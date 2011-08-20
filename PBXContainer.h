@@ -7,6 +7,7 @@
   NSMutableDictionary *classes;
   NSString *objectVersion;
   NSMutableDictionary *objects;
+  id rootObject;
 }
 
 - (id) initWithPBXCoder: (PBXCoder *)coder;
@@ -18,5 +19,7 @@
 - (NSString *) objectVersion;
 - (void) setObjects: (NSMutableDictionary *)dict;
 - (NSMutableDictionary *) objects;
+- (void) setRootObject: (id)object;
+- (id) rootObject;
 
 @end

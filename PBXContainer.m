@@ -3,14 +3,27 @@
 @implementation PBXContainer
 
 - (void) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
+			       withObject: (id)object
 {
   NSEnumerator *en = [dictionary keyEnumerator];
   NSString *key = nil;
   while((key = [en nextObject]) != nil)
     {
       id value = [dictionary objectForKey: key];
-      [self setValue: value
-	      forKey: key];
+      if(value != nil)
+	{
+	  NS_DURING
+	    {
+	      [object setValue: value
+			forKey: key];
+	    }
+	  NS_HANDLER
+	    {
+	      NSLog(@"%@",[localException reason]);
+	      NSLog(@"nil value for %@",key);
+	    }
+	  NS_ENDHANDLER;
+	}
     }
 }
 
@@ -20,7 +33,8 @@
      {
        NSDictionary *dict = 
 	 [NSDictionary dictionaryWithContentsOfFile: fileName];
-       [self applyKeysAndValuesFromDictionary: dict];
+       [self applyKeysAndValuesFromDictionary: dict
+				   withObject: self];
      }
   return self;
 }
@@ -84,5 +98,15 @@
 - (NSMutableDictionary *) objects
 {
   return objects;
+}
+
+- (id) rootObject
+{
+  return rootObject;
+}
+
+- (void) setRootObject: (id)object
+{
+  ASSIGN(rootObject, object);
 }
 @end
