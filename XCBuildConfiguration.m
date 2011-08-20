@@ -3,13 +3,25 @@
 @implementation XCBuildConfiguration
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder 
+- (NSMutableDictionary *) buildSettings // getter
 {
-  if((self = [super init]) != nil)
-    {
-      // ...
-    }
-  return self;
+  return buildSettings;
 }
+
+- (void) setBuildSettings: (NSMutableDictionary *)object; // setter
+{
+  ASSIGN(buildSettings,object);
+}
+
+- (NSString *) name // getter
+{
+  return name;
+}
+
+- (void) setName: (NSString *)object; // setter
+{
+  ASSIGN(name,object);
+}
+
 
 @end

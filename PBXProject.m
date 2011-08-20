@@ -3,13 +3,115 @@
 @implementation PBXProject
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder 
+- (NSString *) developmentRegion // getter
 {
-  if((self = [super init]) != nil)
-    {
-      // ...
-    }
-  return self;
+  return developmentRegion;
 }
+
+- (void) setDevelopmentRegion: (NSString *)object; // setter
+{
+  ASSIGN(developmentRegion,object);
+}
+
+- (NSMutableArray *) knownRegions // getter
+{
+  return knownRegions;
+}
+
+- (void) setKnownRegions: (NSMutableArray *)object; // setter
+{
+  ASSIGN(knownRegions,object);
+}
+
+- (NSString *) compatibilityVersion // getter
+{
+  return compatibilityVersion;
+}
+
+- (void) setCompatibilityVersion: (NSString *)object; // setter
+{
+  ASSIGN(compatibilityVersion,object);
+}
+
+- (NSMutableArray *) projectReferences // getter
+{
+  return projectReferences;
+}
+
+- (void) setProjectReferences: (NSMutableArray *)object; // setter
+{
+  ASSIGN(projectReferences,object);
+}
+
+- (NSMutableArray *) targets // getter
+{
+  return targets;
+}
+
+- (void) setTargets: (NSMutableArray *)object; // setter
+{
+  ASSIGN(targets,object);
+}
+
+- (NSString *) projectDirPath // getter
+{
+  return projectDirPath;
+}
+
+- (void) setProjectDirPath: (NSString *)object; // setter
+{
+  ASSIGN(projectDirPath,object);
+}
+
+- (NSString *) projectRoot // getter
+{
+  return projectRoot;
+}
+
+- (void) setProjectRoot: (NSString *)object; // setter
+{
+  ASSIGN(projectRoot,object);
+}
+
+- (XCConfigurationList *) buildConfigurationList // getter
+{
+  return buildConfigurationList;
+}
+
+- (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
+{
+  ASSIGN(buildConfigurationList,object);
+}
+
+- (PBXGroup *) mainGroup // getter
+{
+  return mainGroup;
+}
+
+- (void) setMainGroup: (PBXGroup *)object; // setter
+{
+  ASSIGN(mainGroup,object);
+}
+
+- (NSString *) hasScannedForEncodings // getter
+{
+  return hasScannedForEncodings;
+}
+
+- (void) setHasScannedForEncodings: (NSString *)object; // setter
+{
+  ASSIGN(hasScannedForEncodings,object);
+}
+
+- (PBXGroup *) productRefGroup // getter
+{
+  return productRefGroup;
+}
+
+- (void) setProductRefGroup: (PBXGroup *)object; // setter
+{
+  ASSIGN(productRefGroup,object);
+}
+
 
 @end

@@ -3,13 +3,25 @@
 @implementation PBXTargetDependency
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder 
+- (PBXContainerItemProxy *) targetProxy // getter
 {
-  if((self = [super init]) != nil)
-    {
-      // ...
-    }
-  return self;
+  return targetProxy;
 }
+
+- (void) setTargetProxy: (PBXContainerItemProxy *)object; // setter
+{
+  ASSIGN(targetProxy,object);
+}
+
+- (NSString *) name // getter
+{
+  return name;
+}
+
+- (void) setName: (NSString *)object; // setter
+{
+  ASSIGN(name,object);
+}
+
 
 @end

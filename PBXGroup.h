@@ -7,14 +7,16 @@
 @interface PBXGroup : NSObject
 {
   NSString *sourceTree;
-  NSString *usesTabs;
-  NSString *tabWidth;
-  NSString *path;
   NSMutableArray *children;
   NSString *name;
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (NSString *) sourceTree; // getter
+- (void) setSourceTree: (NSString *)object; // setter
+- (NSMutableArray *) children; // getter
+- (void) setChildren: (NSMutableArray *)object; // setter
+- (NSString *) name; // getter
+- (void) setName: (NSString *)object; // setter
 
 @end

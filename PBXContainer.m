@@ -2,11 +2,13 @@
 
 @implementation PBXContainer
 
-- (void) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
+- (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
 			       withObject: (id)object
 {
   NSEnumerator *en = [dictionary keyEnumerator];
   NSString *key = nil;
+  id obj = object;
+
   while((key = [en nextObject]) != nil)
     {
       id value = [dictionary objectForKey: key];
@@ -23,6 +25,25 @@
 	      NSLog(@"nil value for %@",key);
 	    }
 	  NS_ENDHANDLER;
+	}
+    }
+
+  return obj;
+}
+
+- (void) resolveObjectReferences
+{
+  NSEnumerator *en = [objects keyEnumerator];
+  NSString *key = nil;
+  while((key = [en nextObject]) != nil)
+    {
+      id object = [objects objectForKey: key];
+      if([object isKindOfClass: [NSDictionary class]])
+	{
+	  Class cls = NSClassFromString([object objectForKey: @"isa"]);
+	  id obj = [[cls alloc] init];
+	  [self applyKeysAndValuesFromDictionary: object
+				      withObject: obj];
 	}
     }
 }

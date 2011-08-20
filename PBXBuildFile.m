@@ -3,13 +3,25 @@
 @implementation PBXBuildFile
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder 
+- (PBXFileReference *) fileRef // getter
 {
-  if((self = [super init]) != nil)
-    {
-      // ...
-    }
-  return self;
+  return fileRef;
 }
+
+- (void) setFileRef: (PBXFileReference *)object; // setter
+{
+  ASSIGN(fileRef,object);
+}
+
+- (NSMutableDictionary *) settings // getter
+{
+  return settings;
+}
+
+- (void) setSettings: (NSMutableDictionary *)object; // setter
+{
+  ASSIGN(settings,object);
+}
+
 
 @end

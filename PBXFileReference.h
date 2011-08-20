@@ -6,16 +6,20 @@
 
 @interface PBXFileReference : NSObject
 {
-  NSString *lastKnownFileType;
   NSString *sourceTree;
-  NSString *indentWidth;
-  NSString *usesTabs;
-  NSString *tabWidth;
-  NSString *fileEncoding;
+  NSString *lastKnownFileType;
   NSString *path;
+  NSString *fileEncoding;
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (NSString *) sourceTree; // getter
+- (void) setSourceTree: (NSString *)object; // setter
+- (NSString *) lastKnownFileType; // getter
+- (void) setLastKnownFileType: (NSString *)object; // setter
+- (NSString *) path; // getter
+- (void) setPath: (NSString *)object; // setter
+- (NSString *) fileEncoding; // getter
+- (void) setFileEncoding: (NSString *)object; // setter
 
 @end

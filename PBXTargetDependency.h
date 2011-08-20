@@ -12,6 +12,9 @@
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (PBXContainerItemProxy *) targetProxy; // getter
+- (void) setTargetProxy: (PBXContainerItemProxy *)object; // setter
+- (NSString *) name; // getter
+- (void) setName: (NSString *)object; // setter
 
 @end

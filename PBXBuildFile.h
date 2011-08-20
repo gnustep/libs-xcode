@@ -8,9 +8,13 @@
 @interface PBXBuildFile : NSObject
 {
   PBXFileReference *fileRef;
+  NSMutableDictionary *settings;
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (PBXFileReference *) fileRef; // getter
+- (void) setFileRef: (PBXFileReference *)object; // setter
+- (NSMutableDictionary *) settings; // getter
+- (void) setSettings: (NSMutableDictionary *)object; // setter
 
 @end

@@ -2,17 +2,18 @@
 
 // Local includes
 #import "PBXCoder.h"
-#import "PBXFileReference.h"
 
 
 @interface XCBuildConfiguration : NSObject
 {
   NSMutableDictionary *buildSettings;
-  PBXFileReference *baseConfigurationReference;
   NSString *name;
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (NSMutableDictionary *) buildSettings; // getter
+- (void) setBuildSettings: (NSMutableDictionary *)object; // setter
+- (NSString *) name; // getter
+- (void) setName: (NSString *)object; // setter
 
 @end

@@ -14,6 +14,13 @@
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (NSString *) proxyType; // getter
+- (void) setProxyType: (NSString *)object; // setter
+- (NSString *) remoteGlobalIDString; // getter
+- (void) setRemoteGlobalIDString: (NSString *)object; // setter
+- (PBXFileReference *) containerPortal; // getter
+- (void) setContainerPortal: (PBXFileReference *)object; // setter
+- (NSString *) remoteInfo; // getter
+- (void) setRemoteInfo: (NSString *)object; // setter
 
 @end

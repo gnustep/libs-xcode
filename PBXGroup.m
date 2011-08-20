@@ -3,13 +3,35 @@
 @implementation PBXGroup
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder 
+- (NSString *) sourceTree // getter
 {
-  if((self = [super init]) != nil)
-    {
-      // ...
-    }
-  return self;
+  return sourceTree;
 }
+
+- (void) setSourceTree: (NSString *)object; // setter
+{
+  ASSIGN(sourceTree,object);
+}
+
+- (NSMutableArray *) children // getter
+{
+  return children;
+}
+
+- (void) setChildren: (NSMutableArray *)object; // setter
+{
+  ASSIGN(children,object);
+}
+
+- (NSString *) name // getter
+{
+  return name;
+}
+
+- (void) setName: (NSString *)object; // setter
+{
+  ASSIGN(name,object);
+}
+
 
 @end

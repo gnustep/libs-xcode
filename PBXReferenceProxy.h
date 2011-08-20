@@ -14,6 +14,13 @@
 }
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder;
+- (NSString *) sourceTree; // getter
+- (void) setSourceTree: (NSString *)object; // setter
+- (NSString *) fileType; // getter
+- (void) setFileType: (NSString *)object; // setter
+- (PBXContainerItemProxy *) remoteRef; // getter
+- (void) setRemoteRef: (PBXContainerItemProxy *)object; // setter
+- (NSString *) path; // getter
+- (void) setPath: (NSString *)object; // setter
 
 @end

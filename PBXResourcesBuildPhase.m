@@ -3,13 +3,35 @@
 @implementation PBXResourcesBuildPhase
 
 // Methods....
-- (id) initWithPBXCoder: (PBXCoder *)coder 
+- (NSMutableArray *) files // getter
 {
-  if((self = [super init]) != nil)
-    {
-      // ...
-    }
-  return self;
+  return files;
 }
+
+- (void) setFiles: (NSMutableArray *)object; // setter
+{
+  ASSIGN(files,object);
+}
+
+- (NSString *) buildActionMask // getter
+{
+  return buildActionMask;
+}
+
+- (void) setBuildActionMask: (NSString *)object; // setter
+{
+  ASSIGN(buildActionMask,object);
+}
+
+- (NSString *) runOnlyForDeploymentPostprocessing // getter
+{
+  return runOnlyForDeploymentPostprocessing;
+}
+
+- (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
+{
+  ASSIGN(runOnlyForDeploymentPostprocessing,object);
+}
+
 
 @end
