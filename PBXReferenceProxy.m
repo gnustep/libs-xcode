@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXReferenceProxy.h"
 
 @implementation PBXReferenceProxy

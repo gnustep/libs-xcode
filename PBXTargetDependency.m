@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXTargetDependency.h"
 
 @implementation PBXTargetDependency

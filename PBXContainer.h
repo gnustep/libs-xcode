@@ -10,7 +10,6 @@
   id rootObject;
 }
 
-- (id) initWithPBXCoder: (PBXCoder *)coder;
 - (void) setArchiveVersion: (NSString *)version;
 - (NSString *) archiveVersion;
 - (void) setClasses: (NSMutableDictionary *)dict;

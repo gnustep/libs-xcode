@@ -9,6 +9,8 @@
   NSString *sourceTree;
   NSMutableArray *children;
   NSString *name;
+  NSString *tabWidth;
+  NSString *usesTabs;
 }
 
 // Methods....

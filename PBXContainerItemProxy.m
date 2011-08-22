@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXContainerItemProxy.h"
 
 @implementation PBXContainerItemProxy

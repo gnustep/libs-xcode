@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "XCConfigurationList.h"
 
 @implementation XCConfigurationList

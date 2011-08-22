@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXBuildFile.h"
 
 @implementation PBXBuildFile

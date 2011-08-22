@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXVariantGroup.h"
 
 @implementation PBXVariantGroup

@@ -29,6 +29,7 @@ Resources/Version \
 XCode_HEADER_FILES = \
 PBXBuildFile.h \
 PBXCoder.h \
+PBXCommon.h \
 PBXContainer.h \
 PBXContainerItemProxy.h \
 PBXFileReference.h \
@@ -52,6 +53,7 @@ XCConfigurationList.h
 XCode_OBJC_FILES = \
 PBXBuildFile.m \
 PBXCoder.m \
+PBXCommon.m \
 PBXContainerItemProxy.m \
 PBXContainer.m \
 PBXFileReference.m \

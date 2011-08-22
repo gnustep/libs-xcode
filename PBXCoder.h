@@ -1,9 +1,24 @@
 #import <Foundation/Foundation.h>
 
-@class PBXContainer;
-
 @interface PBXCoder : NSObject
 {
-  PBXContainer *container;
+  NSString *fileName;
+  NSMutableDictionary *dictionary;
+  NSMutableDictionary *objects;
+  NSMutableDictionary *objectCache;
 }
+
+- (id) initWithContentsOfFile: (NSString *)name;
+
+- (id) unarchive;
+
+- (id) unarchiveObjectForKey: (NSString *)key;
+
+- (id) unarchiveFromDictionary: (NSDictionary *)dictionary;
+
+- (NSMutableArray *) resolveArrayMembers: (NSMutableArray *)array;
+
+- (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
+                               toObject: (id)object;
+
 @end

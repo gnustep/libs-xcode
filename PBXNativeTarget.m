@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXNativeTarget.h"
 
 @implementation PBXNativeTarget

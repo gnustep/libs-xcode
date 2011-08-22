@@ -1,3 +1,4 @@
+#import "PBXCommon.h"
 #import "PBXShellScriptBuildPhase.h"
 
 @implementation PBXShellScriptBuildPhase
