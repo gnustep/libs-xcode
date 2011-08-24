@@ -39,4 +39,6 @@
 - (NSMutableArray *) buildPhases; // getter
 - (void) setBuildPhases: (NSMutableArray *)object; // setter
 
+// build
+- (BOOL) build;
 @end

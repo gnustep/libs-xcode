@@ -114,5 +114,15 @@
   ASSIGN(productRefGroup,object);
 }
 
-
+- (BOOL) build
+{
+  NSEnumerator *en = [targets objectEnumerator];
+  id target = nil;
+  BOOL result = YES;
+  while((target = [en nextObject]) != nil && result)
+    {
+      result = [target build];
+    }
+  return result;
+}
 @end

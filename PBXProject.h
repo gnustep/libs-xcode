@@ -46,4 +46,6 @@
 - (PBXGroup *) productRefGroup; // getter
 - (void) setProductRefGroup: (PBXGroup *)object; // setter
 
+// build
+- (BOOL) build;
 @end

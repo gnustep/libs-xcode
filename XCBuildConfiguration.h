@@ -2,12 +2,13 @@
 
 // Local includes
 #import "PBXCoder.h"
-
+#import "PBXFileReference.h"
 
 @interface XCBuildConfiguration : NSObject
 {
   NSMutableDictionary *buildSettings;
   NSString *name;
+  PBXFileReference *baseConfigurationReference;
 }
 
 // Methods....

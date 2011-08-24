@@ -10,6 +10,12 @@
   NSString *lastKnownFileType;
   NSString *path;
   NSString *fileEncoding;
+  NSString *explicitFileType;
+  NSString *usesTabs;
+  NSString *indentWidth;
+  NSString *tabWidth;
+  NSString *name;
+  NSString *includeInIndex;
 }
 
 // Methods....

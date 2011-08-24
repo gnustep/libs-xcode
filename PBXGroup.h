@@ -11,6 +11,7 @@
   NSString *name;
   NSString *tabWidth;
   NSString *usesTabs;
+  NSString *path;
 }
 
 // Methods....

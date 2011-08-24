@@ -21,4 +21,6 @@
 - (void) setRootObject: (id)object;
 - (id) rootObject;
 
+// Build...			  
+- (BOOL) build;
 @end

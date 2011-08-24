@@ -94,5 +94,16 @@
   ASSIGN(buildPhases,object);
 }
 
+- (BOOL) build
+{
+  NSEnumerator *en = [buildPhases objectEnumerator];
+  id phase = nil;
+  BOOL result = YES;
+  while((phase = [en nextObject]) != nil && result)
+    {
+      result = [phase build];
+    }
+  return result;
+}
 
 @end

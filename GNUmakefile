@@ -27,6 +27,7 @@ Resources/Version \
 # Header files
 #
 XCode_HEADER_FILES = \
+PBXAbstractBuildPhase.h \
 PBXBuildFile.h \
 PBXCoder.h \
 PBXCommon.h \
@@ -51,6 +52,7 @@ XCConfigurationList.h
 # Class files
 #
 XCode_OBJC_FILES = \
+PBXAbstractBuildPhase.m \
 PBXBuildFile.m \
 PBXCoder.m \
 PBXCommon.m \

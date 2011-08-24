@@ -76,7 +76,10 @@
   while((key = [en nextObject]) != nil)
     {
       id obj = [self unarchiveObjectForKey: key];
-      [result addObject: obj];
+      if(obj != nil)
+	{
+	  [result addObject: obj];
+	}
     }
 
   return result;
@@ -113,8 +116,12 @@
 		{
 		  value = newValue;
 		}
-	      [object setValue: value
-			forKey: key];
+	      
+	      if(value != nil)
+		{
+		  [object setValue: value
+			    forKey: key];
+		}
 	    }
 	  NS_HANDLER
 	    {

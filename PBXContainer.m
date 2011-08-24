@@ -61,4 +61,9 @@
 {
   ASSIGN(rootObject, object);
 }
+
+- (BOOL) build
+{
+  return [rootObject build];
+}
 @end
