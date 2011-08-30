@@ -116,6 +116,8 @@
 
 - (BOOL) build
 {
+  [buildConfigurationList applyDefaultConfiguration];
+
   NSEnumerator *en = [targets objectEnumerator];
   id target = nil;
   BOOL result = YES;

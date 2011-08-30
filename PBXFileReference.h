@@ -16,6 +16,7 @@
   NSString *tabWidth;
   NSString *name;
   NSString *includeInIndex;
+  NSString *comments;
 }
 
 // Methods....
@@ -27,5 +28,10 @@
 - (void) setPath: (NSString *)object; // setter
 - (NSString *) fileEncoding; // getter
 - (void) setFileEncoding: (NSString *)object; // setter
+- (NSString *) explicitFileType;
+- (void) setExplicitFileType: (NSString *)object;
+- (NSString *) name;
+- (void) setName: (NSString *)object;
 
+- (BOOL) build;
 @end

@@ -33,6 +33,7 @@ PBXCoder.h \
 PBXCommon.h \
 PBXContainer.h \
 PBXContainerItemProxy.h \
+PBXCopyFilesBuildPhase.h \
 PBXFileReference.h \
 PBXFrameworksBuildPhase.h \
 PBXGroup.h \
@@ -41,12 +42,14 @@ PBXNativeTarget.h \
 PBXProject.h \
 PBXReferenceProxy.h \
 PBXResourcesBuildPhase.h \
+PBXRezBuildPhase.h \
 PBXShellScriptBuildPhase.h \
 PBXSourcesBuildPhase.h \
 PBXTargetDependency.h \
 PBXVariantGroup.h \
 XCBuildConfiguration.h \
-XCConfigurationList.h
+XCConfigurationList.h \
+XCVersionGroup.h 
 
 #
 # Class files
@@ -58,6 +61,7 @@ PBXCoder.m \
 PBXCommon.m \
 PBXContainerItemProxy.m \
 PBXContainer.m \
+PBXCopyFilesBuildPhase.m \
 PBXFileReference.m \
 PBXFrameworksBuildPhase.m \
 PBXGroup.m \
@@ -66,12 +70,14 @@ PBXNativeTarget.m \
 PBXProject.m \
 PBXReferenceProxy.m \
 PBXResourcesBuildPhase.m \
+PBXRezBuildPhase.m \
 PBXShellScriptBuildPhase.m \
 PBXSourcesBuildPhase.m \
 PBXTargetDependency.m \
 PBXVariantGroup.m \
 XCBuildConfiguration.m \
-XCConfigurationList.m
+XCConfigurationList.m \
+XCVersionGroup.m
 
 #
 # Makefiles

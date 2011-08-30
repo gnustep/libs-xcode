@@ -24,5 +24,15 @@
   ASSIGN(settings,object);
 }
 
+- (void) applySettings
+{
+  // NSLog(@"%@",settings);
+}
 
+- (BOOL) build
+{
+  [self applySettings];
+  NSLog(@"\t* Building %@",[fileRef path]);
+  return [fileRef build];
+}
 @end

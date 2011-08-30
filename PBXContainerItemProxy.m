@@ -44,5 +44,9 @@
   ASSIGN(remoteInfo,object);
 }
 
+- (BOOL) build
+{
+  return YES;
+}
 
 @end

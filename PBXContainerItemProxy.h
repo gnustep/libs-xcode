@@ -23,4 +23,5 @@
 - (NSString *) remoteInfo; // getter
 - (void) setRemoteInfo: (NSString *)object; // setter
 
+- (BOOL) build;
 @end

@@ -19,4 +19,5 @@
 - (NSString *) defaultConfigurationName; // getter
 - (void) setDefaultConfigurationName: (NSString *)object; // setter
 
+- (void) applyDefaultConfiguration;
 @end

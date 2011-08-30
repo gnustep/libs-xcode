@@ -17,4 +17,6 @@
 - (NSString *) name; // getter
 - (void) setName: (NSString *)object; // setter
 
+// build
+- (BOOL) build;
 @end

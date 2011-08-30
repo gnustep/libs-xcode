@@ -17,6 +17,7 @@
   NSMutableArray *buildRules;
   NSString *name;
   NSMutableArray *buildPhases;
+  NSString *comments;
 }
 
 // Methods....

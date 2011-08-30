@@ -24,5 +24,8 @@
   ASSIGN(name,object);
 }
 
-
+- (BOOL) build
+{
+  return [targetProxy build];
+}
 @end

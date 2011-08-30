@@ -17,4 +17,6 @@
 - (NSMutableDictionary *) settings; // getter
 - (void) setSettings: (NSMutableDictionary *)object; // setter
 
+- (BOOL) build;
+
 @end

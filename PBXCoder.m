@@ -36,6 +36,12 @@
   NSString *className = (isaValue == nil) ? @"PBXContainer" : isaValue;
   Class classInstance = NSClassFromString(className);
   
+  if(classInstance == nil)
+    {
+      NSLog(@"Unknown class: %@",className);
+      return nil;
+    }
+
   object = [[classInstance alloc] init];
   object = [self applyKeysAndValuesFromDictionary: dict
 					 toObject: object];

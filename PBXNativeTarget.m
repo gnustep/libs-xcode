@@ -1,3 +1,4 @@
+#import <stdlib.h>
 #import "PBXCommon.h"
 #import "PBXNativeTarget.h"
 
@@ -94,11 +95,40 @@
   ASSIGN(buildPhases,object);
 }
 
+- (void) _buildConfiguration
+{
+}
+
+- (void) _productWrapper
+{
+  NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
+  NSString *fullPath = [buildDir stringByAppendingPathComponent: [productReference path]];
+  NSError *error = nil;
+
+  [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
+			    withIntermediateDirectories:YES
+					     attributes:nil
+						  error:&error];
+}
+
 - (BOOL) build
 {
-  NSEnumerator *en = [buildPhases objectEnumerator];
-  id phase = nil;
   BOOL result = YES;
+  NSEnumerator *en = nil;
+
+  [self _buildConfiguration];
+
+  id dependency = nil;
+  en = [dependencies objectEnumerator];
+  while((dependency = [en nextObject]) != nil && result)
+    {
+      result = [dependency build];
+    }
+
+  [self _productWrapper];
+
+  id phase = nil;
+  en = [buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
       result = [phase build];

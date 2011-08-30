@@ -1,5 +1,6 @@
 #import "PBXCommon.h"
 #import "XCConfigurationList.h"
+#import "XCBuildConfiguration.h"
 
 @implementation XCConfigurationList
 
@@ -34,5 +35,19 @@
   ASSIGN(defaultConfigurationName,object);
 }
 
-
+- (void) applyDefaultConfiguration
+{
+  NSEnumerator *en = [buildConfigurations objectEnumerator];
+  id config = nil;
+  while((config = [en nextObject]) != nil)
+    {
+      if([[config name] 
+	   isEqualToString: 
+	     defaultConfigurationName])
+	{
+	  break;
+	}
+    }
+  [config apply];
+}
 @end
