@@ -97,6 +97,8 @@
 
 - (void) _buildConfiguration
 {
+  setenv("SOURCE_ROOT",[[self name] cString],1);
+  NSLog(@"\tSOURCE_ROOT = %@",[self name]);
 }
 
 - (void) _productWrapper
@@ -109,6 +111,9 @@
 			    withIntermediateDirectories:YES
 					     attributes:nil
 						  error:&error];
+
+  setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
+  setenv("PRODUCT_NAME",[name cString],1);
 }
 
 - (BOOL) build

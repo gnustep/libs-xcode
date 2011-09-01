@@ -3,6 +3,7 @@
 @interface PBXCoder : NSObject
 {
   NSString *fileName;
+  NSString *projectRoot;
   NSMutableDictionary *dictionary;
   NSMutableDictionary *objects;
   NSMutableDictionary *objectCache;

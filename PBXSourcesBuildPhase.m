@@ -13,7 +13,7 @@
   BOOL result = YES;
   while((file = [en nextObject]) != nil && result)
     {
-      [file build];
+      result = [file build];
     }
   NSLog(@"=== Sources Build Phase Completed");
 

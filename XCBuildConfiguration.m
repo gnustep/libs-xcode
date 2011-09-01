@@ -41,6 +41,11 @@
       NSLog(@"\tTARGET_BUILD_DIR = build");
       setenv("TARGET_BUILD_DIR","build",1);
     }
+  if([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
+    {
+      NSLog(@"\tBUILT_PRODUCTS_DIR = build");
+      setenv("BUILT_PRODUCTS_DIR","build",1);
+    }
   NSLog(@"=== Done Applying Build Configuration for %@",name);
 }
 @end

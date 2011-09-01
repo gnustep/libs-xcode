@@ -1,5 +1,6 @@
 #import "PBXCoder.h"
 #import "PBXContainer.h"
+#import <stdlib.h>
 
 @implementation PBXCoder
 
@@ -9,8 +10,10 @@
     {
       objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
       ASSIGN(fileName, name);
+      ASSIGN(projectRoot, [[fileName stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]);
       ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
+      setenv("PROJECT_ROOT",[projectRoot cString],1);      
     }
   return self;
 }
@@ -125,13 +128,21 @@
 	      
 	      if(value != nil)
 		{
-		  [object setValue: value
-			    forKey: key];
+		  id currentValue = [object valueForKey: key];
+		  if(currentValue == nil)
+		    {
+		      [object setValue: value
+				forKey: key];
+		    }
 		}
 	    }
 	  NS_HANDLER
 	    {
-	      NSLog(@"%@, key = %@, object = %@",[localException reason], key, object);
+	      NSLog(@"%@, key = %@, value = %@, object = %@",
+		    [localException reason], 
+		    key, 
+		    value, 
+		    object);
 	    }
 	  NS_ENDHANDLER;
 	}

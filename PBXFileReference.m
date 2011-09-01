@@ -67,6 +67,9 @@
 
 - (BOOL) build
 {  
+  char *of = getenv("OUTPUT_FILES");
+  NSString *outputFiles = (of == NULL)?@"":[NSString stringWithCString: of];
+  int result = 0;
   if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || 
      [lastKnownFileType isEqualToString: @"sourcecode.c.cpp"])
@@ -83,25 +86,33 @@
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Headers"];
       NSString *compiler = [NSString stringWithCString: getenv("CC")];
+      NSString *buildPath = [[[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+			       stringByAppendingPathComponent: 
+				 [NSString stringWithCString: getenv("SOURCE_ROOT")]]
+			      stringByAppendingPathComponent: fileName];
+      NSString *outputPath = [buildDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
+      outputFiles = [[outputFiles stringByAppendingString: outputPath] stringByAppendingString: @" "];
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
 	{
 	  compiler = @"gcc";
 	}
 
-      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ -o %@/obj/%@.o";
+      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ -o %@";
       
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
-					 path, 
+					 buildPath, 
 					 userIncludeDir,
 					 localIncludeDir, 
 					 systemIncludeDir, 
-					 buildDir, 
-					 fileName];
+					 outputPath];
       NSLog(@"\t%@",buildCommand);
-      system([buildCommand cString]);
+      result = system([buildCommand cString]);
     }
-  return YES;
+
+  setenv("OUTPUT_FILES",[outputFiles cString],1);
+
+  return (result != 127);
 }
 @end

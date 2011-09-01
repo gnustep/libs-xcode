@@ -56,7 +56,16 @@
 
 - (BOOL) build
 {
-  NSLog(@"Executing... %@ %@",self,name);
-  return YES;
+  NSError *error = nil;
+  NSString *fileName = [NSString stringWithFormat: @"script_%d",[shellScript hash]];
+  NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,fileName];
+  NSLog(@"=== Executing Script Build Phase... %@",name);
+  NSLog(@"\t%@",command);
+  [shellScript writeToFile: fileName atomically: YES encoding: NSASCIIStringEncoding error: &error];
+  int result = system([shellScript cString]);
+  NSString *deleteCommand = [NSString stringWithFormat: @"rm %@",fileName];
+  system([deleteCommand cString]);
+  NSLog(@"=== Done Executing Script Build Phase... %@",name);
+  return (result != 127);
 }
 @end

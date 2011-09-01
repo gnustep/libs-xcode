@@ -28,4 +28,14 @@
 {
   return [targetProxy build];
 }
+
+- (PBXNativeTarget *)target
+{
+  return target;
+}
+
+- (void) setTarget: (PBXNativeTarget *)object
+{
+  ASSIGN(target, object);
+}
 @end
