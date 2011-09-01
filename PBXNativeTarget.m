@@ -114,6 +114,7 @@
 
   setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
   setenv("PRODUCT_NAME",[name cString],1);
+  setenv("EXECUTABLE_NAME",[name cString],1);
 }
 
 - (BOOL) build

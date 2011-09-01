@@ -21,8 +21,8 @@
 				   stringByAppendingPathComponent: @"Libraries"];
   NSString *outputFiles = [NSString stringWithCString: getenv("OUTPUT_FILES")];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *productName = [NSString stringWithCString: getenv("PRODUCT_NAME")];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: productName];
+  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
@@ -41,6 +41,14 @@
       else if([name isEqualToString: @"Foundation"])
 	{
 	  linkString = [linkString stringByAppendingString: @"-lgnustep-base "];
+	}
+      else if([name isEqualToString: @"CoreFoundation"])
+	{
+	  linkString = [linkString stringByAppendingString: @"-lcorebase "];
+	}
+      else if([name isEqualToString: @"CoreGraphics"])
+	{
+	  linkString = [linkString stringByAppendingString: @"-lopal "];
 	}
       else if([name isEqual: @"Carbon"] ||
 	 [name isEqual: @"IOKit"] ||
