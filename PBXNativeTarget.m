@@ -97,8 +97,7 @@
 
 - (void) _buildConfiguration
 {
-  setenv("SOURCE_ROOT",[[self name] cString],1);
-  NSLog(@"\tSOURCE_ROOT = %@",[self name]);
+  // [self _sourceRootFromMainGroup];
 }
 
 - (void) _productWrapper

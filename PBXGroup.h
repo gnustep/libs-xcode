@@ -21,5 +21,7 @@
 - (void) setChildren: (NSMutableArray *)object; // setter
 - (NSString *) name; // getter
 - (void) setName: (NSString *)object; // setter
+- (NSString *) path; // getter
+- (void) setPath: (NSString *)object; // setter
 
 @end

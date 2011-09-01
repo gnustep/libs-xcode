@@ -114,9 +114,26 @@
   ASSIGN(productRefGroup,object);
 }
 
+- (void) _sourceRootFromMainGroup
+{
+  PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; // get first group, which is the source group.
+  NSString *sourceRoot = [sourceGroup path];
+  
+  if(sourceRoot == nil)
+    {
+      sourceRoot = @"";
+    }
+
+  setenv("SOURCE_ROOT",[sourceRoot cString],1);
+  NSLog(@"\tSOURCE_ROOT = %@",sourceRoot);
+}
+
 - (BOOL) build
 {
+  NSLog(@"=== Building Project");
   [buildConfigurationList applyDefaultConfiguration];
+
+  [self _sourceRootFromMainGroup];
 
   NSEnumerator *en = [targets objectEnumerator];
   id target = nil;
@@ -125,6 +142,7 @@
     {
       result = [target build];
     }
+  NSLog(@"=== Completed Building Project");
   return result;
 }
 @end

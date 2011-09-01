@@ -34,5 +34,14 @@
   ASSIGN(name,object);
 }
 
+- (NSString *) path // getter
+{
+  return path;
+}
+
+- (void) setPath: (NSString *)object; // setter
+{
+  ASSIGN(path,object);
+}
 
 @end

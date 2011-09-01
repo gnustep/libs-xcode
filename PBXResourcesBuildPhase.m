@@ -25,8 +25,17 @@
   PBXBuildFile *file = nil;
   while((file = [en nextObject]) != nil && result)
     {
-      PBXVariantGroup *group = (PBXVariantGroup *)[file fileRef];
-      PBXFileReference *fileRef = [[group children] objectAtIndex: 0]; // FIXME: Assume English only for now...
+      id group = [file fileRef];
+      PBXFileReference *fileRef = nil; 
+      if([group isKindOfClass: [PBXVariantGroup class]])
+	{
+	  fileRef = [[group children] objectAtIndex: 0]; // FIXME: Assume English only for now...
+	}
+      else
+	{
+	  fileRef = group;
+	}
+      
       NSString *filePath = [path stringByAppendingPathComponent: [fileRef path]];
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];

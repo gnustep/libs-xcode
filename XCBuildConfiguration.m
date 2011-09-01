@@ -32,9 +32,16 @@
   NSString *key = nil;
   while((key = [en nextObject]) != nil)
     {
-      NSString *value = [buildSettings objectForKey: key];
+      id value = [buildSettings objectForKey: key];
       NSLog(@"\t%@ = %@",key,value);
-      setenv([key cString],[value cString],1);
+      if([value isKindOfClass: [NSString class]])
+	{	  
+	  setenv([key cString],[value cString],1);
+	}
+      else
+	{
+	  NSLog(@"\tERROR: Can't set value %@, for key %@, object is not an instance of NSString", value, key);
+	}
     }
   if([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
     {
