@@ -39,7 +39,7 @@
       NSString *filePath = [path stringByAppendingPathComponent: [fileRef path]];
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
-      NSString *command = [NSString stringWithFormat: @"cp %@ %@",filePath,destPath];
+      NSString *command = [NSString stringWithFormat: @"cp -r %@ %@",filePath,destPath];
       NSLog(@"\t%@",command);
       int sysresult = system([command cString]);
       result = (sysresult != 127);
@@ -51,9 +51,9 @@
       return result;
     }
   
-  NSString *productName = [NSString stringWithCString: getenv("PRODUCT_NAME")];
-  NSString *plistName = [productName stringByAppendingString: @"-Info.plist"];
-  NSString *inputPlist = [[projectRoot stringByAppendingPathComponent: sourceRoot] stringByAppendingPathComponent: plistName];
+  // NSString *productName = [NSString stringWithCString: getenv("PRODUCT_NAME")];
+  // NSString *plistName = [productName stringByAppendingString: @"-Info.plist"];
+  NSString *inputPlist = [NSString stringWithCString: getenv("INFOPLIST_FILE")]; // [[projectRoot stringByAppendingPathComponent: sourceRoot] stringByAppendingPathComponent: plistName];
   NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];
   NSString *awkCommand = [NSString stringWithFormat: 
 				     @"awk '{while(match($0,\"[$]{[^}]*}\")) {var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\",ENVIRON[var])}}1' < %@ > %@",

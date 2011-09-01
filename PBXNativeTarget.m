@@ -95,11 +95,6 @@
   ASSIGN(buildPhases,object);
 }
 
-- (void) _buildConfiguration
-{
-  // [self _sourceRootFromMainGroup];
-}
-
 - (void) _productWrapper
 {
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
@@ -121,7 +116,7 @@
   BOOL result = YES;
   NSEnumerator *en = nil;
 
-  [self _buildConfiguration];
+  [buildConfigurationList applyDefaultConfiguration];
 
   id dependency = nil;
   en = [dependencies objectEnumerator];

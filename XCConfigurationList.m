@@ -38,12 +38,13 @@
 - (void) applyDefaultConfiguration
 {
   NSEnumerator *en = [buildConfigurations objectEnumerator];
+  NSString *defaultConfig = (defaultConfigurationName == nil)?@"Release":defaultConfigurationName;
   id config = nil;
   while((config = [en nextObject]) != nil)
     {
       if([[config name] 
 	   isEqualToString: 
-	     defaultConfigurationName])
+	     defaultConfig])
 	{
 	  break;
 	}
