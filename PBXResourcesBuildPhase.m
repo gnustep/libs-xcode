@@ -53,7 +53,9 @@
   
   // NSString *productName = [NSString stringWithCString: getenv("PRODUCT_NAME")];
   // NSString *plistName = [productName stringByAppendingString: @"-Info.plist"];
-  NSString *inputPlist = [NSString stringWithCString: getenv("INFOPLIST_FILE")]; // [[projectRoot stringByAppendingPathComponent: sourceRoot] stringByAppendingPathComponent: plistName];
+  NSString *inputPlist = [projectRoot stringByAppendingPathComponent: 
+					 [NSString stringWithCString: getenv("INFOPLIST_FILE")]];
+  // [[projectRoot stringByAppendingPathComponent: sourceRoot] stringByAppendingPathComponent: plistName];
   NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];
   NSString *awkCommand = [NSString stringWithFormat: 
 				     @"awk '{while(match($0,\"[$]{[^}]*}\")) {var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\",ENVIRON[var])}}1' < %@ > %@",

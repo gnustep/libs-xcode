@@ -28,6 +28,8 @@ Resources/Version \
 #
 XCode_HEADER_FILES = \
 PBXAbstractBuildPhase.h \
+PBXAbstractTarget.h \
+PBXAggregateTarget.h \
 PBXBuildFile.h \
 PBXCoder.h \
 PBXCommon.h \
@@ -56,6 +58,8 @@ XCVersionGroup.h
 #
 XCode_OBJC_FILES = \
 PBXAbstractBuildPhase.m \
+PBXAbstractTarget.m \
+PBXAggregateTarget.m \
 PBXBuildFile.m \
 PBXCoder.m \
 PBXCommon.m \
