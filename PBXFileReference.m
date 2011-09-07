@@ -1,6 +1,10 @@
+#import <stdlib.h>
+
 #import "PBXCommon.h"
 #import "PBXFileReference.h"
-#import <stdlib.h>
+#import "PBXGroup.h"
+#import "GSXCBuildContext.h"
+#import "NSArray+Additions.h"
 
 @implementation PBXFileReference
 
@@ -65,10 +69,54 @@
   ASSIGN(name,object);
 }
 
+- (NSString *) resolvePathFor: (id)object 
+		    withGroup: (PBXGroup *)group
+			found: (BOOL *)found
+{
+  NSString *result = @"";
+  NSArray *children = [group children];
+  NSEnumerator *en = [children objectEnumerator];
+  id file = nil;
+  while((file = [en nextObject]) != nil && *found == NO)
+    {
+      if(file == self) // have we found ourselves??
+	{
+	  NSString *filePath = ([file path] == nil)?@"":[file path];
+	  result = filePath;
+	  *found = YES;
+	  break;
+	}
+      else if([file isKindOfClass: [PBXGroup class]])
+	{
+	  NSString *filePath = ([file path] == nil)?@"":[file path];
+	  result = [filePath stringByAppendingPathComponent: 
+				      [self resolvePathFor: object 
+						 withGroup: file
+						     found: found]];
+	}
+    }
+  return result;
+}
+
+- (NSString *) buildPathFromMainGroupForFile
+{
+  PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
+  BOOL found = NO;
+  NSString *result = nil;
+  
+  // Resolve path for the current file reference...
+  result = [self resolvePathFor: self 
+		      withGroup: mainGroup
+			  found: &found];
+  
+  return result;
+}
+
 - (BOOL) build
 {  
-  char *of = getenv("OUTPUT_FILES");
-  NSString *outputFiles = (of == NULL)?@"":[NSString stringWithCString: of];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
   if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || 
@@ -86,10 +134,25 @@
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Headers"];
       NSString *compiler = [NSString stringWithCString: getenv("CC")];
+      NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
+				      implodeArrayWithSeparator: @" -I"];
+      NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
+				  implodeArrayWithSeparator: @" "];
+      if(headerSearchPaths == nil)
+	{
+	  headerSearchPaths = @"";
+	}
+      if(warningCflags == nil)
+	{
+	  warningCflags = @"";
+	}
+      /*
       NSString *buildPath = [[[NSString stringWithCString: getenv("PROJECT_ROOT")] 
 			       stringByAppendingPathComponent: 
 				 [NSString stringWithCString: getenv("SOURCE_ROOT")]]
 			      stringByAppendingPathComponent: fileName];
+      */
+      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] stringByAppendingPathComponent: [self buildPathFromMainGroupForFile]];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: outputPath] stringByAppendingString: @" "];
       if([compiler isEqualToString: @""] ||
@@ -98,20 +161,23 @@
 	  compiler = @"gcc";
 	}
 
-      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ -o %@";
+      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ %@ -o %@";
       
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
 					 buildPath, 
+					 // warningCflags,
 					 userIncludeDir,
 					 localIncludeDir, 
 					 systemIncludeDir, 
+					 headerSearchPaths,
 					 outputPath];
       NSLog(@"\t%@",buildCommand);
       result = system([buildCommand cString]);
     }
 
-  setenv("OUTPUT_FILES",[outputFiles cString],1);
+  // setenv("OUTPUT_FILES",[outputFiles cString],1);
+  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
   return (result != 127);
 }

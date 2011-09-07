@@ -27,6 +27,9 @@ Resources/Version \
 # Header files
 #
 XCode_HEADER_FILES = \
+GSXCBuildContext.h \
+GSXCCommon.h \
+NSArray+Additions.h \
 PBXAbstractBuildPhase.h \
 PBXAbstractTarget.h \
 PBXAggregateTarget.h \
@@ -57,6 +60,8 @@ XCVersionGroup.h
 # Class files
 #
 XCode_OBJC_FILES = \
+GSXCBuildContext.m \
+NSArray+Additions.m \
 PBXAbstractBuildPhase.m \
 PBXAbstractTarget.m \
 PBXAggregateTarget.m \

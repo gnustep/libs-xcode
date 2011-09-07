@@ -1,5 +1,7 @@
 #import "PBXCommon.h"
 #import "XCBuildConfiguration.h"
+#import "GSXCBuildContext.h"
+
 #import <stdlib.h>
 
 @implementation XCBuildConfiguration
@@ -28,19 +30,39 @@
 - (void) apply
 {
   NSLog(@"=== Applying Build Configuration %@",name);
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;
+
   while((key = [en nextObject]) != nil)
     {
       id value = [buildSettings objectForKey: key];
-      NSLog(@"\t%@ = %@",key,value);
       if([value isKindOfClass: [NSString class]])
 	{	  
+	  NSLog(@"\t%@ = %@\t\t# Environment",key,value);
 	  setenv([key cString],[value cString],1);
+	}
+      else if([value isKindOfClass: [NSArray class]])
+	{
+	  /*
+	  NSString *string = @"";
+	  NSEnumerator *en = [value objectEnumerator];
+	  id val = nil;
+	  while((val = [en nextObject]) != nil)
+	    {
+	      string = [string stringByAppendingString: val];
+	      string = [string stringByAppendingString: @" "];
+	    }
+	  NSLog(@"\t%@ = %@",key,string);
+	  setenv([key cString],[string cString],1);
+	  */
+	  [context setObject: value
+		      forKey: key];
+	  NSLog(@"\t%@ = %@\t\t# Context",key,value);
 	}
       else
 	{
-	  NSLog(@"\tERROR: Can't set value %@, for key %@, object is not an instance of NSString", value, key);
+	  NSLog(@"\tWARNING: Can't interpret value %@, for environment variable %@", value, key);
 	}
     }
   if([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)

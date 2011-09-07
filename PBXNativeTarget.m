@@ -1,6 +1,8 @@
 #import <stdlib.h>
 #import "PBXCommon.h"
 #import "PBXNativeTarget.h"
+#import "GSXCCommon.h"
+#import "GSXCBuildContext.h"
 
 @implementation PBXNativeTarget
 
@@ -51,38 +53,71 @@
   NSString *fullPath = [buildDir stringByAppendingPathComponent: [productReference path]];
   NSError *error = nil;
 
-  [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
+  [[NSFileManager defaultManager] createDirectoryAtPath:buildDir
 			    withIntermediateDirectories:YES
 					     attributes:nil
 						  error:&error];
+  
 
-  setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
-  setenv("PRODUCT_NAME",[name cString],1);
-  setenv("EXECUTABLE_NAME",[name cString],1);
+  if([productType isEqualToString: FRAMEWORK_TYPE] ||
+     [productType isEqualToString: BUNDLE_TYPE] ||
+     [productType isEqualToString: APPLICATION_TYPE]) 
+    {
+      NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
+
+      // products which need bundles...
+      [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
+				withIntermediateDirectories:YES
+						 attributes:nil
+						      error:&error];
+
+
+      setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
+      setenv("PRODUCT_NAME",[execName cString],1);
+      setenv("EXECUTABLE_NAME",[execName cString],1);
+    }
+  else 
+    {
+      // for non-bundled packages...
+      NSString *fileName = [fullPath lastPathComponent];
+      NSString *path = [fullPath stringByDeletingLastPathComponent];
+      setenv("PRODUCT_OUTPUT_DIR",[path cString],1);
+      setenv("PRODUCT_NAME",[fileName cString],1);
+      setenv("EXECUTABLE_NAME",[fileName cString],1);
+    }
 }
 
 - (BOOL) build
 {
   BOOL result = YES;
   NSEnumerator *en = nil;
-
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  
+  NSLog(@"=== Building Target @%",name);
   [buildConfigurationList applyDefaultConfiguration];
+  [context setObject: productType
+	      forKey: @"PRODUCT_TYPE"];
 
+  NSLog(@"=== Checking Dependencies");  
   id dependency = nil;
   en = [dependencies objectEnumerator];
   while((dependency = [en nextObject]) != nil && result)
     {
       result = [dependency build];
     }
+  NSLog(@"=== Done.");
 
+  NSLog(@"=== Executing build phases...");
   [self _productWrapper];
-
   id phase = nil;
   en = [buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
       result = [phase build];
     }
+  NSLog(@"=== Done...");
+  NSLog(@"=== Completed Executing Target %@", name);
+
   return result;
 }
 

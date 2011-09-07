@@ -4,7 +4,7 @@
 #import "PBXCoder.h"
 #import "XCConfigurationList.h"
 #import "PBXFileReference.h"
-
+#import "GSXCBuildContext.h"
 
 @interface PBXAbstractTarget : NSObject
 {

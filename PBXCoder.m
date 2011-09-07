@@ -44,6 +44,10 @@
       NSLog(@"Unknown class: %@",className);
       return nil;
     }
+  if([className isEqualToString: @"PBXAggregateTarget"])
+    {
+      NSLog(@"Aggregate target...");
+    }
 
   object = [[classInstance alloc] init];
   object = [self applyKeysAndValuesFromDictionary: dict
@@ -103,7 +107,9 @@
   while((key = [en nextObject]) != nil)
     {
       // continue if it's the isa pointer...
-      if([key isEqualToString: @"isa"])
+      if([key isEqualToString: @"isa"] ||
+	 [key isEqualToString: @"remoteGlobalIDString"] ||
+	 [key isEqualToString: @"containerPortal"]) // TODO: this should be moved to a method on the callee.
 	{
 	  continue;
 	}
