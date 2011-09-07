@@ -34,6 +34,7 @@ PBXAbstractBuildPhase.h \
 PBXAbstractTarget.h \
 PBXAggregateTarget.h \
 PBXBuildFile.h \
+PBXBuildRule.h \
 PBXCoder.h \
 PBXCommon.h \
 PBXContainer.h \
@@ -66,6 +67,7 @@ PBXAbstractBuildPhase.m \
 PBXAbstractTarget.m \
 PBXAggregateTarget.m \
 PBXBuildFile.m \
+PBXBuildRule.m \
 PBXCoder.m \
 PBXCommon.m \
 PBXContainerItemProxy.m \
