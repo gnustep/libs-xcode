@@ -59,8 +59,7 @@
 						  error:&error];
   
 
-  if([productType isEqualToString: FRAMEWORK_TYPE] ||
-     [productType isEqualToString: BUNDLE_TYPE] ||
+  if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: APPLICATION_TYPE]) 
     {
       NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
@@ -71,6 +70,28 @@
 						 attributes:nil
 						      error:&error];
 
+
+      setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
+      setenv("PRODUCT_NAME",[execName cString],1);
+      setenv("EXECUTABLE_NAME",[execName cString],1);
+    }
+  else if([productType isEqualToString: FRAMEWORK_TYPE])
+    {
+      NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
+      NSString *frameworkVersion = 
+	[NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+
+      fullPath = [fullPath stringByAppendingPathComponent: @"Versions"];
+      NSString *currentLink = [fullPath stringByAppendingPathComponent: @"Current"];
+      fullPath = [fullPath stringByAppendingPathComponent: frameworkVersion];
+ 
+      [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
+				withIntermediateDirectories:YES
+						 attributes:nil
+						      error:&error];
+
+      [[NSFileManager defaultManager] createSymbolicLinkAtPath: currentLink
+						   pathContent: frameworkVersion];
 
       setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
       setenv("PRODUCT_NAME",[execName cString],1);
@@ -93,7 +114,7 @@
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   
-  NSLog(@"=== Building Target @%",name);
+  NSLog(@"=== Building Target %@",name);
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: productType
 	      forKey: @"PRODUCT_TYPE"];

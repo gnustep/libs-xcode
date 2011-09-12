@@ -146,12 +146,7 @@
 	{
 	  warningCflags = @"";
 	}
-      /*
-      NSString *buildPath = [[[NSString stringWithCString: getenv("PROJECT_ROOT")] 
-			       stringByAppendingPathComponent: 
-				 [NSString stringWithCString: getenv("SOURCE_ROOT")]]
-			      stringByAppendingPathComponent: fileName];
-      */
+
       NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] stringByAppendingPathComponent: [self buildPathFromMainGroupForFile]];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: outputPath] stringByAppendingString: @" "];
@@ -176,7 +171,6 @@
       result = system([buildCommand cString]);
     }
 
-  // setenv("OUTPUT_FILES",[outputFiles cString],1);
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
   return (result != 127);
