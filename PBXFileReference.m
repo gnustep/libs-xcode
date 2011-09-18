@@ -176,7 +176,7 @@
 	{
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: 
 					      [NSString stringWithFormat: @" -I%@ ",
-							derivedSrcHeaderDir]];
+							[derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
 	}
 
       NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 

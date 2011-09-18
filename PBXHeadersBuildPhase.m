@@ -23,7 +23,7 @@
     {
       NSString *path = [[file fileRef] path];
       NSString *srcFile = [[file fileRef] buildPath];
-      NSString *dstFile = [derivedSourceHeaderDir stringByAppendingPathComponent: path];
+      NSString *dstFile = [derivedSourceHeaderDir stringByAppendingPathComponent: [path lastPathComponent]];
       BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						toPath: dstFile
 						 error: &error];
@@ -41,7 +41,7 @@
     {
       NSString *path = [[file fileRef] path];
       NSString *srcFile = [[file fileRef] buildPath];
-      NSString *dstFile = [headerDir stringByAppendingPathComponent: path];
+      NSString *dstFile = [headerDir stringByAppendingPathComponent: [path lastPathComponent]];
       BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						toPath: dstFile
 						 error: &error];
