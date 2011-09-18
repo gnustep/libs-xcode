@@ -20,6 +20,7 @@
   PBXGroup *mainGroup;
   NSString *hasScannedForEncodings;
   PBXGroup *productRefGroup;
+  NSDictionary *attributes;
 }
 
 // Methods....

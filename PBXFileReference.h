@@ -17,6 +17,7 @@
   NSString *name;
   NSString *includeInIndex;
   NSString *comments;
+  NSString *plistStructureDefinitionIdentifier;
 }
 
 // Methods....
@@ -33,5 +34,7 @@
 - (NSString *) name;
 - (void) setName: (NSString *)object;
 
+// Build methods...
+- (NSString *) buildPathFromMainGroupForFile;
 - (BOOL) build;
 @end

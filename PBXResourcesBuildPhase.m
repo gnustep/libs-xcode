@@ -39,10 +39,11 @@
       NSString *filePath = [path stringByAppendingPathComponent: [fileRef path]];
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
-      NSString *command = [NSString stringWithFormat: @"cp -r %@ %@",filePath,destPath];
-      NSLog(@"\t%@",command);
-      int sysresult = system([command cString]);
-      result = (sysresult != 127);
+      NSError *error = nil;
+      NSLog(@"\tCopy %@ -> %@",filePath,destPath);
+      result = [[NSFileManager defaultManager] copyItemAtPath: filePath
+						       toPath: destPath
+							error: &error];
     }
 
   // return, if we failed...

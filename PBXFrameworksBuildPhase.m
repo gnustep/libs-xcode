@@ -261,14 +261,19 @@
   int result = 0;
   NSLog(@"=== Executing Frameworks Build Phase (Framework)");
   [self generateDummyClass];
-  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
-								   @"OUTPUT_FILES"];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *outputFiles = [context objectForKey: 
+				     @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
-  NSString *libraryPath = [outputDir stringByAppendingPathComponent: 
-					 [NSString stringWithFormat: @"lib%@.so.0",
-						   executableName]];
+  NSString *frameworkVersion = [NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+  NSString *libNameWithVersion =  [NSString stringWithFormat: @"lib%@.so.%@",
+					    executableName,frameworkVersion];
+  NSString *libName = [NSString stringWithFormat: @"lib%@.so",executableName];
+
+  NSString *libraryPath = [outputDir stringByAppendingPathComponent: libNameWithVersion];
+  NSString *libraryPathNoVersion = [outputDir stringByAppendingPathComponent: libName];
   NSString *systemLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
 				      stringByAppendingPathComponent: @"Library"] 
 				     stringByAppendingPathComponent: @"Libraries"];
@@ -278,9 +283,11 @@
   NSString *userLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Libraries"];
+  NSString *frameworkRoot = [context objectForKey: @"FRAMEWORK_DIR"];
+  NSString *libraryLink = [frameworkRoot stringByAppendingPathComponent: libName];
+  NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];
 
-
-  NSString *commandTemplate = @"%@ -shared -Wl,-soname,%@.so.0  -rdynamic " 
+  NSString *commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
     @"-shared-libgcc -fexceptions -o %@ %@ "
     @"-L%@ -L/%@ -L%@";     
   NSString *compiler = [NSString stringWithCString: getenv("CC")];
@@ -289,16 +296,33 @@
     {
       compiler = @"gcc";
     }
+
   NSString *command = [NSString stringWithFormat: commandTemplate,
 				compiler,
 				executableName,
+				frameworkVersion,
 				libraryPath,
 				outputFiles,
 				userLibDir,
 				localLibDir,
 				systemLibDir];
 
-  
+  // Create link to library...
+  [[NSFileManager defaultManager] createSymbolicLinkAtPath: outputPath
+					       pathContent: libName];
+
+  [[NSFileManager defaultManager] createSymbolicLinkAtPath: libraryPathNoVersion
+					       pathContent: libNameWithVersion];
+
+  [[NSFileManager defaultManager] createSymbolicLinkAtPath: libraryLink
+					       pathContent: 
+				[NSString stringWithFormat: @"Versions/Current/%@",libName]];
+
+  [[NSFileManager defaultManager] createSymbolicLinkAtPath: execLink
+					       pathContent: 
+				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
+
+
   NSLog(@"\t%@",command);
   result = system([command cString]);
   NSLog(@"=== Frameworks Build Phase Completed");
@@ -324,6 +348,10 @@
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
       return [self buildFramework];
+    }
+  else 
+    {
+      NSLog(@"***** ERROR: Unknown product type: %@",productType);
     }
   return NO;
 }

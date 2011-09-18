@@ -77,21 +77,58 @@
     }
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
+      GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+      NSString *derivedSourceDir = 
+	[[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+	  stringByAppendingPathComponent: @"derived_src"];
       NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
+      NSString *derivedSourceHeaderDir = [derivedSourceDir stringByAppendingPathComponent: execName];
       NSString *frameworkVersion = 
 	[NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+      [context setObject: [NSString stringWithString: fullPath]
+		  forKey: @"FRAMEWORK_DIR"];
 
+      // Above "Versions"
+      NSString *headersLink = [fullPath stringByAppendingPathComponent: @"Headers"];
+      NSString *resourcesLink = [fullPath stringByAppendingPathComponent: @"Resources"];
+      
+      // Below "Versions"
       fullPath = [fullPath stringByAppendingPathComponent: @"Versions"];
       NSString *currentLink = [fullPath stringByAppendingPathComponent: @"Current"];
       fullPath = [fullPath stringByAppendingPathComponent: frameworkVersion];
+      NSString *headerDir = [fullPath stringByAppendingPathComponent: @"Headers"];
+      NSString *resourceDir = [fullPath stringByAppendingPathComponent: @"Resources"];
  
+      // Creater directories...
       [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
 				withIntermediateDirectories:YES
 						 attributes:nil
 						      error:&error];
 
+      [[NSFileManager defaultManager] createDirectoryAtPath:derivedSourceHeaderDir
+				withIntermediateDirectories:YES
+						 attributes:nil
+						      error:&error];
+
+      [[NSFileManager defaultManager] createDirectoryAtPath:headerDir
+				withIntermediateDirectories:YES
+						 attributes:nil
+						      error:&error];
+      // Create links....
       [[NSFileManager defaultManager] createSymbolicLinkAtPath: currentLink
 						   pathContent: frameworkVersion];
+
+      [[NSFileManager defaultManager] createSymbolicLinkAtPath: headersLink
+						   pathContent: @"Versions/Current/Headers"];
+
+      [[NSFileManager defaultManager] createSymbolicLinkAtPath: resourcesLink
+						   pathContent: @"Versions/Current/Resources"];
+
+      // Things to pass on to the next phase...
+      [context setObject: headerDir forKey: @"HEADER_DIR"];
+      [context setObject: resourceDir forKey: @"RESOURCE_DIR"];
+      [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
+      [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCE_DIR"];
 
       setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
       setenv("PRODUCT_NAME",[execName cString],1);

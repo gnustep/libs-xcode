@@ -69,6 +69,16 @@
   ASSIGN(name,object);
 }
 
+- (NSString *) plistStructureDefinitionIdentifier
+{
+  return plistStructureDefinitionIdentifier;
+}
+
+- (void) setPlistStructureDefinitionIdentifier: (NSString *)object
+{
+  ASSIGN(plistStructureDefinitionIdentifier,object);
+}
+
 - (NSString *) resolvePathFor: (id)object 
 		    withGroup: (PBXGroup *)group
 			found: (BOOL *)found
@@ -133,11 +143,14 @@
       NSString *userIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Headers"];
+      NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: getenv("CC")];
       NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
 				      implodeArrayWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
+
+      // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
 	  headerSearchPaths = @"";
@@ -147,9 +160,21 @@
 	  warningCflags = @"";
 	}
 
-      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] stringByAppendingPathComponent: [self buildPathFromMainGroupForFile]];
-      NSString *outputPath = [buildDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
-      outputFiles = [[outputFiles stringByAppendingString: outputPath] stringByAppendingString: @" "];
+      // If we have derived sources, then get the header directory and add it to the search path....
+      if(derivedSrcHeaderDir != nil)
+	{
+	  headerSearchPaths = [headerSearchPaths stringByAppendingString: 
+					      [NSString stringWithFormat: @" -I%@ ",
+							derivedSrcHeaderDir]];
+	}
+
+      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+			      stringByAppendingPathComponent: 
+				[self buildPathFromMainGroupForFile]];
+      NSString *outputPath = [buildDir stringByAppendingPathComponent: 
+				    [fileName stringByAppendingString: @".o"]];
+      outputFiles = [[outputFiles stringByAppendingString: outputPath] 
+		      stringByAppendingString: @" "];
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
 	{
