@@ -29,6 +29,11 @@
   // NSLog(@"%@",settings);
 }
 
+- (NSString *) buildPath
+{
+  return [fileRef buildPath];
+}
+
 - (BOOL) build
 {
   [self applySettings];

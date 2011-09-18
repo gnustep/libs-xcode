@@ -57,7 +57,19 @@
 
 - (BOOL) build
 {
-  NSLog(@"%@",self);
+  NSLog(@"Building %@",self);
+  return YES;
+}
+
+- (BOOL) clean
+{
+  NSLog(@"Cleaning %@",self);
+  return YES;
+}
+
+- (BOOL) install
+{
+  NSLog(@"Installing %@",self);
   return YES;
 }
 

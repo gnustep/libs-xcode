@@ -22,12 +22,16 @@
   while((file = [en nextObject]) != nil && result)
     {
       NSString *path = [[file fileRef] path];
-      NSString *srcFile = [[file fileRef] buildPathFromMainGroupForFile];
+      NSString *srcFile = [[file fileRef] buildPath];
       NSString *dstFile = [derivedSourceHeaderDir stringByAppendingPathComponent: path];
-      result = [defaultManager copyItemAtPath: srcFile
-				       toPath: dstFile
-					error: &error];
+      BOOL copyResult = [defaultManager copyItemAtPath: srcFile
+						toPath: dstFile
+						 error: &error];
       NSLog(@"\tCopy %@ -> %@",srcFile,dstFile);
+      if(!copyResult)
+	{
+	  NSLog(@"\t* Already exists");
+	}
     }
 
   NSLog(@"\t* Copying headers to header folder...");
@@ -36,12 +40,16 @@
   while((file = [en nextObject]) != nil && result)
     {
       NSString *path = [[file fileRef] path];
-      NSString *srcFile = [[file fileRef] buildPathFromMainGroupForFile];
+      NSString *srcFile = [[file fileRef] buildPath];
       NSString *dstFile = [headerDir stringByAppendingPathComponent: path];
-      result = [defaultManager copyItemAtPath: srcFile
-				       toPath: dstFile
-					error: &error];
+      BOOL copyResult = [defaultManager copyItemAtPath: srcFile
+						toPath: dstFile
+						 error: &error];
       NSLog(@"\tCopy %@ -> %@",srcFile,dstFile);      
+      if(!copyResult)
+	{
+	  NSLog(@"\t* Already exists");
+	}
     }
   NSLog(@"=== Completed Headers Build Phase");
 

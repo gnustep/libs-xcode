@@ -66,4 +66,14 @@
 {
   return [rootObject build];
 }
+
+- (BOOL) clean
+{
+  return [rootObject clean];
+}
+
+- (BOOL) install
+{
+  return [rootObject install];
+}
 @end

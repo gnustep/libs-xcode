@@ -30,6 +30,7 @@ XCode_HEADER_FILES = \
 GSXCBuildContext.h \
 GSXCCommon.h \
 NSArray+Additions.h \
+NSString+PBXAdditions.h \
 PBXAbstractBuildPhase.h \
 PBXAbstractTarget.h \
 PBXAggregateTarget.h \
@@ -63,6 +64,7 @@ XCVersionGroup.h
 XCode_OBJC_FILES = \
 GSXCBuildContext.m \
 NSArray+Additions.m \
+NSString+PBXAdditions.m \
 PBXAbstractBuildPhase.m \
 PBXAbstractTarget.m \
 PBXAggregateTarget.m \

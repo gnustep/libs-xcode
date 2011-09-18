@@ -5,6 +5,7 @@
 #import "PBXGroup.h"
 #import "GSXCBuildContext.h"
 #import "NSArray+Additions.h"
+#import "NSString+PBXAdditions.h"
 
 @implementation PBXFileReference
 
@@ -108,7 +109,7 @@
   return result;
 }
 
-- (NSString *) buildPathFromMainGroupForFile
+- (NSString *) buildPath
 {
   PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
   BOOL found = NO;
@@ -126,8 +127,18 @@
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
+  NSError *error = nil;
+
+  if(modified == nil)
+    {
+      modified = @"NO";
+      [context setObject: @"NO"
+		  forKey: @"MODIFIED_FLAG"];
+    }
+
   if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || 
      [lastKnownFileType isEqualToString: @"sourcecode.c.cpp"])
@@ -170,7 +181,7 @@
 
       NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
 			      stringByAppendingPathComponent: 
-				[self buildPathFromMainGroupForFile]];
+				[self buildPath]];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: outputPath] 
@@ -181,23 +192,66 @@
 	  compiler = @"gcc";
 	}
 
-      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ %@ -o %@";
+      NSString *objCflags = @"";
+      if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+	{
+	  objCflags = @"-fgnu-runtime -fconstant-string-class=NSConstantString";
+	}
+    
+
+      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g %@ -I. -I%@ -I%@ -I%@ %@ -o %@";
       
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
-					 buildPath, 
-					 // warningCflags,
+					 [buildPath stringByEscapingSpecialCharacters], 
+					 objCflags,
 					 userIncludeDir,
 					 localIncludeDir, 
 					 systemIncludeDir, 
 					 headerSearchPaths,
-					 outputPath];
-      NSLog(@"\t%@",buildCommand);
-      result = system([buildCommand cString]);
-    }
+					 [outputPath stringByEscapingSpecialCharacters]];
 
-  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+      NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
+											    error: &error];
+      NSDictionary *outputPathAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath: outputPath
+											    error: &error];
+      NSDate *buildPathDate = [buildPathAttributes fileModificationDate];
+      NSDate *outputPathDate = [outputPathAttributes fileModificationDate];
+
+      if(outputPathDate != nil)
+	{
+	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
+	    {	  
+	      NSLog(@"\t** Rebuilding: %@",buildCommand);
+	      result = system([buildCommand cString]);
+	      if([modified isEqualToString: @"NO"])
+		{
+		  modified = @"YES";
+		  [context setObject: @"YES"
+			      forKey: @"MODIFIED_FLAG"];
+		}
+	    }
+	  else
+	    {
+	      NSLog(@"\t** Already built, nothing to be done for %@",buildPath);
+	    }
+	}
+      else
+	{
+	  NSLog(@"\t%@",buildCommand);
+	  result = system([buildCommand cString]);
+	  if([modified isEqualToString: @"NO"])
+	    {
+	      modified = @"YES";
+	      [context setObject: @"YES"
+			  forKey: @"MODIFIED_FLAG"];
+	    }
+	}
+
+      [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+    }
 
   return (result != 127);
 }
+
 @end

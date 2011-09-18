@@ -35,6 +35,6 @@
 - (void) setName: (NSString *)object;
 
 // Build methods...
-- (NSString *) buildPathFromMainGroupForFile;
+- (NSString *) buildPath;
 - (BOOL) build;
 @end

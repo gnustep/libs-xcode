@@ -179,4 +179,58 @@
   return result;
 }
 
+- (BOOL) clean
+{
+  NSLog(@"=== Cleaning Target %@",name);
+  NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
+  NSString *command = [NSString stringWithFormat: @"rm -rf %@",buildDir];
+  int result = system([command cString]);
+  NSLog(@"=== Completed Cleaning Target %@",name);
+
+  return (result != 127);
+}
+
+- (BOOL) install
+{
+  NSLog(@"=== Installing Target %@",name);
+  NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
+  NSString *fullPath = [buildDir stringByAppendingPathComponent: [productReference path]];
+  NSString *installDir = [NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")]; // FIXME: Shouldn't always be local...
+  NSString *fileName = [fullPath lastPathComponent];
+  NSString *execName = [fileName stringByDeletingPathExtension];
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSError *error = nil;
+
+  if([productType isEqualToString: APPLICATION_TYPE])
+    {
+      NSString *installDest = [[installDir stringByAppendingPathComponent: @"Applications"] stringByAppendingPathComponent: fileName]; 
+      [fileManager copyItemAtPath: fullPath
+			   toPath: installDest
+			    error: &error];
+    }
+  else if([productType isEqualToString: FRAMEWORK_TYPE])
+    {
+      NSString *installDest = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Frameworks"]; 
+      NSString *productDir = [installDest stringByAppendingPathComponent: [productReference path]];
+      NSString *headersDir = [installDir stringByAppendingPathComponent: @"Headers"];
+      NSString *libsDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Libraries"];
+      
+      // Copy
+      [fileManager copyItemAtPath: fullPath
+			   toPath: productDir
+			    error: &error];
+
+      // Create links...
+      [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
+				pathContent: [productDir stringByAppendingPathComponent: @"Headers"]];
+      [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
+							  [NSString stringWithFormat: @"lib%@.so",execName]]
+				pathContent: [productDir stringByAppendingPathComponent: 
+							     [NSString stringWithFormat: @"lib%@.so",execName]]];
+    }
+
+  NSLog(@"=== Completed Installing Target %@",name);
+
+  return YES;
+}
 @end

@@ -152,4 +152,46 @@
   NSLog(@"=== Completed Building Project");
   return result;
 }
+
+- (BOOL) clean
+{
+  NSLog(@"=== Cleaning Project");
+  [buildConfigurationList applyDefaultConfiguration];
+
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSEnumerator *en = [targets objectEnumerator];
+  id target = nil;
+  BOOL result = YES;
+  while((target = [en nextObject]) != nil && result)
+    {
+      [context contextDictionaryForName: [target name]];
+      [context setObject: mainGroup 
+		  forKey: @"MAIN_GROUP"]; 
+      result = [target clean];
+      [context popCurrentContext];
+    }
+  NSLog(@"=== Completed Cleaning Project");
+  return result;  
+}
+
+- (BOOL) install
+{
+  NSLog(@"=== Installing Project");
+  [buildConfigurationList applyDefaultConfiguration];
+
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSEnumerator *en = [targets objectEnumerator];
+  id target = nil;
+  BOOL result = YES;
+  while((target = [en nextObject]) != nil && result)
+    {
+      [context contextDictionaryForName: [target name]];
+      [context setObject: mainGroup 
+		  forKey: @"MAIN_GROUP"]; 
+      result = [target install];
+      [context popCurrentContext];
+    }
+  NSLog(@"=== Completed Installing Project");
+  return result;  
+}
 @end

@@ -22,4 +22,7 @@
 - (NSString *) name; // getter
 - (void) setName: (NSString *)object; // setter
 
+// build...
+- (NSString *) buildPath;
+
 @end

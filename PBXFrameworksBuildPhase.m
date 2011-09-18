@@ -4,6 +4,7 @@
 #import "PBXBuildFile.h"
 #import "GSXCBuildContext.h"
 #import "NSArray+Additions.h"
+#import "NSString+PBXAdditions.h"
 #import "GSXCCommon.h"
 
 @implementation PBXFrameworksBuildPhase
@@ -101,11 +102,11 @@
   
   NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 				     compiler,
-				     buildPath,
+				     [buildPath stringByEscapingSpecialCharacters],
 				     userIncludeDir,
 				     localIncludeDir,
 				     systemIncludeDir,
-				     objPath];
+				     [objPath stringByEscapingSpecialCharacters]];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *outputFiles = (of == nil)?@"":of;
@@ -197,12 +198,25 @@
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fexceptions -fgnu-runtime -o %@ %@ %@",
 				compiler, 
-				outputPath,
+				[outputPath stringByEscapingSpecialCharacters],
 				outputFiles,
 				linkString];
 
-  NSLog(@"\t%@",command);
-  int result = system([command cString]);
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  int result = 0;
+  if([modified isEqualToString: @"YES"])
+    {
+      NSLog(@"\t%@",command);
+      result = system([command cString]);
+    }
+  else
+    {
+      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+    }
+
+  // NSLog(@"\t%@",command);
+  // int result = system([command cString]);
 
   NSLog(@"=== Frameworks Build Phase Completed");
   return (result != 127);
@@ -224,12 +238,25 @@
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fexceptions -fgnu-runtime -o %@ %@ %@",
 				compiler, 
-				outputPath,
+				[outputPath stringByEscapingSpecialCharacters],
 				outputFiles,
 				linkString];
 
-  NSLog(@"\t%@",command);
-  int result = system([command cString]);
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  int result = 0;
+  if([modified isEqualToString: @"YES"])
+    {
+      NSLog(@"\t%@",command);
+      result = system([command cString]);
+    }
+  else
+    {
+      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+    }
+
+  // NSLog(@"\t%@",command);
+  // int result = system([command cString]);
 
   NSLog(@"=== Frameworks Build Phase Completed");
   return (result != 127);
@@ -248,9 +275,19 @@
 				outputPath,
 				outputFiles,
 				outputPath];
-  
-  NSLog(@"\t%@",command);
-  int result = system([command cString]);
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  int result = 0;
+  if([modified isEqualToString: @"YES"])
+    {
+      NSLog(@"\t%@",command);
+      result = system([command cString]);
+    }
+  else
+    {
+      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+    }
+
   NSLog(@"=== Frameworks Build Phase Completed");
 
   return (result != 127);
@@ -264,6 +301,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *outputFiles = [context objectForKey: 
 				     @"OUTPUT_FILES"];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
@@ -323,8 +361,16 @@
 				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
 
 
-  NSLog(@"\t%@",command);
-  result = system([command cString]);
+  if([modified isEqualToString: @"YES"])
+    {
+      NSLog(@"\t%@",command);
+      result = system([command cString]);
+    }
+  else
+    {
+      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+    }
+
   NSLog(@"=== Frameworks Build Phase Completed");
   return (result != 127);
 }

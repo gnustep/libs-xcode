@@ -23,4 +23,7 @@
 
 // Build...			  
 - (BOOL) build;
+- (BOOL) clean;
+- (BOOL) install;
+
 @end
