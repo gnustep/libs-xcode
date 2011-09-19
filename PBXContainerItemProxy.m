@@ -46,7 +46,7 @@
 
 - (BOOL) build
 {
-  NSLog(@"%@ -- NOT YET IMPLEMENTED...",self);
+  NSLog(@"%@",[containerPortal path]);
   return YES;
 }
 

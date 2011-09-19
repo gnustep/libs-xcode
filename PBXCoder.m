@@ -108,8 +108,8 @@
     {
       // continue if it's the isa pointer...
       if([key isEqualToString: @"isa"] ||
-	 [key isEqualToString: @"remoteGlobalIDString"] ||
-	 [key isEqualToString: @"containerPortal"]) // TODO: this should be moved to a method on the callee.
+	 [key isEqualToString: @"remoteGlobalIDString"]) // ||
+	 // [key isEqualToString: @"containerPortal"]) // TODO: this should be moved to a method on the callee.
 	{
 	  continue;
 	}

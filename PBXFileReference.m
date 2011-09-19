@@ -141,7 +141,8 @@
 
   if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || 
-     [lastKnownFileType isEqualToString: @"sourcecode.c.cpp"])
+     [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
+     [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];

@@ -24,11 +24,6 @@
   ASSIGN(name,object);
 }
 
-- (BOOL) build
-{
-  return [targetProxy build];
-}
-
 - (PBXNativeTarget *)target
 {
   return target;
@@ -37,5 +32,10 @@
 - (void) setTarget: (PBXNativeTarget *)object
 {
   ASSIGN(target, object);
+}
+
+- (BOOL) build
+{
+  return [targetProxy build];
 }
 @end

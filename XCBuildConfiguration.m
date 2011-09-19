@@ -39,26 +39,14 @@
       id value = [buildSettings objectForKey: key];
       if([value isKindOfClass: [NSString class]])
 	{	  
-	  NSLog(@"\t%@ = %@\t\t# Environment",key,value);
+	  NSLog(@"\tEnvironment: %@ = %@",key,value);
 	  setenv([key cString],[value cString],1);
 	}
       else if([value isKindOfClass: [NSArray class]])
 	{
-	  /*
-	  NSString *string = @"";
-	  NSEnumerator *en = [value objectEnumerator];
-	  id val = nil;
-	  while((val = [en nextObject]) != nil)
-	    {
-	      string = [string stringByAppendingString: val];
-	      string = [string stringByAppendingString: @" "];
-	    }
-	  NSLog(@"\t%@ = %@",key,string);
-	  setenv([key cString],[string cString],1);
-	  */
 	  [context setObject: value
 		      forKey: key];
-	  NSLog(@"\t%@ = %@\t\t# Context",key,value);
+	  NSLog(@"\t    Context: %@ = %@",key,value);
 	}
       else
 	{
@@ -67,12 +55,12 @@
     }
   if([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
     {
-      NSLog(@"\tTARGET_BUILD_DIR = build");
+      NSLog(@"\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
       setenv("TARGET_BUILD_DIR","build",1);
     }
   if([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
     {
-      NSLog(@"\tBUILT_PRODUCTS_DIR = build");
+      NSLog(@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
       setenv("BUILT_PRODUCTS_DIR","build",1);
     }
   NSLog(@"=== Done Applying Build Configuration for %@",name);
