@@ -212,7 +212,7 @@
     {
       NSString *installDest = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Frameworks"]; 
       NSString *productDir = [installDest stringByAppendingPathComponent: [productReference path]];
-      NSString *headersDir = [installDir stringByAppendingPathComponent: @"Headers"];
+      NSString *headersDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Headers"];
       NSString *libsDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Libraries"];
       
       // Copy
@@ -221,12 +221,20 @@
 			    error: &error];
 
       // Create links...
-      [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
-				pathContent: [productDir stringByAppendingPathComponent: @"Headers"]];
-      [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
-							  [NSString stringWithFormat: @"lib%@.so",execName]]
-				pathContent: [productDir stringByAppendingPathComponent: 
-							     [NSString stringWithFormat: @"lib%@.so",execName]]];
+      BOOL flag = [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
+					    pathContent: [productDir stringByAppendingPathComponent: @"Headers"]];
+      if(!flag)
+	{
+	  NSLog(@"Error creating symbolic link...");
+	}
+      flag = [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
+								 [NSString stringWithFormat: @"lib%@.so",execName]]
+				       pathContent: [productDir stringByAppendingPathComponent: 
+								    [NSString stringWithFormat: @"lib%@.so",execName]]];
+      if(!flag)
+	{
+	  NSLog(@"Error creating symbolic link...");
+	}
     }
 
   NSLog(@"=== Completed Installing Target %@",name);

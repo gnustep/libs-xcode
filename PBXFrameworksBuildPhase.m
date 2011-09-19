@@ -375,6 +375,46 @@
   return (result != 127);
 }
 
+- (BOOL) buildBundle
+{
+  NSLog(@"=== Executing Frameworks Build Phase (Bundle)");
+  // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  char *cc = getenv("CC");
+  NSString *compiler = (cc == NULL)?@"gcc":[NSString stringWithCString: cc];
+  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
+								   @"OUTPUT_FILES"];
+  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *linkString = [self linkString];
+
+  NSString *command = [NSString stringWithFormat: 
+				  @"%@ -rdynamic -shared-libgcc -fexceptions -fgnu-runtime -o %@ %@ %@",
+				compiler, 
+				[outputPath stringByEscapingSpecialCharacters],
+				outputFiles,
+				linkString];
+
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  int result = 0;
+  if([modified isEqualToString: @"YES"])
+    {
+      NSLog(@"\t%@",command);
+      result = system([command cString]);
+    }
+  else
+    {
+      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+    }
+
+  // NSLog(@"\t%@",command);
+  // int result = system([command cString]);
+
+  NSLog(@"=== Frameworks Build Phase Completed");
+  return (result != 127);
+}
+
 - (BOOL) build
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -394,6 +434,10 @@
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
       return [self buildFramework];
+    }
+  else if([productType isEqualToString: BUNDLE_TYPE])
+    {
+      return [self buildBundle];
     }
   else 
     {
