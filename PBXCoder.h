@@ -9,6 +9,8 @@
   NSMutableDictionary *objectCache;
 }
 
+- (id) initWithProjectFile: (NSString *)name;
+
 - (id) initWithContentsOfFile: (NSString *)name;
 
 - (id) unarchive;

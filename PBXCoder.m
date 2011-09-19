@@ -18,6 +18,12 @@
   return self;
 }
 
+- (id) initWithProjectFile: (NSString *)name
+{
+  NSString *newName = [name stringByAppendingPathComponent: @"project.pbxproj"];
+  return [self initWithContentsOfFile: newName];
+}
+
 - (void) dealloc
 {
   RELEASE(objectCache);

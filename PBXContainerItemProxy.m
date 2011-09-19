@@ -46,8 +46,10 @@
 
 - (BOOL) build
 {
-  NSLog(@"%@",[containerPortal path]);
-  return YES;
+  NSLog(@"Reading %@",[containerPortal path]);
+  PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
+  PBXContainer *container = [coder unarchive];
+  return [container build];
 }
 
 @end
