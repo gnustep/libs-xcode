@@ -64,7 +64,7 @@
   [shellScript writeToFile: fileName atomically: YES encoding: NSASCIIStringEncoding error: &error];
   int result = system([shellScript cString]);
   NSString *deleteCommand = [NSString stringWithFormat: @"rm %@",fileName];
-  system([deleteCommand cString]);
+  // system([deleteCommand cString]);
   NSLog(@"=== Done Executing Script Build Phase... %@",name);
   return (result != 127);
 }

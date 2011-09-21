@@ -24,4 +24,8 @@
 - (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
                                toObject: (id)object;
 
+- (NSString *) projectRoot;
+
+- (void) changeToProjectRoot;
+
 @end

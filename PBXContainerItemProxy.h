@@ -9,7 +9,7 @@
 {
   NSString *proxyType;
   NSString *remoteGlobalIDString;
-  PBXFileReference *containerPortal;
+  id containerPortal;
   NSString *remoteInfo;
 }
 
@@ -18,8 +18,8 @@
 - (void) setProxyType: (NSString *)object; // setter
 - (NSString *) remoteGlobalIDString; // getter
 - (void) setRemoteGlobalIDString: (NSString *)object; // setter
-- (PBXFileReference *) containerPortal; // getter
-- (void) setContainerPortal: (PBXFileReference *)object; // setter
+- (id) containerPortal; // getter
+- (void) setContainerPortal: (id)object; // setter
 - (NSString *) remoteInfo; // getter
 - (void) setRemoteInfo: (NSString *)object; // setter
 

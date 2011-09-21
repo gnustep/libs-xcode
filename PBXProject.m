@@ -116,6 +116,16 @@
   ASSIGN(productRefGroup,object);
 }
 
+- (PBXContainer *) container
+{
+  return container;
+}
+
+- (void) setContainer: (PBXContainer *)object
+{
+  container = object; // container retains us, do not retain it...
+}
+
 - (void) _sourceRootFromMainGroup
 {
   PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; // get first group, which is the source group.
@@ -146,6 +156,8 @@
       [context contextDictionaryForName: [target name]];
       [context setObject: mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
+      [context setObject: container
+		  forKey: @"CONTAINER"];
       result = [target build];
       [context popCurrentContext];
     }

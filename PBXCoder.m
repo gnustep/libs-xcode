@@ -1,6 +1,8 @@
 #import "PBXCoder.h"
 #import "PBXContainer.h"
+
 #import <stdlib.h>
+#import <unistd.h>
 
 @implementation PBXCoder
 
@@ -13,7 +15,7 @@
       ASSIGN(projectRoot, [[fileName stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]);
       ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
-      setenv("PROJECT_ROOT",[projectRoot cString],1);      
+      setenv("PROJECT_ROOT","",1);      
     }
   return self;
 }
@@ -113,9 +115,7 @@
   while((key = [en nextObject]) != nil)
     {
       // continue if it's the isa pointer...
-      if([key isEqualToString: @"isa"] ||
-	 [key isEqualToString: @"remoteGlobalIDString"]) // ||
-	 // [key isEqualToString: @"containerPortal"]) // TODO: this should be moved to a method on the callee.
+      if([key isEqualToString: @"isa"])
 	{
 	  continue;
 	}
@@ -132,10 +132,14 @@
 		}
 	      
 	      // search the global dictionary...
-	      id newValue = [self unarchiveObjectForKey: value];  
-	      if(newValue != nil)
+	      if([key isEqualToString: @"containerPortal"] == NO &&
+		 [key isEqualToString: @"remoteGlobalIDString"] == NO) // FIXME: Find a more generalized way to do lazy instantiation...
 		{
-		  value = newValue;
+		  id newValue = [self unarchiveObjectForKey: value];  
+		  if(newValue != nil)
+		    {
+		      value = newValue;
+		    }
 		}
 	      
 	      if(value != nil)
@@ -163,4 +167,13 @@
   return object;
 }
 
+- (NSString *) projectRoot
+{
+  return projectRoot;
+}
+
+- (void) changeToProjectRoot
+{
+  chdir([projectRoot cString]);
+}
 @end

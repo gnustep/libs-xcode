@@ -6,6 +6,7 @@
 #import "PBXGroup.h"
 #import "PBXGroup.h"
 
+@class PBXContainer;
 
 @interface PBXProject : NSObject
 {
@@ -20,6 +21,7 @@
   PBXGroup *mainGroup;
   NSString *hasScannedForEncodings;
   PBXGroup *productRefGroup;
+  PBXContainer *container;
   NSDictionary *attributes;
 }
 
@@ -46,6 +48,8 @@
 - (void) setHasScannedForEncodings: (NSString *)object; // setter
 - (PBXGroup *) productRefGroup; // getter
 - (void) setProductRefGroup: (PBXGroup *)object; // setter
+- (PBXContainer *) container;
+- (void) setContainer: (PBXContainer *)container;
 
 // build
 - (BOOL) build;

@@ -1,5 +1,6 @@
 #import "PBXContainer.h"
 #import "PBXCommon.h"
+#import "PBXProject.h"
 
 @implementation PBXContainer
 
@@ -64,6 +65,7 @@
 
 - (BOOL) build
 {
+  [rootObject setContainer: self];
   return [rootObject build];
 }
 

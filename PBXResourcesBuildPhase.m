@@ -54,15 +54,15 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int sysresult = 0;
-  if([modified isEqualToString: @"YES"])
+  // if([modified isEqualToString: @"YES"])
     {
       NSLog(@"\t%@",awkCommand);
       sysresult = system([awkCommand cString]);
       result = (sysresult != 127);
     }
-  else
+  // else
     {
-      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPlist);
+  //    NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPlist);
     }
 
   NSLog(@"=== Resources Build Phase Completed");

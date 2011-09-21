@@ -2,6 +2,7 @@
 #import "PBXContainerItemProxy.h"
 #import "PBXCoder.h"
 #import "PBXContainer.h"
+#import "GSXCBuildContext.h"
 
 @implementation PBXContainerItemProxy
 
@@ -26,12 +27,12 @@
   ASSIGN(remoteGlobalIDString,object);
 }
 
-- (PBXFileReference *) containerPortal // getter
+- (id) containerPortal // getter
 {
   return containerPortal;
 }
 
-- (void) setContainerPortal: (PBXFileReference *)object; // setter
+- (void) setContainerPortal: (id)object; // setter
 {
   ASSIGN(containerPortal,object);
 }
@@ -48,6 +49,9 @@
 
 - (BOOL) build
 {
+  PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
+  containerPortal = [[currentContainer objects] objectForKey: containerPortal];
+
   NSLog(@"Reading %@",[containerPortal path]);
   PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
   PBXContainer *container = [coder unarchive];
