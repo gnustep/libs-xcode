@@ -6,6 +6,16 @@
 
 @implementation PBXNativeTarget
 
+- (void) dealloc
+{
+  [productReference release];
+  [productInstallPath release];
+  [productType release];
+  [buildRules release];
+  [comments release];
+  [super dealloc];
+}
+
 // Methods....
 - (PBXFileReference *) productReference // getter
 {
@@ -50,7 +60,8 @@
 - (void) _productWrapper
 {
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  NSString *fullPath = [buildDir stringByAppendingPathComponent: [productReference path]];
+  NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"UninstalledProducts"] 
+			 stringByAppendingPathComponent: [productReference path]];
   NSError *error = nil;
 
   [[NSFileManager defaultManager] createDirectoryAtPath:buildDir

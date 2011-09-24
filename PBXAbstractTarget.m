@@ -4,6 +4,16 @@
 
 @implementation PBXAbstractTarget
 
+- (void) dealloc
+{
+  [dependencies release];
+  [buildConfigurationList release];
+  [productName release];
+  [buildPhases release];
+  [name release];
+  [super dealloc];
+}
+
 // Methods....
 - (NSMutableArray *) dependencies // getter
 {
