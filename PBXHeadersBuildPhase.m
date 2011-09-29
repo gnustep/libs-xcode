@@ -13,9 +13,10 @@
   NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: TOOL_TYPE] ||
-     [productType isEqualToString: APPLICATION_TYPE])
+     [productType isEqualToString: APPLICATION_TYPE]) // ||
+   //[productType isEqualToString: LIBRARY_TYPE])
     {
-      NSLog(@"\tNo need to process headers for product type %@",productType);
+      NSLog(@"\t** WARN: No need to process headers for product type %@",productType);
       return YES;
     }
 
@@ -43,23 +44,28 @@
 	}
     }
 
-  NSLog(@"\t* Copying headers to header folder...");
-  en = [files objectEnumerator];
-  NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
-  while((file = [en nextObject]) != nil && result)
+  // Only copy into the framework header folder, if it's a framework...
+  if([productType isEqualToString: FRAMEWORK_TYPE])
     {
-      NSString *path = [[file fileRef] path];
-      NSString *srcFile = [[file fileRef] buildPath];
-      NSString *dstFile = [headerDir stringByAppendingPathComponent: [path lastPathComponent]];
-      BOOL copyResult = [defaultManager copyItemAtPath: srcFile
-						toPath: dstFile
-						 error: &error];
-      NSLog(@"\tCopy %@ -> %@",srcFile,dstFile);      
-      if(!copyResult)
+      NSLog(@"\t* Copying headers to framework header folder...");
+      en = [files objectEnumerator];
+      NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
+      while((file = [en nextObject]) != nil && result)
 	{
-	  NSLog(@"\t* Already exists");
+	  NSString *path = [[file fileRef] path];
+	  NSString *srcFile = [[file fileRef] buildPath];
+	  NSString *dstFile = [headerDir stringByAppendingPathComponent: [path lastPathComponent]];
+	  BOOL copyResult = [defaultManager copyItemAtPath: srcFile
+						    toPath: dstFile
+						     error: &error];
+	  NSLog(@"\tCopy %@ -> %@",srcFile,dstFile);      
+	  if(!copyResult)
+	    {
+	      NSLog(@"\t* Already exists");
+	    }
 	}
     }
+
   NSLog(@"=== Completed Headers Build Phase");
 
   return result;

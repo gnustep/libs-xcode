@@ -175,9 +175,12 @@
       // If we have derived sources, then get the header directory and add it to the search path....
       if(derivedSrcHeaderDir != nil)
 	{
-	  headerSearchPaths = [headerSearchPaths stringByAppendingString: 
-					      [NSString stringWithFormat: @" -I%@ ",
-							[derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
+	  if([[derivedSrcHeaderDir pathComponents] count] > 1)
+	    {
+	      headerSearchPaths = [headerSearchPaths stringByAppendingString: 
+						  [NSString stringWithFormat: @" -I%@ ",
+							    [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
+	    }
 	}
 
       NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
