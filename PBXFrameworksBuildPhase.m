@@ -98,7 +98,7 @@
       compiler = @"gcc";
     }
   
-  NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -fno-strict-aliasing -fexceptions -fobjc-exceptions -D_NATIVE_OBJC_EXCEPTIONS -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ -o %@";
+  NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -fno-strict-aliasing -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ -o %@";
   
   NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 				     compiler,
@@ -196,7 +196,7 @@
   NSString *linkString = [self linkString];
 
   NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -fexceptions -fgnu-runtime -o %@ %@ %@",
+				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
 				compiler, 
 				[outputPath stringByEscapingSpecialCharacters],
 				outputFiles,
@@ -236,7 +236,7 @@
   NSString *linkString = [self linkString];
 
   NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -fexceptions -fgnu-runtime -o %@ %@ %@",
+				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
 				compiler, 
 				[outputPath stringByEscapingSpecialCharacters],
 				outputFiles,
@@ -326,7 +326,7 @@
   NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];
 
   NSString *commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
-    @"-shared-libgcc -fexceptions -o %@ %@ "
+    @"-shared-libgcc -o %@ %@ "
     @"-L%@ -L/%@ -L%@";     
   NSString *compiler = [NSString stringWithCString: getenv("CC")];
   if([compiler isEqualToString: @""] ||
@@ -389,7 +389,7 @@
   NSString *linkString = [self linkString];
 
   NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -fexceptions -fgnu-runtime -o %@ %@ %@",
+				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
 				compiler, 
 				[outputPath stringByEscapingSpecialCharacters],
 				outputFiles,
