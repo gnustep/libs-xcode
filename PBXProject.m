@@ -2,6 +2,7 @@
 #import "PBXProject.h"
 #import "PBXNativeTarget.h"
 #import "GSXCBuildContext.h"
+#import <unistd.h>
 
 @implementation PBXProject
 
@@ -153,11 +154,14 @@
   BOOL result = YES;
   while((target = [en nextObject]) != nil && result)
     {
+      NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
       [context contextDictionaryForName: [target name]];
       [context setObject: mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
       [context setObject: container
 		  forKey: @"CONTAINER"];
+      [context setObject: currentDirectory
+		  forKey: @"PROJECT_ROOT"];
       result = [target build];
       [context popCurrentContext];
     }

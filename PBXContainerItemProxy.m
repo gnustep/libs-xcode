@@ -54,6 +54,7 @@
 
   NSLog(@"Reading %@",[containerPortal path]);
   PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
+  [coder changeToProjectRoot];
   PBXContainer *container = [coder unarchive];
   return [container build];
 }

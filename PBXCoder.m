@@ -15,7 +15,8 @@
       ASSIGN(projectRoot, [[fileName stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]);
       ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
-      setenv("PROJECT_ROOT","",1);      
+      // NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
+      // setenv("PROJECT_ROOT","",1);      
     }
   return self;
 }
@@ -174,6 +175,7 @@
 
 - (void) changeToProjectRoot
 {
+  NSLog(@"************************************* Changing to Project Root: %@",projectRoot);
   chdir([projectRoot cString]);
 }
 @end

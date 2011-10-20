@@ -1,4 +1,5 @@
 #import "GSXCBuildContext.h"
+#import <unistd.h>
 
 id _sharedBuildContext = nil;
 
@@ -52,6 +53,9 @@ id _sharedBuildContext = nil;
   NSMutableDictionary *popped = [stack lastObject];
   [stack removeLastObject];
   currentContext = [stack lastObject];
+  NSString *dir = [self objectForKey: @"PROJECT_ROOT"];
+  chdir([dir cString]);
+  NSLog(@"************************************ Changing back to %@",dir);
   return popped;
 }
 
