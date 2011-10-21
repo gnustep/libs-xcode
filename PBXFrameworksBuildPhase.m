@@ -24,6 +24,7 @@
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
   NSString *objDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
   NSError *error = nil;
+  /*
   NSString *systemIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
 				      stringByAppendingPathComponent: @"Library"] 
 				     stringByAppendingPathComponent: @"Headers"];
@@ -32,7 +33,8 @@
 				    stringByAppendingPathComponent: @"Headers"];
   NSString *userIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
 				    stringByAppendingPathComponent: @"Library"] 
-				   stringByAppendingPathComponent: @"Headers"];
+ 				   stringByAppendingPathComponent: @"Headers"];
+  */
 
   // Create the derived source directory...
   [[NSFileManager defaultManager] createDirectoryAtPath:outputDir
@@ -97,17 +99,14 @@
     {
       compiler = @"gcc";
     }
-  
-  NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -fno-strict-aliasing -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g -fgnu-runtime -fconstant-string-class=NSConstantString -I. -I%@ -I%@ -I%@ -o %@";
-  
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
+  NSString *buildTemplate = @"%@ %@ -c %@ -o %@";
   NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 				     compiler,
 				     [buildPath stringByEscapingSpecialCharacters],
-				     userIncludeDir,
-				     localIncludeDir,
-				     systemIncludeDir,
+				     configString,
 				     [objPath stringByEscapingSpecialCharacters]];
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *outputFiles = (of == nil)?@"":of;
   outputFiles = [[outputFiles stringByAppendingString: objPath] 
@@ -225,15 +224,16 @@
 - (BOOL) buildApp
 {
   NSLog(@"=== Executing Frameworks Build Phase (Application)");
-  // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
   NSString *compiler = (cc == NULL)?@"gcc":[NSString stringWithCString: cc];
-  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
-								   @"OUTPUT_FILES"];
+  NSString *outputFiles = [context objectForKey: 
+				     @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
+  // NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
@@ -242,7 +242,6 @@
 				outputFiles,
 				linkString];
 
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])

@@ -50,13 +50,22 @@
 - (BOOL) build
 {
   PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
+  NSString *currentDir = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PROJECT_ROOT"];
   containerPortal = [[currentContainer objects] objectForKey: containerPortal];
 
-  NSLog(@"Reading %@",[containerPortal path]);
-  PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
-  [coder changeToProjectRoot];
-  PBXContainer *container = [coder unarchive];
-  return [container build];
+  if([containerPortal isKindOfClass: [PBXFileReference class]])
+    {
+      NSLog(@"Reading %@",[containerPortal path]);
+      PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
+      [coder changeToProjectRoot];
+      PBXContainer *container = [coder unarchive];
+      BOOL result = [container build];
+      return result;
+    }
+  else
+    {
+      NSLog(@"***** Item Proxy is project = %@",containerPortal);
+    }
 }
 
 @end

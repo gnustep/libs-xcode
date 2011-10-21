@@ -146,6 +146,7 @@
     {
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+      /*
       NSString *systemIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
 				      stringByAppendingPathComponent: @"Library"] 
 				     stringByAppendingPathComponent: @"Headers"];
@@ -155,6 +156,7 @@
       NSString *userIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Headers"];
+      */
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: getenv("CC")];
       NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
@@ -202,16 +204,14 @@
 	  objCflags = @"-fgnu-runtime -fconstant-string-class=NSConstantString";
 	}
     
-
-      NSString *buildTemplate = @"%@ %@ -c -MMD -MP -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_GUI_LIBRARY=1 -DGNU_RUNTIME=1 -DGNUSTEP_BASE_LIBRARY=1 -fno-strict-aliasing -fPIC -DDEBUG -fno-omit-frame-pointer -Wall -DGSWARN -DGSDIAGNOSE -Wno-import -g %@ -I. -I%@ -I%@ -I%@ %@ -o %@";
+      NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
+      NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
       
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
 					 [buildPath stringByEscapingSpecialCharacters], 
 					 objCflags,
-					 userIncludeDir,
-					 localIncludeDir, 
-					 systemIncludeDir, 
+					 configString,
 					 headerSearchPaths,
 					 [outputPath stringByEscapingSpecialCharacters]];
 

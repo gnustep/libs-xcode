@@ -129,7 +129,8 @@
 
 - (void) _sourceRootFromMainGroup
 {
-  PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; // get first group, which is the source group.
+  PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; 
+  // get first group, which is the source group.
   NSString *sourceRoot = [sourceGroup path];
   
   if(sourceRoot == nil)
@@ -141,11 +142,48 @@
   NSLog(@"\tSOURCE_ROOT = %@",sourceRoot);
 }
 
+- (NSString *) buildString
+{
+  FILE *fp;
+  int status;
+  char string[1035];
+  NSString *output = @"";
+
+  /* Open the command for reading. */
+  fp = popen("gnustep-config --objc-flags", "r");
+  if (fp == NULL) {
+    NSLog(@"*** Failed to run command\n" );
+    return nil;
+  }
+
+  /* Read the output a line at a time - output it. */
+  while (fgets(string, sizeof(string)-1, fp) != NULL) {
+    int len = strlen(string);
+    int i = 0;
+    for(i = 0; i < len; i++)
+      {
+	if(string[i] == '\n')
+	  {
+	    string[i] = ' ';
+	  }
+      }
+    output = [output stringByAppendingString: 
+		       [NSString stringWithCString: string]];
+  }
+  
+  // Context...
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  [context setObject: output
+	      forKey: @"CONFIG_STRING"];
+
+  /* close */
+  pclose(fp);
+}
+
 - (BOOL) build
 {
   NSLog(@"=== Building Project");
   [buildConfigurationList applyDefaultConfiguration];
-
   [self _sourceRootFromMainGroup];
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -156,6 +194,7 @@
     {
       NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
       [context contextDictionaryForName: [target name]];
+      [self buildString];
       [context setObject: mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
       [context setObject: container
