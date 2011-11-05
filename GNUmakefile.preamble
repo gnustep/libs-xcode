@@ -23,3 +23,7 @@ ADDITIONAL_LIB_DIRS +=
 # Additional TOOL libraries to link
 ADDITIONAL_TOOL_LIBS += 
 
+ifeq ($(GNUSTEP_TARGET_OS),mingw32)
+XCode_C_FILES = setenv.c
+endif
+
