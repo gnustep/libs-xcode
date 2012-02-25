@@ -60,7 +60,7 @@
       if(file == self) // have we found ourselves??
 	{
 	  PBXFileReference *fileRef = [[file children] objectAtIndex: 0]; // FIXME: Assume english for now...
-	  NSString *filePath = ([fileRef path] == nil)?@"":[fileRef path];
+	  NSString *filePath = ([fileRef path] == nil)?@"":[[fileRef path] lastPathComponent];
 	  result = filePath;
 	  *found = YES;
 	  break;
@@ -68,10 +68,10 @@
       else if([file isKindOfClass: [PBXGroup class]])
 	{
 	  NSString *filePath = ([file path] == nil)?@"":[file path]; // lastPathComponent];
-	  result = // [filePath stringByAppendingPathComponent: 
+	  result = [filePath stringByAppendingPathComponent: 
 				      [self resolvePathFor: object 
 						 withGroup: file
-						     found: found];  //];
+						     found: found]];
 	}
     }
   return result;
