@@ -1,3 +1,8 @@
+2012-02-25 11:36-EST Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXResourcesBuildPhase.m: Fix issues with copying of resources
+	which are localized.
+
 2012-02-25 10:29-EST Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXVariantGroup.m: More fixes for appending resource names.
