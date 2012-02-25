@@ -1,0 +1,6 @@
+2012-02-25 00:53-EST Gregory John Casamento <greg.casamento@gmail.com>
+
+	* ChangeLog: Add ChangeLog.
+	* PBXVariantGroup.m: Fix issue with appending resource
+	names.
+

@@ -67,11 +67,11 @@
 	}
       else if([file isKindOfClass: [PBXGroup class]])
 	{
-	  NSString *filePath = ([file path] == nil)?@"":[file path];
-	  result = [filePath stringByAppendingPathComponent: 
+	  NSString *filePath = ([file path] == nil)?@"":[file path]; // lastPathComponent];
+	  result = // [filePath stringByAppendingPathComponent: 
 				      [self resolvePathFor: object 
 						 withGroup: file
-						     found: found]];
+						     found: found];  //];
 	}
     }
   return result;
