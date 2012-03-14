@@ -24,17 +24,6 @@
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
   NSString *objDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
   NSError *error = nil;
-  /*
-  NSString *systemIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
-				      stringByAppendingPathComponent: @"Library"] 
-				     stringByAppendingPathComponent: @"Headers"];
-  NSString *localIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")] 
-				     stringByAppendingPathComponent: @"Library"] 
-				    stringByAppendingPathComponent: @"Headers"];
-  NSString *userIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
-				    stringByAppendingPathComponent: @"Library"] 
- 				   stringByAppendingPathComponent: @"Headers"];
-  */
 
   // Create the derived source directory...
   [[NSFileManager defaultManager] createDirectoryAtPath:outputDir

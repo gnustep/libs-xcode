@@ -1,2 +1,2 @@
-The XCode library is used to parse and process xcodeproj files so that 
+The XCLib framework is used to parse and process xcodeproj files so that 
 they can be built by a tool or an IDE using this framework.

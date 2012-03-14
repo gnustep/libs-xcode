@@ -1,3 +1,8 @@
+2012-03-14 18:25-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXFrameworksBuildPhase.m: Remove commented out code..
+	* README: Update readme to reflect new name.
+
 2012-02-25 11:36-EST Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXResourcesBuildPhase.m: Fix issues with copying of resources
