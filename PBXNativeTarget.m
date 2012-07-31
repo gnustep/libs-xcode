@@ -232,7 +232,7 @@
   NSLog(@"Cleaning build directory");
   int result = system([command cString]);
 
-  if(result != 127)
+  if(result == 0)
     {
       if([[NSFileManager defaultManager] fileExistsAtPath: @"derived_src"])
 	{
@@ -243,7 +243,7 @@
     }
   
   NSLog(@"=== Completed Cleaning Target %@",name);
-  return (result != 127);
+  return (result == 0);
 }
 
 - (BOOL) install

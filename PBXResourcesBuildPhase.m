@@ -75,7 +75,7 @@
     {
       NSLog(@"\t%@",awkCommand);
       sysresult = system([awkCommand cString]);
-      result = (sysresult != 127);
+      result = (sysresult == 0);
     }
   // else
     {

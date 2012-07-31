@@ -255,7 +255,7 @@
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
     }
 
-  return (result != 127);
+  return (result == 0);
 }
 
 @end

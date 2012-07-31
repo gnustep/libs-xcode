@@ -207,7 +207,7 @@
   // int result = system([command cString]);
 
   NSLog(@"=== Frameworks Build Phase Completed");
-  return (result != 127);
+  return (result == 0);
 }
 
 - (BOOL) buildApp
@@ -247,7 +247,7 @@
   // int result = system([command cString]);
 
   NSLog(@"=== Frameworks Build Phase Completed");
-  return (result != 127);
+  return (result == 0);
 }
 
 - (BOOL) buildStaticLib
@@ -278,7 +278,7 @@
 
   NSLog(@"=== Frameworks Build Phase Completed");
 
-  return (result != 127);
+  return (result == 0);
 }
 
 - (BOOL) buildFramework
@@ -360,7 +360,7 @@
     }
 
   NSLog(@"=== Frameworks Build Phase Completed");
-  return (result != 127);
+  return (result == 0);
 }
 
 - (BOOL) buildBundle
@@ -400,7 +400,7 @@
   // int result = system([command cString]);
 
   NSLog(@"=== Frameworks Build Phase Completed");
-  return (result != 127);
+  return (result == 0);
 }
 
 - (BOOL) build

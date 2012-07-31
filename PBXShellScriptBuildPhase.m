@@ -66,6 +66,6 @@
   NSString *deleteCommand = [NSString stringWithFormat: @"rm %@",fileName];
   // system([deleteCommand cString]);
   NSLog(@"=== Done Executing Script Build Phase... %@",name);
-  return (result != 127);
+  return (result == 0);
 }
 @end
