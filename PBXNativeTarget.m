@@ -267,32 +267,58 @@
     }
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
+      /*
+      NSString *frameworkVersion = 
+	[NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+      */
       NSString *installDest = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Frameworks"]; 
       NSString *productDir = [installDest stringByAppendingPathComponent: [productReference path]];
       NSString *headersDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Headers"];
       NSString *libsDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Libraries"];
-      
+      NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [productReference path]] stringByAppendingPathComponent:@"Versions"] stringByAppendingPathComponent:@"Current"];
+      NSString *headersLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [productReference path]] stringByAppendingPathComponent:@"Versions"] stringByAppendingPathComponent:@"Current"];
+
       // Copy
+      [fileManager removeItemAtPath: productDir error:NULL];
       [fileManager copyItemAtPath: fullPath
 			   toPath: productDir
 			    error: &error];
 
       // Create links...
+      [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: execName]
+			      error:NULL];
       BOOL flag = [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
-					    pathContent: [productDir stringByAppendingPathComponent: @"Headers"]];
+					    pathContent: [headersLinkDir stringByAppendingPathComponent: @"Headers"]];
       if(!flag)
 	{
 	  NSLog(@"Error creating symbolic link...");
 	}
 
+      [fileManager removeItemAtPath: [libsDir stringByAppendingPathComponent: 
+								 [NSString stringWithFormat: @"lib%@.so",execName]]
+			      error:NULL];
       flag = [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
 								 [NSString stringWithFormat: @"lib%@.so",execName]]
-				       pathContent: [productDir stringByAppendingPathComponent: 
+				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
 								    [NSString stringWithFormat: @"lib%@.so",execName]]];
       if(!flag)
 	{
 	  NSLog(@"Error creating symbolic link...");
 	}
+
+      /*
+      [fileManager removeItemAtPath: [libsDir stringByAppendingPathComponent: 
+						  [NSString stringWithFormat: @"lib%@.so.%@",execName,frameworkVersion]]
+			      error:NULL];
+      flag = [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
+								 [NSString stringWithFormat: @"lib%@.so.%@",execName,frameworkVersion]]
+				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
+									  [NSString stringWithFormat: @"lib%@.so",execName]]];
+      if(!flag)
+	{
+	  NSLog(@"Error creating symbolic link...");
+	}
+      */
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
     {

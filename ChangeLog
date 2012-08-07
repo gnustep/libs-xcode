@@ -1,3 +1,7 @@
+2012-08-07 00:09-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXNativeTarget.m: Generate the links with a relative path.
+
 2012-03-14 18:25-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFrameworksBuildPhase.m: Remove commented out code..
