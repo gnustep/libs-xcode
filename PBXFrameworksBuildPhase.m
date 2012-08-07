@@ -117,12 +117,16 @@
   NSString *userLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Libraries"];
+  NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"UninstalledProducts"];
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   NSString *linkString = [NSString stringWithFormat: @"-L%@ -L%@ -L%@ ",
 				   userLibDir,
 				   localLibDir,
 				   systemLibDir];;
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSDirectoryEnumerator *dirEnumerator = [manager enumeratorAtPath:uninstalledProductsDir];
 
   while((file = [en nextObject]) != nil)
     {
@@ -162,6 +166,18 @@
 	  linkString = [linkString stringByAppendingString: 
 				[NSString stringWithFormat: @"-l%@ ",
 					  name]];
+	}
+    }
+
+  // Find any frameworks and add them to the -L directive...
+  while((file = [dirEnumerator nextObject]) != nil)
+    {
+      NSString *ext = [file pathExtension];
+      if([ext isEqualToString:@"framework"])
+	{
+	  NSString *headerDir = [file stringByAppendingPathComponent:@"Headers"];
+	  linkString = [linkString stringByAppendingString:[NSString stringWithFormat:@"-I%@ ",[uninstalledProductsDir stringByAppendingPathComponent:headerDir]]];
+	  linkString = [linkString stringByAppendingString:[NSString stringWithFormat:@"-L%@ ",[uninstalledProductsDir stringByAppendingPathComponent:file]]];
 	}
     }
 

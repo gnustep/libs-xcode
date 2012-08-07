@@ -1,3 +1,9 @@
+2012-08-07 01:13-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXFrameworksBuildPhase.m: Automatically add link directives -I
+	and -L for frameworks present in the UninstalledProducts directory.
+	This allows for linking of dependencies prior to installation.
+
 2012-08-07 00:09-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXNativeTarget.m: Generate the links with a relative path.
