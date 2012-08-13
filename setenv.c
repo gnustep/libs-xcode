@@ -8,7 +8,7 @@ int setenv(const char *key, const char *value, int overwrite)
   if(overwrite && current)
     {
       int key_len = strlen(key);
-      int val_len = sttlen(value);
+      int val_len = strlen(value);
       int len = key_len + 1 + val_len + 1; // key + "=" + value + '\0'
       char *buffer = malloc(len);
       bzero(buffer, len);
