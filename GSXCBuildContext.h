@@ -13,5 +13,5 @@
 - (NSMutableDictionary *) popCurrentContext;
 - (void) setObject: (id)object forKey: (id)key;
 - (id) objectForKey: (id)key;
-
+- (void) addEntriesFromDictionary: (NSDictionary *)dict;
 @end

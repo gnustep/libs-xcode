@@ -157,6 +157,7 @@
 				    stringByAppendingPathComponent: @"Library"] 
 				   stringByAppendingPathComponent: @"Headers"];
       */
+      NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: getenv("CC")];
       NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
@@ -183,6 +184,12 @@
 						  [NSString stringWithFormat: @" -I%@ ",
 							    [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
 	    }
+	}
+
+      // If we have additional header dirs specified... then add them.
+      if(additionalHeaderDirs != nil)
+	{
+	  headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
 	}
 
       NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 

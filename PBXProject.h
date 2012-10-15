@@ -23,6 +23,7 @@
   PBXGroup *productRefGroup;
   PBXContainer *container;
   NSDictionary *attributes;
+  NSDictionary *ctx;
 }
 
 // Methods....
@@ -50,6 +51,7 @@
 - (void) setProductRefGroup: (PBXGroup *)object; // setter
 - (PBXContainer *) container;
 - (void) setContainer: (PBXContainer *)container;
+- (void) setContext: (NSDictionary *)ctx;
 
 // build
 - (BOOL) build;

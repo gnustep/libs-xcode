@@ -127,6 +127,11 @@
   container = object; // container retains us, do not retain it...
 }
 
+- (void) setContext: (NSDictionary *)context
+{
+  ASSIGN(ctx,context);
+}
+
 - (void) _sourceRootFromMainGroup
 {
   PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; 
@@ -145,7 +150,6 @@
 - (NSString *) buildString
 {
   FILE *fp;
-  int status;
   char string[1035];
   NSString *output = @"";
 
@@ -178,6 +182,7 @@
 
   /* close */
   pclose(fp);
+  return output;
 }
 
 - (BOOL) build
@@ -201,6 +206,8 @@
 		  forKey: @"CONTAINER"];
       [context setObject: currentDirectory
 		  forKey: @"PROJECT_ROOT"];
+      [context addEntriesFromDictionary:ctx];
+
       result = [target build];
       [context popCurrentContext];
     }

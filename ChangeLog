@@ -1,3 +1,15 @@
+2012-10-15 13:20-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* GSXCBuildContext.h: Add declaration for addEntriesFromDictionary:
+	* GSXCBuildContext.m: Implement addEntriesFromDictionary:
+	* PBXContainerItemProxy.m: Correct warnings.
+	* PBXContainer.m: Added method to collect header directories
+	which need to be referenced for build.
+	* PBXFileReference.m: Add code to handle INCLUDE_DIRS context
+	variable.
+	* PBXProject.h: Added ivar
+	* PBXProject.m: Add project context.
+
 2012-08-07 01:13-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFrameworksBuildPhase.m: Automatically add link directives -I

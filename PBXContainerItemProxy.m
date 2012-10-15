@@ -50,7 +50,7 @@
 - (BOOL) build
 {
   PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
-  NSString *currentDir = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PROJECT_ROOT"];
+  // NSString *currentDir = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PROJECT_ROOT"];
   containerPortal = [[currentContainer objects] objectForKey: containerPortal];
 
   if([containerPortal isKindOfClass: [PBXFileReference class]])
@@ -66,6 +66,8 @@
     {
       NSLog(@"***** Item Proxy is project = %@",containerPortal);
     }
+
+  return NO;
 }
 
 @end

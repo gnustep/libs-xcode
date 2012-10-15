@@ -68,4 +68,9 @@ id _sharedBuildContext = nil;
 {
   return [currentContext objectForKey: key];
 }
+
+- (void) addEntriesFromDictionary: (NSDictionary *)dict;
+{
+  [currentContext addEntriesFromDictionary: dict];
+}
 @end

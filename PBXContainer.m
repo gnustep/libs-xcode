@@ -1,6 +1,7 @@
 #import "PBXContainer.h"
 #import "PBXCommon.h"
 #import "PBXProject.h"
+#import "PBXFileReference.h"
 
 @implementation PBXContainer
 
@@ -63,8 +64,39 @@
   ASSIGN(rootObject, object);
 }
 
+- (void) collectHeaderFileReferences
+{
+  NSString *includeDirs = @"";
+  NSMutableArray *dirs = [NSMutableArray array];
+  NSArray *array = [objects allValues];
+  NSEnumerator *en = [array objectEnumerator];
+  id obj = nil;
+
+  while((obj = [en nextObject]) != nil)
+    {
+      if([obj isKindOfClass:[PBXFileReference class]])
+	{
+	  if([[obj lastKnownFileType] isEqualToString:@"sourcecode.c.h"])
+	    {
+	      NSString *includePath = [[obj path] stringByDeletingLastPathComponent];
+	      if([includePath isEqualToString:@""] == NO)
+		{
+		  if([dirs containsObject:includePath] == NO)
+		    {
+		      [dirs addObject:includePath];
+		      includeDirs = [includeDirs stringByAppendingFormat: @" -I./%@ ",includePath]; 
+		    }
+		}
+	    }
+	}
+    }
+
+  [rootObject setContext: [NSDictionary dictionaryWithObject:includeDirs forKey:@"INCLUDE_DIRS"]];
+}
+
 - (BOOL) build
 {
+  [self collectHeaderFileReferences];
   [rootObject setContainer: self];
   return [rootObject build];
 }
