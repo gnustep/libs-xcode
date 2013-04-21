@@ -10,7 +10,7 @@
 - (BOOL) build
 {
   NSLog(@"=== Executing Resources Build Phase");
-  NSString *projectRoot = [NSString stringWithCString: getenv("PROJECT_ROOT")];
+  // NSString *projectRoot = [NSString stringWithCString: getenv("PROJECT_ROOT")];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
@@ -38,10 +38,10 @@
 	  NSString *dirs = [filePath stringByDeletingLastPathComponent];
 
 	  destPath = [resourcesDir stringByAppendingPathComponent: dirs];
-	  [[NSFileManager defaultManager] createDirectoryAtPath:destPath
-				    withIntermediateDirectories:YES
-						     attributes:nil
-							  error:NULL];
+	  // [[NSFileManager defaultManager] createDirectoryAtPath:destPath
+	  //			    withIntermediateDirectories:YES
+	  //					     attributes:nil
+	  //						  error:NULL];
 	  destPath = [destPath stringByAppendingPathComponent: fileName];
 	}
       
@@ -52,9 +52,36 @@
 
       if(!copyResult)
 	{
-	  NSLog(@"\tFile exists...");
+	  NSLog(@"\tCopy Error: %@",[error localizedDescription]);
 	}
     }
+
+
+  /**********************************************************************************/
+  /**** This is a kludge, only for the moment to handle English...............   ****/
+  NSString *lprojPath = [productOutputDir stringByAppendingPathComponent:@"en.lproj"];
+  BOOL copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"en.lproj"
+							    toPath: lprojPath
+							     error: &error];
+
+  if(copyResult == NO)
+    {
+      result = NO;
+      NSLog(@"\tCopy Error: %@",[error localizedDescription]);
+    }
+
+
+  lprojPath = [productOutputDir stringByAppendingPathComponent:@"English.lproj"];
+  copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"en.lproj"
+						       toPath: lprojPath
+							error: &error];
+
+  if(copyResult == NO)
+    {
+      result = NO;
+      NSLog(@"\tCopy Error: %@",[error localizedDescription]);
+    }
+  /**********************************************************************************/
 
   // return, if we failed...
   if(result == NO)
@@ -62,8 +89,8 @@
       return result;
     }
   
-  NSString *inputPlist = [projectRoot stringByAppendingPathComponent: 
-					 [NSString stringWithCString: getenv("INFOPLIST_FILE")]];
+  NSString *inputPlist = // [projectRoot stringByAppendingPathComponent: 
+    [[NSString stringWithCString: getenv("INFOPLIST_FILE")] lastPathComponent]; // ];
   NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];
   NSString *awkCommand = [NSString stringWithFormat: 
 				     @"awk '{while(match($0,\"[$]{[^}]*}\")) {var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\",ENVIRON[var])}}1' < %@ > %@",

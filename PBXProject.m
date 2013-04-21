@@ -191,13 +191,22 @@
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
 
+  NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
   while((target = [en nextObject]) != nil && result)
     {
+      BOOL targetInSubdir = NO;
       NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
+
+      // Go into the target...
+      if(YES == [fileManager fileExistsAtPath:[target name]])
+	{
+	  chdir([[target name] UTF8String]);
+	}
+
       [context contextDictionaryForName: [target name]];
       [self buildString];
       [context setObject: mainGroup 
@@ -207,9 +216,15 @@
       [context setObject: currentDirectory
 		  forKey: @"PROJECT_ROOT"];
       [context addEntriesFromDictionary:ctx];
-
+      
       result = [target build];
       [context popCurrentContext];
+
+      // Back to the current dir...
+      if(YES == targetInSubdir)
+	{
+	  chdir([currentDirectory UTF8String]);
+	}
     }
   NSLog(@"=== Completed Building Project");
   return result;

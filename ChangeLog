@@ -1,3 +1,14 @@
+2013-04-20 23:16-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXContainerItemProxy.m
+	* PBXFileReference.h
+	* PBXFileReference.m: Use the compiler which was used to build
+	GNUstep instead of hardcoding.
+	* PBXProject.m: Proceed into target directories when doing the build
+	* PBXResourcesBuildPhase.m: Copy lproj files.
+	* PBXShellScriptBuildPhase.m: Improve building of 10.7 and 10.8
+	(Xcode 4.4 and 4.5) style files.
+
 2012-10-15 13:20-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* GSXCBuildContext.h: Add declaration for addEntriesFromDictionary:

@@ -65,6 +65,7 @@
   else
     {
       NSLog(@"***** Item Proxy is project = %@",containerPortal);
+      return YES;
     }
 
   return NO;

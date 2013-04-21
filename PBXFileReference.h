@@ -18,6 +18,8 @@
   NSString *includeInIndex;
   NSString *comments;
   NSString *plistStructureDefinitionIdentifier;
+  NSString *xcLanguageSpecificationIdentifier;
+  NSString *lineEnding;
 }
 
 // Methods....
@@ -33,6 +35,12 @@
 - (void) setExplicitFileType: (NSString *)object;
 - (NSString *) name;
 - (void) setName: (NSString *)object;
+- (void) setPlistStructureDefinitionIdentifier: (NSString *)object;
+- (NSString *) xcLanguageSpecificationIdentifier;
+- (void) setXcLanguageSpecificationIdentifier: (NSString *)object;
+- (NSString *) lineEnding;
+- (void) setLineEnding: (NSString *)object;
+
 
 // Build methods...
 - (NSString *) buildPath;

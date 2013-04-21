@@ -80,6 +80,26 @@
   ASSIGN(plistStructureDefinitionIdentifier,object);
 }
 
+- (NSString *) xcLanguageSpecificationIdentifier
+{
+  return xcLanguageSpecificationIdentifier;
+}
+
+- (void) setXcLanguageSpecificationIdentifier: (NSString *)object
+{
+  ASSIGN(xcLanguageSpecificationIdentifier, object);
+}
+
+- (NSString *) lineEnding
+{
+  return lineEnding;
+}
+
+- (void) setLineEnding: (NSString *)object
+{
+  ASSIGN(lineEnding,object);
+}
+
 - (NSString *) resolvePathFor: (id)object 
 		    withGroup: (PBXGroup *)group
 			found: (BOOL *)found
@@ -192,9 +212,9 @@
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
 	}
 
-      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
-			      stringByAppendingPathComponent: 
-				[self buildPath]];
+      NSString *buildPath = [self path]; // [self buildPath]; // [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+	//  stringByAppendingPathComponent: 
+	// 			[self buildPath]];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: outputPath] 
@@ -202,7 +222,7 @@
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
 	{
-	  compiler = @"gcc";
+	  compiler = @"`gnustep-config --variable=CC`";
 	}
 
       NSString *objCflags = @"";
