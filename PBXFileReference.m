@@ -146,6 +146,7 @@
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  BOOL targetInSubdir = [[context objectForKey:@"TARGET_IN_SUBDIR"] isEqualToString:@"YES"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputFiles = (of == nil)?@"":of;
@@ -211,10 +212,15 @@
 	{
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
 	}
+      
+      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+				         stringByAppendingPathComponent: 
+	 			[self buildPath]];
+      if(targetInSubdir)
+	{
+	  buildPath = [self path]; //[buildPath stringByDeletingFirstPathComponent];
+	}
 
-      NSString *buildPath = [self path]; // [self buildPath]; // [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
-	//  stringByAppendingPathComponent: 
-	// 			[self buildPath]];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: outputPath] 

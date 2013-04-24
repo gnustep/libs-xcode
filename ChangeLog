@@ -1,3 +1,11 @@
+2013-04-24 02:39-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* NSString+PBXAdditions.h
+	* NSString+PBXAdditions.m: Path manipulation methods.
+	* PBXFileReference.m
+	* PBXProject.m: Correct issue with handling older project files
+	after last modification.
+
 2013-04-20 23:16-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXContainerItemProxy.m
