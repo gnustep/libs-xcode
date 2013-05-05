@@ -58,7 +58,7 @@
 
 
   /**********************************************************************************/
-  /**** This is a kludge, only for the moment to handle English...............   ****/
+  /**** This is a kludge, only for the moment to handle English.......   ****/
   NSString *lprojPath = [productOutputDir stringByAppendingPathComponent:@"en.lproj"];
   BOOL copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"en.lproj"
 							    toPath: lprojPath
@@ -66,27 +66,27 @@
 
   if(copyResult == NO)
     {
-      result = NO;
-      NSLog(@"\tCopy Error: %@",[error localizedDescription]);
+      // result = NO;
+      NSLog(@"\tCopy Error (en.lproj): %@",[error localizedDescription]);
     }
 
 
   lprojPath = [productOutputDir stringByAppendingPathComponent:@"English.lproj"];
-  copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"en.lproj"
+  copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"English.lproj"
 						       toPath: lprojPath
 							error: &error];
 
   if(copyResult == NO)
     {
-      result = NO;
-      NSLog(@"\tCopy Error: %@",[error localizedDescription]);
+      // result = NO;
+      NSLog(@"\tCopy Error (English.lproj): %@",[error localizedDescription]);
     }
-  /**********************************************************************************/
+  /**************************************************************************/
 
   // return, if we failed...
   if(result == NO)
     {
-      return result;
+      // return result;
     }
   
   NSString *inputPlist = // [projectRoot stringByAppendingPathComponent: 

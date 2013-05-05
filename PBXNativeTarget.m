@@ -216,6 +216,10 @@
   while((phase = [en nextObject]) != nil && result)
     {
       result = [phase build];
+      if(NO == result)
+	{
+	  NSLog(@"*** Failed build phase: %@",phase);
+	}
     }
   NSLog(@"=== Done...");
   NSLog(@"=== Completed Executing Target %@", name);

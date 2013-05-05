@@ -1,3 +1,8 @@
+2013-05-04 20:38-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXNativeTarget.m
+	* PBXResourcesBuildPhase.m: Fix issue with copying English.lproj
+
 2013-04-24 02:39-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* NSString+PBXAdditions.h
