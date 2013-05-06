@@ -9,6 +9,7 @@
   NSMutableArray *files;
   NSString *buildActionMask;
   NSString *runOnlyForDeploymentPostprocessing;
+  BOOL showEnvVarsInLog;
 }
 
 // Methods....
@@ -18,6 +19,8 @@
 - (void) setBuildActionMask: (NSString *)object; // setter
 - (NSString *) runOnlyForDeploymentPostprocessing; // getter
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
+- (BOOL) showEnvVarsInLog; // setter
+- (void) setEnvVarsInLog: (BOOL)flag;
 
 // build
 - (BOOL) build;

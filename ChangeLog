@@ -1,3 +1,9 @@
+2013-05-06 02:14-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXAbstractBuildPhase.h
+	* PBXAbstractBuildPhase.m: Added missing methods for property
+	showEnvVarsInLog.
+
 2013-05-06 01:55-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFileReference.m: -build, override buildPath pre-prending

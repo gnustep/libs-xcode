@@ -34,6 +34,16 @@
   ASSIGN(runOnlyForDeploymentPostprocessing,object);
 }
 
+- (BOOL) showEnvVarsInLog; // setter
+{
+  return showEnvVarsInLog;
+}
+
+- (void) setEnvVarsInLog: (BOOL)flag
+{
+  showEnvVarsInLog = flag;
+}
+
 - (BOOL) build
 {
   NSLog(@"Executing... %@",self);
