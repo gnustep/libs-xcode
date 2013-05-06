@@ -1,3 +1,9 @@
+2013-05-06 01:55-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXFileReference.m: -build, override buildPath pre-prending
+	of project root in some cases.  This is likely due to differences
+	in some versions of the xcodeproj format.
+
 2013-05-04 20:38-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXNativeTarget.m

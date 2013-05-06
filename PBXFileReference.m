@@ -152,6 +152,7 @@
   NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
   NSError *error = nil;
+  NSFileManager *manager = [NSFileManager defaultManager];
 
   if(modified == nil)
     {
@@ -216,9 +217,21 @@
       NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
 				         stringByAppendingPathComponent: 
 	 			[self buildPath]];
+
+      // If the target is in the subdirectory, then override the preprending of
+      // the project root.
       if(targetInSubdir)
 	{
-	  buildPath = [self path]; //[buildPath stringByDeletingFirstPathComponent];
+	  buildPath = [self path]; 
+	}
+
+      // Sometimes, for some incomprehensible reason, the buildpath doesn't 
+      // need the project dir pre-pended.  This could be due to differences 
+      // in different version of xcode.  It must be removed to successfully
+      // compile the application...
+      if([manager fileExistsAtPath:buildPath] == NO)
+	{
+	  buildPath = [self path];
 	}
 
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
