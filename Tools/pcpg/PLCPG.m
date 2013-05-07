@@ -47,11 +47,11 @@
     plist = [[NSDictionary alloc] initWithContentsOfFile: plistName];
     dictionary = [plist objectForKey: @"objects"];
     classes = [[NSMutableDictionary alloc] initWithCapacity: 10];
-    classNameMap = [[NSDictionary alloc] initWithObjectsAndKeys: 
-					   @"NSString", @"NSConstantString", 
-					 @"NSString", @"GSMutableString",
-					 @"NSMutableArray", @"GSMutableArray",
-					 @"NSMutableDictionary", @"GSMutableDictionary",
+    classNameMap = [[NSMutableDictionary alloc] initWithObjectsAndKeys: 
+						  @"NSString", @"NSConstantString", 
+						@"NSString", @"GSMutableString",
+						@"NSMutableArray", @"GSMutableArray",
+						@"NSMutableDictionary", @"GSMutableDictionary",
 					 nil];
   }
   return self;

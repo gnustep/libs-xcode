@@ -1,3 +1,11 @@
+2013-05-07 19:58-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXFrameworksBuildPhase.m: Use the gnustep-config script
+	everywhere to allow us to automatically use the default
+	compiler.
+	* Tools/pcpg/PLCPG.m: Fix an issue where mutable dictionary
+	was not used.
+
 2013-05-06 02:14-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXAbstractBuildPhase.h

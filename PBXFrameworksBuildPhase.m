@@ -54,7 +54,7 @@
 
   // Write the file out...
   NSString *classTemplate = 
-    @"#include <Foundation/NSString.h>\n\n"
+    @"#include <Foundation/Foundation.h>\n\n"
     @"@interface NSFramework_%@\n"
     @"+ (NSString *)frameworkEnv;\n"
     @"+ (NSString *)frameworkPath;\n"
@@ -86,7 +86,7 @@
   if([compiler isEqualToString: @""] ||
      compiler == nil)
     {
-      compiler = @"gcc";
+      compiler = @"`gnustep-config --variable=CC`";
     }
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
@@ -191,7 +191,7 @@
   NSLog(@"=== Executing Frameworks Build Phase (Tool)");
   // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?@"gcc":[NSString stringWithCString: cc];
+  NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
   NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
 								   @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
@@ -231,7 +231,7 @@
   NSLog(@"=== Executing Frameworks Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?@"gcc":[NSString stringWithCString: cc];
+  NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
   NSString *outputFiles = [context objectForKey: 
 				     @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
@@ -336,7 +336,7 @@
   if([compiler isEqualToString: @""] ||
      compiler == nil)
     {
-      compiler = @"gcc";
+      compiler = @"`gnustep-config --variable=CC`";
     }
 
   NSString *command = [NSString stringWithFormat: commandTemplate,
@@ -384,7 +384,7 @@
   NSLog(@"=== Executing Frameworks Build Phase (Bundle)");
   // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?@"gcc":[NSString stringWithCString: cc];
+  NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
   NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
 								   @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
