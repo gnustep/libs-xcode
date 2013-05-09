@@ -1,3 +1,10 @@
+2013-05-09 12:56-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXApplicationTarget.m: Set the product type in init.
+	* PBXBundleTarget.m: Set the product type in init.
+	* PBXCommon.h: Add GSXCCommon.h to the header.
+	* PBXFrameworkTarget.m: Set the product type in init.
+
 2013-05-09 12:44-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXApplicationTarget.h

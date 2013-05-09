@@ -3,16 +3,14 @@
 
 @implementation PBXApplicationTarget
 
-// Methods....
-- (NSString *) productSettingsXML // getter
+- (id) init
 {
-  return productSettingsXML;
+  self = [super init];
+  if(self)
+    {
+      [self setProductType: APPLICATION_TYPE];
+    }
+  return self;
 }
-
-- (void) setProductSettingsXML: (NSString *)object; // setter
-{
-  ASSIGN(productSettingsXML,object);
-}
-
 
 @end
