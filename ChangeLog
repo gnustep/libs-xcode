@@ -1,5 +1,15 @@
 2013-05-09 12:44-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
+	* PBXApplicationTarget.h
+	* PBXApplicationTarget.m
+	* PBXBundleTarget.h
+	* PBXBundleTarget.m
+	* PBXFrameworkTarget.h
+	* PBXFrameworkTarget.m: Add new classes to handle older files for
+	these targets.
+
+2013-05-09 12:44-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
 	* GNUmakefile
 	* PBXNativeTarget.h
 	* PBXNativeTarget.m: Add new method.
