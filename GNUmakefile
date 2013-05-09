@@ -33,9 +33,11 @@ NSArray+Additions.h \
 NSString+PBXAdditions.h \
 PBXAbstractBuildPhase.h \
 PBXAbstractTarget.h \
+PBXApplicationTarget.h \
 PBXAggregateTarget.h \
 PBXBuildFile.h \
 PBXBuildRule.h \
+PBXBundleTarget.h \
 PBXCoder.h \
 PBXCommon.h \
 PBXContainer.h \
@@ -43,6 +45,7 @@ PBXContainerItemProxy.h \
 PBXCopyFilesBuildPhase.h \
 PBXFileReference.h \
 PBXFrameworksBuildPhase.h \
+PBXFrameworkTarget.h \
 PBXGroup.h \
 PBXHeadersBuildPhase.h \
 PBXNativeTarget.h \
@@ -67,9 +70,11 @@ NSArray+Additions.m \
 NSString+PBXAdditions.m \
 PBXAbstractBuildPhase.m \
 PBXAbstractTarget.m \
+PBXApplicationTarget.m \
 PBXAggregateTarget.m \
 PBXBuildFile.m \
 PBXBuildRule.m \
+PBXBundleTarget.m \
 PBXCoder.m \
 PBXCommon.m \
 PBXContainerItemProxy.m \
@@ -77,6 +82,7 @@ PBXContainer.m \
 PBXCopyFilesBuildPhase.m \
 PBXFileReference.m \
 PBXFrameworksBuildPhase.m \
+PBXFrameworkTarget.m \
 PBXGroup.m \
 PBXHeadersBuildPhase.m \
 PBXNativeTarget.m \

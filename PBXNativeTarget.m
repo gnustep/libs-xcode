@@ -13,6 +13,7 @@
   [productType release];
   [buildRules release];
   [comments release];
+  [productSettingsXML release];
   [super dealloc];
 }
 
@@ -55,6 +56,16 @@
 - (void) setBuildRules: (NSMutableArray *)object; // setter
 {
   ASSIGN(buildRules,object);
+}
+
+- (NSString *) productSettingsXML // getter
+{
+  return productSettingsXML;
+}
+
+- (void) setProductSettingsXML: (NSString *)object // setter
+{
+  ASSIGN(productSettingsXML,object);
 }
 
 - (void) _productWrapper

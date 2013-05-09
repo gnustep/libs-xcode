@@ -13,6 +13,7 @@
   NSString *productType;
   NSMutableArray *buildRules;
   NSString *comments;
+  NSString *productSettingsXML;
 }
 
 // Methods....
@@ -24,6 +25,8 @@
 - (void) setProductType: (NSString *)object; // setter
 - (NSMutableArray *) buildRules; // getter
 - (void) setBuildRules: (NSMutableArray *)object; // setter
+- (NSString *) productSettingsXML; // getter
+- (void) setProductSettingsXML: (NSString *)object; // setter
 
 // build
 - (BOOL) build;

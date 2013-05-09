@@ -1,3 +1,9 @@
+2013-05-09 12:44-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* GNUmakefile
+	* PBXNativeTarget.h
+	* PBXNativeTarget.m: Add new method.
+
 2013-05-07 19:58-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFrameworksBuildPhase.m: Use the gnustep-config script
