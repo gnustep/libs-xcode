@@ -1,9 +1,6 @@
 #import "PBXCoder.h"
 #import "PBXContainer.h"
 
-#import <stdlib.h>
-#import <unistd.h>
-
 @implementation PBXCoder
 
 - (id) initWithContentsOfFile: (NSString *)name
@@ -171,11 +168,5 @@
 - (NSString *) projectRoot
 {
   return projectRoot;
-}
-
-- (void) changeToProjectRoot
-{
-  NSLog(@"************************************* Changing to Project Root: %@",projectRoot);
-  chdir([projectRoot cString]);
 }
 @end

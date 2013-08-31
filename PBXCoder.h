@@ -26,6 +26,4 @@
 
 - (NSString *) projectRoot;
 
-- (void) changeToProjectRoot;
-
 @end

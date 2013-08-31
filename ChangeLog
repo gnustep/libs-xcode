@@ -1,3 +1,13 @@
+2013-08-31  Fred Kiefer <FredKiefer@gmx.de>
+
+	* PBXCoder.h,
+	* PBXCoder.m: Remove method -changeToProjectRoot.
+	* GSXCBuildContext.m: Remove directory change from pop.
+	* PBXContainerItemProxy.m: Handle all directory changes here.
+	* PBXFileReference.m: Add std to the compile options.
+	* PBXFrameworksBuildPhase.m: Add frameworks in OTHER_LDFLAGS to
+	the link options.
+
 2013-05-09 12:56-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXApplicationTarget.m: Set the product type in init.

@@ -4,6 +4,8 @@
 #import "PBXContainer.h"
 #import "GSXCBuildContext.h"
 
+#import <unistd.h>
+
 @implementation PBXContainerItemProxy
 
 // Methods....
@@ -56,10 +58,17 @@
   if([containerPortal isKindOfClass: [PBXFileReference class]])
     {
       NSLog(@"Reading %@",[containerPortal path]);
+      char *dir = getcwd(NULL, 0);
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
-      [coder changeToProjectRoot];
+      NSLog(@"************************************* Changing to Project Root: %@",
+            [coder projectRoot]);
+      chdir([[coder projectRoot] cString]);
       PBXContainer *container = [coder unarchive];
       BOOL result = [container build];
+      chdir(dir);
+      NSLog(@"************************************ Changing back to %s", dir);
+      free(dir);
+
       return result;
     }
   else

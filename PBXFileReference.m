@@ -249,6 +249,12 @@
 	{
 	  objCflags = @"-fgnu-runtime -fconstant-string-class=NSConstantString";
 	}
+      NSString *std = [NSString stringWithCString: getenv("GCC_C_LANGUAGE_STANDARD")];
+      if ([std length] > 0)
+        {
+          objCflags = [NSString stringWithFormat: @"%@ -std=%@",
+                                objCflags, std];
+        }
     
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";

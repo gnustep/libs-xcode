@@ -106,6 +106,43 @@
   system([buildCommand cString]);
 }
 
+- (NSString *) frameworkLinkString: (NSString*)framework
+{
+  if ([framework isEqualToString: @"Cocoa"])
+    {
+      return @"-lgnustep-gui -lgnustep-base ";
+    }
+  else if ([framework isEqualToString: @"Foundation"])
+    {
+      return @"-lgnustep-base ";
+    }
+  else if ([framework isEqualToString: @"AppKit"])
+    {
+      return @"-lgnustep-gui ";
+    }
+  else if ([framework isEqualToString: @"CoreFoundation"])
+    {
+      return @"-lcorebase ";
+    }
+  else if ([framework isEqualToString: @"CoreGraphics"])
+    {
+      return @"-lopal ";
+    }
+  else if ([framework isEqual: @"Carbon"] ||
+           [framework isEqual: @"IOKit"] ||
+           [framework isEqual: @"Quartz"] ||
+           [framework isEqual: @"QuartzCore"] ||
+           [framework isEqual: @"QuickTime"] ||
+           [framework isEqual: @"ApplicationServices"])
+    {
+      return @"";
+    }
+  else
+    {
+      return [NSString stringWithFormat: @"-l%@ ", framework];
+    }
+}
+
 - (NSString *) linkString
 {
   NSString *systemLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
@@ -132,41 +169,8 @@
     {
       PBXFileReference *fileRef = [file fileRef];
       NSString *name = [[[fileRef path] lastPathComponent] stringByDeletingPathExtension];
-      if([name isEqualToString: @"Cocoa"])
-	{
-	  linkString = [linkString stringByAppendingString: @"-lgnustep-gui -lgnustep-base "];
-	}
-      else if([name isEqualToString: @"Foundation"])
-	{
-	  linkString = [linkString stringByAppendingString: @"-lgnustep-base "];
-	}
-      else if([name isEqualToString: @"AppKit"])
-	{
-	  linkString = [linkString stringByAppendingString: @"-lgnustep-gui "];
-	}
-      else if([name isEqualToString: @"CoreFoundation"])
-	{
-	  linkString = [linkString stringByAppendingString: @"-lcorebase "];
-	}
-      else if([name isEqualToString: @"CoreGraphics"])
-	{
-	  linkString = [linkString stringByAppendingString: @"-lopal "];
-	}
-      else if([name isEqual: @"Carbon"] ||
-	 [name isEqual: @"IOKit"] ||
-	 [name isEqual: @"Quartz"] ||
-	 [name isEqual: @"QuartzCore"] ||
-	 [name isEqual: @"QuickTime"] ||
-	 [name isEqual: @"ApplicationServices"])
-	{
-	  continue;
-	}
-      else
-	{
-	  linkString = [linkString stringByAppendingString: 
-				[NSString stringWithFormat: @"-l%@ ",
-					  name]];
-	}
+      
+      linkString = [linkString stringByAppendingString: [self frameworkLinkString: name]];
     }
 
   // Find any frameworks and add them to the -L directive...
@@ -179,6 +183,22 @@
 	  linkString = [linkString stringByAppendingString:[NSString stringWithFormat:@"-I%@ ",[uninstalledProductsDir stringByAppendingPathComponent:headerDir]]];
 	  linkString = [linkString stringByAppendingString:[NSString stringWithFormat:@"-L%@ ",[uninstalledProductsDir stringByAppendingPathComponent:file]]];
 	}
+    }
+
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSArray *otherLDFlags = [context objectForKey: @"OTHER_LDFLAGS"];
+  en = [otherLDFlags objectEnumerator];
+  while((file = [en nextObject]) != nil)
+    {
+      if ([file isEqualToString: @"-framework"])
+        {
+          NSString *framework = [en nextObject];
+          linkString = [linkString stringByAppendingString: [self frameworkLinkString: framework]];
+        }
+      else
+        {
+          //linkString = [linkString stringByAppendingString:];
+        }
     }
 
   linkString = [linkString stringByAppendingString: @"-lpthread -lobjc -lm "];
