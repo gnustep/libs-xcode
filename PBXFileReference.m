@@ -252,8 +252,12 @@
       NSString *std = [NSString stringWithCString: getenv("GCC_C_LANGUAGE_STANDARD")];
       if ([std length] > 0)
         {
-          objCflags = [NSString stringWithFormat: @"%@ -std=%@",
-                                objCflags, std];
+	    if([std isEqualToString:@"compiler-default"] == YES)
+	    {
+		std = @"gnu99";
+	    }
+	    objCflags = [NSString stringWithFormat: @"%@ -std=%@",
+				  objCflags, std];
         }
     
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
