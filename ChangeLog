@@ -1,6 +1,11 @@
+2013-09-21 08:17-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXFileReference.m: Add all subdirectories in the project
+	to the include directives.
+
 2013-09-21 02:06-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFileReference.m: Use C99 as default.  Need to start thinking
+	* PBXFileReference.m: Use gnu99 as default.  Need to start thinking
 	about a specs file which will allow definition of defaults on
 	a per compiler/platform basis.
 

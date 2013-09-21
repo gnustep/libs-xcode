@@ -129,6 +129,30 @@
   return result;
 }
 
+- (NSArray *) allSubdirsAtPath: (NSString *)apath
+{
+    NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSDirectoryEnumerator *en = [manager enumeratorAtPath:apath];
+    NSString *fileName = nil;
+    NSString *rootPath = [[manager currentDirectoryPath] stringByAppendingPathComponent: apath];
+    
+    while((fileName = [en nextObject]) != nil)
+    {
+	if([[fileName pathExtension] isEqualToString:@"h"])
+	{
+	    NSString *dirToAdd = [fileName stringByDeletingLastPathComponent];
+	    dirToAdd = [rootPath stringByAppendingPathComponent: dirToAdd];
+	    if([results containsObject: dirToAdd] == NO)
+	    {
+		[results addObject: dirToAdd];
+	    }
+	}
+    }
+
+    return results;
+}
+
 - (NSString *) buildPath
 {
   PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
@@ -166,6 +190,10 @@
      [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
+      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+				         stringByAppendingPathComponent: 
+				    [self buildPath]];
+      NSArray *localHeaderPathsArray = [self allSubdirsAtPath:[buildPath stringByDeletingLastPathComponent]];
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
       /*
@@ -186,12 +214,19 @@
 				      implodeArrayWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
+      NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
+
 
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
 	  headerSearchPaths = @"";
 	}
+      if(localHeaderPaths == nil)
+        {
+	  localHeaderPaths = @"";
+        }
+      
       if(warningCflags == nil)
 	{
 	  warningCflags = @"";
@@ -212,12 +247,9 @@
       if(additionalHeaderDirs != nil)
 	{
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
+	  headerSearchPaths = [headerSearchPaths stringByAppendingString: localHeaderPaths];
 	}
       
-      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
-				         stringByAppendingPathComponent: 
-	 			[self buildPath]];
-
       // If the target is in the subdirectory, then override the preprending of
       // the project root.
       if(targetInSubdir)
