@@ -1,3 +1,7 @@
+2014-03-25 03:49-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXProject.m: Change to debug settings
+
 2013-09-21 08:17-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFileReference.m: Add all subdirectories in the project

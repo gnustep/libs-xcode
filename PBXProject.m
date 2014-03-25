@@ -154,7 +154,7 @@
   NSString *output = @"";
 
   /* Open the command for reading. */
-  fp = popen("gnustep-config --objc-flags", "r");
+  fp = popen("gnustep-config --debug-flags", "r");
   if (fp == NULL) {
     NSLog(@"*** Failed to run command\n" );
     return nil;
