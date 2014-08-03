@@ -13,8 +13,10 @@
   // NSString *projectRoot = [NSString stringWithCString: getenv("PROJECT_ROOT")];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
+  NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];
   NSError *error = nil;
 
+  NSLog(@"%@",currentDir);
   [[NSFileManager defaultManager] createDirectoryAtPath:resourcesDir
 			    withIntermediateDirectories:YES
 					     attributes:nil
@@ -25,7 +27,7 @@
   PBXBuildFile *file = nil;
   while((file = [en nextObject]) != nil && result)
     {
-      NSString *filePath = [file buildPath];
+      NSString *filePath = [[file buildPath] stringByDeletingFirstPathComponent];
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
       NSError *error = nil;
@@ -57,13 +59,12 @@
     }
 
 
-  /**********************************************************************************/
+  /**************************************************************************/
   /**** This is a kludge, only for the moment to handle English.......   ****/
   NSString *lprojPath = [productOutputDir stringByAppendingPathComponent:@"en.lproj"];
   BOOL copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"en.lproj"
 							    toPath: lprojPath
 							     error: &error];
-
   if(copyResult == NO)
     {
       // result = NO;
@@ -75,14 +76,24 @@
   copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"English.lproj"
 						       toPath: lprojPath
 							error: &error];
-
   if(copyResult == NO)
     {
       // result = NO;
       NSLog(@"\tCopy Error (English.lproj): %@",[error localizedDescription]);
     }
-  /**************************************************************************/
 
+  lprojPath = [productOutputDir stringByAppendingPathComponent:@"Resources"];
+  copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"Base.lproj"
+						       toPath: lprojPath
+							  error: &error];
+  if(copyResult == NO)
+    {
+      // result = NO;
+      NSLog(@"\tCopy Error (Base.lproj): %@",[error localizedDescription]);
+    }
+  /****                                                                  ****/
+  /**************************************************************************/
+ 
   // return, if we failed...
   if(result == NO)
     {

@@ -273,7 +273,7 @@
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
 	{
-	  compiler = @"`gnustep-config --variable=CC`";
+	  compiler = @"`gnustep-config --variable=CC` -DGNUSTEP";
 	}
 
       NSString *objCflags = @"";
