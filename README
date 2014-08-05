@@ -9,10 +9,10 @@ xcode project or used to build an xcode project directly.
 ===========
 
 The GNUstep libraries and library resources are covered under the GNU
-Lesser Public License.  This means you can use these libraries in any
-program (even non-free programs). If you distribute the libraries along
-with your program, you must make the improvements you have made to the
-libraries freely available. You should read the COPYING.LIB file for
+Lesser General Public License.  This means you can use these libraries 
+in any program (even non-free programs). If you distribute the libraries 
+along with your program, you must make the improvements you have made to 
+the libraries freely available. You should read the COPYING.LIB file for
 more information. 
 
 1.2 How can you help?
