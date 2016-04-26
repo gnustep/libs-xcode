@@ -145,15 +145,12 @@
 
 - (NSString *) linkString
 {
-  NSString *systemLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
-				      stringByAppendingPathComponent: @"Library"] 
-				     stringByAppendingPathComponent: @"Libraries"];
-  NSString *localLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")] 
-				     stringByAppendingPathComponent: @"Library"] 
-				    stringByAppendingPathComponent: @"Libraries"];
-  NSString *userLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
-				    stringByAppendingPathComponent: @"Library"] 
-				   stringByAppendingPathComponent: @"Libraries"];
+  NSString *systemLibDir = [@"`gnustep-config --variable=GNUSTEP_SYSTEM_LIBRARY`/"
+			       stringByAppendingPathComponent: @"Libraries"];
+  NSString *localLibDir = [@"`gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY`/"
+			      stringByAppendingPathComponent: @"Libraries"];
+  NSString *userLibDir = [@"`gnustep-config --variable=GNUSTEP_USER_LIBRARY`/"
+			     stringByAppendingPathComponent: @"Libraries"];
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"UninstalledProducts"];
   NSEnumerator *en = [files objectEnumerator];
