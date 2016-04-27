@@ -1,3 +1,7 @@
+2016-04-26 20:48-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* PBXFrameworksBuildPhase.m: Fix tool compilation.
+
 2016-04-26 19:45-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFrameworksBuildPhase.m: Use gnustep-config to get the

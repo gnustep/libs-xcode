@@ -110,15 +110,15 @@
 {
   if ([framework isEqualToString: @"Cocoa"])
     {
-      return @"-lgnustep-gui -lgnustep-base ";
+      return @"`gnustep-config --gui-libs` ";
     }
   else if ([framework isEqualToString: @"Foundation"])
     {
-      return @"-lgnustep-base ";
+      return @"`gnustep-config --base-libs` ";
     }
   else if ([framework isEqualToString: @"AppKit"])
     {
-      return @"-lgnustep-gui ";
+      return @"`gnustep-config --gui-libs` ";
     }
   else if ([framework isEqualToString: @"CoreFoundation"])
     {
@@ -215,6 +215,7 @@
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
+  linkString = [linkString stringByAppendingString: @"`gnustep-config --base-libs`"];
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
