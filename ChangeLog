@@ -1,3 +1,7 @@
+2016-05-08 00:37-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* Tools/pcpg/PLCPG.m: Fix issue with include/import of non-NS classes.
+
 2016-04-26 20:48-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFrameworksBuildPhase.m: Fix tool compilation.

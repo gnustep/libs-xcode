@@ -152,7 +152,7 @@
 	 ![type isEqualToString: @"NSDictionary"] &&
 	 ![type isEqualToString: @"NSMutableDictionary"])
 	{
-	  includeString = [includeString stringByAppendingString: [NSString stringWithFormat: @"#import \"%@.h\"\n"]];
+	  includeString = [includeString stringByAppendingString: [NSString stringWithFormat: @"#import \"%@.h\"\n", type]];
 	}
 
       methodString = [methodString stringByAppendingString: [NSString stringWithFormat: @"- (%@ *) %@; // getter\n",type,ivarName]];
