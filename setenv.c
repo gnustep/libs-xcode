@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <strings.h>
+#include <stdio.h>
 
 int setenv(const char *key, const char *value, int overwrite)
 {
@@ -11,7 +12,7 @@ int setenv(const char *key, const char *value, int overwrite)
       int val_len = strlen(value);
       int len = key_len + 1 + val_len + 1; // key + "=" + value + '\0'
       char *buffer = malloc(len);
-      bzero(buffer, len);
+      memset(buffer, 0, len);
       sprintf(buffer,"%s=%s",key,value);
       result = putenv(buffer);
       free(buffer);
