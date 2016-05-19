@@ -25,5 +25,8 @@ ADDITIONAL_TOOL_LIBS +=
 
 ifeq ($(GNUSTEP_TARGET_OS),mingw32)
 XCode_C_FILES = setenv.c
+else ifeq ($(GNUSTEP_TARGET_OS),mingw64)
+XCode_C_FILES = setenv.c
 endif
+
 
