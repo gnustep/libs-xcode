@@ -42,10 +42,6 @@
 	  NSString *dirs = [filePath stringByDeletingLastPathComponent];
 
 	  destPath = [resourcesDir stringByAppendingPathComponent: dirs];
-	  // [[NSFileManager defaultManager] createDirectoryAtPath:destPath
-	  //			    withIntermediateDirectories:YES
-	  //					     attributes:nil
-	  //						  error:NULL];
 	  destPath = [destPath stringByAppendingPathComponent: fileName];
 	}
       
@@ -62,17 +58,11 @@
     }
 
 
-  /**************************************************************************/
-  /**** This is a kludge, only for the moment to handle English.......   ****/
-  NSString *lprojPath = [productOutputDir stringByAppendingPathComponent:@"Resources"];
-  NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
+  NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj"];
   NSString *copyCmd = [NSString stringWithFormat: @"cp -r %@ %@", origPath, resourcesDir];
-
   int r = 0;
   NSLog(@"COPYING: %@", copyCmd);
   r = system([copyCmd cString]);
-  /****                                                                  ****/
-  /**************************************************************************/
  
   // return, if we failed...
   if(r != 0)
@@ -87,19 +77,10 @@
 				     @"awk '{while(match($0,\"[$]{[^}]*}\")) {var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\",ENVIRON[var])}}1' < %@ > %@",
 				   [inputPlist stringByEscapingSpecialCharacters], [outputPlist stringByEscapingSpecialCharacters]];
   int sysresult = 0;
-  // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  // NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
-  // if([modified isEqualToString: @"YES"])
-    {
-      NSDebugLog(@"\t%@",awkCommand);
-      sysresult = system([awkCommand cString]);
-      result = (sysresult == 0);
-    }
-  // else
-    {
-  //    NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPlist);
-    }
-
+  NSDebugLog(@"\t%@",awkCommand);
+  sysresult = system([awkCommand cString]);
+  result = (sysresult == 0);
+  
   NSLog(@"=== Resources Build Phase Completed");
   return result;
 }
