@@ -29,7 +29,7 @@
 
 - (void) apply
 {
-  NSLog(@"=== Applying Build Configuration %@",name);
+  puts([[NSString stringWithFormat: @"=== Applying Build Configuration %@",name] cString]);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;
@@ -39,30 +39,30 @@
       id value = [buildSettings objectForKey: key];
       if([value isKindOfClass: [NSString class]])
 	{	  
-	  NSLog(@"\tEnvironment: %@ = %@",key,value);
+	  // puts([[NSString stringWithFormat: @"\tEnvironment: %@ = %@",key,value] cString]);
 	  setenv([key cString],[value cString],1);
 	}
       else if([value isKindOfClass: [NSArray class]])
 	{
 	  [context setObject: value
 		      forKey: key];
-	  NSLog(@"\t    Context: %@ = %@",key,value);
+	  // puts([[NSString stringWithFormat: @"\t    Context: %@ = %@",key,value] cString]);
 	}
       else
 	{
-	  NSLog(@"\tWARNING: Can't interpret value %@, for environment variable %@", value, key);
+	  puts([[NSString stringWithFormat: @"\tWARNING: Can't interpret value %@, for environment variable %@", value, key] cString]);
 	}
     }
   if([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
     {
-      NSLog(@"\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
+      puts("\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
       setenv("TARGET_BUILD_DIR","build",1);
     }
   if([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
     {
-      NSLog(@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
+      puts("\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
       setenv("BUILT_PRODUCTS_DIR","build",1);
     }
-  NSLog(@"=== Done Applying Build Configuration for %@",name);
+  puts([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
 }
 @end

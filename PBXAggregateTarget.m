@@ -4,7 +4,7 @@
 @implementation PBXAggregateTarget
 - (BOOL) build
 {
-  NSLog(@"%@",buildPhases);
+  // puts([buildPhases cString]);
   return YES;
 }
 @end

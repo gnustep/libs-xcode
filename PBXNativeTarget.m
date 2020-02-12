@@ -206,21 +206,21 @@
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   
-  NSLog(@"=== Building Target %@",name);
+  puts([[NSString stringWithFormat: @"=== Building Target %@",name] cString]);
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: productType
 	      forKey: @"PRODUCT_TYPE"];
 
-  NSLog(@"=== Checking Dependencies");  
+  puts([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
   id dependency = nil;
   en = [dependencies objectEnumerator];
   while((dependency = [en nextObject]) != nil && result)
     {
       result = [dependency build];
     }
-  NSLog(@"=== Done.");
+  puts([[NSString stringWithFormat: @"=== Done."] cString]);
 
-  NSLog(@"=== Executing build phases...");
+  puts([[NSString stringWithFormat: @"=== Executing build phases..."] cString]);
   [self _productWrapper];
   id phase = nil;
   en = [buildPhases objectEnumerator];
@@ -229,22 +229,22 @@
       result = [phase build];
       if(NO == result)
 	{
-	  NSLog(@"*** Failed build phase: %@",phase);
+	  puts([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
 	}
     }
-  NSLog(@"=== Done...");
-  NSLog(@"=== Completed Executing Target %@", name);
+  puts([[NSString stringWithFormat: @"=== Done..."] cString]);
+  puts([[NSString stringWithFormat: @"=== Completed Executing Target %@", name] cString]);
 
   return result;
 }
 
 - (BOOL) clean
 {
-  NSLog(@"=== Cleaning Target %@",name);
+  puts([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
   NSString *command = [NSString stringWithFormat: @"rm -rf %@",buildDir];
 
-  NSLog(@"Cleaning build directory");
+  puts([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
   int result = system([command cString]);
 
   if(result == 0)
@@ -252,18 +252,18 @@
       if([[NSFileManager defaultManager] fileExistsAtPath: @"derived_src"])
 	{
 	  command = @"rm -rf derived_src";
-	  NSLog(@"Cleaning derived_src directory");
+	  puts([[NSString stringWithFormat: @"Cleaning derived_src directory"] cString]);
 	  result = system([command cString]);
 	}
     }
   
-  NSLog(@"=== Completed Cleaning Target %@",name);
+  puts([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",name] cString]);
   return (result == 0);
 }
 
 - (BOOL) install
 {
-  NSLog(@"=== Installing Target %@",name);
+  puts([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"UninstalledProducts"]; 
   NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [productReference path]];
@@ -306,7 +306,7 @@
 					    pathContent: [headersLinkDir stringByAppendingPathComponent: @"Headers"]];
       if(!flag)
 	{
-	  NSLog(@"Error creating symbolic link...");
+	  puts([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
 
       [fileManager removeItemAtPath: [libsDir stringByAppendingPathComponent: 
@@ -318,22 +318,8 @@
 								    [NSString stringWithFormat: @"lib%@.so",execName]]];
       if(!flag)
 	{
-	  NSLog(@"Error creating symbolic link...");
+	  puts([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
-
-      /*
-      [fileManager removeItemAtPath: [libsDir stringByAppendingPathComponent: 
-						  [NSString stringWithFormat: @"lib%@.so.%@",execName,frameworkVersion]]
-			      error:NULL];
-      flag = [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
-								 [NSString stringWithFormat: @"lib%@.so.%@",execName,frameworkVersion]]
-				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
-									  [NSString stringWithFormat: @"lib%@.so",execName]]];
-      if(!flag)
-	{
-	  NSLog(@"Error creating symbolic link...");
-	}
-      */
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
     {
@@ -343,7 +329,7 @@
       NSString *derivedSrcHeaderDir = derivedSrcDir;
       NSString *destPath = [libsDir stringByAppendingPathComponent: [productReference path]];
 
-      NSLog(@"\tCopy %@ -> %@",fullPath,destPath);
+      puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
       [fileManager copyItemAtPath: fullPath
 			   toPath: destPath
 			    error: &error];
@@ -354,7 +340,7 @@
 	{
 	  NSString *fileName = [file lastPathComponent];
 	  NSString *destFile = [headersDir stringByAppendingPathComponent: fileName];
-	  NSLog(@"\tCopy %@ -> %@",file,destFile);
+	  puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",file,destFile] cString]);
 	  [fileManager copyItemAtPath: file
 			       toPath: destFile
 				error: &error];
@@ -362,7 +348,7 @@
     }
     
 
-  NSLog(@"=== Completed Installing Target %@",name);
+  puts([[NSString stringWithFormat: @"=== Completed Installing Target %@",name] cString]);
 
   return YES;
 }

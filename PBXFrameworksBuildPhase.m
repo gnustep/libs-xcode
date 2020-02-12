@@ -102,7 +102,7 @@
 		  stringByAppendingString: @" "];
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
-  NSLog(@"\t%@",buildCommand);
+  puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
   system([buildCommand cString]);
 }
 
@@ -205,7 +205,7 @@
 
 - (BOOL) buildTool
 {
-  NSLog(@"=== Executing Frameworks Build Phase (Tool)");
+  puts([[NSString stringWithFormat: @"=== Executing Frameworks Build Phase (Tool)"] cString]);
   // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
   NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
@@ -229,24 +229,21 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      NSLog(@"\t%@",command);
+      // puts("\t%@",command);
       result = system([command cString]);
     }
   else
     {
-      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  // NSLog(@"\t%@",command);
-  // int result = system([command cString]);
-
-  NSLog(@"=== Frameworks Build Phase Completed");
+  puts("=== Frameworks Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildApp
 {
-  NSLog(@"=== Executing Frameworks Build Phase (Application)");
+  puts("=== Executing Frameworks Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
   NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
@@ -269,24 +266,20 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      NSLog(@"\t%@",command);
       result = system([command cString]);
     }
   else
     {
-      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  // NSLog(@"\t%@",command);
-  // int result = system([command cString]);
-
-  NSLog(@"=== Frameworks Build Phase Completed");
+  puts("=== Frameworks Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildStaticLib
 {
-  NSLog(@"=== Executing Frameworks Build Phase (Static Library)");
+  puts("=== Executing Frameworks Build Phase (Static Library)");
   NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
 								   @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
@@ -302,15 +295,14 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      NSLog(@"\t%@",command);
       result = system([command cString]);
     }
   else
     {
-      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  NSLog(@"=== Frameworks Build Phase Completed");
+  puts("=== Frameworks Build Phase Completed");
 
   return (result == 0);
 }
@@ -318,7 +310,7 @@
 - (BOOL) buildFramework
 {
   int result = 0;
-  NSLog(@"=== Executing Frameworks Build Phase (Framework)");
+  puts("=== Executing Frameworks Build Phase (Framework)");
   [self generateDummyClass];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *outputFiles = [context objectForKey: 
@@ -385,21 +377,21 @@
 
   if([modified isEqualToString: @"YES"])
     {
-      NSLog(@"\t%@",command);
+      // puts("\t%@",command);
       result = system([command cString]);
     }
   else
     {
-      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  NSLog(@"=== Frameworks Build Phase Completed");
+  puts("=== Frameworks Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildBundle
 {
-  NSLog(@"=== Executing Frameworks Build Phase (Bundle)");
+  puts("=== Executing Frameworks Build Phase (Bundle)");
   // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
   NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
@@ -422,18 +414,18 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      NSLog(@"\t%@",command);
+      // puts("\t%@",command);
       result = system([command cString]);
     }
   else
     {
-      NSLog(@"\t** Nothing to be done for %@, no modifications.",outputPath);
+      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  // NSLog(@"\t%@",command);
+  // puts("\t%@",command);
   // int result = system([command cString]);
 
-  NSLog(@"=== Frameworks Build Phase Completed");
+  puts("=== Frameworks Build Phase Completed");
   return (result == 0);
 }
 
@@ -463,7 +455,7 @@
     }
   else 
     {
-      NSLog(@"***** ERROR: Unknown product type: %@",productType);
+      puts([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
     }
   return NO;
 }

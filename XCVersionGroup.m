@@ -61,7 +61,7 @@
   BOOL result = YES;
   while((o = [en nextObject]) != nil && result)
     {
-      NSLog(@"\tProcessing %@",[o path]);
+      puts([[NSString stringWithFormat: @"\tProcessing %@",[o path]] cString]);
     }
   return result;
 }

@@ -26,7 +26,7 @@
 
 - (void) applySettings
 {
-  // NSLog(@"%@",settings);
+  // puts("%@",settings);
 }
 
 - (NSString *) buildPath
@@ -37,7 +37,7 @@
 - (BOOL) build
 {
   [self applySettings];
-  NSLog(@"\t* Building %@",[fileRef path]);
+  puts([[NSString stringWithFormat: @"\t* Building %@",[fileRef path]] cString]);
   return [fileRef build];
 }
 

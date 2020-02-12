@@ -46,7 +46,7 @@
 
 - (BOOL) build
 {
-  NSLog(@"Executing... %@",self);
+  puts([[NSString stringWithFormat: @"Executing... %@",self] cString]);
   return YES;
 }
 @end

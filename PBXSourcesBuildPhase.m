@@ -7,7 +7,7 @@
 
 - (BOOL) build
 {
-  NSLog(@"=== Executing Sources Build Phase");
+  puts("=== Executing Sources Build Phase");
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   BOOL result = YES;
@@ -15,7 +15,7 @@
     {
       result = [file build];
     }
-  NSLog(@"=== Sources Build Phase Completed");
+  puts("=== Sources Build Phase Completed");
 
   return result;
 }

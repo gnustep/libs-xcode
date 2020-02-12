@@ -144,7 +144,7 @@
     }
 
   setenv("SOURCE_ROOT",[sourceRoot cString],1);
-  NSLog(@"\tSOURCE_ROOT = %@",sourceRoot);
+  puts([[NSString stringWithFormat: @"\tSOURCE_ROOT = %@",sourceRoot] cString]);
 }
 
 - (NSString *) buildString
@@ -156,7 +156,7 @@
   /* Open the command for reading. */
   fp = popen("gnustep-config --debug-flags", "r");
   if (fp == NULL) {
-    NSLog(@"*** Failed to run command\n" );
+    puts("*** Failed to run command\n" );
     return nil;
   }
 
@@ -187,7 +187,7 @@
 
 - (BOOL) build
 {
-  NSLog(@"=== Building Project");
+  puts("=== Building Project");
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
 
@@ -230,13 +230,13 @@
 	  chdir([currentDirectory UTF8String]);
 	}
     }
-  NSLog(@"=== Completed Building Project");
+  puts("=== Completed Building Project");
   return result;
 }
 
 - (BOOL) clean
 {
-  NSLog(@"=== Cleaning Project");
+  puts("=== Cleaning Project");
   [buildConfigurationList applyDefaultConfiguration];
 
   NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -270,13 +270,13 @@
 	  chdir([currentDirectory UTF8String]);
 	}
     }
-  NSLog(@"=== Completed Cleaning Project");
+  puts("=== Completed Cleaning Project");
   return result;  
 }
 
 - (BOOL) install
 {
-  NSLog(@"=== Installing Project");
+  puts("=== Installing Project");
   [buildConfigurationList applyDefaultConfiguration];
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -291,7 +291,7 @@
       result = [target install];
       [context popCurrentContext];
     }
-  NSLog(@"=== Completed Installing Project");
+  puts("=== Completed Installing Project");
   return result;  
 }
 @end

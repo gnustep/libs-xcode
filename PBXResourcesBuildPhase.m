@@ -9,7 +9,7 @@
 @implementation PBXResourcesBuildPhase
 - (BOOL) build
 {
-  NSLog(@"=== Executing Resources Build Phase");
+  puts("=== Executing Resources Build Phase");
   // NSString *projectRoot = [NSString stringWithCString: getenv("PROJECT_ROOT")];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
@@ -59,13 +59,13 @@
   NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
   NSString *copyCmd = [NSString stringWithFormat: @"cp %@ %@", origPath, resourcesDir];
   int r = 0;
-  NSLog(@"COPYING: %@", copyCmd);
+  puts([[NSString stringWithFormat: @"COPYING: %@", copyCmd] cString]);
   r = system([copyCmd cString]);
  
   // return, if we failed...
   if(r != 0)
     {
-      NSLog(@"Error copying...");
+      puts("Error copying...");
     }
 
   // Handle Info.plist....
@@ -81,7 +81,7 @@
   sysresult = system([awkCommand cString]);
   result = (sysresult == 0);
   
-  NSLog(@"=== Resources Build Phase Completed");
+  puts("=== Resources Build Phase Completed");
   return result;
 }
 @end

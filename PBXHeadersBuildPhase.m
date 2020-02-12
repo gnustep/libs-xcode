@@ -9,18 +9,18 @@
 @implementation PBXHeadersBuildPhase
 - (BOOL) build
 {
-  NSLog(@"=== Executing Headers Build Phase");
+  puts("=== Executing Headers Build Phase");
   NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: TOOL_TYPE] ||
      [productType isEqualToString: APPLICATION_TYPE]) // ||
    //[productType isEqualToString: LIBRARY_TYPE])
     {
-      NSLog(@"\t** WARN: No need to process headers for product type %@",productType);
+      puts([[NSString stringWithFormat: @"\t** WARN: No need to process headers for product type %@",productType] cString]);
       return YES;
     }
 
-  NSLog(@"\t* Copying headers to derived sources folder...");
+  puts([[NSString stringWithFormat: @"\t* Copying headers to derived sources folder..."] cString]);
   NSFileManager *defaultManager = [NSFileManager defaultManager];
   id file = nil;
   BOOL result = YES;
@@ -37,17 +37,17 @@
       BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						toPath: dstFile
 						 error: &error];
-      NSLog(@"\tCopy %@ -> %@",srcFile,dstFile);
+      puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,dstFile] cString]);
       if(!copyResult)
 	{
-	  NSLog(@"\t* Already exists");
+	  puts([[NSString stringWithFormat: @"\t* Already exists"] cString]);
 	}
     }
 
   // Only copy into the framework header folder, if it's a framework...
   if([productType isEqualToString: FRAMEWORK_TYPE])
     {
-      NSLog(@"\t* Copying headers to framework header folder...");
+      puts([[NSString stringWithFormat: @"\t* Copying headers to framework header folder..."] cString]);
       en = [files objectEnumerator];
       NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
       while((file = [en nextObject]) != nil && result)
@@ -58,15 +58,15 @@
 	  BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						    toPath: dstFile
 						     error: &error];
-	  NSLog(@"\tCopy %@ -> %@",srcFile,dstFile);      
+	  puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,dstFile] cString]);      
 	  if(!copyResult)
 	    {
-	      NSLog(@"\t* Already exists");
+	      puts([[NSString stringWithFormat: @"\t* Already exists"] cString]);
 	    }
 	}
     }
 
-  NSLog(@"=== Completed Headers Build Phase");
+  puts([[NSString stringWithFormat: @"=== Completed Headers Build Phase"] cString]);
 
   return result;
 }

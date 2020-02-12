@@ -67,19 +67,19 @@
 
 - (BOOL) build
 {
-  NSLog(@"Building %@",self);
+  puts([[NSString stringWithFormat: @"Building %@",self] cString]);
   return YES;
 }
 
 - (BOOL) clean
 {
-  NSLog(@"Cleaning %@",self);
+  puts([[NSString stringWithFormat: @"Cleaning %@",self] cString]);
   return YES;
 }
 
 - (BOOL) install
 {
-  NSLog(@"Installing %@",self);
+  puts([[NSString stringWithFormat: @"Installing %@",self] cString]);
   return YES;
 }
 

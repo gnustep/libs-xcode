@@ -47,12 +47,12 @@
   
   if(classInstance == nil)
     {
-      NSLog(@"Unknown class: %@",className);
+      puts([[NSString stringWithFormat: @"Unknown class: %@",className] cString]);
       return nil;
     }
   if([className isEqualToString: @"PBXAggregateTarget"])
     {
-      NSLog(@"Aggregate target...");
+      puts("Aggregate target...");
     }
 
   object = [[classInstance alloc] init];
@@ -152,11 +152,11 @@
 	    }
 	  NS_HANDLER
 	    {
-	      NSLog(@"%@, key = %@, value = %@, object = %@",
-		    [localException reason], 
-		    key, 
-		    value, 
-		    object);
+	      puts([[NSString stringWithFormat: @"%@, key = %@, value = %@, object = %@",
+                              [localException reason], 
+                              key, 
+                              value, 
+                              object] cString]);
 	    }
 	  NS_ENDHANDLER;
 	}

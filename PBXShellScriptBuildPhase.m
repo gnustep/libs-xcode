@@ -59,14 +59,13 @@
   NSError *error = nil;
   NSString *fileName = [NSString stringWithFormat: @"script_%d",[shellScript hash]];
   NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,fileName];
-  NSLog(@"=== Executing Script Build Phase... %@",name);
-  NSLog(@"\t%@",command);
+  puts([[NSString stringWithFormat: @"=== Executing Script Build Phase... %@",name] cString]);
+  puts([[NSString stringWithFormat: @"\t%@",command] cString]);
   [shellScript writeToFile: fileName atomically: YES encoding: NSASCIIStringEncoding error: &error];
   int result = system([shellScript cString]);
   NSString *deleteCommand = [NSString stringWithFormat: @"rm %@",fileName];
-  // system([deleteCommand cString]);
-  NSLog(@"=== Done Executing Script Build Phase... %@",name);
-  // return (result == 0);
+  puts([[NSString stringWithFormat: @"=== Done Executing Script Build Phase... %@",name] cString]);
+
   return YES; // be forgiving since this is not a mac...
 }
 @end

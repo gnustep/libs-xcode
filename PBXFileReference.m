@@ -317,7 +317,7 @@
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
 	    {	  
-	      NSLog(@"\t** Rebuilding: %@",buildCommand);
+	      puts([[NSString stringWithFormat: @"\t** Rebuilding: %@",buildCommand] cString]);
 	      result = system([buildCommand cString]);
 	      if([modified isEqualToString: @"NO"])
 		{
@@ -328,12 +328,12 @@
 	    }
 	  else
 	    {
-	      NSLog(@"\t** Already built, nothing to be done for %@",buildPath);
+	      puts([[NSString stringWithFormat: @"\t** Already built: %@",buildPath] cString]);
 	    }
 	}
       else
 	{
-	  NSLog(@"\t%@",buildCommand);
+	  puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
 	  result = system([buildCommand cString]);
 	  if([modified isEqualToString: @"NO"])
 	    {

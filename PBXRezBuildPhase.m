@@ -5,15 +5,15 @@
 
 -(BOOL) build
 {
-  NSLog(@"=== Executing Rez Build Phase");
+  puts("=== Executing Rez Build Phase");
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   BOOL result = YES;
   while((file = [en nextObject]) != nil && result)
     {
-      NSLog(@"\tFile = %@",file);
+      puts([[NSString stringWithFormat: @"\tFile = %@",file] cString]);
     }
-  NSLog(@"=== Completed Rez Build Phase");
+  puts("=== Completed Rez Build Phase");
   return result;
 }
 
