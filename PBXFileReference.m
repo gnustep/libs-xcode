@@ -210,17 +210,6 @@
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:[buildPath stringByDeletingLastPathComponent]];
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
-      /*
-      NSString *systemIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
-				      stringByAppendingPathComponent: @"Library"] 
-				     stringByAppendingPathComponent: @"Headers"];
-      NSString *localIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")] 
-				     stringByAppendingPathComponent: @"Library"] 
-				    stringByAppendingPathComponent: @"Headers"];
-      NSString *userIncludeDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
-				    stringByAppendingPathComponent: @"Library"] 
-				   stringByAppendingPathComponent: @"Headers"];
-      */
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: cc];
@@ -360,4 +349,9 @@
   return (result == 0);
 }
 
+- (NSString *) description
+{
+  NSString *s = [super description];
+  return [s stringByAppendingFormat: @" <%@>", path];
+}
 @end

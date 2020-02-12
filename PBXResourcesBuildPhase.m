@@ -16,11 +16,13 @@
   NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];
   NSError *error = nil;
 
-  NSLog(@"%@",currentDir);
+  NSLog(@"CURRENT DIR: %@",currentDir);
   [[NSFileManager defaultManager] createDirectoryAtPath:resourcesDir
 			    withIntermediateDirectories:YES
 					     attributes:nil
 						  error:&error];
+
+  NSLog(@"Files = %@", files);
 
   NSEnumerator *en = [files objectEnumerator];
   BOOL result = YES;
@@ -47,57 +49,35 @@
 	  destPath = [destPath stringByAppendingPathComponent: fileName];
 	}
       
-      NSLog(@"\tCopy %@ -> %@",filePath,destPath);
+      NSDebugLog(@"\tCopy %@ -> %@",filePath,destPath);
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
 							    error: &error];
 
       if(!copyResult)
 	{
-	  NSLog(@"\tCopy Error: %@",[error localizedDescription]);
+	  NSDebugLog(@"\tCopy Error: %@ copying %@ -> %@",[error localizedDescription],
+                     filePath, destPath);
 	}
     }
 
 
   /**************************************************************************/
   /**** This is a kludge, only for the moment to handle English.......   ****/
-  NSString *lprojPath = [productOutputDir stringByAppendingPathComponent:@"en.lproj"];
-  BOOL copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"en.lproj"
-							    toPath: lprojPath
-							     error: &error];
-  if(copyResult == NO)
-    {
-      // result = NO;
-      NSLog(@"\tCopy Error (en.lproj): %@",[error localizedDescription]);
-    }
+  NSString *lprojPath = [productOutputDir stringByAppendingPathComponent:@"Resources"];
+  NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
+  NSString *copyCmd = [NSString stringWithFormat: @"cp -r %@ %@", origPath, resourcesDir];
 
-
-  lprojPath = [productOutputDir stringByAppendingPathComponent:@"English.lproj"];
-  copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"English.lproj"
-						       toPath: lprojPath
-							error: &error];
-  if(copyResult == NO)
-    {
-      // result = NO;
-      NSLog(@"\tCopy Error (English.lproj): %@",[error localizedDescription]);
-    }
-
-  lprojPath = [productOutputDir stringByAppendingPathComponent:@"Resources"];
-  copyResult = [[NSFileManager defaultManager] copyItemAtPath: @"Base.lproj"
-						       toPath: lprojPath
-							  error: &error];
-  if(copyResult == NO)
-    {
-      // result = NO;
-      NSLog(@"\tCopy Error (Base.lproj): %@",[error localizedDescription]);
-    }
+  int r = 0;
+  NSLog(@"COPYING: %@", copyCmd);
+  r = system([copyCmd cString]);
   /****                                                                  ****/
   /**************************************************************************/
  
   // return, if we failed...
-  if(result == NO)
+  if(r != 0)
     {
-      // return result;
+      NSLog(@"Error copying...");
     }
   
   NSString *inputPlist = // [projectRoot stringByAppendingPathComponent: 
@@ -111,7 +91,7 @@
   // NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   // if([modified isEqualToString: @"YES"])
     {
-      NSLog(@"\t%@",awkCommand);
+      NSDebugLog(@"\t%@",awkCommand);
       sysresult = system([awkCommand cString]);
       result = (sysresult == 0);
     }

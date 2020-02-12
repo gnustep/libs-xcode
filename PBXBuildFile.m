@@ -40,4 +40,11 @@
   NSLog(@"\t* Building %@",[fileRef path]);
   return [fileRef build];
 }
+
+- (NSString *) description
+{
+  NSString *s = [super description];
+  return [s stringByAppendingFormat: @" <%@>", fileRef]; 
+}
+
 @end
