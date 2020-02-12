@@ -190,7 +190,21 @@
      [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
-      NSString *buildPath = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
+      char *proj_root = getenv("PROJECT_ROOT");
+      if (proj_root == NULL ||
+          strcmp(proj_root, "") == 0)
+        {
+          proj_root = "";
+        }
+      
+      char *cc = getenv("CC");
+      if (cc == NULL ||
+          strcmp(cc, "") == 0)
+        {
+          cc = "`gnustep-config --variable=CC`";
+        }
+
+      NSString *buildPath = [[NSString stringWithCString: proj_root] 
 				         stringByAppendingPathComponent: 
 				    [self buildPath]];
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:[buildPath stringByDeletingLastPathComponent]];
@@ -209,7 +223,7 @@
       */
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
-      NSString *compiler = [NSString stringWithCString: getenv("CC")];
+      NSString *compiler = [NSString stringWithCString: cc];
       NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
 				      implodeArrayWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
