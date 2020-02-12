@@ -284,7 +284,8 @@
 	{
 	  objCflags = @"-fgnu-runtime -fconstant-string-class=NSConstantString";
 	}
-      NSString *std = [NSString stringWithCString: getenv("GCC_C_LANGUAGE_STANDARD")];
+      NSString *std = [NSString stringWithCString: getenv("GCC_C_LANGUAGE_STANDARD") != NULL ?
+                                getenv("GCC_C_LANGUAGE_STANDARD") : "" ];
       if ([std length] > 0)
         {
 	    if([std isEqualToString:@"compiler-default"] == YES)
