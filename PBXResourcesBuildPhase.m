@@ -16,14 +16,12 @@
   NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];
   NSError *error = nil;
 
-  NSLog(@"CURRENT DIR: %@",currentDir);
   [[NSFileManager defaultManager] createDirectoryAtPath:resourcesDir
 			    withIntermediateDirectories:YES
 					     attributes:nil
 						  error:&error];
 
-  NSLog(@"Files = %@", files);
-
+  // Copy all resources...
   NSEnumerator *en = [files objectEnumerator];
   BOOL result = YES;
   PBXBuildFile *file = nil;
@@ -57,9 +55,9 @@
 	}
     }
 
-
-  NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj"];
-  NSString *copyCmd = [NSString stringWithFormat: @"cp -r %@ %@", origPath, resourcesDir];
+  // Copy XIBs...
+  NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
+  NSString *copyCmd = [NSString stringWithFormat: @"cp %@ %@", origPath, resourcesDir];
   int r = 0;
   NSLog(@"COPYING: %@", copyCmd);
   r = system([copyCmd cString]);
@@ -69,13 +67,15 @@
     {
       NSLog(@"Error copying...");
     }
-  
-  NSString *inputPlist = // [projectRoot stringByAppendingPathComponent: 
-    [[NSString stringWithCString: getenv("INFOPLIST_FILE")] lastPathComponent]; // ];
+
+  // Handle Info.plist....
+  NSString *inputPlist = [[NSString stringWithCString: getenv("INFOPLIST_FILE")] lastPathComponent];
   NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];
-  NSString *awkCommand = [NSString stringWithFormat: 
-				     @"awk '{while(match($0,\"[$]{[^}]*}\")) {var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\",ENVIRON[var])}}1' < %@ > %@",
-				   [inputPlist stringByEscapingSpecialCharacters], [outputPlist stringByEscapingSpecialCharacters]];
+  NSString *awkCommand = [NSString stringWithFormat: @"awk '{while(match($0,\"[$]{[^}]*}\")) "
+                                   @"{var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\","
+                                   @"ENVIRON[var])}}1' < %@ > %@",
+				   [inputPlist stringByEscapingSpecialCharacters],
+                                   [outputPlist stringByEscapingSpecialCharacters]];
   int sysresult = 0;
   NSDebugLog(@"\t%@",awkCommand);
   sysresult = system([awkCommand cString]);

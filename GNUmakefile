@@ -20,8 +20,7 @@ FRAMEWORK_NAME = XCode
 #
 # Resource files
 #
-XCode_RESOURCE_FILES = \
-Resources/Version \
+XCode_RESOURCE_FILES =
 
 #
 # Header files
