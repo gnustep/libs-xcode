@@ -215,7 +215,7 @@
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @"`gnustep-config --base-libs`"];
+  linkString = [linkString stringByAppendingString: @"`gnustep-config --base-libs` -lgnustep-base"];
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
