@@ -55,12 +55,12 @@
     }
   if([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
     {
-      puts("\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
+      //      puts("\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
       setenv("TARGET_BUILD_DIR","build",1);
     }
   if([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
     {
-      puts("\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
+      // puts("\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
       setenv("BUILT_PRODUCTS_DIR","build",1);
     }
   puts([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
