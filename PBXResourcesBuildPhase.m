@@ -10,7 +10,8 @@
 - (BOOL) build
 {
   puts("=== Executing Resources Build Phase");
-  // NSString *projectRoot = [NSString stringWithCString: getenv("PROJECT_ROOT")];
+  // char *proot = getenv("PROJECT_ROOT");
+  // NSString *projectRoot = [NSString stringWithCString: proot == NULL?"":proot ];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];

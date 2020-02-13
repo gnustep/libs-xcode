@@ -318,7 +318,7 @@
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
 	    {	  
-	      puts([[NSString stringWithFormat: @"\t** Rebuilding: %@",buildCommand] cString]);
+	      // puts([[NSString stringWithFormat: @"\t** Rebuilding: %@",buildCommand] cString]);
 	      result = system([buildCommand cString]);
 	      if([modified isEqualToString: @"NO"])
 		{
@@ -334,7 +334,7 @@
 	}
       else
 	{
-	  puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
+	  // puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
 	  result = system([buildCommand cString]);
 	  if([modified isEqualToString: @"NO"])
 	    {
