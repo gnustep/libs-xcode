@@ -34,6 +34,11 @@
   return [fileRef buildPath];
 }
 
+- (NSString *) path
+{
+  return [fileRef path];
+}
+
 - (BOOL) build
 {
   [self applySettings];

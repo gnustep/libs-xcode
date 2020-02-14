@@ -7,6 +7,19 @@
 #import "GSXCBuildContext.h"
 
 @implementation PBXResourcesBuildPhase
+- (instancetype) init
+{
+  self = [super init];
+  if (self != nil)
+    {
+      NSArray *objs = nil;
+      objs = [[[GSXCBuildContext sharedBuildContext] objectForKey: @"objects"] allValues];
+      
+      ASSIGNCOPY(files, objs);
+    }
+  return self;
+}
+
 - (BOOL) build
 {
   puts("=== Executing Resources Build Phase");
@@ -14,7 +27,7 @@
   // NSString *projectRoot = [NSString stringWithCString: proot == NULL?"":proot ];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
-  NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];
+  // NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];
   NSError *error = nil;
 
   [[NSFileManager defaultManager] createDirectoryAtPath:resourcesDir
@@ -25,10 +38,62 @@
   // Copy all resources...
   NSEnumerator *en = [files objectEnumerator];
   BOOL result = YES;
-  PBXBuildFile *file = nil;
+  id file = nil;
   while((file = [en nextObject]) != nil && result)
     {
-      NSString *filePath = [[file buildPath] stringByDeletingFirstPathComponent];
+      id fileRef = [file fileRef];
+      NSLog(@"fileRef = %@", fileRef); /// , fileType);
+      if ([fileRef isKindOfClass: [PBXVariantGroup class]])
+        {
+          NSArray *children = [fileRef children];
+          NSEnumerator *e = [children objectEnumerator];
+          id child = nil;
+          while ((child = [e nextObject]) != nil)
+            {
+              NSLog(@"\t%@", child);
+              NSLog(@"child = %@", child); /// , fileType);
+              NSString *filePath = [child path]; // [[child buildPath] stringByDeletingFirstPathComponent];
+              NSString *fileDir = [resourcesDir stringByAppendingPathComponent: [filePath stringByDeletingLastPathComponent]];
+              NSString *fileName = [filePath lastPathComponent];
+              NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
+              NSFileManager *mgr = [NSFileManager defaultManager];
+              NSError *error = nil;
+              BOOL copyResult = NO; 
+              
+              // If there is more than one path component... then the intervening directories need to
+              // be created.
+              if([[filePath pathComponents] count] > 1)
+                {
+                  NSString *dirs = [filePath stringByDeletingLastPathComponent];
+                  
+                  destPath = [resourcesDir stringByAppendingPathComponent: dirs];
+                  destPath = [destPath stringByAppendingPathComponent: fileName];
+                }
+              
+              NSLog(@"\tCreate %@",fileDir);
+              copyResult = [mgr       createDirectoryAtPath: fileDir
+                                withIntermediateDirectories: YES
+                                                 attributes: nil
+                                                      error: &error];
+              if (copyResult == NO)
+                {
+                  NSLog(@"\t(create error = %@)", error);
+                }
+
+              NSLog(@"\tCopy child %@  -> %@",filePath,destPath);
+              copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
+                                                                   toPath: destPath
+                                                                    error: &error];
+              if (copyResult == NO)
+                {
+                  NSLog(@"\t(error = %@)", error);
+                }
+            }
+          continue;
+        }
+      
+      // NSString *fileType = [fileRef explicitFileType];
+      NSString *filePath = [file path]; //  stringByDeletingFirstPathComponent];
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
       NSError *error = nil;
@@ -44,7 +109,7 @@
 	  destPath = [destPath stringByAppendingPathComponent: fileName];
 	}
       
-      NSDebugLog(@"\tCopy %@ -> %@",filePath,destPath);
+      NSLog(@"\tX Copy %@ -> %@",filePath,destPath);
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
 							    error: &error];
@@ -56,19 +121,21 @@
 	}
     }
 
+  //
   // Copy XIBs...
-  NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
-  NSString *copyCmd = [NSString stringWithFormat: @"cp %@ %@", origPath, resourcesDir];
-  int r = 0;
-  puts([[NSString stringWithFormat: @"COPYING: %@", copyCmd] cString]);
-  r = system([copyCmd cString]);
- 
+  // NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
+  // NSString *copyCmd = [NSString stringWithFormat: @"cp %@ %@", origPath, resourcesDir];
+  // int r = 0;
+  // puts([[NSString stringWithFormat: @"COPYING: %@", copyCmd] cString]);
+  // r = system([copyCmd cString]);
+  //
   // return, if we failed...
-  if(r != 0)
-    {
-      puts("Error copying...");
-    }
-
+  // if(r != 0)
+  //  {
+  //    puts("Error copying...");
+  //  }
+  //
+  
   // Handle Info.plist....
   NSString *inputPlist = [[NSString stringWithCString: getenv("INFOPLIST_FILE")] lastPathComponent];
   NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];

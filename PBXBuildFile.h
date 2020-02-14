@@ -16,6 +16,7 @@
 - (NSMutableDictionary *) settings; // getter
 - (void) setSettings: (NSMutableDictionary *)object; // setter
 
+- (NSString *) path;
 - (NSString *) buildPath;
 - (BOOL) build;
 

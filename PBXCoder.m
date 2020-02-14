@@ -1,5 +1,6 @@
 #import "PBXCoder.h"
 #import "PBXContainer.h"
+#import "GSXCBuildContext.h"
 
 @implementation PBXCoder
 
@@ -12,8 +13,9 @@
       ASSIGN(projectRoot, [[fileName stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]);
       ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
+      [[GSXCBuildContext sharedBuildContext] setObject: objects forKey: @"objects"];
       // NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
-      // setenv("PROJECT_ROOT","",1);      
+      setenv("PROJECT_ROOT","",1);      
     }
   return self;
 }

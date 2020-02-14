@@ -353,6 +353,6 @@
 - (NSString *) description
 {
   NSString *s = [super description];
-  return [s stringByAppendingFormat: @" <%@>", path];
+  return [s stringByAppendingFormat: @" <%@, %@>", path, lastKnownFileType];
 }
 @end
