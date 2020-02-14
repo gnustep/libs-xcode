@@ -43,7 +43,7 @@
   while((file = [en nextObject]) != nil && result)
     {
       id fileRef = [file fileRef];
-      NSLog(@"fileRef = %@", fileRef); /// , fileType);
+      NSDebugLog(@"fileRef = %@", fileRef); /// , fileType);
       if ([fileRef isKindOfClass: [PBXVariantGroup class]])
         {
           NSArray *children = [fileRef children];
@@ -51,8 +51,8 @@
           id child = nil;
           while ((child = [e nextObject]) != nil)
             {
-              NSLog(@"\t%@", child);
-              NSLog(@"child = %@", child); /// , fileType);
+              NSDebugLog(@"\t%@", child);
+              NSDebugLog(@"child = %@", child); /// , fileType);
               NSString *filePath = [child path]; // [[child buildPath] stringByDeletingFirstPathComponent];
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent: [filePath stringByDeletingLastPathComponent]];
               NSString *fileName = [filePath lastPathComponent];
@@ -70,7 +70,7 @@
                   destPath = [destPath stringByAppendingPathComponent: fileName];
                 }
               
-              NSLog(@"\tCreate %@",fileDir);
+              NSDebugLog(@"\tCreate %@",fileDir);
               copyResult = [mgr       createDirectoryAtPath: fileDir
                                 withIntermediateDirectories: YES
                                                  attributes: nil
@@ -80,7 +80,7 @@
                   NSLog(@"\t(create error = %@)", error);
                 }
 
-              NSLog(@"\tCopy child %@  -> %@",filePath,destPath);
+              NSDebugLog(@"\tCopy child %@  -> %@",filePath,destPath);
               copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
                                                                    toPath: destPath
                                                                     error: &error];
@@ -109,7 +109,7 @@
 	  destPath = [destPath stringByAppendingPathComponent: fileName];
 	}
       
-      NSLog(@"\tX Copy %@ -> %@",filePath,destPath);
+      NSDebugLog(@"\tX Copy %@ -> %@",filePath,destPath);
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
 							    error: &error];
