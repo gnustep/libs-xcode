@@ -23,6 +23,7 @@
 - (BOOL) build
 {
   puts("=== Executing Resources Build Phase");
+  NSFileManager *mgr = [NSFileManager defaultManager];
   // char *proot = getenv("PROJECT_ROOT");
   // NSString *projectRoot = [NSString stringWithCString: proot == NULL?"":proot ];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
@@ -56,7 +57,6 @@
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent: [filePath stringByDeletingLastPathComponent]];
               NSString *fileName = [filePath lastPathComponent];
               NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
-              NSFileManager *mgr = [NSFileManager defaultManager];
               NSError *error = nil;
               BOOL copyResult = NO; 
               
@@ -144,10 +144,16 @@
                                    @"ENVIRON[var])}}1' < %@ > %@",
 				   [inputPlist stringByEscapingSpecialCharacters],
                                    [outputPlist stringByEscapingSpecialCharacters]];
+
   int sysresult = 0;
   NSDebugLog(@"\t%@",awkCommand);
   sysresult = system([awkCommand cString]);
   result = (sysresult == 0);
+
+  // Move Base.lproj to English.lproj until Base.lproj is supported..
+  NSString *baseLproj = [resourcesDir stringByAppendingPathComponent: @"Base.lproj"];
+  NSString *engLproj =  [resourcesDir stringByAppendingPathComponent: @"English.lproj"];
+  [mgr moveItemAtPath: baseLproj toPath: engLproj error: NULL];
   
   puts("=== Resources Build Phase Completed");
   return result;
