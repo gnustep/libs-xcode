@@ -39,18 +39,18 @@
       id value = [buildSettings objectForKey: key];
       if([value isKindOfClass: [NSString class]])
 	{	  
-	  // puts([[NSString stringWithFormat: @"\tEnvironment: %@ = %@",key,value] cString]);
+	  NSDebugLog(@"\tEnvironment: %@ = %@",key,value);
 	  setenv([key cString],[value cString],1);
 	}
       else if([value isKindOfClass: [NSArray class]])
 	{
 	  [context setObject: value
 		      forKey: key];
-	  // puts([[NSString stringWithFormat: @"\t    Context: %@ = %@",key,value] cString]);
+	  NSDebugLog(@"\t    Context: %@ = %@",key,value);
 	}
       else
 	{
-	  puts([[NSString stringWithFormat: @"\tWARNING: Can't interpret value %@, for environment variable %@", value, key] cString]);
+	  NSDebugLog(@"\tWARNING: Can't interpret value %@, for environment variable %@", value, key); 
 	}
     }
   if([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
