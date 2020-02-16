@@ -144,7 +144,7 @@
     }
 
   setenv("SOURCE_ROOT",[sourceRoot cString],1);
-  puts([[NSString stringWithFormat: @"\tSOURCE_ROOT = %@",sourceRoot] cString]);
+  NSDebugLog(@"\tSOURCE_ROOT = %@",sourceRoot);
 }
 
 - (NSString *) buildString
