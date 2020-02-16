@@ -20,17 +20,30 @@
   return self;
 }
 
+- (BOOL) processInfoPlistInput: (NSString *)inputFileName
+                        output: (NSString *)outputFileName
+{
+  NSString *command = [NSString stringWithFormat: @"awk '{while(match($0,\"[$]{[^}]*}\")) "
+                                   @"{var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$](\"var\")\","
+                                   @"ENVIRON[var])}}1' < %@ > %@",
+				   [inputFileName stringByEscapingSpecialCharacters],
+                                   [outputFileName stringByEscapingSpecialCharacters]];
+  int sysresult = 0;
+  NSDebugLog(@"\t%@",command);
+  sysresult = system([command cString]);
+  BOOL result = (sysresult == 0);
+  return result;
+}
+
 - (BOOL) build
 {
   puts("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
-  // char *proot = getenv("PROJECT_ROOT");
-  // NSString *projectRoot = [NSString stringWithCString: proot == NULL?"":proot ];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
-  // NSString *currentDir = [[NSFileManager defaultManager] currentDirectoryPath];
   NSError *error = nil;
 
+  // Pre create directory....
   [[NSFileManager defaultManager] createDirectoryAtPath:resourcesDir
 			    withIntermediateDirectories:YES
 					     attributes:nil
@@ -43,7 +56,7 @@
   while((file = [en nextObject]) != nil && result)
     {
       id fileRef = [file fileRef];
-      NSDebugLog(@"fileRef = %@", fileRef); /// , fileType);
+      NSDebugLog(@"fileRef = %@", fileRef);
       if ([fileRef isKindOfClass: [PBXVariantGroup class]])
         {
           NSArray *children = [fileRef children];
@@ -52,15 +65,17 @@
           while ((child = [e nextObject]) != nil)
             {
               NSDebugLog(@"\t%@", child);
-              NSDebugLog(@"child = %@", child); /// , fileType);
-              NSString *filePath = [child path]; // [[child buildPath] stringByDeletingFirstPathComponent];
-              NSString *fileDir = [resourcesDir stringByAppendingPathComponent: [filePath stringByDeletingLastPathComponent]];
+              NSDebugLog(@"child = %@", child); 
+              NSString *filePath = [child path];
+              NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
+                                                  [filePath stringByDeletingLastPathComponent]];
               NSString *fileName = [filePath lastPathComponent];
               NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
               NSError *error = nil;
               BOOL copyResult = NO; 
               
-              // If there is more than one path component... then the intervening directories need to
+              // If there is more than one path component...
+              // then the intervening directories need to
               // be created.
               if([[filePath pathComponents] count] > 1)
                 {
@@ -92,14 +107,14 @@
           continue;
         }
       
-      // NSString *fileType = [fileRef explicitFileType];
-      NSString *filePath = [file path]; //  stringByDeletingFirstPathComponent];
+      NSString *filePath = [file path]; 
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
       NSError *error = nil;
       BOOL copyResult = NO; 
 
-      // If there is more than one path component... then the intervening directories need to
+      // If there is more than one path component...
+      // then the intervening directories need to
       // be created.
       if([[filePath pathComponents] count] > 1)
 	{
@@ -121,39 +136,22 @@
 	}
     }
 
-  //
-  // Copy XIBs...
-  // NSString *origPath = [currentDir stringByAppendingPathComponent:@"Base.lproj/*"];
-  // NSString *copyCmd = [NSString stringWithFormat: @"cp %@ %@", origPath, resourcesDir];
-  // int r = 0;
-  // puts([[NSString stringWithFormat: @"COPYING: %@", copyCmd] cString]);
-  // r = system([copyCmd cString]);
-  //
-  // return, if we failed...
-  // if(r != 0)
-  //  {
-  //    puts("Error copying...");
-  //  }
-  //
-  
   // Handle Info.plist....
-  NSString *inputPlist = [[NSString stringWithCString: getenv("INFOPLIST_FILE")] lastPathComponent];
-  NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];
-  NSString *awkCommand = [NSString stringWithFormat: @"awk '{while(match($0,\"[$]{[^}]*}\")) "
-                                   @"{var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$]{\"var\"}\","
-                                   @"ENVIRON[var])}}1' < %@ > %@",
-				   [inputPlist stringByEscapingSpecialCharacters],
-                                   [outputPlist stringByEscapingSpecialCharacters]];
-
-  int sysresult = 0;
-  NSDebugLog(@"\t%@",awkCommand);
-  sysresult = system([awkCommand cString]);
-  result = (sysresult == 0);
+  NSString *inputPlist = [[NSString stringWithCString:
+                                      getenv("INFOPLIST_FILE")] lastPathComponent];
+  NSString *outputPlist = [resourcesDir
+                            stringByAppendingPathComponent: @"Info-gnustep.plist"];
+  [self processInfoPlistInput: inputPlist
+                       output: outputPlist];
 
   // Move Base.lproj to English.lproj until Base.lproj is supported..
-  NSString *baseLproj = [resourcesDir stringByAppendingPathComponent: @"Base.lproj"];
-  NSString *engLproj =  [resourcesDir stringByAppendingPathComponent: @"English.lproj"];
-  [mgr moveItemAtPath: baseLproj toPath: engLproj error: NULL];
+  NSString *baseLproj = [resourcesDir
+                          stringByAppendingPathComponent: @"Base.lproj"];
+  NSString *engLproj =  [resourcesDir
+                          stringByAppendingPathComponent: @"English.lproj"];
+  [mgr moveItemAtPath: baseLproj
+               toPath: engLproj
+                error: NULL];
   
   puts("=== Resources Build Phase Completed");
   return result;
