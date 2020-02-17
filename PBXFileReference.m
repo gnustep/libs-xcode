@@ -178,6 +178,7 @@
   NSError *error = nil;
   NSFileManager *manager = [NSFileManager defaultManager];
 
+  // NSLog(@"*** %@", sourceTree);
   if(modified == nil)
     {
       modified = @"NO";
@@ -220,6 +221,7 @@
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
 
 
+      NSLog(@"Build path = %@", [self buildPath]);
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
@@ -255,11 +257,12 @@
       
       // If the target is in the subdirectory, then override the preprending of
       // the project root.
+      
       if(targetInSubdir)
 	{
 	  buildPath = [self path]; 
 	}
-
+       
       // Sometimes, for some incomprehensible reason, the buildpath doesn't 
       // need the project dir pre-pended.  This could be due to differences 
       // in different version of xcode.  It must be removed to successfully
@@ -298,7 +301,7 @@
     
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
-      
+      NSLog(@"*** %@ %@", path, buildPath);      
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
 					 [buildPath stringByEscapingSpecialCharacters], 
@@ -334,7 +337,7 @@
 	}
       else
 	{
-	  // puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
+	  puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
 	  result = system([buildCommand cString]);
 	  if([modified isEqualToString: @"NO"])
 	    {

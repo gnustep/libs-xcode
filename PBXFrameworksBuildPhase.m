@@ -215,7 +215,7 @@
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @"`gnustep-config --base-libs` -lgnustep-base"];
+  linkString = [linkString stringByAppendingString: @"`gnustep-config --base-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base"];
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
@@ -253,7 +253,7 @@
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs` -lgnustep-base -lgnustep-gui"];
+  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs`  `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui"];
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
