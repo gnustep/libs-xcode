@@ -6,6 +6,8 @@
 #import "NSString+PBXAdditions.h"
 #import "GSXCBuildContext.h"
 
+extern char **environ;
+
 @implementation PBXResourcesBuildPhase
 - (instancetype) init
 {
@@ -23,16 +25,41 @@
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
                         output: (NSString *)outputFileName
 {
-  NSString *command = [NSString stringWithFormat: @"awk '{while(match($0,\"[$]{[^}]*}\")) "
-                                   @"{var=substr($0,RSTART+2,RLENGTH -3);gsub(\"[$](\"var\")\","
-                                   @"ENVIRON[var])}}1' < %@ > %@",
-				   [inputFileName stringByEscapingSpecialCharacters],
-                                   [outputFileName stringByEscapingSpecialCharacters]];
-  int sysresult = 0;
-  NSDebugLog(@"\t%@",command);
-  sysresult = system([command cString]);
-  BOOL result = (sysresult == 0);
-  return result;
+  NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+  NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
+  NSString *outputFileString = nil;
+
+  ASSIGNCOPY(outputFileString, inputFileString);
+
+  // Get env vars...
+  for (char **env = environ; *env != 0; env++)
+    {
+      char *thisEnv = *env;
+      NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
+      NSArray *components = [envStr componentsSeparatedByString: @"="];
+      [dict setObject: [components lastObject]
+               forKey: [components firstObject]];
+    }
+
+  // Replace all variables in the plist with the values...
+  NSDebugLog(@"%@", dict);
+  NSArray *keys = [dict allKeys];
+  NSEnumerator *en = [keys objectEnumerator];
+  NSString *k = nil;
+  while ((k = [en nextObject]) != nil)
+    {
+      NSString *v = [dict objectForKey: k];
+      outputFileString = [outputFileString stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
+                                                                     withString: v];
+    }
+
+  [outputFileString writeToFile: outputFileName
+                     atomically: YES
+                       encoding: NSUTF8StringEncoding
+                          error: NULL];
+
+  NSDebugLog(@"%@", outputFileString);
+  return YES;
 }
 
 - (BOOL) build
