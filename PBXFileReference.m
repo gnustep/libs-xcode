@@ -221,7 +221,7 @@
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
 
 
-      NSLog(@"Build path = %@", [self buildPath]);
+      NSLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
@@ -304,7 +304,7 @@
       NSLog(@"*** %@ %@", path, buildPath);      
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
-					 [buildPath stringByEscapingSpecialCharacters], 
+					 [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters], 
 					 objCflags,
 					 configString,
 					 headerSearchPaths,

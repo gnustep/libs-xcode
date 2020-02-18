@@ -4,12 +4,8 @@
 @implementation NSString (PBXAdditions)
 - (NSString *) firstPathComponent
 {
-  NSString *result = nil;
-  if ([[self pathComponents] count] >= 2)
-    {
-      result = [[self pathComponents] objectAtIndex:1];
-    }
-  return result;
+  NSArray *components = [self pathComponents];
+  return ([components count] > 0)?[components objectAtIndex: 0]:@"";
 }
 
 - (NSString *) stringByEscapingSpecialCharacters
@@ -30,21 +26,20 @@
 
 - (NSString *) stringByDeletingFirstPathComponent
 {
-  NSString *firstPathComponent = [self firstPathComponent];
-  NSString *result = nil;
-  if (nil != firstPathComponent)
-    {
-      NSMutableArray *pathComponents = [NSMutableArray arrayWithArray:[self pathComponents]];
-      
-      if ([[pathComponents objectAtIndex:0] isEqualToString:@"/"])
-	{
-	  [pathComponents removeObjectAtIndex:0];
-	}
+  NSArray *components = [self pathComponents];
+  NSString *firstComponent = [self firstPathComponent];
+  NSString *result = @"";
+  NSEnumerator *en = [components objectEnumerator];
+  NSString *c = nil;
 
-      [pathComponents removeObject:firstPathComponent];      
-      result = [@"/" stringByAppendingPathComponent:
-		   [pathComponents componentsJoinedByString:@"/"]];
+  while ((c = [en nextObject]) != nil)
+    {
+      if ([c isEqualToString: firstComponent])
+        continue;
+      
+      result = [result stringByAppendingPathComponent: c];
     }
+  
   return result;
 }
 @end
