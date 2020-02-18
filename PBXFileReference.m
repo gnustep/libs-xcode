@@ -131,26 +131,39 @@
 
 - (NSArray *) allSubdirsAtPath: (NSString *)apath
 {
-    NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
-    NSFileManager *manager = [NSFileManager defaultManager];
-    NSDirectoryEnumerator *en = [manager enumeratorAtPath:apath];
-    NSString *fileName = nil;
-    NSString *rootPath = [[manager currentDirectoryPath] stringByAppendingPathComponent: apath];
-    
-    while((fileName = [en nextObject]) != nil)
+  NSDebugLog(@"apath = %@", apath);
+  NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
+  NSFileManager *manager = [[NSFileManager alloc] init];
+  NSDirectoryEnumerator *en = [manager enumeratorAtPath:apath];
+  NSString *fileName = nil;
+  NSDebugLog(@"cwd = %@", [manager currentDirectoryPath]);
+  
+  while((fileName = [en nextObject]) != nil)
     {
-	if([[fileName pathExtension] isEqualToString:@"h"])
-	{
-	    NSString *dirToAdd = [fileName stringByDeletingLastPathComponent];
-	    dirToAdd = [rootPath stringByAppendingPathComponent: dirToAdd];
-	    if([results containsObject: dirToAdd] == NO)
-	    {
-		[results addObject: dirToAdd];
-	    }
-	}
+      BOOL isDir = NO;
+      NSString *dirToAdd = fileName; //[fileName stringByDeletingLastPathComponent];
+      [manager fileExistsAtPath: fileName
+                    isDirectory: &isDir];
+
+      if (isDir && [results containsObject: dirToAdd] == NO)
+        {
+          NSString *ext = [dirToAdd pathExtension];
+          if ([ext isEqualToString: @"app"] ||
+              [ext isEqualToString: @"xcassets"] ||
+              [ext isEqualToString: @"lproj"] ||
+              [dirToAdd containsString: @"build"] ||
+              [dirToAdd containsString: @"xcassets"])
+            {
+              continue;
+            }
+          [results addObject: dirToAdd];
+          NSDebugLog(@"adding dirToAdd = %@", dirToAdd);
+        }
     }
 
-    return results;
+  NSDebugLog(@"results = %@", results);
+  RELEASE(manager);
+  return results;
 }
 
 - (NSString *) buildPath
@@ -178,7 +191,7 @@
   NSError *error = nil;
   NSFileManager *manager = [NSFileManager defaultManager];
 
-  // NSLog(@"*** %@", sourceTree);
+  // NSDebugLog(@"*** %@", sourceTree);
   if(modified == nil)
     {
       modified = @"NO";
@@ -208,7 +221,7 @@
       NSString *buildPath = [[NSString stringWithCString: proj_root] 
 				         stringByAppendingPathComponent: 
 				    [self buildPath]];
-      NSArray *localHeaderPathsArray = [self allSubdirsAtPath:[buildPath stringByDeletingLastPathComponent]];
+      NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
@@ -220,8 +233,8 @@
 				  implodeArrayWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
 
-
-      NSLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
+      NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
+      NSDebugLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
