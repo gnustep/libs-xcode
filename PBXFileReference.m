@@ -152,11 +152,13 @@
               [ext isEqualToString: @"xcassets"] ||
               [ext isEqualToString: @"lproj"] ||
               [dirToAdd containsString: @"build"] ||
-              [dirToAdd containsString: @"xcassets"])
+              [dirToAdd containsString: @"xcassets"] ||
+              [dirToAdd containsString: @"lproj"] ||
+              [dirToAdd containsString: @"xcodeproj"])
             {
               continue;
             }
-          [results addObject: dirToAdd];
+          [results addObject: [dirToAdd stringByEscapingSpecialCharacters]];
           NSDebugLog(@"adding dirToAdd = %@", dirToAdd);
         }
     }
@@ -314,10 +316,12 @@
     
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
-      NSDebugLog(@"*** %@ %@", path, buildPath);      
+      NSDebugLog(@"*** %@ %@", path, buildPath);
+      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1)?
+        [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters]:[self buildPath];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
-					 [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters], 
+					 compilePath,
 					 objCflags,
 					 configString,
 					 headerSearchPaths,
