@@ -301,7 +301,7 @@
     
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
-      NSLog(@"*** %@ %@", path, buildPath);      
+      NSDebugLog(@"*** %@ %@", path, buildPath);      
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
 					 [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters], 
@@ -337,7 +337,7 @@
 	}
       else
 	{
-	  puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
+          NSDebugLog(@"\t%@",buildCommand); 
 	  result = system([buildCommand cString]);
 	  if([modified isEqualToString: @"NO"])
 	    {
