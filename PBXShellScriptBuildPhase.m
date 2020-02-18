@@ -61,7 +61,10 @@
   NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,fileName];
   puts([[NSString stringWithFormat: @"=== Executing Script Build Phase... %@",name] cString]);
   puts([[NSString stringWithFormat: @"\t%@",command] cString]);
-  [shellScript writeToFile: fileName atomically: YES encoding: NSASCIIStringEncoding error: &error];
+  [shellScript writeToFile: fileName
+                atomically: YES
+                  encoding: NSASCIIStringEncoding
+                     error: &error];
   system([shellScript cString]);
   // NSString *deleteCommand = [NSString stringWithFormat: @"rm -rf %@",fileName];
   puts([[NSString stringWithFormat: @"=== Done Executing Script Build Phase... %@",name] cString]);
