@@ -318,7 +318,7 @@
       NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
       NSDebugLog(@"*** %@ %@", path, buildPath);
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1)?
-        [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters]:[self buildPath];
+        [[self buildPath] stringByEscapingSpecialCharacters]:[self buildPath];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
 					 compilePath,
