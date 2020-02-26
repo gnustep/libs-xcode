@@ -15,7 +15,9 @@ extern char **environ;
   if (self != nil)
     {
       NSArray *objs = nil;
-      objs = [[[GSXCBuildContext sharedBuildContext] objectForKey: @"objects"] allValues];
+      objs = [[[GSXCBuildContext sharedBuildContext]
+                objectForKey: @"objects"]
+               allValues];
       
       ASSIGNCOPY(files, objs);
     }
@@ -147,11 +149,12 @@ extern char **environ;
 	{
 	  NSString *dirs = [filePath stringByDeletingLastPathComponent];
 
-	  destPath = [resourcesDir stringByAppendingPathComponent: dirs];
-	  destPath = [destPath stringByAppendingPathComponent: fileName];
+	  // destPath = [resourcesDir stringByAppendingPathComponent: dirs];
+          // NSLog(@"dirs = %@",dirs);
+	  // destPath = [destPath stringByAppendingPathComponent: fileName];
 	}
       
-      NSDebugLog(@"\tX Copy %@ -> %@",filePath,destPath);
+      NSLog(@"\tX Copy %@ -> %@",filePath,destPath);
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
 							    error: &error];
