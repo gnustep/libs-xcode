@@ -272,7 +272,6 @@
       
       // If the target is in the subdirectory, then override the preprending of
       // the project root.
-      
       if(targetInSubdir)
 	{
 	  buildPath = [self path]; 
@@ -313,11 +312,12 @@
 	    objCflags = [NSString stringWithFormat: @"%@ -std=%@",
 				  objCflags, std];
         }
-    
+
+      BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
       NSDebugLog(@"*** %@ %@", path, buildPath);
-      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1)?
+      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists)?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters]:[self buildPath];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
