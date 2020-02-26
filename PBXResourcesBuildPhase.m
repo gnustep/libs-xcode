@@ -145,16 +145,16 @@ extern char **environ;
       // If there is more than one path component...
       // then the intervening directories need to
       // be created.
-      if([[filePath pathComponents] count] > 1)
-	{
-	  NSString *dirs = [filePath stringByDeletingLastPathComponent];
+      //if([[filePath pathComponents] count] > 1)
+      //	{
+      //	  NSString *dirs = [filePath stringByDeletingLastPathComponent];
 
 	  // destPath = [resourcesDir stringByAppendingPathComponent: dirs];
           // NSLog(@"dirs = %@",dirs);
 	  // destPath = [destPath stringByAppendingPathComponent: fileName];
-	}
+      //	}
       
-      NSLog(@"\tX Copy %@ -> %@",filePath,destPath);
+      NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
 							    error: &error];
