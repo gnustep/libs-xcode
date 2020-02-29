@@ -266,7 +266,7 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);
+      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
       result = system([command cString]);
     }
   else
@@ -296,7 +296,7 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);
+      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
       result = system([command cString]);
     }
   else
@@ -379,7 +379,7 @@
 
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);      
+      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
       result = system([command cString]);
     }
   else
@@ -416,7 +416,7 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);            
+      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);            
       result = system([command cString]);
     }
   else
