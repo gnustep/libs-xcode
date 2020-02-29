@@ -266,6 +266,7 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
+      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);
       result = system([command cString]);
     }
   else
@@ -295,6 +296,7 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
+      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);
       result = system([command cString]);
     }
   else
@@ -377,7 +379,7 @@
 
   if([modified isEqualToString: @"YES"])
     {
-      // puts("\t%@",command);
+      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);      
       result = system([command cString]);
     }
   else
@@ -414,16 +416,13 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      // puts("\t%@",command);
+      puts([[NSString stringWithFormat: @"\t* Linking %@.",outputPath] cString]);            
       result = system([command cString]);
     }
   else
     {
       puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
-
-  // puts("\t%@",command);
-  // int result = system([command cString]);
 
   puts("=== Frameworks Build Phase Completed");
   return (result == 0);

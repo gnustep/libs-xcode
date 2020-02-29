@@ -137,6 +137,7 @@ extern char **environ;
                 }
 
               NSDebugLog(@"\tCopy child %@  -> %@",filePath,destPath);
+              puts([[NSString stringWithFormat: @"\tCopy child resource %@ --> %@",filePath,destPath] cString]);
               copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
                                                                    toPath: destPath
                                                                     error: &error];
@@ -154,6 +155,7 @@ extern char **environ;
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
+      puts([[NSString stringWithFormat: @"\tCopy resource %@ --> %@",filePath,destPath] cString]);      
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
 							    error: &error];
