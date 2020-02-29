@@ -315,12 +315,14 @@
 
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
+      NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
       NSDebugLog(@"*** %@ %@", path, buildPath);
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists)?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters]:[self buildPath];
+      NSString *errorOutPath = [buildDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".err"]];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
+                                         errorOutPath,
 					 compilePath,
 					 objCflags,
 					 configString,
