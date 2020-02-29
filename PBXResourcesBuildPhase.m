@@ -27,40 +27,52 @@ extern char **environ;
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
                         output: (NSString *)outputFileName
 {
-  NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-  NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
-  NSString *outputFileString = nil;
-
-  ASSIGNCOPY(outputFileString, inputFileString);
-
-  // Get env vars...
-  for (char **env = environ; *env != 0; env++)
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *settings = [context objectForKey: @"PRODUCT_SETTINGS_XML"];
+  if(settings == nil)
     {
-      char *thisEnv = *env;
-      NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
-      NSArray *components = [envStr componentsSeparatedByString: @"="];
-      [dict setObject: [components lastObject]
-               forKey: [components firstObject]];
+      NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+      NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
+      NSString *outputFileString = nil;
+      
+      ASSIGNCOPY(outputFileString, inputFileString);
+      
+      // Get env vars...
+      for (char **env = environ; *env != 0; env++)
+        {
+          char *thisEnv = *env;
+          NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
+          NSArray *components = [envStr componentsSeparatedByString: @"="];
+          [dict setObject: [components lastObject]
+                   forKey: [components firstObject]];
+        }
+      
+      // Replace all variables in the plist with the values...
+      NSDebugLog(@"%@", dict);
+      NSArray *keys = [dict allKeys];
+      NSEnumerator *en = [keys objectEnumerator];
+      NSString *k = nil;
+      while ((k = [en nextObject]) != nil)
+        {
+          NSString *v = [dict objectForKey: k];
+          outputFileString = [outputFileString stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
+                                                                         withString: v];
+        }
+      
+      [outputFileString writeToFile: outputFileName
+                         atomically: YES
+                           encoding: NSUTF8StringEncoding
+                              error: NULL];
+      
+      NSDebugLog(@"%@", outputFileString);
     }
-
-  // Replace all variables in the plist with the values...
-  NSDebugLog(@"%@", dict);
-  NSArray *keys = [dict allKeys];
-  NSEnumerator *en = [keys objectEnumerator];
-  NSString *k = nil;
-  while ((k = [en nextObject]) != nil)
+  else
     {
-      NSString *v = [dict objectForKey: k];
-      outputFileString = [outputFileString stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
-                                                                     withString: v];
+      [settings writeToFile: outputFileName
+                 atomically: YES
+                   encoding: NSUTF8StringEncoding
+                      error: NULL];      
     }
-
-  [outputFileString writeToFile: outputFileName
-                     atomically: YES
-                       encoding: NSUTF8StringEncoding
-                          error: NULL];
-
-  NSDebugLog(@"%@", outputFileString);
   return YES;
 }
 
@@ -141,19 +153,6 @@ extern char **environ;
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
       NSError *error = nil;
       BOOL copyResult = NO; 
-
-      // If there is more than one path component...
-      // then the intervening directories need to
-      // be created.
-      //if([[filePath pathComponents] count] > 1)
-      //	{
-      //	  NSString *dirs = [filePath stringByDeletingLastPathComponent];
-
-	  // destPath = [resourcesDir stringByAppendingPathComponent: dirs];
-          // NSLog(@"dirs = %@",dirs);
-	  // destPath = [destPath stringByAppendingPathComponent: fileName];
-      //	}
-      
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
       copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
 							   toPath: destPath
@@ -167,8 +166,9 @@ extern char **environ;
     }
 
   // Handle Info.plist....
+  char *infoplist = getenv("INFOPLIST_FILE") == NULL ? "":getenv("INFOPLIST_FILE");
   NSString *inputPlist = [[NSString stringWithCString:
-                                      getenv("INFOPLIST_FILE")] lastPathComponent];
+                           infoplist] lastPathComponent];
   NSString *outputPlist = [resourcesDir
                             stringByAppendingPathComponent: @"Info-gnustep.plist"];
   [self processInfoPlistInput: inputPlist

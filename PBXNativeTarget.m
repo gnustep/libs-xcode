@@ -210,7 +210,11 @@
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: productType
 	      forKey: @"PRODUCT_TYPE"];
-
+  if(productSettingsXML != nil)
+    {
+      [context setObject: productSettingsXML 
+                  forKey: @"PRODUCT_SETTINGS_XML"];
+    }
   puts([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
   id dependency = nil;
   en = [dependencies objectEnumerator];
