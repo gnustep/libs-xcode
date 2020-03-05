@@ -38,7 +38,8 @@ extern char **environ;
       ASSIGNCOPY(outputFileString, inputFileString);
       
       // Get env vars...
-      for (char **env = environ; *env != 0; env++)
+      char **env = NULL;
+      for (env = environ; *env != 0; env++)
         {
           char *thisEnv = *env;
           NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
