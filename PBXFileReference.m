@@ -313,6 +313,9 @@
 				  objCflags, std];
         }
 
+      // remove flags incompatible with gnustep...
+      objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
+
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
