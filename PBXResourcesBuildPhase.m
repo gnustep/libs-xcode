@@ -111,13 +111,17 @@ extern char **environ;
               //              NSLog(@"\t%@", child);
               //              NSLog(@"child = %@", [child path]);
               NSString *filePath = [child path];
+              NSString *resourceFilePath = [filePath stringByDeletingLastPathComponent];
+              BOOL edited = NO;
               if ([mgr fileExistsAtPath: [child path]] == NO)
                 {
+                  edited = YES;
                   filePath = [productName stringByAppendingPathComponent: [child path]];
                 }
-                  
+
+              // NSLog(@"resourceFilePath = %@", resourceFilePath);
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
-                                                  [filePath stringByDeletingLastPathComponent]];
+                                                  resourceFilePath];
               NSString *fileName = [filePath lastPathComponent];
               NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
               NSError *error = nil;
@@ -129,7 +133,10 @@ extern char **environ;
               if([[filePath pathComponents] count] > 1)
                 {
                   NSString *dirs = [filePath stringByDeletingLastPathComponent];
-                  
+                  if (edited)
+                    {
+                      dirs = [dirs stringByReplacingOccurrencesOfString: productName withString: @""];
+                    }
                   destPath = [resourcesDir stringByAppendingPathComponent: dirs];
                   destPath = [destPath stringByAppendingPathComponent: fileName];
                 }

@@ -346,6 +346,10 @@
       NSDate *buildPathDate = [buildPathAttributes fileModificationDate];
       NSDate *outputPathDate = [outputPathAttributes fileModificationDate];
 
+      NSDebugLog(@"buildCommand %@", buildCommand);
+      buildCommand = [buildCommand stringByReplacingOccurrencesOfString: @"$(inherited)"
+                                                             withString: @"."];
+      
       if(outputPathDate != nil)
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)

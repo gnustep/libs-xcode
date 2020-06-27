@@ -92,7 +92,7 @@
 						  error:&error];
   */
 
-
+  setenv("inherited","",1); // probably from a parent project or target..
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: APPLICATION_TYPE]) 
     {
