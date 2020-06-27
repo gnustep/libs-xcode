@@ -198,11 +198,11 @@
         }
     }
 
-  linkString = [linkString stringByAppendingString: @"-lpthread -lobjc -lm "];
+  linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
 
   // Do substitutions and additions for buildtool.plist...
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
-  NSLog(@"%@",plistFile);
+  // NSLog(@"%@",plistFile);
   NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
 
@@ -221,7 +221,7 @@
   o = nil;
   while ((o = [en nextObject]) != nil)
     {
-      linkString = [linkString stringByAppendingFormat: @" %@", o];
+      linkString = [linkString stringByAppendingFormat: @" %@ ", o];
     }
   
   return linkString;
@@ -239,7 +239,7 @@
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @"`gnustep-config --base-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base"];
+  linkString = [linkString stringByAppendingString: @" `gnustep-config --base-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base "];
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
@@ -248,6 +248,7 @@
 				outputFiles,
 				linkString];
 
+  // NSLog(@"command = %@", command);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
@@ -289,7 +290,7 @@
 				linkString];
 
   
-  NSLog(@"command = %@", command);
+  // NSLog(@"command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])

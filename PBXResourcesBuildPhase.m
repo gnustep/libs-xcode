@@ -1,4 +1,5 @@
 #import "PBXCommon.h"
+#import "PBXGroup.h"
 #import "PBXResourcesBuildPhase.h"
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
@@ -84,12 +85,13 @@ extern char **environ;
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
-
+  NSString *productName = [target productName];
+  
   // Pre create directory....
-  [[NSFileManager defaultManager] createDirectoryAtPath:resourcesDir
-			    withIntermediateDirectories:YES
-					     attributes:nil
-						  error:&error];
+  [mgr createDirectoryAtPath:resourcesDir
+       withIntermediateDirectories:YES
+                  attributes:nil
+                       error:&error];
 
   // Copy all resources...
   NSEnumerator *en = [files objectEnumerator];
@@ -98,7 +100,7 @@ extern char **environ;
   while((file = [en nextObject]) != nil && result)
     {
       id fileRef = [file fileRef];
-      NSDebugLog(@"fileRef = %@", fileRef);
+      //      NSLog(@"fileRef = %@", fileRef);
       if ([fileRef isKindOfClass: [PBXVariantGroup class]])
         {
           NSArray *children = [fileRef children];
@@ -106,9 +108,14 @@ extern char **environ;
           id child = nil;
           while ((child = [e nextObject]) != nil)
             {
-              NSDebugLog(@"\t%@", child);
-              NSDebugLog(@"child = %@", child); 
+              //              NSLog(@"\t%@", child);
+              //              NSLog(@"child = %@", [child path]);
               NSString *filePath = [child path];
+              if ([mgr fileExistsAtPath: [child path]] == NO)
+                {
+                  filePath = [productName stringByAppendingPathComponent: [child path]];
+                }
+                  
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
                                                   [filePath stringByDeletingLastPathComponent]];
               NSString *fileName = [filePath lastPathComponent];
@@ -134,32 +141,37 @@ extern char **environ;
                                                       error: &error];
               if (copyResult == NO)
                 {
-                  NSLog(@"\t(create error = %@)", error);
+                  NSLog(@"\tFILE CREATION ERROR:  %@, %@", error, fileDir);
                 }
 
               NSDebugLog(@"\tCopy child %@  -> %@",filePath,destPath);
-              puts([[NSString stringWithFormat: @"\tCopy child resource %@ --> %@",filePath,destPath] cString]);
-              copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
-                                                                   toPath: destPath
-                                                                    error: &error];
+              puts([[NSString stringWithFormat: @"\tCopy child resource %@ --> %@", filePath, destPath] cString]);
+              copyResult = [mgr copyItemAtPath: filePath
+                                        toPath: destPath
+                                         error: &error];
               if (copyResult == NO)
                 {
-                  NSLog(@"\t(error = %@)", error);
+                  NSLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
                 }
             }
           continue;
         }
       
-      NSString *filePath = [file path]; 
+      NSString *filePath = [file path];
+      if ([mgr fileExistsAtPath: [file path]] == NO)
+        {
+          filePath = [productName stringByAppendingPathComponent: [file path]];
+        }
+
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
       puts([[NSString stringWithFormat: @"\tCopy resource %@ --> %@",filePath,destPath] cString]);      
-      copyResult = [[NSFileManager defaultManager] copyItemAtPath: filePath
-							   toPath: destPath
-							    error: &error];
+      copyResult = [mgr copyItemAtPath: filePath
+                                toPath: destPath
+                                 error: &error];
 
       if(!copyResult)
 	{

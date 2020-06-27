@@ -91,4 +91,8 @@
   return result;
 }
 
+- (NSString *) description
+{
+  return [NSString stringWithFormat: @"%@ - %@, %@, %@, %@", [super description], name, path, sourceTree, children];
+}
 @end
