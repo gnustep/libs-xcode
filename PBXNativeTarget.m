@@ -72,11 +72,12 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"UninstalledProducts"]; 
-  NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"UninstalledProducts"] 
+  buildDir = [buildDir stringByAppendingPathComponent: [self name]];
+  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
+  NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"Products"] 
 			 stringByAppendingPathComponent: [productReference path]];
   NSError *error = nil;
-
+  
   // Create directories...
   [[NSFileManager defaultManager] createDirectoryAtPath:uninstalledProductsDir
 			    withIntermediateDirectories:YES
@@ -230,6 +231,7 @@
   en = [buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
+      [phase setTarget: self];
       result = [phase build];
       if(NO == result)
 	{
@@ -246,6 +248,7 @@
 {
   puts([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
+  buildDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *command = [NSString stringWithFormat: @"rm -rf %@",buildDir];
 
   puts([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
@@ -269,7 +272,9 @@
 {
   puts([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"UninstalledProducts"]; 
+  buildDir = [buildDir stringByAppendingPathComponent: [self name]];
+
+  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [productReference path]];
   NSString *installDir = [NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")]; // FIXME: Shouldn't always be local...
   NSString *fileName = [fullPath lastPathComponent];

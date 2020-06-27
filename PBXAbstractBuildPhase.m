@@ -44,6 +44,11 @@
   showEnvVarsInLog = flag;
 }
 
+- (void) setTarget: (PBXNativeTarget *)t
+{
+  ASSIGN(target, t);
+}
+
 - (BOOL) build
 {
   NSDebugLog(@"Executing... %@",self);

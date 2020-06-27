@@ -1,5 +1,6 @@
 #import "PBXCommon.h"
 #import "PBXBuildFile.h"
+#import "PBXNativeTarget.h"
 
 @implementation PBXBuildFile
 
@@ -39,10 +40,16 @@
   return [fileRef path];
 }
 
+- (void) setTarget: (PBXNativeTarget *)t
+{
+  ASSIGN(target, t);
+}
+
 - (BOOL) build
 {
   [self applySettings];
   puts([[NSString stringWithFormat: @"\t* Building %@",[fileRef buildPath]] cString]);
+  [fileRef setTarget: target];
   return [fileRef build];
 }
 

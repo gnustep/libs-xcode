@@ -3,6 +3,7 @@
 // Local includes
 #import "PBXCoder.h"
 
+@class PBXNativeTarget;
 
 @interface PBXFileReference : NSObject
 {
@@ -20,6 +21,7 @@
   NSString *plistStructureDefinitionIdentifier;
   NSString *xcLanguageSpecificationIdentifier;
   NSString *lineEnding;
+  PBXNativeTarget *target;
 }
 
 // Methods....
@@ -40,7 +42,7 @@
 - (void) setXcLanguageSpecificationIdentifier: (NSString *)object;
 - (NSString *) lineEnding;
 - (void) setLineEnding: (NSString *)object;
-
+- (void) setTarget: (PBXNativeTarget *)t;
 
 // Build methods...
 - (NSString *) buildPath;

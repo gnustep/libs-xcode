@@ -2,7 +2,7 @@
 
 // Local includes
 #import "PBXCoder.h"
-
+#import "PBXNativeTarget.h"
 
 @interface PBXAbstractBuildPhase : NSObject
 {
@@ -10,6 +10,7 @@
   NSString *buildActionMask;
   NSString *runOnlyForDeploymentPostprocessing;
   BOOL showEnvVarsInLog;
+  PBXNativeTarget *target;
 }
 
 // Methods....
@@ -21,6 +22,7 @@
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
 - (BOOL) showEnvVarsInLog; // setter
 - (void) setEnvVarsInLog: (BOOL)flag;
+- (void) setTarget: (PBXNativeTarget *)t;
 
 // build
 - (BOOL) build;

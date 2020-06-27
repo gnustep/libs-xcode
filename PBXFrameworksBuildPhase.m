@@ -152,7 +152,7 @@
   NSString *userLibDir = [@"`gnustep-config --variable=GNUSTEP_USER_LIBRARY`/"
 			     stringByAppendingPathComponent: @"Libraries"];
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
-  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"UninstalledProducts"];
+  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"];
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   NSString *linkString = [NSString stringWithFormat: @"-L%@ -L%@ -L%@ ",
@@ -200,6 +200,30 @@
 
   linkString = [linkString stringByAppendingString: @"-lpthread -lobjc -lm "];
 
+  // Do substitutions and additions for buildtool.plist...
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSLog(@"%@",plistFile);
+  NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
+  NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
+
+  // Replace anything that needs substitution... not all libraries on macos map directly...
+  en = [[substitutionList allKeys] objectEnumerator];
+  id o = nil;
+  while ((o = [en nextObject]) != nil)
+    {
+      NSString *r = [substitutionList objectForKey: o];
+      linkString = [linkString stringByReplacingOccurrencesOfString: o
+                                                         withString: r];
+    }
+
+  // Add any additional libs...
+  en = [additionalFlags objectEnumerator];
+  o = nil;
+  while ((o = [en nextObject]) != nil)
+    {
+      linkString = [linkString stringByAppendingFormat: @" %@", o];
+    }
+  
   return linkString;
 }
 
@@ -246,15 +270,17 @@
   puts("=== Executing Frameworks Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?@"`gnustep-config --variable=CC`":[NSString stringWithCString: cc];
+  NSString *compiler = (cc == NULL) ? @"`gnustep-config --variable=CC`" : [NSString stringWithCString: cc];
   NSString *outputFiles = [context objectForKey: 
 				     @"OUTPUT_FILES"];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs`  `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui"];
+  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui "];
 
+
+           
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
 				compiler, 
@@ -262,6 +288,8 @@
 				outputFiles,
 				linkString];
 
+  
+  NSLog(@"command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])

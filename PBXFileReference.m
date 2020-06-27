@@ -6,6 +6,7 @@
 #import "GSXCBuildContext.h"
 #import "NSArray+Additions.h"
 #import "NSString+PBXAdditions.h"
+#import "PBXNativeTarget.h"
 
 @implementation PBXFileReference
 
@@ -98,6 +99,11 @@
 - (void) setLineEnding: (NSString *)object
 {
   ASSIGN(lineEnding,object);
+}
+
+- (void) setTarget: (PBXNativeTarget *)t
+{
+  ASSIGN(target, t);
 }
 
 - (NSString *) resolvePathFor: (id)object 
@@ -226,6 +232,7 @@
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+      buildDir = [buildDir stringByAppendingPathComponent: [target name]];
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: cc];
@@ -319,10 +326,11 @@
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
-      NSDebugLog(@"*** %@ %@", path, buildPath);
-      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists)?
-        [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters]:[self buildPath];
-      NSString *errorOutPath = [buildDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".err"]];
+      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
+        [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
+        [self buildPath];
+      NSString *errorOutPath = [buildDir stringByAppendingPathComponent:
+                                      [fileName stringByAppendingString: @".err"]];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
                                          errorOutPath,
@@ -331,7 +339,6 @@
 					 configString,
 					 headerSearchPaths,
 					 [outputPath stringByEscapingSpecialCharacters]];
-
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
       NSDictionary *outputPathAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath: outputPath
@@ -343,7 +350,6 @@
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
 	    {	  
-	      // puts([[NSString stringWithFormat: @"\t** Rebuilding: %@",buildCommand] cString]);
 	      result = system([buildCommand cString]);
 	      if([modified isEqualToString: @"NO"])
 		{

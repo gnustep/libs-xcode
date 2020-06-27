@@ -13,6 +13,7 @@
   BOOL result = YES;
   while((file = [en nextObject]) != nil && result)
     {
+      [file setTarget: target];
       result = [file build];
     }
   puts("=== Sources Build Phase Completed");
