@@ -198,7 +198,7 @@ extern char **environ;
   
   NSString *outputPlist = [resourcesDir
                             stringByAppendingPathComponent: @"Info-gnustep.plist"];
-  NSLog(@"resourcesDir = %@ %s", resourcesDir, infoplist);
+  // NSLog(@"resourcesDir = %@ %s", resourcesDir, infoplist);
   [self processInfoPlistInput: inputPlist
                        output: outputPlist];
 

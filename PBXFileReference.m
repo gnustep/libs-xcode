@@ -306,7 +306,8 @@
       NSString *objCflags = @"";
       if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
 	{
-	  objCflags = @"-fgnu-runtime -fconstant-string-class=NSConstantString";
+	  // objCflags = @"-fconstant-string-class=NSConstantString";
+          objCflags = @"";
 	}
       NSString *std = [NSString stringWithCString: getenv("GCC_C_LANGUAGE_STANDARD") != NULL ?
                                 getenv("GCC_C_LANGUAGE_STANDARD") : "" ];

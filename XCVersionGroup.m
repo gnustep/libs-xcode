@@ -44,6 +44,11 @@
   ASSIGN(path,object);
 }
 
+- (NSString *) buildPath
+{
+  return [self path];
+}
+
 - (NSMutableArray *) children // getter
 {
   return children;
@@ -52,6 +57,10 @@
 - (void) setChildren: (NSMutableArray *)object; // setter
 {
   ASSIGN(children,object);
+}
+
+- (void) setTarget: (NSString *)target
+{
 }
 
 - (BOOL) build
