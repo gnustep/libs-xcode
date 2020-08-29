@@ -488,4 +488,43 @@
   return NO;
 }
 
+- (BOOL) generate
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
+
+  printf("\t* Adding product type entry: %s\n", [productType cStringUsingEncoding: NSUTF8StringEncoding]);
+  
+  if([productType isEqualToString: APPLICATION_TYPE])
+    {
+      [context setObject: @"application"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else if([productType isEqualToString: TOOL_TYPE])
+    {
+      [context setObject: @"tool"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else if([productType isEqualToString: LIBRARY_TYPE])
+    {
+      [context setObject: @"library"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else if([productType isEqualToString: FRAMEWORK_TYPE])
+    {
+      [context setObject: @"framework"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else if([productType isEqualToString: BUNDLE_TYPE])
+    {
+      [context setObject: @"bundle"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else 
+    {
+      puts([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
+    }
+  
+  return YES;
+}
 @end

@@ -23,5 +23,6 @@
 - (NSString *) path;
 - (NSString *) buildPath;
 - (BOOL) build;
+- (BOOL) generate;
 
 @end

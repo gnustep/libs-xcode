@@ -386,6 +386,157 @@
   return (result == 0);
 }
 
+- (NSMutableArray *) _arrayForKey: (NSString *)keyName
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSMutableArray *result = [context objectForKey: keyName];
+
+  if (result == nil)
+    {
+      result = [NSMutableArray array];
+      [context setObject: result forKey: keyName];
+    }
+
+  return result;
+}
+
+- (BOOL) generate
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSMutableArray *objcFiles = [self _arrayForKey: @"OBJC_FILES"];
+  NSMutableArray *cFiles = [self _arrayForKey: @"C_FILES"];
+  NSMutableArray *cppFiles = [self _arrayForKey: @"CPP_FILES"];
+  NSMutableArray *objcppFiles = [self _arrayForKey: @"OBJCPP_FILES"];
+  BOOL targetInSubdir = [[context objectForKey:@"TARGET_IN_SUBDIR"] isEqualToString:@"YES"];
+  NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  NSString *outputFiles = (of == nil)?@"":of;
+  int result = 0;
+  NSFileManager *manager = [NSFileManager defaultManager];
+
+  // NSDebugLog(@"*** %@", sourceTree);
+  if(modified == nil)
+    {
+      modified = @"NO";
+      [context setObject: @"NO"
+		  forKey: @"MODIFIED_FLAG"];
+    }
+
+  // Get project root
+  char *proj_root = getenv("PROJECT_ROOT");
+  if (proj_root == NULL ||
+      strcmp(proj_root, "") == 0)
+    {
+      proj_root = "";
+    }
+
+  NSString *buildPath = [[NSString stringWithCString: proj_root] 
+				         stringByAppendingPathComponent: 
+                            [self buildPath]];
+
+
+  NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
+  NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+  buildDir = [buildDir stringByAppendingPathComponent: [target name]];
+  NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
+  NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
+  NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
+				      implodeArrayWithSeparator: @" -I"];
+  NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
+				  implodeArrayWithSeparator: @" "];
+  NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
+
+  NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
+  NSDebugLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
+  // blank these out if they are not used...
+  if(headerSearchPaths == nil)
+    {
+      headerSearchPaths = @"";
+    }
+  if(localHeaderPaths == nil)
+    {
+      localHeaderPaths = @"";
+    }
+  
+  if(warningCflags == nil)
+    {
+      warningCflags = @"";
+    }
+  
+  // If we have derived sources, then get the header directory and add it to the search path....
+  if(derivedSrcHeaderDir != nil)
+    {
+      if([[derivedSrcHeaderDir pathComponents] count] > 1)
+        {
+          headerSearchPaths = [headerSearchPaths stringByAppendingString: 
+                                              [NSString stringWithFormat: @" -I%@ ",
+                                                        [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
+        }
+    }
+  
+  // If we have additional header dirs specified... then add them.
+  if(additionalHeaderDirs != nil)
+    {
+      headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
+      headerSearchPaths = [headerSearchPaths stringByAppendingString: localHeaderPaths];
+    }
+  
+  // If the target is in the subdirectory, then override the preprending of
+  // the project root.
+  if(targetInSubdir)
+    {
+      buildPath = [self path]; 
+    }
+  
+  // Sometimes, for some incomprehensible reason, the buildpath doesn't 
+  // need the project dir pre-pended.  This could be due to differences 
+  // in different version of xcode.  It must be removed to successfully
+  // compile the application...
+  if([manager fileExistsAtPath:buildPath] == NO)
+    {
+      buildPath = [self path];
+    }
+  
+  NSString *objCflags = @"";
+  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+    {
+      // objCflags = @"-fconstant-string-class=NSConstantString";
+      objCflags = @"";
+    }
+  
+  // remove flags incompatible with gnustep...
+  objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
+  
+  BOOL exists = [manager fileExistsAtPath: [self buildPath]];
+  NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
+    [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
+    [self buildPath];
+  
+  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+
+  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+    {
+      [objcFiles addObject: compilePath];
+    }
+
+  if([lastKnownFileType isEqualToString: @"sourcecode.c.c"])
+    {
+      [cFiles addObject: compilePath];
+    }
+  
+  if([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"])
+    {
+      [cppFiles addObject: compilePath];
+    }
+
+  if([lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+    {
+      [objcppFiles addObject: compilePath];
+    }
+
+  return (result == 0);
+}
+
 - (NSString *) description
 {
   NSString *s = [super description];

@@ -214,4 +214,81 @@ extern char **environ;
   puts("=== Resources Build Phase Completed");
   return result;
 }
+
+- (BOOL) generate
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [files count]];
+  
+  puts("=== Generating Resources Entries Build Phase");
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  NSString *productName = [target productName];
+ 
+  // Copy all resources...
+  NSEnumerator *en = [files objectEnumerator];
+  BOOL result = YES;
+  id file = nil;
+  while((file = [en nextObject]) != nil && result)
+    {
+      id fileRef = [file fileRef];
+      if ([fileRef isKindOfClass: [PBXVariantGroup class]])
+        {
+          NSArray *children = [fileRef children];
+          NSEnumerator *e = [children objectEnumerator];
+          id child = nil;
+          while ((child = [e nextObject]) != nil)
+            {
+              NSString *filePath = [child path];
+              BOOL edited = NO;
+              if ([mgr fileExistsAtPath: [child path]] == NO)
+                {
+                  edited = YES;
+                  filePath = [productName stringByAppendingPathComponent: [child path]];
+                }
+
+              puts([[NSString stringWithFormat: @"\tAdd child resource entry %@", filePath] cString]);
+              [resources addObject: filePath];
+            }
+          continue;
+        }
+      
+      NSString *filePath = [file path];
+      if ([mgr fileExistsAtPath: [file path]] == NO)
+        {
+          filePath = [productName stringByAppendingPathComponent: [file path]];
+        }
+
+      puts([[NSString stringWithFormat: @"\tAdd resource entry %@",filePath] cString]);      
+
+      [resources addObject: filePath];
+    }
+
+  // Handle Info.plist....
+  char *infoplist = getenv("INFOPLIST_FILE") == NULL ? "":getenv("INFOPLIST_FILE");
+  NSString *inputPlist = [NSString stringWithCString:
+                                     infoplist];
+  if ([mgr fileExistsAtPath: inputPlist] == NO)
+    {
+      inputPlist = [inputPlist lastPathComponent];
+    }
+
+  /*
+  NSString *outputPlist = [resourcesDir
+                            stringByAppendingPathComponent: @"Info-gnustep.plist"];
+  // NSLog(@"resourcesDir = %@ %s", resourcesDir, infoplist);
+  [self processInfoPlistInput: inputPlist
+                       output: outputPlist];
+  // Move Base.lproj to English.lproj until Base.lproj is supported..
+  NSString *baseLproj = [resourcesDir
+                          stringByAppendingPathComponent: @"Base.lproj"];
+  NSString *engLproj =  [resourcesDir
+                          stringByAppendingPathComponent: @"English.lproj"];
+  [resources addObject: engLproj];
+  
+  */
+  [context setObject: resources forKey: @"RESOURCES"];
+  puts("=== Resources Build Phase Completed");
+  return result;
+}
+
 @end

@@ -53,6 +53,14 @@
   return [fileRef build];
 }
 
+- (BOOL) generate
+{
+  [self applySettings];
+  puts([[NSString stringWithFormat: @"\t* Creating entry for %@",[fileRef buildPath]] cString]);
+  [fileRef setTarget: target];
+  return [fileRef generate];
+}
+
 - (NSString *) description
 {
   NSString *s = [super description];

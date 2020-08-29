@@ -51,7 +51,14 @@
 
 - (BOOL) build
 {
-  NSDebugLog(@"Executing... %@",self);
+  NSDebugLog(@"Abstract build... %@, %@",self, files);
   return YES;
 }
+
+- (BOOL) generate
+{
+  NSLog(@"Abstract generate... %@, %@",self,files);
+  return YES;
+}
+
 @end

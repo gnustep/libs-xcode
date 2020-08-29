@@ -110,4 +110,12 @@
 {
   return [rootObject install];
 }
+
+- (BOOL) generate
+{
+  [self collectHeaderFileReferences];
+  [rootObject setContainer: self];
+  return [rootObject generate];
+}
+
 @end

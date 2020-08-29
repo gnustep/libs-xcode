@@ -25,5 +25,6 @@
 - (BOOL) build;
 - (BOOL) clean;
 - (BOOL) install;
+- (BOOL) generate;
 
 @end

@@ -47,4 +47,6 @@
 // Build methods...
 - (NSString *) buildPath;
 - (BOOL) build;
+- (BOOL) generate;
+
 @end
