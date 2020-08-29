@@ -387,6 +387,23 @@
   return result;
 }
 
+- (NSString *) _arrayToIncludeList: (NSArray *)arr
+{
+  NSString *result = @"-I. \\\n";
+  NSEnumerator *en = [arr objectEnumerator];
+  NSString *aname = nil;
+
+  while((aname = [en nextObject]) != nil)
+    {
+      result = [result stringByAppendingString: [NSString stringWithFormat: @"\t-I./%@ ", aname]];
+      if ([aname isEqualToString: [arr lastObject]] == NO)
+        {
+          result = [result stringByAppendingString: @"\\\n"];
+        }
+    }
+  return result;
+}
+
 - (BOOL) generate
 {
   BOOL result = YES;
@@ -438,7 +455,7 @@
   NSString *cppFilesString = [self _arrayToList: [context objectForKey: @"CPP_FILES"]];
   NSString *objCPPFilesString = [self _arrayToList: [context objectForKey: @"OBJCPP_FILES"]];  
   NSString *resourceFilesString = [self _arrayToList: [context objectForKey: @"RESOURCES"]];
-  NSString *additionalIncludes = [self _arrayToList: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"]];
+  NSString *additionalIncludes = [self _arrayToIncludeList: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"]];
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Sometimes the build will generate all of the target makefiles in one place, depending on the version of
