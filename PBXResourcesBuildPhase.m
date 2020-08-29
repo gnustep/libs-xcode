@@ -279,7 +279,7 @@ extern char **environ;
                        output: outputPlist];
 
   // Move Base.lproj to English.lproj until Base.lproj is supported..
-  NSString *baseLproj =  @"Base.lproj";
+  // NSString *baseLproj =  @"Base.lproj/*";
   NSString *engLproj =  @"English.lproj";
   [resources addObject: engLproj];
   

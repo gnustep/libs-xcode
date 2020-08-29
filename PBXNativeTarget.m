@@ -458,7 +458,7 @@
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"include $(GNUSTEP_MAKEFILES)/%@.make\n\n", projectType]];
   makefileString = [makefileString stringByAppendingString: @"# end"];
 
-  NSLog(@"makefile = %@", makefileString);
+  NSDebugLog(@"makefile = %@", makefileString);
   [makefileString writeToFile: makefileName atomically: YES];
   
   return result;
