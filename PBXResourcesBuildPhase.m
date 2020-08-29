@@ -66,7 +66,7 @@ extern char **environ;
                            encoding: NSUTF8StringEncoding
                               error: NULL];
       
-      NSDebugLog(@"%@", outputFileString);
+      NSLog(@"%@", outputFileString);
     }
   else
     {
@@ -223,7 +223,8 @@ extern char **environ;
   puts("=== Generating Resources Entries Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *productName = [target productName];
- 
+  NSString *appName = [productName stringByDeletingPathExtension];
+  
   // Copy all resources...
   NSEnumerator *en = [files objectEnumerator];
   BOOL result = YES;
@@ -272,20 +273,16 @@ extern char **environ;
       inputPlist = [inputPlist lastPathComponent];
     }
 
-  /*
-  NSString *outputPlist = [resourcesDir
-                            stringByAppendingPathComponent: @"Info-gnustep.plist"];
-  // NSLog(@"resourcesDir = %@ %s", resourcesDir, infoplist);
+  
+  NSString *outputPlist = [NSString stringWithFormat: @"%@Info.plist",appName] ;
   [self processInfoPlistInput: inputPlist
                        output: outputPlist];
+
   // Move Base.lproj to English.lproj until Base.lproj is supported..
-  NSString *baseLproj = [resourcesDir
-                          stringByAppendingPathComponent: @"Base.lproj"];
-  NSString *engLproj =  [resourcesDir
-                          stringByAppendingPathComponent: @"English.lproj"];
+  NSString *baseLproj =  @"Base.lproj";
+  NSString *engLproj =  @"English.lproj";
   [resources addObject: engLproj];
   
-  */
   [context setObject: resources forKey: @"RESOURCES"];
   puts("=== Resources Build Phase Completed");
   return result;

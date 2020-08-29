@@ -370,7 +370,15 @@
 
   while((aname = [en nextObject]) != nil)
     {
-      result = [result stringByAppendingString: [NSString stringWithFormat: @"  %@ ", aname]];
+      if ([aname isEqualToString: [arr firstObject]] == YES)
+        {
+          result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+        }
+      else
+        {
+          result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+        }
+      
       if ([aname isEqualToString: [arr lastObject]] == NO)
         {
           result = [result stringByAppendingString: @"\\\n"];
