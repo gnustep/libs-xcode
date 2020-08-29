@@ -407,6 +407,7 @@
   NSMutableArray *cFiles = [self _arrayForKey: @"C_FILES"];
   NSMutableArray *cppFiles = [self _arrayForKey: @"CPP_FILES"];
   NSMutableArray *objcppFiles = [self _arrayForKey: @"OBJCPP_FILES"];
+  NSMutableArray *addlIncDirs = [self _arrayForKey: @"ADDITIONAL_INCLUDE_DIRS"];
   BOOL targetInSubdir = [[context objectForKey:@"TARGET_IN_SUBDIR"] isEqualToString:@"YES"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
@@ -533,6 +534,17 @@
     {
       [objcppFiles addObject: compilePath];
     }
+
+  NSString *includePath = [compilePath stringByDeletingLastPathComponent];
+  NSDebugLog(@"%@", includePath);
+  if (includePath != nil && [includePath isEqualToString: @""] == NO)
+    {
+      if ([addlIncDirs containsObject: includePath] == NO)
+        {
+          [addlIncDirs addObject: includePath];
+        }
+    }
+  NSDebugLog(@"Additional includes %@", addlIncDirs);
 
   return (result == 0);
 }
