@@ -66,7 +66,7 @@ extern char **environ;
                            encoding: NSUTF8StringEncoding
                               error: NULL];
       
-      NSLog(@"%@", outputFileString);
+      NSDebugLog(@"%@", outputFileString);
     }
   else
     {
