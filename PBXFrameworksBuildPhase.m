@@ -206,6 +206,9 @@
   NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
 
+  NSLog(@"%@", additionalFlags);
+  [context setObject: additionalFlags forKey: @"ADDITIONAL_LDFLAGS"];
+
   // Replace anything that needs substitution... not all libraries on macos map directly...
   en = [[substitutionList allKeys] objectEnumerator];
   id o = nil;
@@ -492,6 +495,15 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
+
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
+  
+  NSLog(@"%@", additionalFlags);
+  if (additionalFlags != nil)
+    {
+      [context setObject: additionalFlags forKey: @"ADDITIONAL_LDFLAGS"];
+    }
 
   printf("\t* Adding product type entry: %s\n", [productType cStringUsingEncoding: NSUTF8StringEncoding]);
   

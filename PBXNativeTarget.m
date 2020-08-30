@@ -404,6 +404,32 @@
   return result;
 }
 
+
+- (NSString *) _arrayToLinkList: (NSArray *)arr
+{
+  NSString *result = @"";
+  NSEnumerator *en = [arr objectEnumerator];
+  NSString *aname = nil;
+
+  while((aname = [en nextObject]) != nil)
+    {
+      if ([aname isEqualToString: [arr firstObject]] == YES)
+        {
+          result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+        }
+      else
+        {
+          result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+        }
+      
+      if ([aname isEqualToString: [arr lastObject]] == NO)
+        {
+          result = [result stringByAppendingString: @"\\\n"];
+        }
+    }
+  return result;
+}
+
 - (BOOL) generate
 {
   BOOL result = YES;
@@ -442,12 +468,11 @@
 	}
     }
   puts([[NSString stringWithFormat: @"=== Done..."] cString]);
-  puts([[NSString stringWithFormat: @"=== Completed generation for target %@", name] cString]);
 
   NSString *appName = [[self name] stringByDeletingPathExtension];
   
   // Construct the makefile out of the data we have thusfar collected.
-  puts("** generating makefile from data...");
+  puts("\t** Generating GNUmakefile from data...");
   NSString *makefileName = @"GNUmakefile";
   NSString *makefileString = @"";
   NSString *objCFilesString = [self _arrayToList: [context objectForKey: @"OBJC_FILES"]];
@@ -456,6 +481,7 @@
   NSString *objCPPFilesString = [self _arrayToList: [context objectForKey: @"OBJCPP_FILES"]];  
   NSString *resourceFilesString = [self _arrayToList: [context objectForKey: @"RESOURCES"]];
   NSString *additionalIncludes = [self _arrayToIncludeList: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"]];
+  NSString *additionalLdflags = [self _arrayToLinkList: [context objectForKey: @"ADDITIONAL_LDFLAGS"]];
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Sometimes the build will generate all of the target makefiles in one place, depending on the version of
@@ -478,6 +504,7 @@
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"%@_OBJCPP_FILES = %@\n\n", appName, objCPPFilesString]];
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, resourceFilesString]];
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"ADDITIONAL_INCLUDE_DIRS += %@\n\n", additionalIncludes]];
+  makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"ADDITIONAL_LDFLAGS += %@\n\n", additionalLdflags]];
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n"];
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"include $(GNUSTEP_MAKEFILES)/%@.make\n\n", projectType]];
   makefileString = [makefileString stringByAppendingString: @"#\n"];
@@ -486,7 +513,8 @@
 
   NSDebugLog(@"makefile = %@", makefileString);
   [makefileString writeToFile: makefileName atomically: YES];
-  
+  puts([[NSString stringWithFormat: @"=== Completed generation for target %@", name] cString]);
+
   return result;
 }
 @end
