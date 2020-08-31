@@ -280,8 +280,9 @@ extern char **environ;
 
   // Move Base.lproj to English.lproj until Base.lproj is supported..
   // NSString *baseLproj =  @"Base.lproj/*";
-  NSString *engLproj =  @"English.lproj";
-  [resources addObject: engLproj];
+  // NSString *engLproj =  @"English.lproj";
+  // [resources addObject: engLproj];
+  [resources addObject: outputPlist];
   
   [context setObject: resources forKey: @"RESOURCES"];
   puts("=== Resources Build Phase Completed");

@@ -481,7 +481,7 @@
   NSString *objCPPFilesString = [self _arrayToList: [context objectForKey: @"OBJCPP_FILES"]];  
   NSString *resourceFilesString = [self _arrayToList: [context objectForKey: @"RESOURCES"]];
   NSString *additionalIncludes = [self _arrayToIncludeList: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"]];
-  NSString *additionalLdflags = [self _arrayToLinkList: [context objectForKey: @"ADDITIONAL_LDFLAGS"]];
+  NSString *additionalOCflags = [self _arrayToLinkList: [context objectForKey: @"ADDITIONAL_OBJC_LIBS"]];
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Sometimes the build will generate all of the target makefiles in one place, depending on the version of
@@ -504,7 +504,7 @@
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"%@_OBJCPP_FILES = %@\n\n", appName, objCPPFilesString]];
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, resourceFilesString]];
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"ADDITIONAL_INCLUDE_DIRS += %@\n\n", additionalIncludes]];
-  makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"ADDITIONAL_LDFLAGS += %@\n\n", additionalLdflags]];
+  makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"ADDITIONAL_OBJC_LIBS += %@\n\n", additionalOCflags]];
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n"];
   makefileString = [makefileString stringByAppendingString: [NSString stringWithFormat: @"include $(GNUSTEP_MAKEFILES)/%@.make\n\n", projectType]];
   makefileString = [makefileString stringByAppendingString: @"#\n"];

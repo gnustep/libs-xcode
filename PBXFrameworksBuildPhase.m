@@ -207,7 +207,7 @@
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
 
   NSLog(@"%@", additionalFlags);
-  [context setObject: additionalFlags forKey: @"ADDITIONAL_LDFLAGS"];
+  [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
 
   // Replace anything that needs substitution... not all libraries on macos map directly...
   en = [[substitutionList allKeys] objectEnumerator];
@@ -502,7 +502,7 @@
   NSLog(@"%@", additionalFlags);
   if (additionalFlags != nil)
     {
-      [context setObject: additionalFlags forKey: @"ADDITIONAL_LDFLAGS"];
+      [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
     }
 
   printf("\t* Adding product type entry: %s\n", [productType cStringUsingEncoding: NSUTF8StringEncoding]);
