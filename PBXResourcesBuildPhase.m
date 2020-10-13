@@ -1,3 +1,6 @@
+#import <Foundation/NSJSONSerialization.h>
+#import <unistd.h>
+
 #import "PBXCommon.h"
 #import "PBXGroup.h"
 #import "PBXResourcesBuildPhase.h"
@@ -23,6 +26,56 @@ extern char **environ;
       ASSIGNCOPY(files, objs);
     }
   return self;
+}
+
+- (NSString *) processAssets
+{
+  // char cwd[PATH_MAX];
+  // if (getcwd(cwd, sizeof(cwd)) != NULL)
+  //  {
+  //    printf("Current working dir is: %s", cwd);
+  //  }
+  
+  NSString *filename = nil;
+  NSString *assetsDir = @"Assets.xcassets"; 
+  NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+  NSString *contentsJson = [appIconDir stringByAppendingPathComponent: @"Contents.json"];
+  NSData *data = [NSData dataWithContentsOfFile: contentsJson];
+  NSDictionary *dict = [NSJSONSerialization JSONObjectWithData: data
+                                                       options: 0L
+                                                         error: NULL];
+  NSArray *imagesArray = [dict objectForKey: @"images"];
+  NSDictionary *imageDict = nil;
+  NSEnumerator *en = [imagesArray objectEnumerator];
+  
+  while ((imageDict = [en nextObject]) != nil)
+    {
+      NSString *size = [imageDict objectForKey: @"size"];
+      NSString *scale = [imageDict objectForKey: @"scale"];
+
+      if ([size isEqualToString: @"32x32"] &&
+          [scale isEqualToString: @"1x"])
+        {
+          filename = [imageDict objectForKey: @"filename"];
+          break;
+        }
+    }
+
+  // Copy icons to resource dir...
+  NSString *targetDir = @""; // [target productName];
+  NSString *productOutputDir = [targetDir stringByAppendingPathComponent: [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")]];
+  NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  NSString *imagePath = [targetDir stringByAppendingPathComponent: [appIconDir stringByAppendingPathComponent: filename]];
+  NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
+  // NSLog(@"%@ -> %@", imagePath, resourcesDir);
+  NSError *error = nil;
+  [mgr copyItemAtPath: imagePath
+               toPath: destPath
+                error: &error];
+  // NSLog(@"error = %@", error);
+
+  return filename;
 }
 
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
@@ -60,13 +113,14 @@ extern char **environ;
           outputFileString = [outputFileString stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
                                                                          withString: v];
         }
+
+      NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
+      NSString *filename = [self processAssets];
+      [plistDict setObject: filename forKey: @"NSIcon"];
+      [plistDict writeToFile: outputFileName
+                  atomically: YES];
       
-      [outputFileString writeToFile: outputFileName
-                         atomically: YES
-                           encoding: NSUTF8StringEncoding
-                              error: NULL];
-      
-      NSDebugLog(@"%@", outputFileString);
+      NSDebugLog(@"%@", plistDict);
     }
   else
     {
@@ -108,8 +162,6 @@ extern char **environ;
           id child = nil;
           while ((child = [e nextObject]) != nil)
             {
-              //              NSLog(@"\t%@", child);
-              //              NSLog(@"child = %@", [child path]);
               NSString *filePath = [child path];
               NSString *resourceFilePath = [filePath stringByDeletingLastPathComponent];
               BOOL edited = NO;
@@ -119,7 +171,6 @@ extern char **environ;
                   filePath = [productName stringByAppendingPathComponent: [child path]];
                 }
 
-              // NSLog(@"resourceFilePath = %@", resourceFilePath);
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
                                                   resourceFilePath];
               NSString *fileName = [filePath lastPathComponent];
@@ -179,7 +230,6 @@ extern char **environ;
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
-
       if(!copyResult)
 	{
 	  NSDebugLog(@"\tCopy Error: %@ copying %@ -> %@",[error localizedDescription],
