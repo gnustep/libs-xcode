@@ -30,11 +30,12 @@ extern char **environ;
 
 - (NSString *) processAssets
 {
-  // char cwd[PATH_MAX];
-  // if (getcwd(cwd, sizeof(cwd)) != NULL)
-  //  {
-  //    printf("Current working dir is: %s", cwd);
-  //  }
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  char cwd[PATH_MAX];
+  if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+      NSDebugLog(@"Current working dir is: %s", cwd);
+    }
   
   NSString *filename = nil;
   NSString *assetsDir = @"Assets.xcassets"; 
@@ -63,9 +64,13 @@ extern char **environ;
 
   // Copy icons to resource dir...
   NSString *targetDir = @""; // [target productName];
+  if ([mgr fileExistsAtPath: assetsDir] == NO)
+    {
+      targetDir = [target productName];
+    }
+    
   NSString *productOutputDir = [targetDir stringByAppendingPathComponent: [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")]];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
-  NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *imagePath = [targetDir stringByAppendingPathComponent: [appIconDir stringByAppendingPathComponent: filename]];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
   // NSLog(@"%@ -> %@", imagePath, resourcesDir);
@@ -73,7 +78,7 @@ extern char **environ;
   [mgr copyItemAtPath: imagePath
                toPath: destPath
                 error: &error];
-  // NSLog(@"error = %@", error);
+  NSDebugLog(@"error = %@", error);
 
   return filename;
 }
@@ -116,7 +121,11 @@ extern char **environ;
 
       NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
       NSString *filename = [self processAssets];
-      [plistDict setObject: filename forKey: @"NSIcon"];
+      if (filename != nil)
+        {
+          [plistDict setObject: filename forKey: @"NSIcon"];
+        }
+      
       [plistDict writeToFile: outputFileName
                   atomically: YES];
       
