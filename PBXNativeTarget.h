@@ -14,6 +14,7 @@
   NSMutableArray *buildRules;
   NSString *comments;
   NSString *productSettingsXML;
+  XCConfigurationList *xcConfigurationList;
 }
 
 // Methods....
@@ -27,6 +28,8 @@
 - (void) setBuildRules: (NSMutableArray *)object; // setter
 - (NSString *) productSettingsXML; // getter
 - (void) setProductSettingsXML: (NSString *)object; // setter
+// - (XCConfigurationList *) buildConfigurationList;
+// - (void) setBuildConfigurationList: (XCConfigurationList *)list;
 
 // build
 - (BOOL) build;

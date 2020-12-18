@@ -68,6 +68,19 @@
   ASSIGN(productSettingsXML,object);
 }
 
+/*
+- (XCConfigurationList *) buildConfigurationList
+{
+  return xcConfigurationList;
+}
+
+- (void) setBuildConfigurationList: (XCConfigurationList *)list
+{
+  NSLog(@"build config list = %@",list);
+  ASSIGN(xcConfigurationList, list);
+}
+*/
+
 - (void) _productWrapper
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -209,6 +222,8 @@
   
   puts([[NSString stringWithFormat: @"=== Building Target %@",name] cString]);
   [buildConfigurationList applyDefaultConfiguration];
+  [context setObject: buildConfigurationList
+              forKey: @"buildConfig"];
   [context setObject: productType
 	      forKey: @"PRODUCT_TYPE"];
   if(productSettingsXML != nil)

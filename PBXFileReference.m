@@ -1,4 +1,5 @@
 #import <stdlib.h>
+#import <unistd.h>
 
 #import "PBXCommon.h"
 #import "PBXFileReference.h"
@@ -7,6 +8,10 @@
 #import "NSArray+Additions.h"
 #import "NSString+PBXAdditions.h"
 #import "PBXNativeTarget.h"
+#import "XCConfigurationList.h"
+#import "XCBuildConfiguration.h"
+
+extern char **environ;
 
 @implementation PBXFileReference
 
@@ -188,6 +193,68 @@
   return result;
 }
 
+- (NSArray *) substituteSearchPaths: (NSArray *)array
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [array count]];
+  NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithCapacity: [array count]];
+  XCConfigurationList *list = [context objectForKey: @"buildConfig"];
+  NSMutableArray *allHeaders = [NSMutableArray arrayWithArray: array];
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSArray *headerPaths = [plistFile objectForKey: @"headerPaths"];
+  //  NSLog(@"plist = %@", plistFile);
+  NSDebugLog(@"BUILD CONFIG: %@", list);
+
+  XCBuildConfiguration *config = [[list buildConfigurations] objectAtIndex: 0];
+  NSDictionary *buildSettings = [config buildSettings];
+  NSMutableArray *headers = [buildSettings objectForKey: @"HEADER_SEARCH_PATHS"];
+  
+  [allHeaders addObjectsFromArray: headers];
+  [allHeaders addObjectsFromArray: headerPaths];
+    
+  // get environment variables...
+  char **env = NULL;
+  for (env = environ; *env != 0; env++)
+    {
+      char *thisEnv = *env;
+      NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
+      NSArray *components = [envStr componentsSeparatedByString: @"="];
+      [dict setObject: [components lastObject]
+               forKey: [components firstObject]];
+    }
+  
+  // Get project root
+  char *proj_root = getenv("PROJECT_ROOT");
+  if (proj_root == NULL ||
+      strcmp(proj_root, "") == 0)
+    {
+      proj_root = NULL;
+    }
+
+  NSString *projDir = @".";
+  if (proj_root != NULL)
+    projDir = [NSString stringWithFormat: @"%s", proj_root];
+
+  NSEnumerator *en = [allHeaders objectEnumerator];
+  NSString *s = nil;
+  while ((s = [en nextObject]) != nil)
+    {
+      if ([s isEqualToString: @"$(inherited)"])
+        continue;
+      
+      NSString *o = [s stringByReplacingOccurrencesOfString: @"$(PROJECT_DIR)"
+                                                 withString: projDir];
+      o = [o stringByReplacingOccurrencesOfString: @"${PROJECT_DIR}"
+                                       withString: projDir];
+      if ([result containsObject: o] == NO)
+        [result addObject: o];
+    }
+
+  // NSLog(@"RESULT: %@", result);
+  
+  return result;
+}
+
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -236,8 +303,8 @@
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: cc];
-      NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
-				      implodeArrayWithSeparator: @" -I"];
+      NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"]] 
+                                      implodeArrayWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
@@ -340,6 +407,9 @@
 					 configString,
 					 headerSearchPaths,
 					 [outputPath stringByEscapingSpecialCharacters]];
+
+      // NSLog(@"buildCommand = %@", buildCommand);
+      
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
       NSDictionary *outputPathAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath: outputPath

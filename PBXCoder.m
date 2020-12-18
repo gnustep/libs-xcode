@@ -1,5 +1,6 @@
 #import "PBXCoder.h"
 #import "PBXContainer.h"
+#import "PBXCommon.h"
 #import "GSXCBuildContext.h"
 
 @implementation PBXCoder

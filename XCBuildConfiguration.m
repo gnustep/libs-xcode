@@ -39,7 +39,6 @@
       id value = [buildSettings objectForKey: key];
       if ([value isKindOfClass: [NSString class]])
 	{	  
-	  NSDebugLog(@"\tEnvironment: %@ = %@",key,value);
 	  setenv([key cString],[value cString],1);
 	}
       else if([value isKindOfClass: [NSArray class]])
