@@ -247,7 +247,7 @@ extern char **environ;
                                                  withString: projDir];
       o = [o stringByReplacingOccurrencesOfString: @"${PROJECT_DIR}"
                                        withString: projDir];
-      [o stringByReplacingOccurrancesOfString: @"\"" withString: @""];
+      [o stringByReplacingOccurrencesOfString: @"\"" withString: @""];
       NSString *p = [NSString stringWithFormat: @"../%@",o];
       if ([result containsObject: o] == NO)
         {
