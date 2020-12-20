@@ -209,6 +209,9 @@
 	{
 	  targetInSubdir = YES;
 	  chdir([[target name] UTF8String]);
+          NSLog(@"Target dir = %@", [target name]);
+          char *cwd = get_current_dir_name();
+          NSLog(@"Changed dir to = %s", cwd);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -227,6 +230,9 @@
       // Back to the current dir...
       if(YES == targetInSubdir)
 	{
+          char *cwd = get_current_dir_name();
+          NSLog(@"Popped dir to = %s", cwd);
+          NSLog(@"Current dir = %@", currentDirectory);
 	  chdir([currentDirectory UTF8String]);
 	}
     }

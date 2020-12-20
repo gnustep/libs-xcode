@@ -194,6 +194,7 @@ extern char **environ;
 }
 
 - (NSArray *) substituteSearchPaths: (NSArray *)array
+                          buildPath: (NSString *)buildPath
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: [array count]];
@@ -246,12 +247,15 @@ extern char **environ;
                                                  withString: projDir];
       o = [o stringByReplacingOccurrencesOfString: @"${PROJECT_DIR}"
                                        withString: projDir];
+      [o stringByReplacingOccurrancesOfString: @"\"" withString: @""];
+      NSString *p = [NSString stringWithFormat: @"../%@",o];
       if ([result containsObject: o] == NO)
-        [result addObject: o];
+        {
+          [result addObject: o];
+          [result addObject: p];
+        }
     }
 
-  // NSLog(@"RESULT: %@", result);
-  
   return result;
 }
 
@@ -303,7 +307,7 @@ extern char **environ;
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: cc];
-      NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"]] 
+      NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"] buildPath: buildPath] 
                                       implodeArrayWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
@@ -346,6 +350,7 @@ extern char **environ;
       
       // If the target is in the subdirectory, then override the preprending of
       // the project root.
+      NSString *savedBuildPath = [buildPath copy];
       if(targetInSubdir)
 	{
 	  buildPath = [self path]; 
@@ -355,9 +360,25 @@ extern char **environ;
       // need the project dir pre-pended.  This could be due to differences 
       // in different version of xcode.  It must be removed to successfully
       // compile the application...
+      BOOL existsInParent = NO;
       if([manager fileExistsAtPath:buildPath] == NO)
 	{
-	  buildPath = [self path];
+          // NSLog(@"not at %@", buildPath);
+          if ([manager fileExistsAtPath: [self path]] == YES)
+            {
+              // NSLog(@"is at %@", [self path]);
+              buildPath = [self path];
+            }
+          else
+            {
+              buildPath = [NSString stringWithFormat: @"../%@", savedBuildPath];
+              if ([manager fileExistsAtPath: buildPath  ] == YES)
+                {
+                  existsInParent = YES;
+                  // NSLog(@"holy shit, is at %@", buildPath);
+                }
+              // NSLog(@"buildPath = %@", buildPath);
+            }
 	}
 
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
@@ -394,9 +415,14 @@ extern char **environ;
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
+      // NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
+      if (existsInParent)
+        {
+          compilePath = buildPath;
+        }
       NSString *errorOutPath = [buildDir stringByAppendingPathComponent:
                                       [fileName stringByAppendingString: @".err"]];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
@@ -408,7 +434,7 @@ extern char **environ;
 					 headerSearchPaths,
 					 [outputPath stringByEscapingSpecialCharacters]];
 
-      // NSLog(@"buildCommand = %@", buildCommand);
+      NSLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];

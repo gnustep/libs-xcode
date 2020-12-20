@@ -184,6 +184,7 @@
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSArray *otherLDFlags = [context objectForKey: @"OTHER_LDFLAGS"];
+  NSLog(@"OTHER_LDFLAGS = %@", otherLDFlags);
   en = [otherLDFlags objectEnumerator];
   while((file = [en nextObject]) != nil)
     {
@@ -284,8 +285,7 @@
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui "];
-
-
+  NSLog(@"LINK: %@", linkString);
            
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
