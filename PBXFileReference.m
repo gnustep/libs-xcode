@@ -209,10 +209,18 @@ extern char **environ;
   XCBuildConfiguration *config = [[list buildConfigurations] objectAtIndex: 0];
   NSDictionary *buildSettings = [config buildSettings];
   NSMutableArray *headers = [buildSettings objectForKey: @"HEADER_SEARCH_PATHS"];
+  if ([headers isKindOfClass: [NSArray class]] &&
+      headers != nil)
+    {
+      [allHeaders addObjectsFromArray: headers];
+    }
+
+  if ([headerPaths isKindOfClass: [NSArray class]] &&
+      headerPaths != nil)
+    {
+      [allHeaders addObjectsFromArray: headerPaths];
+    }
   
-  [allHeaders addObjectsFromArray: headers];
-  [allHeaders addObjectsFromArray: headerPaths];
-    
   // get environment variables...
   char **env = NULL;
   for (env = environ; *env != 0; env++)
@@ -434,7 +442,7 @@ extern char **environ;
 					 headerSearchPaths,
 					 [outputPath stringByEscapingSpecialCharacters]];
 
-      NSLog(@"buildCommand = %@", buildCommand);
+      // NSLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
