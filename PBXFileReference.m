@@ -484,6 +484,12 @@ extern char **environ;
 	    }
 	}
 
+      // If the result is not successful, show the error...
+      if (result != 0)
+        {
+          system([[NSString stringWithFormat: @"cat %@", errorOutPath] cString]);
+        }
+
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
     }
 
