@@ -209,11 +209,11 @@
 	{
 	  targetInSubdir = YES;
 	  chdir([[target name] UTF8String]);
-          NSLog(@"Target dir = %@", [target name]);
+          NSDebugLog(@"Target dir = %@", [target name]);
           const char *cwd = [[[NSFileManager defaultManager]
 			 currentDirectoryPath]
 			fileSystemRepresentation];
-          NSLog(@"Changed dir to = %s", cwd);
+          NSDebugLog(@"Changed dir to = %s", cwd);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -235,8 +235,8 @@
           const char *cwd = [[[NSFileManager defaultManager]
 			 currentDirectoryPath]
 			fileSystemRepresentation];
-          NSLog(@"Popped dir to = %s", cwd);
-          NSLog(@"Current dir = %@", currentDirectory);
+          NSDebugLog(@"Popped dir to = %s", cwd);
+          NSDebugLog(@"Current dir = %@", currentDirectory);
 	  chdir([currentDirectory UTF8String]);
 	}
     }

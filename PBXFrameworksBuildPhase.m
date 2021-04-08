@@ -184,7 +184,7 @@
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSArray *otherLDFlags = [context objectForKey: @"OTHER_LDFLAGS"];
-  NSLog(@"OTHER_LDFLAGS = %@", otherLDFlags);
+  NSDebugLog(@"OTHER_LDFLAGS = %@", otherLDFlags);
   en = [otherLDFlags objectEnumerator];
   while((file = [en nextObject]) != nil)
     {
@@ -203,10 +203,10 @@
 
   // Do substitutions and additions for buildtool.plist...
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
-  // NSLog(@"%@",plistFile);
+  NSDebugLog(@"%@",plistFile);
   NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
-  NSLog(@"%@", additionalFlags);
+  NSDebugLog(@"%@", additionalFlags);
   if (additionalFlags != nil)
     {
       [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
@@ -254,7 +254,7 @@
 				outputFiles,
 				linkString];
 
-  // NSLog(@"command = %@", command);
+  NSDebugLog(@"command = %@", command);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
@@ -285,7 +285,7 @@
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui "];
-  NSLog(@"LINK: %@", linkString);
+  NSDebugLog(@"LINK: %@", linkString);
            
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o %@ %@ %@",
@@ -295,7 +295,7 @@
 				linkString];
 
   
-  // NSLog(@"command = %@", command);
+  NSDebugLog(@"command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
@@ -501,7 +501,7 @@
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
   
-  NSLog(@"%@", additionalFlags);
+  NSDebugLog(@"%@", additionalFlags);
   if (additionalFlags != nil)
     {
       [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];

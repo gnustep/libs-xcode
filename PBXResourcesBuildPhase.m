@@ -264,11 +264,52 @@ extern char **environ;
   // Move Base.lproj to English.lproj until Base.lproj is supported..
   NSString *baseLproj = [resourcesDir
                           stringByAppendingPathComponent: @"Base.lproj"];
-  NSString *engLproj =  [resourcesDir
-                          stringByAppendingPathComponent: @"English.lproj"];
-  [mgr moveItemAtPath: baseLproj
-               toPath: engLproj
-                error: NULL];
+  // NSString *engLproj =  [resourcesDir
+  //                    stringByAppendingPathComponent: @"English.lproj"];
+  // NSError *error = nil;
+  //NSDirectoryEnumerator *den = [[NSDirectoryEnumerator alloc] initWithDirectoryPath: baseLproj
+  //                                                        recurseIntoSubdirectories: NO
+  //                                                                   followSymlinks: NO
+  //                                                                     justContents: YES
+  //for: self];
+
+  NSArray *farr = [mgr directoryContentsAtPath: baseLproj];
+  NSDebugLog(@"files in dir %@", farr);
+
+  NSEnumerator *fen = [farr objectEnumerator];
+  NSString *f = nil;
+
+  while ((f = [fen nextObject]) != nil)
+    {
+      NSString *src = [baseLproj stringByAppendingPathComponent: f];
+      NSString *dst = [resourcesDir stringByAppendingPathComponent: f];
+      NSError *ferror = nil;      
+      [mgr moveItemAtPath: src
+                   toPath: dst
+                    error: &ferror];
+      if (ferror != nil)
+        {
+          NSLog(@"** Error while copying resource: %@", ferror);
+        }
+    }
+
+  /*
+  if (den !=nil)
+    {
+      NSString *fn = nil;
+      
+      while ((fn = [den nextObject]) != nil)
+        {
+          [mgr moveItemAtPath: baseLproj
+                       toPath: engLproj
+                        error: NULL];
+          if (error != nil)
+            {
+              NSLog(@"** Error while copying resource: %@", error);
+            }
+        }
+        } */
+  
   
   puts("=== Resources Build Phase Completed");
   return result;
