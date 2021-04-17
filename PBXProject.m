@@ -209,11 +209,9 @@
 	{
 	  targetInSubdir = YES;
 	  chdir([[target name] UTF8String]);
-          NSDebugLog(@"Target dir = %@", [target name]);
           const char *cwd = [[[NSFileManager defaultManager]
 			 currentDirectoryPath]
 			fileSystemRepresentation];
-          NSDebugLog(@"Changed dir to = %s", cwd);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}

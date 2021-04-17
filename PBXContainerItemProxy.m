@@ -60,20 +60,16 @@
       puts([[NSString stringWithFormat: @"Reading %@",[containerPortal path]] cString]);
       char *dir = getcwd(NULL, 0);
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
-      // puts([[NSString stringWithFormat: @"************************************* Changing to Project Root: %@",
-      //      [coder projectRoot]] cString]);
       chdir([[coder projectRoot] cString]);
       PBXContainer *container = [coder unarchive];
       BOOL result = [container build];
       chdir(dir);
-      // puts([[NSString stringWithFormat: @"************************************ Changing back to %s", dir] cString]);
       free(dir);
 
       return result;
     }
   else
     {
-      // puts([[NSString stringWithFormat: @"***** Item Proxy is project = %@",containerPortal] cString]);
       return YES;
     }
 
