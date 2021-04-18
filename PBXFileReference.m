@@ -267,6 +267,25 @@ extern char **environ;
   return result;
 }
 
+- (NSString *) _findFile: (NSString *)apath
+{
+  NSString *currentPath = apath;
+  NSFileManager *manager = [NSFileManager defaultManager];
+  int i = 0;
+  while ([manager fileExistsAtPath: currentPath] == NO && i < 100)
+    {
+      currentPath = [NSString stringWithFormat: @"../%@", currentPath];
+      i++;
+    }
+
+  if (i == 100)
+    {
+      return nil;
+    }
+  
+  return currentPath;
+}
+
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -379,13 +398,11 @@ extern char **environ;
             }
           else
             {
-              buildPath = [NSString stringWithFormat: @"../%@", savedBuildPath];
-              if ([manager fileExistsAtPath: buildPath  ] == YES)
+              buildPath = [self _findFile: savedBuildPath];
+              if (buildPath != nil)
                 {
                   existsInParent = YES;
-                  // NSLog(@"holy shit, is at %@", buildPath);
                 }
-              // NSLog(@"buildPath = %@", buildPath);
             }
 	}
 

@@ -209,9 +209,9 @@
 	{
 	  targetInSubdir = YES;
 	  chdir([[target name] UTF8String]);
-          const char *cwd = [[[NSFileManager defaultManager]
-			 currentDirectoryPath]
-			fileSystemRepresentation];
+          //const char *cwd = [[[NSFileManager defaultManager]
+          //   currentDirectoryPath]
+          //   fileSystemRepresentation];
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
