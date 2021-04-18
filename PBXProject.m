@@ -208,7 +208,7 @@
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
-	  chdir([[target name] UTF8String]);
+	  // chdir([[target name] UTF8String]);
           //const char *cwd = [[[NSFileManager defaultManager]
           //   currentDirectoryPath]
           //   fileSystemRepresentation];
@@ -235,7 +235,7 @@
 			fileSystemRepresentation];
           NSDebugLog(@"Popped dir to = %s", cwd);
           NSDebugLog(@"Current dir = %@", currentDirectory);
-	  chdir([currentDirectory UTF8String]);
+	  // chdir([currentDirectory UTF8String]);
 	}
     }
   puts("=== Completed Building Project");
@@ -261,7 +261,7 @@
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
-	  chdir([[target name] UTF8String]);
+	  // chdir([[target name] UTF8String]);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -275,7 +275,7 @@
       // Back to the current dir...
       if(YES == targetInSubdir)
 	{
-	  chdir([currentDirectory UTF8String]);
+	  // chdir([currentDirectory UTF8String]);
 	}
     }
   puts("=== Completed Cleaning Project");
@@ -326,7 +326,7 @@
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
-	  chdir([[target name] UTF8String]);
+	  // chdir([[target name] UTF8String]);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -345,7 +345,7 @@
       // Back to the current dir...
       if(YES == targetInSubdir)
 	{
-	  chdir([currentDirectory UTF8String]);
+	  // chdir([currentDirectory UTF8String]);
 	}
     }
   puts("=== Completed Generating Project");

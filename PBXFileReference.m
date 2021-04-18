@@ -378,10 +378,10 @@ extern char **environ;
       // If the target is in the subdirectory, then override the preprending of
       // the project root.
       NSString *savedBuildPath = [buildPath copy];
-      if(targetInSubdir)
-	{
-	  buildPath = [self path]; 
-	}
+      // if(targetInSubdir)
+      //   {
+      //     buildPath = [self path]; 
+      //   }
        
       // Sometimes, for some incomprehensible reason, the buildpath doesn't 
       // need the project dir pre-pended.  This could be due to differences 
@@ -441,9 +441,10 @@ extern char **environ;
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
       // NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
-      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
-        [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
-        [self buildPath];
+      //NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
+      //  [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
+      //  [self buildPath];
+      NSString *compilePath = [self buildPath];
       if (existsInParent)
         {
           compilePath = buildPath;
@@ -611,10 +612,10 @@ extern char **environ;
   
   // If the target is in the subdirectory, then override the preprending of
   // the project root.
-  if(targetInSubdir)
-    {
-      buildPath = [self path]; 
-    }
+  //if(targetInSubdir)
+  //  {
+  //    buildPath = [self path]; 
+  //  }
   
   // Sometimes, for some incomprehensible reason, the buildpath doesn't 
   // need the project dir pre-pended.  This could be due to differences 
