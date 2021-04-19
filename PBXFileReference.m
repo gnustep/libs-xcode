@@ -445,10 +445,10 @@ extern char **environ;
       //  [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
       //  [self buildPath];
       NSString *compilePath = [self buildPath];
-      if (existsInParent)
-        {
-          compilePath = buildPath;
-        }
+      //if (existsInParent)
+      //  {
+      //    compilePath = buildPath;
+      //  }
       NSString *errorOutPath = [buildDir stringByAppendingPathComponent:
                                       [fileName stringByAppendingString: @".err"]];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
