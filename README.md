@@ -15,14 +15,23 @@ along with your program, you must make the improvements you have made to
 the libraries freely available. You should read the COPYING.LIB file for
 more information. 
 
-1.2 How can you help?
+1.2 How to use
+==============
+
+To use this library you need to build it and install it and then compile
+the front-end which is in tools-buildtool.  Simply go into a directory
+which contains an Xcode project and type buildtool and it should build
+the project.  If it doesn't then submit a bug.  Currently GNUstep can
+only build projects for macOS.
+
+1.3 How can you help?
 =====================
 
    * Give us feedback!  Tell us what you like; tell us what you think
      could be better.
 
      Please log bug reports on the GNUstep project page
-     `http://savannah.gnu.org/bugs/?group=gnustep' or send bug reports
+     `https://github.com/gnustep/libs-xcode/issues` or send bug reports
      to <bug-gnustep@gnu.org>.
 
 
