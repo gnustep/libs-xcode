@@ -1,3 +1,4 @@
+![libs-xcode workflow](https://github.com/gnustep/libs-xcode/actions/workflows/main.yml/badge.svg)
 1 README
 ********
 
