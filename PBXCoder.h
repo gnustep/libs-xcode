@@ -7,6 +7,7 @@
   NSMutableDictionary *dictionary;
   NSMutableDictionary *objects;
   NSMutableDictionary *objectCache;
+  NSMutableDictionary *parents;
 }
 
 - (id) initWithProjectFile: (NSString *)name;

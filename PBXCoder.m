@@ -10,12 +10,15 @@
   if((self = [super init]) != nil)
     {
       objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
+
       ASSIGN(fileName, name);
       ASSIGN(projectRoot, [[fileName stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]);
       ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
+      
+      parents = [[NSDictionary alloc] initWithCapacity: 10];
       [[GSXCBuildContext sharedBuildContext] setObject: objects forKey: @"objects"];
-      // NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
+
       setenv("PROJECT_ROOT","",1);      
     }
   return self;
@@ -33,6 +36,8 @@
   RELEASE(fileName);
   RELEASE(dictionary);
   RELEASE(objects);
+  RELEASE(parents);
+
   [super dealloc];
 }
 
@@ -52,10 +57,6 @@
     {
       puts([[NSString stringWithFormat: @"Unknown class: %@",className] cString]);
       return nil;
-    }
-  if([className isEqualToString: @"PBXAggregateTarget"])
-    {
-      puts("Aggregate target...");
     }
 
   object = [[classInstance alloc] init];
