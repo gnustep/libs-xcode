@@ -16,7 +16,7 @@
       ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
       
-      parents = [[NSDictionary alloc] initWithCapacity: 10];
+      parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
       [[GSXCBuildContext sharedBuildContext] setObject: objects forKey: @"objects"];
 
       setenv("PROJECT_ROOT","",1);      
