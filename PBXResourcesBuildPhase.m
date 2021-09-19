@@ -70,7 +70,8 @@ extern char **environ;
     }
   
   NSString *filename = nil;
-  NSString *assetsDir = @"Assets.xcassets"; 
+  NSString *productName = [self productName];
+  NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"]; 
   NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
   NSString *contentsJson = [appIconDir stringByAppendingPathComponent: @"Contents.json"];
   NSData *data = [NSData dataWithContentsOfFile: contentsJson];
@@ -95,25 +96,18 @@ extern char **environ;
     }
 
   // Copy icons to resource dir...
-  NSString *targetDir = @""; // [target productName];
-  if ([mgr fileExistsAtPath: assetsDir] == NO)
-    {
-      NSString *productName = [self productName];
-      if ([mgr fileExistsAtPath: productName])
-	{
-	  targetDir = [self productName];
-	}
-    } 
-    
-  NSString *productOutputDir = [targetDir stringByAppendingPathComponent: [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")]];
+  NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
-  NSString *imagePath = [targetDir stringByAppendingPathComponent: [appIconDir stringByAppendingPathComponent: filename]];
+  NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
+
   // NSLog(@"%@ -> %@", imagePath, resourcesDir);
   NSError *error = nil;
+
   [mgr copyItemAtPath: imagePath
                toPath: destPath
                 error: &error];
+
   NSDebugLog(@"error = %@", error);
 
   return filename;
@@ -250,8 +244,8 @@ extern char **environ;
                   NSLog(@"\tFILE CREATION ERROR:  %@, %@", error, fileDir);
                 }
 
-              NSDebugLog(@"\tCopy child %@  -> %@",filePath,destPath);
-              puts([[NSString stringWithFormat: @"\tCopy child resource %@ --> %@", filePath, destPath] cString]);
+              NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
+              puts([[NSString stringWithFormat: @"\t* Copy child resource %@ --> %@", filePath, destPath] cString]);
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
@@ -274,7 +268,7 @@ extern char **environ;
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      puts([[NSString stringWithFormat: @"\tCopy resource %@ --> %@",filePath,destPath] cString]);      
+      puts([[NSString stringWithFormat: @"\t* Copy resource %@ --> %@",filePath,destPath] cString]);      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
