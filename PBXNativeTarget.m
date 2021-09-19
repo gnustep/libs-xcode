@@ -84,8 +84,11 @@
 - (void) _productWrapper
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
+  NSDebugLog(@"CONTEXT = %@", context);
+  
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  buildDir = [buildDir stringByAppendingPathComponent: [self name]];
+  buildDir = [buildDir stringByAppendingPathComponent: [self productName]];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"Products"] 
 			 stringByAppendingPathComponent: [productReference path]];

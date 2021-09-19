@@ -6,6 +6,11 @@
 
 @implementation XCBuildConfiguration
 
+- (NSString *) description
+{
+  return [NSString stringWithFormat: @"%@ -- buildSettings = %@, name = %@", [super description], buildSettings, name];
+}
+
 // Methods....
 - (NSMutableDictionary *) buildSettings // getter
 {

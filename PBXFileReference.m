@@ -165,7 +165,8 @@ extern char **environ;
               [dirToAdd containsString: @"build"] ||
               [dirToAdd containsString: @"xcassets"] ||
               [dirToAdd containsString: @"lproj"] ||
-              [dirToAdd containsString: @"xcodeproj"])
+              [dirToAdd containsString: @"xcodeproj"] ||
+	      [dirToAdd containsString: @".git"])
             {
               continue;
             }
@@ -179,12 +180,24 @@ extern char **environ;
   return results;
 }
 
+- (NSString *) productName
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *ctx = [context currentContext];
+  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
+  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
+  NSDictionary *bs = [xbc buildSettings];
+  NSString *productName = [bs objectForKey: @"PRODUCT_NAME"];
+
+  return productName;
+}
+
 - (NSString *) buildPath
 {
   PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
   BOOL found = NO;
   NSString *result = nil;
-  
+
   // Resolve path for the current file reference...
   result = [self resolvePathFor: self 
 		      withGroup: mainGroup
@@ -286,18 +299,31 @@ extern char **environ;
   return currentPath;
 }
 
+- (char *) getCompiler
+{
+  char *cc = getenv("CC");
+  if (cc == NULL ||
+      strcmp(cc, "") == 0)
+    {
+      cc = "`gnustep-config --variable=CC`";
+    }
+  return cc;
+}
+
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  BOOL targetInSubdir = [[context objectForKey:@"TARGET_IN_SUBDIR"] isEqualToString:@"YES"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
   NSError *error = nil;
   NSFileManager *manager = [NSFileManager defaultManager];
-
-  // NSDebugLog(@"*** %@", sourceTree);
+  NSDictionary *ctx = [context currentContext];
+  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
+  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
+  NSDictionary *bs = [xbc buildSettings];
+  
   if(modified == nil)
     {
       modified = @"NO";
@@ -310,27 +336,19 @@ extern char **environ;
      [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
      [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
-      char *proj_root = getenv("PROJECT_ROOT");
-      if (proj_root == NULL ||
-          strcmp(proj_root, "") == 0)
+      NSString *proj_root = [bs objectForKey: @"PROJECT_ROOT"];
+      if (proj_root == nil ||
+          [proj_root isEqualToString: @""])
         {
-          proj_root = "";
+          proj_root = @"";
         }
       
-      char *cc = getenv("CC");
-      if (cc == NULL ||
-          strcmp(cc, "") == 0)
-        {
-          cc = "`gnustep-config --variable=CC`";
-        }
-
-      NSString *buildPath = [[NSString stringWithCString: proj_root] 
-				         stringByAppendingPathComponent: 
-				    [self buildPath]];
+      char *cc = [self getCompiler];
+      NSString *buildPath = [proj_root stringByAppendingPathComponent: 
+					 [self buildPath]];
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
-      buildDir = [buildDir stringByAppendingPathComponent: [target name]];
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: cc];
@@ -339,6 +357,8 @@ extern char **environ;
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
+
+      buildDir = [buildDir stringByAppendingPathComponent: [target productName]];
 
       NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
       NSDebugLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
@@ -375,37 +395,6 @@ extern char **environ;
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: localHeaderPaths];
 	}
       
-      // If the target is in the subdirectory, then override the preprending of
-      // the project root.
-      NSString *savedBuildPath = [buildPath copy];
-      if(targetInSubdir)
-	{
-	  buildPath = [self path]; 
-	}
-       
-      // Sometimes, for some incomprehensible reason, the buildpath doesn't 
-      // need the project dir pre-pended.  This could be due to differences 
-      // in different version of xcode.  It must be removed to successfully
-      // compile the application...
-      BOOL existsInParent = NO;
-      if([manager fileExistsAtPath:buildPath] == NO)
-	{
-          // NSLog(@"not at %@", buildPath);
-          if ([manager fileExistsAtPath: [self path]] == YES)
-            {
-              // NSLog(@"is at %@", [self path]);
-              buildPath = [self path];
-            }
-          else
-            {
-              buildPath = [self _findFile: savedBuildPath];
-              if (buildPath != nil)
-                {
-                  existsInParent = YES;
-                }
-            }
-	}
-
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: outputPath] 
@@ -440,16 +429,10 @@ extern char **environ;
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
-      // NSString *buildTemplate = @"%@ %@ -c %@ %@ %@ -o %@";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
-      if (existsInParent)
-        {
-          compilePath = buildPath;
-        }
-      NSString *errorOutPath = [buildDir stringByAppendingPathComponent:
-                                      [fileName stringByAppendingString: @".err"]];
+      NSString *errorOutPath = [compilePath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
                                          errorOutPath,
@@ -459,7 +442,7 @@ extern char **environ;
 					 headerSearchPaths,
 					 [outputPath stringByEscapingSpecialCharacters]];
 
-      // NSLog(@"buildCommand = %@", buildCommand);
+      NSDebugLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
@@ -565,7 +548,7 @@ extern char **environ;
 
   NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
-  buildDir = [buildDir stringByAppendingPathComponent: [target name]];
+  buildDir = [buildDir stringByAppendingPathComponent: [self productName]];
   NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
   NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
   NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 

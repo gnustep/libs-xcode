@@ -35,11 +35,13 @@
   ASSIGN(defaultConfigurationName,object);
 }
 
-- (void) applyDefaultConfiguration
+- (XCBuildConfiguration *) defaultConfiguration
 {
   NSEnumerator *en = [buildConfigurations objectEnumerator];
-  NSString *defaultConfig = (defaultConfigurationName == nil)?@"Release":defaultConfigurationName;
-  id config = nil;
+  NSString *defaultConfig = (defaultConfigurationName == nil)?
+    @"Release":defaultConfigurationName;
+  XCBuildConfiguration *config = nil;
+
   while((config = [en nextObject]) != nil)
     {
       if([[config name] 
@@ -49,7 +51,13 @@
 	  break;
 	}
     }
-  [config apply];
+
+  return config;
+}
+
+- (void) applyDefaultConfiguration
+{
+  [[self defaultConfiguration] apply];
 }
 
 - (instancetype) init
@@ -58,4 +66,9 @@
   return self;
 }
 
+- (NSString *) description
+{
+  return [NSString stringWithFormat: @"%@ -- %@", [super description],
+		   buildConfigurations];
+}
 @end

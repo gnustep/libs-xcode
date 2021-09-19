@@ -43,6 +43,7 @@
 - (NSString *) lineEnding;
 - (void) setLineEnding: (NSString *)object;
 - (void) setTarget: (PBXNativeTarget *)t;
+- (NSString *) productName;
 
 // Build methods...
 - (NSString *) buildPath;

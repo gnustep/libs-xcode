@@ -69,4 +69,10 @@ id _sharedBuildContext = nil;
 {
   [currentContext addEntriesFromDictionary: dict];
 }
+
+- (NSString *) description
+{
+  return [NSString stringWithFormat: @"%@ -- contextDictionary = %@, \n currentContext = %@, \n stack = %@ \n\n",
+		   [super description], contextDictionary, currentContext, stack];
+}
 @end

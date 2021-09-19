@@ -1,8 +1,7 @@
 #import <Foundation/Foundation.h>
-
-// Local includes
 #import "PBXCoder.h"
 
+@class XCBuildConfiguration;
 
 @interface XCConfigurationList : NSObject
 {
@@ -18,6 +17,7 @@
 - (void) setBuildConfigurations: (NSMutableArray *)object; // setter
 - (NSString *) defaultConfigurationName; // getter
 - (void) setDefaultConfigurationName: (NSString *)object; // setter
+- (XCBuildConfiguration *) defaultConfiguration;
 
 - (void) applyDefaultConfiguration;
 @end

@@ -9,6 +9,8 @@
 #import "PBXVariantGroup.h"
 #import "NSString+PBXAdditions.h"
 #import "GSXCBuildContext.h"
+#import "XCBuildConfiguration.h"
+#import "XCConfigurationList.h"
 
 extern char **environ;
 
@@ -26,6 +28,36 @@ extern char **environ;
       ASSIGNCOPY(files, objs);
     }
   return self;
+}
+
+- (NSString *) productName
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *ctx = [context currentContext];
+  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
+  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
+  NSDictionary *bs = [xbc buildSettings];
+  NSString *productName = [bs objectForKey: @"PRODUCT_NAME"];
+
+  // NSProcessInfo *info = [NSProcessInfo processInfo];
+  // NSDictionary *env = [info environment];
+  NSDebugLog(@"bs = %@", bs);
+  
+  // This is kind of a kludge, but better than what was here before.
+  // I believe that when the context has the variable name it means to use
+  // the product name from the target.
+  if ([productName isEqualToString: @"$(TARGET_NAME)"])
+    {
+      productName = [target productName];
+      NSDebugLog(@"* 2nd try %@", productName);
+      if ([productName isEqualToString: @"$(TARGET_NAME)"])
+	{
+	  productName = [target name];
+	  NSDebugLog(@"* 3rd try %@", productName);
+	}
+    }
+  
+  return productName;
 }
 
 - (NSString *) processAssets
@@ -66,8 +98,12 @@ extern char **environ;
   NSString *targetDir = @""; // [target productName];
   if ([mgr fileExistsAtPath: assetsDir] == NO)
     {
-      targetDir = [target productName];
-    }
+      NSString *productName = [self productName];
+      if ([mgr fileExistsAtPath: productName])
+	{
+	  targetDir = [self productName];
+	}
+    } 
     
   NSString *productOutputDir = [targetDir stringByAppendingPathComponent: [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")]];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
@@ -148,7 +184,9 @@ extern char **environ;
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
-  NSString *productName = [target productName];
+  NSString *productName = [self productName]; // @""; // [target productName];
+
+  NSDebugLog(@"productName = %@", productName);
   
   // Pre create directory....
   [mgr createDirectoryAtPath:resourcesDir
@@ -163,7 +201,7 @@ extern char **environ;
   while((file = [en nextObject]) != nil && result)
     {
       id fileRef = [file fileRef];
-      //      NSLog(@"fileRef = %@", fileRef);
+
       if ([fileRef isKindOfClass: [PBXVariantGroup class]])
         {
           NSArray *children = [fileRef children];
@@ -172,6 +210,7 @@ extern char **environ;
           while ((child = [e nextObject]) != nil)
             {
               NSString *filePath = [child path];
+	      NSDebugLog(@"FILEPATH = %@", filePath);
               NSString *resourceFilePath = [filePath stringByDeletingLastPathComponent];
               BOOL edited = NO;
               if ([mgr fileExistsAtPath: [child path]] == NO)
@@ -202,10 +241,10 @@ extern char **environ;
                 }
               
               NSDebugLog(@"\tCreate %@",fileDir);
-              copyResult = [mgr       createDirectoryAtPath: fileDir
+              copyResult = [mgr createDirectoryAtPath: fileDir
                                 withIntermediateDirectories: YES
-                                                 attributes: nil
-                                                      error: &error];
+					   attributes: nil
+						error: &error];
               if (copyResult == NO)
                 {
                   NSLog(@"\tFILE CREATION ERROR:  %@, %@", error, fileDir);
