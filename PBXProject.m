@@ -226,17 +226,6 @@
       
       result = [target build];
       [context popCurrentContext];
-
-      // Back to the current dir...
-      if(YES == targetInSubdir)
-	{
-          const char *cwd = [[[NSFileManager defaultManager]
-			 currentDirectoryPath]
-			fileSystemRepresentation];
-          // NSDebugLog(@"Popped dir to = %s", cwd);
-          // NSDebugLog(@"Current dir = %@", currentDirectory);
-	  // chdir([currentDirectory UTF8String]);
-	}
     }
   puts("=== Completed Building Project");
   return result;
@@ -250,7 +239,6 @@
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [targets objectEnumerator];
-  NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
   id target = nil;
   BOOL result = YES;
   

@@ -342,6 +342,12 @@ extern char **environ;
         {
           proj_root = @"";
         }
+
+      if ([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
+	  [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+	{
+	  [context setObject: @"YES" forKey: @"LINK_WITH_CPP"];
+	}
       
       char *cc = [self getCompiler];
       NSString *buildPath = [proj_root stringByAppendingPathComponent: 
@@ -397,7 +403,7 @@ extern char **environ;
       
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
-      outputFiles = [[outputFiles stringByAppendingString: outputPath] 
+      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"\"%@\"",outputPath]] 
 		      stringByAppendingString: @" "];
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
@@ -428,7 +434,7 @@ extern char **environ;
 
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o %@";
+      NSString *buildTemplate = @"%@ 2> %@ \"%@\" -c %@ %@ %@ -o \"%@\"";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
@@ -440,7 +446,7 @@ extern char **environ;
 					 objCflags,
 					 configString,
 					 headerSearchPaths,
-					 [outputPath stringByEscapingSpecialCharacters]];
+					 outputPath];
 
       NSDebugLog(@"buildCommand = %@", buildCommand);
       

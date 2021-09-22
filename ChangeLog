@@ -1,3 +1,12 @@
+2021-09-22 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* NSString+PBXAdditions.m
+	* PBXFileReference.m
+	* PBXFrameworksBuildPhase.m
+	* PBXNativeTarget.m
+	* PBXProject.m: Refactor path handling.  Correct handling of escaping
+	paths.
+
 2016-05-08 00:37-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
 	* Tools/pcpg/PLCPG.m: Fix issue with include/import of non-NS classes.

@@ -10,8 +10,17 @@
 
 - (NSString *) stringByEscapingSpecialCharacters
 {
-  return [self stringByReplacingOccurrencesOfString: @" "
-					 withString: @"\\ "];
+  NSString *result = [self stringByReplacingOccurrencesOfString: @" "
+						     withString: @"\\ "];
+  result = [self stringByReplacingOccurrencesOfString: @"("
+						     withString: @"\\("];
+  result = [self stringByReplacingOccurrencesOfString: @")"
+						     withString: @"\\)"];
+  result = [self stringByReplacingOccurrencesOfString: @"["
+						     withString: @"\\["];
+  result = [self stringByReplacingOccurrencesOfString: @"]"
+						     withString: @"\\]"];
+  return result;
 }
 
 - (NSString *) stringByCapitalizingFirstCharacter

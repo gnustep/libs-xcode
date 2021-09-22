@@ -267,7 +267,7 @@
   puts([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
   buildDir = [buildDir stringByAppendingPathComponent: [self name]];
-  NSString *command = [NSString stringWithFormat: @"rm -rf %@",buildDir];
+  NSString *command = [NSString stringWithFormat: @"rm -rf \"%@\"",buildDir];
 
   puts([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
   int result = system([command cString]);
