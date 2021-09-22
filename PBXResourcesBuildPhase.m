@@ -251,7 +251,8 @@ extern char **environ;
                                          error: &error];
               if (copyResult == NO)
                 {
-                  NSLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
+		  puts([[NSString stringWithFormat: @"\t\033[1;31m** Could not copy file\033[0m %@", filePath] cString]);
+		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
                 }
             }
           continue;

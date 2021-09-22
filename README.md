@@ -25,6 +25,20 @@ which contains an Xcode project and type buildtool and it should build
 the project.  If it doesn't then submit a bug.  Currently GNUstep can
 only build projects for macOS.
 
+1.2.1 Plans for the future
+==========================
+
+  * Create GSXBuildDelegate which will provide a way for the library to
+  execute callbacks into the caller so that information can be shown.
+  This should eliminate the need to print anything in the library as all
+  of the printing will be done on the front end based on information sent
+  back by the library to the delegate.
+  * Add more options to how the build is run so that the caller can specify
+  which target should be built.
+  * Add support for workspaces
+  * Add support for translated to .pcproj files.
+  * Add support for creating from GNUmakefiles... (maybe)
+  
 1.3 How can you help?
 =====================
 
