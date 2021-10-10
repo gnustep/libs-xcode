@@ -20,7 +20,7 @@ FRAMEWORK_NAME = XCode
 #
 # Resource files
 #
-XCode_RESOURCE_FILES =
+XCode_RESOURCE_FILES = Resources/Framework-mapping.plist
 
 #
 # Header files

@@ -122,40 +122,24 @@
 
 - (NSString *) frameworkLinkString: (NSString*)framework
 {
-  if ([framework isEqualToString: @"Cocoa"])
-    {
-      return @"`gnustep-config --gui-libs` ";
-    }
-  else if ([framework isEqualToString: @"Foundation"])
-    {
-      return @"`gnustep-config --base-libs` ";
-    }
-  else if ([framework isEqualToString: @"AppKit"])
-    {
-      return @"`gnustep-config --gui-libs` ";
-    }
-  else if ([framework isEqualToString: @"CoreFoundation"])
-    {
-      return @"-lcorebase ";
-    }
-  else if ([framework isEqualToString: @"CoreGraphics"])
-    {
-      return @"-lopal ";
-    }
-  else if ([framework isEqual: @"Carbon"] ||
-           [framework isEqual: @"IOKit"] ||
-           [framework isEqual: @"Quartz"] ||
-           [framework isEqual: @"QuartzCore"] ||
-           [framework isEqual: @"QuickTime"] ||
-           [framework isEqual: @"ApplicationServices"])
+  NSString *path = [[NSBundle bundleForClass: [self class]]
+                     pathForResource: @"Framework-mapping" ofType: @"plist"];
+  NSDictionary *propList = [[NSString stringWithContentsOfFile: path] propertyList];
+  NSArray *ignored = [propList objectForKey: @"Ignored"];
+  NSDictionary *mapped = [propList objectForKey: @"Mapped"];
+  NSString *result = nil;
+  
+  NSDebugLog(@"path = %@", path);
+  if ([ignored containsObject: framework])
     {
       return @"";
     }
-  else
-    {
-      return [NSString stringWithFormat: @"-l%@ ", framework];
-    }
-}
+
+  result = [mapped objectForKey: framework];
+  result = result != nil ? result : [NSString stringWithFormat: @"-l%@ ", framework];
+
+  return result;
+} 
 
 - (NSString *) processOutputFilesString
 {
@@ -190,8 +174,6 @@
 			     stringByAppendingPathComponent: @"Libraries"];
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"];
-  NSEnumerator *en = [files objectEnumerator];
-  id file = nil;
   NSString *linkString = [NSString stringWithFormat: @"-L%@ -L%@ -L%@ ",
 				   userLibDir,
 				   localLibDir,
@@ -199,6 +181,11 @@
   NSFileManager *manager = [NSFileManager defaultManager];
   NSDirectoryEnumerator *dirEnumerator = [manager enumeratorAtPath:uninstalledProductsDir];
 
+  // NSString *s = [self frameworkLinkString: @"AppKit"];
+  NSEnumerator *en = [files objectEnumerator];
+  id file = nil;
+
+  // NSDebugLog(@"*** Frameworks build phase files = %@, %@", files, s);
   while((file = [en nextObject]) != nil)
     {
       PBXFileReference *fileRef = [file fileRef];

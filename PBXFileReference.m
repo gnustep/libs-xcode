@@ -438,7 +438,7 @@ extern char **environ;
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
-      NSString *errorOutPath = [compilePath stringByAppendingString: @".err"];
+      NSString *errorOutPath = [outputPath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
                                          errorOutPath,

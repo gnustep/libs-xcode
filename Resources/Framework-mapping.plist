@@ -1,0 +1,12 @@
+{
+        Mapped = {
+                Cocoa = "`gnustep-config --gui-libs` ";
+                Foundation = "`gnustep-config --base-libs` ";
+                AppKit = "`gnustep-config --gui-libs` ";
+                CoreFoundation = "-lcorebase ";
+                CoreGraphics = "-lopal ";
+                Carbon = "-lboron ";
+        };
+        Ignored = ("IOKit", "Quartz", "QuartzCore",
+                   "QuickTime", "ApplicationServices");
+}
