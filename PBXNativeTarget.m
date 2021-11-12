@@ -3,6 +3,7 @@
 #import "PBXNativeTarget.h"
 #import "GSXCCommon.h"
 #import "GSXCBuildContext.h"
+#import "NSString+PBXAdditions.h"
 
 @implementation PBXNativeTarget
 
@@ -88,7 +89,8 @@
   NSDebugLog(@"CONTEXT = %@", context);
   
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  buildDir = [buildDir stringByAppendingPathComponent: [self productName]];
+  NSString *prodName = [self productName];
+  buildDir = [buildDir stringByAppendingPathComponent: prodName];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"Products"] 
 			 stringByAppendingPathComponent: [productReference path]];

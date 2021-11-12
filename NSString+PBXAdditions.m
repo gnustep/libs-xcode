@@ -1,7 +1,10 @@
 #import <Foundation/NSArray.h>
+#import <Foundation/NSCharacterSet.h>
+
 #import "NSString+PBXAdditions.h"
 
 @implementation NSString (PBXAdditions)
+
 - (NSString *) firstPathComponent
 {
   NSArray *components = [self pathComponents];
@@ -10,16 +13,43 @@
 
 - (NSString *) stringByEscapingSpecialCharacters
 {
-  NSString *result = [self stringByReplacingOccurrencesOfString: @" "
-						     withString: @"\\ "];
+  NSString *result = nil;
+
+  result = [self stringByReplacingOccurrencesOfString: @" "
+						     withString: @"_"];
   result = [self stringByReplacingOccurrencesOfString: @"("
-						     withString: @"\\("];
+                                           withString: @"\\)"];
   result = [self stringByReplacingOccurrencesOfString: @")"
-						     withString: @"\\)"];
+                                           withString: @"\\)"];
   result = [self stringByReplacingOccurrencesOfString: @"["
-						     withString: @"\\["];
+                                           withString: @"\\["];
   result = [self stringByReplacingOccurrencesOfString: @"]"
-						     withString: @"\\]"];
+                                           withString: @"\\]"];
+  result = [self stringByReplacingOccurrencesOfString: @"{"
+                                           withString: @"\\{"];
+  result = [self stringByReplacingOccurrencesOfString: @"}"
+                                           withString: @"\\}"];
+
+  return result;
+}
+
+- (NSString *) stringByEliminatingSpecialCharacters
+{
+  NSString *cs = @"()[]/\\| ";
+  NSString *result = @"";
+  NSUInteger l = [self length];
+  NSUInteger i = 0;
+
+  for (i = 0; i < l; i++)
+    {
+      NSString *c = [NSString stringWithFormat: @"%c",[self characterAtIndex: i]];
+      if ([cs containsString: c])
+        {
+          continue;
+        }
+      result = [result stringByAppendingString: c];
+    }
+
   return result;
 }
 
@@ -51,4 +81,5 @@
   
   return result;
 }
+
 @end

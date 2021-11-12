@@ -363,7 +363,7 @@ extern char **environ;
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
-
+      
       buildDir = [buildDir stringByAppendingPathComponent: [target productName]];
 
       NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
@@ -405,6 +405,7 @@ extern char **environ;
 				    [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"\"%@\"",outputPath]] 
 		      stringByAppendingString: @" "];
+
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
 	{

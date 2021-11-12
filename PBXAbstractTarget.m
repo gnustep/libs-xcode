@@ -1,6 +1,7 @@
 #import <stdlib.h>
 #import "PBXCommon.h"
 #import "PBXAbstractTarget.h"
+#import "NSString+PBXAdditions.h"
 
 @implementation PBXAbstractTarget
 
@@ -42,7 +43,8 @@
 
 - (void) setProductName: (NSString *)object; // setter
 {
-  ASSIGN(productName,object);
+  NSString *newName = [object stringByEliminatingSpecialCharacters];
+  ASSIGN(productName,newName);
 }
 
 - (NSString *) name // getter
@@ -52,7 +54,8 @@
 
 - (void) setName: (NSString *)object; // setter
 {
-  ASSIGN(name,object);
+  NSString *newName = [object stringByEliminatingSpecialCharacters];
+  ASSIGN(name, newName);
 }
 
 - (NSMutableArray *) buildPhases // getter
