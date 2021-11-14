@@ -135,7 +135,7 @@
       NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
       NSString *derivedSourceHeaderDir = [derivedSourceDir stringByAppendingPathComponent: execName];
       NSString *frameworkVersion = 
-	[NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+	[NSString stringWithCString: getenv("FRAMEWORK_VERSION") ?: "0.0.0"];
       [context setObject: [NSString stringWithString: fullPath]
 		  forKey: @"FRAMEWORK_DIR"];
 
