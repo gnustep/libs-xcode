@@ -7,6 +7,8 @@
 #import "NSString+PBXAdditions.h"
 #import "GSXCCommon.h"
 
+#import <Foundation/NSPathUtilities.h>
+
 @implementation PBXFrameworksBuildPhase
 
 - (NSString *) linkerForBuild
@@ -25,9 +27,8 @@
 
 - (void) generateDummyClass
 {
-  NSString *frameworkPath = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
-				      stringByAppendingPathComponent: @"Library"] 
-				     stringByAppendingPathComponent: @"Frameworks"];
+  NSArray *libs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSLocalDomainMask, YES);
+  NSString *frameworkPath = [([libs firstObject] != nil ? [libs firstObject] : @"") stringByAppendingPathComponent: @"Frameworks"];
   NSString *frameworkVersion = [NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *classList = @"";
