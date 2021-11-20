@@ -343,6 +343,8 @@
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+
+  // NSLog(@"********* EXECUTABLE NAME: %@", executableName);
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,

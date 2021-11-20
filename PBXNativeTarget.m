@@ -292,11 +292,9 @@
 {
   puts([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  buildDir = [buildDir stringByAppendingPathComponent: [self name]];
-
-  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
+  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self productName]];
+  NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [productReference path]];
-  NSString *installDir = [NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")]; // FIXME: Shouldn't always be local...
   NSString *fileName = [fullPath lastPathComponent];
   NSString *execName = [fileName stringByDeletingPathExtension];
   NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -304,23 +302,28 @@
 
   if([productType isEqualToString: APPLICATION_TYPE])
     {
-      NSString *installDest = [[installDir stringByAppendingPathComponent: @"Applications"] stringByAppendingPathComponent: fileName]; 
+      NSArray *apps = NSSearchPathForDirectoriesInDomains(NSAllApplicationsDirectory, NSLocalDomainMask, YES);
+      NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
+      NSString *installDest = [installDir stringByAppendingPathComponent: fileName]; 
       [fileManager copyItemAtPath: fullPath
 			   toPath: installDest
 			    error: &error];
     }
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
-      /*
-      NSString *frameworkVersion = 
-	[NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
-      */
-      NSString *installDest = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Frameworks"]; 
+      NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
+      NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
+      NSString *frameworkPath = [libraryPath stringByAppendingPathComponent: @"Frameworks"];
+      NSString *installDest = frameworkPath;
       NSString *productDir = [installDest stringByAppendingPathComponent: [productReference path]];
-      NSString *headersDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Headers"];
-      NSString *libsDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Libraries"];
-      NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [productReference path]] stringByAppendingPathComponent:@"Versions"] stringByAppendingPathComponent:@"Current"];
-      NSString *headersLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [productReference path]] stringByAppendingPathComponent:@"Versions"] stringByAppendingPathComponent:@"Current"];
+      NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
+      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
+      NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [productReference path]]
+                                       stringByAppendingPathComponent:@"Versions"]
+                                      stringByAppendingPathComponent:@"Current"];
+      NSString *headersLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent:
+                                       [productReference path]] stringByAppendingPathComponent:@"Versions"]
+                                   stringByAppendingPathComponent:@"Current"];
 
       // Copy
       [fileManager removeItemAtPath: productDir error:NULL];
@@ -331,6 +334,7 @@
       // Create links...
       [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: execName]
 			      error:NULL];
+      
       BOOL flag = [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
 					    pathContent: [headersLinkDir stringByAppendingPathComponent: @"Headers"]];
       if(!flag)
@@ -338,10 +342,10 @@
 	  puts([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
 
-      [fileManager removeItemAtPath: [libsDir stringByAppendingPathComponent: 
+      [fileManager removeItemAtPath: [librariesDir stringByAppendingPathComponent: 
 								 [NSString stringWithFormat: @"lib%@.so",execName]]
 			      error:NULL];
-      flag = [fileManager createSymbolicLinkAtPath: [libsDir stringByAppendingPathComponent: 
+      flag = [fileManager createSymbolicLinkAtPath: [librariesDir stringByAppendingPathComponent: 
 								 [NSString stringWithFormat: @"lib%@.so",execName]]
 				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
 								    [NSString stringWithFormat: @"lib%@.so",execName]]];
@@ -352,27 +356,51 @@
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
     {
-      NSString *headersDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Headers"];
-      NSString *libsDir = [[installDir stringByAppendingPathComponent: @"Library"] stringByAppendingPathComponent: @"Libraries"];
+      NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
+      NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
+      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
+      NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
       NSString *derivedSrcDir = @"derived_src";
       NSString *derivedSrcHeaderDir = derivedSrcDir;
-      NSString *destPath = [libsDir stringByAppendingPathComponent: [productReference path]];
+      NSString *destPath = [librariesDir stringByAppendingPathComponent: [productReference path]];
 
       puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
       [fileManager copyItemAtPath: fullPath
 			   toPath: destPath
 			    error: &error];
+      if (error != nil)
+        {
+          puts([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+        }
+
+      NSString *libName = [fullPath lastPathComponent];
+      NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
+      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
+      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
+      NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
+      [fileManager createDirectoryAtPath: libHeadersPath
+             withIntermediateDirectories: NO
+                              attributes: nil
+                                   error: &error];
+      if (error != nil)
+        {
+          puts([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
+        }
 
       NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
       id file = nil;
       while((file = [en nextObject]) != nil)
 	{
-	  NSString *fileName = [file lastPathComponent];
-	  NSString *destFile = [headersDir stringByAppendingPathComponent: fileName];
-	  puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",file,destFile] cString]);
-	  [fileManager copyItemAtPath: file
+          NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
+	  NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
+	  puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
+	  [fileManager copyItemAtPath: srcFile
 			       toPath: destFile
 				error: &error];
+          if (error != nil)
+            {
+              puts([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+            }
 	}
     }
     
