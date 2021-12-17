@@ -6,6 +6,7 @@
                 CoreFoundation = "-lcorebase ";
                 CoreGraphics = "-lopal ";
                 Carbon = "-lboron ";
+                OpenGL = "-lGL -lGLU";
         };
         Ignored = ("IOKit", "Quartz", "QuartzCore",
                    "QuickTime", "ApplicationServices");

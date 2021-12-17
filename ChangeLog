@@ -1,3 +1,8 @@
+2021-12-17 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* Resources/Framework-mapping.plist: Add OpenGL framework to the
+        mapping list.
+
 2021-10-10 Gregory John Casamento <greg.casamento@gmail.com>
 
 	* GNUmakefile
