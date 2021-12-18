@@ -137,7 +137,7 @@
     }
 
   result = [mapped objectForKey: framework];
-  result = result != nil ? result : [NSString stringWithFormat: @"-l%@ ", framework];
+  result = result != nil ? [result stringByAppendingString: @" "] : [NSString stringWithFormat: @"-l%@ ", framework];
 
   return result;
 } 
