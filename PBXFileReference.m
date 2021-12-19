@@ -11,6 +11,8 @@
 #import "XCConfigurationList.h"
 #import "XCBuildConfiguration.h"
 
+#import "xc_system.h"
+
 extern char **environ;
 
 @implementation PBXFileReference
@@ -301,6 +303,9 @@ extern char **environ;
 
 - (char *) getCompiler
 {
+#ifdef _WIN32
+  return "gcc";
+#else
   char *cc = getenv("CC");
   if (cc == NULL ||
       strcmp(cc, "") == 0)
@@ -308,6 +313,7 @@ extern char **environ;
       cc = "`gnustep-config --variable=CC`";
     }
   return cc;
+#endif
 }
 
 - (BOOL) build
@@ -409,7 +415,7 @@ extern char **environ;
       if([compiler isEqualToString: @""] ||
 	 compiler == nil)
 	{
-	  compiler = @"`gnustep-config --variable=CC` -DGNUSTEP";
+	  compiler = [NSString stringWithCString: [self getCompiler]]; //@"`gnustep-config --variable=CC` -DGNUSTEP";
 	}
 
       NSString *objCflags = @"";
@@ -466,7 +472,13 @@ extern char **environ;
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
 	    {	  
-	      result = system([buildCommand cString]);
+	      result = xc_system(compiler,
+                                 errorOutPath,
+                                 compilePath,
+                                 objCflags,
+                                 configString,
+                                 headerSearchPaths,
+                                 outputPath);
 	      if([modified isEqualToString: @"NO"])
 		{
 		  modified = @"YES";
@@ -482,7 +494,13 @@ extern char **environ;
       else
 	{
           NSDebugLog(@"\t%@",buildCommand); 
-	  result = system([buildCommand cString]);
+          result = xc_system(compiler,
+                             errorOutPath,
+                             compilePath,
+                             objCflags,
+                             configString,
+                             headerSearchPaths,
+                             outputPath);
 	  if([modified isEqualToString: @"NO"])
 	    {
 	      modified = @"YES";
@@ -494,7 +512,8 @@ extern char **environ;
       // If the result is not successful, show the error...
       if (result != 0)
         {
-          system([[NSString stringWithFormat: @"cat %@", errorOutPath] cString]);
+          NSString *errorText = [NSString stringWithContentsOfFile: errorOutPath];
+          puts([errorText cString]);
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];

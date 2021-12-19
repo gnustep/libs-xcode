@@ -1,0 +1,9 @@
+#import <Foundation/Foundation.h>
+
+BOOL xc_system(NSString *compiler,
+               NSString *errorOutPath,
+               NSString *compilePath,
+               NSString *objCflags,
+               NSString *configString,
+               NSString *headerSearchPaths,
+               NSString *outputPath);

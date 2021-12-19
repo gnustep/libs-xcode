@@ -13,7 +13,7 @@ include $(GNUSTEP_MAKEFILES)/common.make
 #
 # Framework
 #
-VERSION = 0.1
+VERSION = 0.2.0
 PACKAGE_NAME = XCode
 FRAMEWORK_NAME = XCode
 
@@ -58,7 +58,8 @@ PBXTargetDependency.h \
 PBXVariantGroup.h \
 XCBuildConfiguration.h \
 XCConfigurationList.h \
-XCVersionGroup.h 
+XCVersionGroup.h \
+xc_system.h
 
 #
 # Class files
@@ -95,7 +96,8 @@ PBXTargetDependency.m \
 PBXVariantGroup.m \
 XCBuildConfiguration.m \
 XCConfigurationList.m \
-XCVersionGroup.m
+XCVersionGroup.m \
+xc_system.m
 
 #
 # Makefiles
