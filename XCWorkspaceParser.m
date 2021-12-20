@@ -12,6 +12,7 @@
 
 - (instancetype) initWithContentsOfFile: (NSString *)file
 {
+  ASSIGN(_filename, file);
   if ((self = [super init]) != nil)
     {
       NSData *data = [NSData dataWithContentsOfFile: file];
@@ -54,7 +55,15 @@
 
 - (XCWorkspace *) workspace
 {
+  [_workspace setFilename: _filename];
   return _workspace;
+}
+
+- (void) dealloc
+{
+  RELEASE(_filename);
+  RELEASE(_workspace);
+  [super dealloc];
 }
 
 /** Parser delegate **/
@@ -73,7 +82,7 @@ didStartElement: (NSString *)elementName
   if ([elementName isEqualToString: @"Workspace"])
     {
       NSString *v = [attributeDict objectForKey: @"version"];
-      _workspace = [XCWorkspace workspace];
+      ASSIGN(_workspace, [XCWorkspace workspace]);
       [_workspace setVersion: v];
     }
   else if ([elementName isEqualToString: @"FileRef"])

@@ -7,6 +7,7 @@
 @interface XCWorkspaceParser : NSObject <NSXMLParserDelegate>
 {
   XCWorkspace *_workspace;
+  NSString *_filename;
 }
 
 + (instancetype) parseWorkspaceFile: (NSString *)file;

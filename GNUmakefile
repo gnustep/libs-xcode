@@ -58,7 +58,10 @@ PBXTargetDependency.h \
 PBXVariantGroup.h \
 XCBuildConfiguration.h \
 XCConfigurationList.h \
-XCVersionGroup.h 
+XCVersionGroup.h \
+XCWorkspace.h \
+XCFileRef.h \
+XCWorkspaceParser.h
 
 #
 # Class files
@@ -95,7 +98,10 @@ PBXTargetDependency.m \
 PBXVariantGroup.m \
 XCBuildConfiguration.m \
 XCConfigurationList.m \
-XCVersionGroup.m
+XCVersionGroup.m \
+XCWorkspace.m \
+XCFileRef.m \
+XCWorkspaceParser.m
 
 #
 # Makefiles

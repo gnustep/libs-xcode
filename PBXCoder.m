@@ -12,12 +12,16 @@
       objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
 
       ASSIGN(fileName, name);
-      ASSIGN(projectRoot, [[fileName stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]);
-      ASSIGN(dictionary, [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
+      ASSIGN(projectRoot,
+             [[fileName stringByDeletingLastPathComponent]
+               stringByDeletingLastPathComponent]);
+      ASSIGN(dictionary,
+             [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
       
       parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
-      [[GSXCBuildContext sharedBuildContext] setObject: objects forKey: @"objects"];
+      [[GSXCBuildContext sharedBuildContext]
+        setObject: objects forKey: @"objects"];
 
       setenv("PROJECT_ROOT","",1);      
       setenv("SRCROOT","./",1);      
@@ -136,7 +140,8 @@
 	      
 	      // search the global dictionary...
 	      if([key isEqualToString: @"containerPortal"] == NO &&
-		 [key isEqualToString: @"remoteGlobalIDString"] == NO) // FIXME: Find a more generalized way to do lazy instantiation...
+		 [key isEqualToString: @"remoteGlobalIDString"] == NO)
+                // FIXME: Find a more generalized way to do lazy instantiation...
 		{
 		  id newValue = [self unarchiveObjectForKey: value];  
 		  if(newValue != nil)
