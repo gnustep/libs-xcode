@@ -37,7 +37,6 @@
 
 - (BOOL) build
 {
-  NSLog(@"fileref = %@", [self location]);
   NSString *loc = [[self location] stringByReplacingOccurrencesOfString: @"group:" withString: @""];
   NSString *p = [loc stringByDeletingLastPathComponent];
   
@@ -61,7 +60,6 @@
       if (coder != nil)
         {
           PBXContainer *pc = [coder unarchive];
-          NSLog(@"pc = %@", pc);
           [pc build];
         }
       
