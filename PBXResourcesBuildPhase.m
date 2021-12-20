@@ -1,5 +1,4 @@
 #import <Foundation/NSJSONSerialization.h>
-#import <unistd.h>
 
 #import "PBXCommon.h"
 #import "PBXGroup.h"
@@ -11,8 +10,6 @@
 #import "GSXCBuildContext.h"
 #import "XCBuildConfiguration.h"
 #import "XCConfigurationList.h"
-
-extern char **environ;
 
 @implementation PBXResourcesBuildPhase
 - (instancetype) init
@@ -63,11 +60,11 @@ extern char **environ;
 - (NSString *) processAssets
 {
   NSFileManager *mgr = [NSFileManager defaultManager];
-  char cwd[PATH_MAX];
-  if (getcwd(cwd, sizeof(cwd)) != NULL)
-    {
-      NSDebugLog(@"Current working dir is: %s", cwd);
-    }
+  // char cwd[PATH_MAX];
+  // if (getcwd(cwd, sizeof(cwd)) != NULL)
+  //  {
+  //    NSDebugLog(@"Current working dir is: %s", cwd);
+  //  }
   
   NSString *filename = nil;
   NSString *productName = [self productName];
@@ -120,37 +117,11 @@ extern char **environ;
   NSString *settings = [context objectForKey: @"PRODUCT_SETTINGS_XML"];
   if(settings == nil)
     {
-      NSMutableDictionary *dict = [NSMutableDictionary dictionary];
       NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
-      NSString *outputFileString = nil;
-      
-      ASSIGNCOPY(outputFileString, inputFileString);
-      
-      // Get env vars...
-      char **env = NULL;
-      for (env = environ; *env != 0; env++)
-        {
-          char *thisEnv = *env;
-          NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
-          NSArray *components = [envStr componentsSeparatedByString: @"="];
-          [dict setObject: [components lastObject]
-                   forKey: [components firstObject]];
-        }
-      
-      // Replace all variables in the plist with the values...
-      NSDebugLog(@"%@", dict);
-      NSArray *keys = [dict allKeys];
-      NSEnumerator *en = [keys objectEnumerator];
-      NSString *k = nil;
-      while ((k = [en nextObject]) != nil)
-        {
-          NSString *v = [dict objectForKey: k];
-          outputFileString = [outputFileString stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
-                                                                         withString: v];
-        }
-
+      NSString *outputFileString = [inputFileString stringByReplacingEnvironmentVariablesWithValues];
       NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
       NSString *filename = [self processAssets];
+
       if (filename != nil)
         {
           [plistDict setObject: filename forKey: @"NSIcon"];

@@ -217,11 +217,12 @@ extern char **environ;
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSArray *headerPaths = [plistFile objectForKey: @"headerPaths"];
   //  NSLog(@"plist = %@", plistFile);
-  NSDebugLog(@"BUILD CONFIG: %@", list);
+  // NSLog(@"BUILD CONFIG: %@", list);
 
   XCBuildConfiguration *config = [[list buildConfigurations] objectAtIndex: 0];
   NSDictionary *buildSettings = [config buildSettings];
   NSMutableArray *headers = [buildSettings objectForKey: @"HEADER_SEARCH_PATHS"];
+
   if ([headers isKindOfClass: [NSArray class]] &&
       headers != nil)
     {
@@ -257,6 +258,8 @@ extern char **environ;
   if (proj_root != NULL)
     projDir = [NSString stringWithFormat: @"%s", proj_root];
 
+  // NSLog(@"All Headers %@", allHeaders);
+  
   NSEnumerator *en = [allHeaders objectEnumerator];
   NSString *s = nil;
   while ((s = [en nextObject]) != nil)
@@ -268,12 +271,14 @@ extern char **environ;
                                                  withString: projDir];
       o = [o stringByReplacingOccurrencesOfString: @"${PROJECT_DIR}"
                                        withString: projDir];
-      [o stringByReplacingOccurrencesOfString: @"\"" withString: @""];
+      // [o stringByReplacingOccurrencesOfString: @"\"" withString: @""];
+      NSString *q = [o stringByReplacingEnvironmentVariablesWithValues];
       NSString *p = [NSString stringWithFormat: @"../%@",o];
       if ([result containsObject: o] == NO)
         {
           [result addObject: o];
           [result addObject: p];
+          [result addObject: q];
         }
     }
 
@@ -358,7 +363,8 @@ extern char **environ;
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
       NSString *compiler = [NSString stringWithCString: cc];
-      NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"] buildPath: buildPath] 
+      NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"]
+                                                       buildPath: buildPath] 
                                       implodeArrayWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  implodeArrayWithSeparator: @" "];
@@ -432,7 +438,8 @@ extern char **environ;
 
       // remove flags incompatible with gnustep...
       objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
-
+      headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
+      
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ \"%@\" -c %@ %@ %@ -o \"%@\"";

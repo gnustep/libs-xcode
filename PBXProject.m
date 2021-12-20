@@ -2,6 +2,8 @@
 #import "PBXProject.h"
 #import "PBXNativeTarget.h"
 #import "GSXCBuildContext.h"
+#import "NSString+PBXAdditions.h"
+
 #import <unistd.h>
 
 @implementation PBXProject
@@ -136,15 +138,16 @@
 {
   PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; 
   // get first group, which is the source group.
-  NSString *sourceRoot = [sourceGroup path];
+  NSString *sourceRoot = @"./"; // [[sourceGroup path] firstPathComponent];
   
-  if(sourceRoot == nil)
+  if(sourceRoot == nil || [sourceRoot isEqualToString: @""])
     {
-      sourceRoot = @"";
+      sourceRoot = @"./";
     }
 
-  setenv("SOURCE_ROOT",[sourceRoot cString],1);
-  NSDebugLog(@"\tSOURCE_ROOT = %@",sourceRoot);
+  setenv("SOURCE_ROOT","./",1);
+  setenv("SRCROOT","./",1);
+  // NSLog(@"\tSOURCE_ROOT = %@",sourceRoot);
 }
 
 - (NSString *) buildString
@@ -220,8 +223,10 @@
 		  forKey: @"MAIN_GROUP"]; 
       [context setObject: container
 		  forKey: @"CONTAINER"];
-      [context setObject: currentDirectory
+      [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
       [context addEntriesFromDictionary:ctx];
       
       result = [target build];

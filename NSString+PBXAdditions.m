@@ -1,7 +1,12 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSCharacterSet.h>
+#import <Foundation/NSDebug.h>
+#import <Foundation/NSDictionary.h>
 
 #import "NSString+PBXAdditions.h"
+#import <unistd.h>
+
+extern char **environ;
 
 @implementation NSString (PBXAdditions)
 
@@ -78,6 +83,43 @@
       
       result = [result stringByAppendingPathComponent: c];
     }
+  
+  return result;
+}
+
+- (NSString *) stringByReplacingEnvironmentVariablesWithValues
+{
+  NSString *result = nil;
+  NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+
+  result = [NSString stringWithString: self]; // autoreleased copy
+  
+  // Get env vars...
+  char **env = NULL;
+  for (env = environ; *env != 0; env++)
+    {
+      char *thisEnv = *env;
+      NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
+      NSArray *components = [envStr componentsSeparatedByString: @"="];
+      [dict setObject: [components lastObject]
+               forKey: [components firstObject]];
+    }
+
+  // NSLog(@"Env = %@", dict);
+  
+  // Replace all variables in the plist with the values...
+  // NSDebugLog(@"%@", dict);
+  NSArray *keys = [dict allKeys];
+  NSEnumerator *en = [keys objectEnumerator];
+  NSString *k = nil;
+  while ((k = [en nextObject]) != nil)
+    {
+      NSString *v = [dict objectForKey: k];
+      result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
+                                                 withString: v];
+    }
+
+  // NSLog(@"result = %@", result);
   
   return result;
 }
