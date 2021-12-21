@@ -8,6 +8,8 @@
   NSString *objectVersion;
   NSMutableDictionary *objects;
   id rootObject;
+
+  NSString *_filename;
 }
 
 - (void) setArchiveVersion: (NSString *)version;
@@ -20,6 +22,9 @@
 - (NSMutableDictionary *) objects;
 - (void) setRootObject: (id)object;
 - (id) rootObject;
+
+- (void) setFilename: (NSString *)fn;
+- (NSString *) filename;
 
 // Build...			  
 - (BOOL) build;

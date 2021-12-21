@@ -11,6 +11,7 @@
   NSString *runOnlyForDeploymentPostprocessing;
   BOOL showEnvVarsInLog;
   PBXNativeTarget *target;
+  NSString *_name;
 }
 
 // Methods....
@@ -23,6 +24,8 @@
 - (BOOL) showEnvVarsInLog; // setter
 - (void) setEnvVarsInLog: (BOOL)flag;
 - (void) setTarget: (PBXNativeTarget *)t;
+- (void) setName: (NSString *)n;
+- (NSString *) name;
 
 // build
 - (BOOL) build;

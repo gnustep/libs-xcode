@@ -11,7 +11,18 @@
   RELEASE(classes);
   RELEASE(objectVersion);
   RELEASE(objects);
+  RELEASE(_filename);
   [super dealloc];
+}
+
+- (void) setFilename: (NSString *)fn
+{
+  ASSIGN(_filename, fn);
+}
+  
+- (NSString *) filename
+{
+  return _filename;
 }
 
 - (void) setArchiveVersion: (NSString *)version

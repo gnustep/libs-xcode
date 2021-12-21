@@ -24,6 +24,8 @@
   PBXContainer *container;
   NSDictionary *attributes;
   NSDictionary *ctx;
+
+  NSString *_filename;
 }
 
 // Methods....
@@ -52,6 +54,8 @@
 - (PBXContainer *) container;
 - (void) setContainer: (PBXContainer *)container;
 - (void) setContext: (NSDictionary *)ctx;
+- (void) setFilename: (NSString *)fn;
+- (NSString *) filename;
 
 // build
 - (BOOL) build;

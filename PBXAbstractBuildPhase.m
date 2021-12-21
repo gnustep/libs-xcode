@@ -49,6 +49,16 @@
   ASSIGN(target, t);
 }
 
+- (void) setName: (NSString *)n
+{
+  ASSIGN(_name, n);
+}
+
+- (NSString *) name
+{
+  return _name;
+}
+
 - (BOOL) build
 {
   NSDebugLog(@"Abstract build... %@, %@",self, files);

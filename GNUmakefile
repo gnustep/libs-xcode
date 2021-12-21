@@ -61,7 +61,8 @@ XCConfigurationList.h \
 XCVersionGroup.h \
 XCWorkspace.h \
 XCFileRef.h \
-XCWorkspaceParser.h
+XCWorkspaceParser.h \
+PBXLegacyTarget.h
 
 #
 # Class files
@@ -101,7 +102,8 @@ XCConfigurationList.m \
 XCVersionGroup.m \
 XCWorkspace.m \
 XCFileRef.m \
-XCWorkspaceParser.m
+XCWorkspaceParser.m \
+PBXLegacyTarget.m
 
 #
 # Makefiles

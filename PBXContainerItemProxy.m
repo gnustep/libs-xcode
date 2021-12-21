@@ -57,11 +57,12 @@
 
   if([containerPortal isKindOfClass: [PBXFileReference class]])
     {
-      puts([[NSString stringWithFormat: @"Reading %@",[containerPortal path]] cString]);
+      puts([[NSString stringWithFormat: @"** Reading %@",[containerPortal path]] cString]);
       char *dir = getcwd(NULL, 0);
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
       chdir([[coder projectRoot] cString]);
       PBXContainer *container = [coder unarchive];
+      [container setFilename: [containerPortal path]];
       BOOL result = [container build];
       chdir(dir);
       free(dir);

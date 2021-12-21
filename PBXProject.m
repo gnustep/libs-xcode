@@ -134,6 +134,16 @@
   ASSIGN(ctx,context);
 }
 
+- (void) setFilename: (NSString *)fn
+{
+  ASSIGN(_filename, fn);
+}
+  
+- (NSString *) filename
+{
+  return _filename;
+}
+
 - (void) _sourceRootFromMainGroup
 {
   PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; 
@@ -190,7 +200,8 @@
 
 - (BOOL) build
 {
-  puts("=== Building Project");
+  NSString *fn = [[self container] filename];
+  printf("=== Building Project %s\n", [fn cString]);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
 
@@ -211,10 +222,6 @@
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
-	  //chdir([[target name] UTF8String]); // we should not change dir (sep18)
-          //const char *cwd = [[[NSFileManager defaultManager]
-          //   currentDirectoryPath]
-          //   fileSystemRepresentation];
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -232,7 +239,7 @@
       result = [target build];
       [context popCurrentContext];
     }
-  puts("=== Completed Building Project");
+  printf("=== Completed Building Project %s\n", [[self projectDirPath] cString]);
   return result;
 }
 

@@ -21,6 +21,6 @@
 - (void) setDependencies: (NSArray *)deps;
 
 - (BOOL) passBuildSettingsInEnvironment;
-- (void) setPassBuildSettingsInEnvironment: (BOOL)f
+- (void) setPassBuildSettingsInEnvironment: (BOOL)f;
 
 @end

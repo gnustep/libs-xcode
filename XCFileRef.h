@@ -13,5 +13,7 @@
 - (void) setLocation: (NSString *)loc;
 
 - (BOOL) build;
+- (BOOL) clean;
+- (BOOL) install;
 
 @end

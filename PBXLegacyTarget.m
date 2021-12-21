@@ -1,15 +1,9 @@
-#import "PBXAbstractTarget.h"
+#import "PBXLegacyTarget.h"
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
 
-@interface PBXLegacyTarget : PBXAbstractTarget
-{
-  NSString *_buildArgumentsString;
-  NSString *_buildToolPath;
-  NSMutableArray *_dependencies;
-  BOOL _passBuildSettingsInEnvironment;
-}
+@implementation PBXLegacyTarget
 
 - (void) dealloc
 {
@@ -19,7 +13,7 @@
   [super dealloc];
 }
 
-- (NSString *) buildArgumentsString;
+- (NSString *) buildArgumentsString
 {
   return _buildArgumentsString;
 }
@@ -27,6 +21,7 @@
 - (void) setBuildArgumentsString: (NSString *)string
 {
   ASSIGN(_buildArgumentsString, string);
+}
 
 - (NSString *) buildToolPath
 {
@@ -56,6 +51,23 @@
 - (void) setPassBuildSettingsInEnvironment: (BOOL)f
 {
   _passBuildSettingsInEnvironment = f;
+}
+
+- (BOOL) build
+{
+  return system([_buildToolPath cString]);
+}
+
+- (BOOL) clean
+{
+  NSString *build_cmd = [_buildToolPath stringByAppendingString: @" clean"];
+  return system([build_cmd cString]);
+}
+
+- (BOOL) install
+{
+  NSString *build_cmd = [_buildToolPath stringByAppendingString: @" install"];
+  return system([build_cmd cString]);
 }
 
 @end

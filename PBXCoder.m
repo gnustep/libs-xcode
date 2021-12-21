@@ -71,6 +71,7 @@
   if([object isKindOfClass: [PBXContainer class]])
     {
       [object setObjects: objectCache];
+      [object setFilename: fileName];
     }
 
   return object;

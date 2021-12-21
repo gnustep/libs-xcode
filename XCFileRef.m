@@ -35,10 +35,12 @@
   ASSIGN(_location, loc);
 }
 
-- (BOOL) build
+- (BOOL) performLegacyOperation: (SEL)sel
 {
   NSString *loc = [[self location] stringByReplacingOccurrencesOfString: @"group:" withString: @""];
   NSString *p = [loc stringByDeletingLastPathComponent];
+  NSString *function = NSStringFromSelector(sel);
+  NSString *display = [function stringByCapitalizingFirstCharacter];
   
   if (p != nil)
     {
@@ -51,7 +53,7 @@
         {
           NSString *nwd = [cwd stringByAppendingPathComponent: p];
 
-          printf("@@ Descending to project dir... %s\n", [nwd cString]);
+          printf("@@ %s project in dir... %s\n", [display cString], [nwd cString]);
           [mgr changeCurrentDirectoryPath: nwd];
         }
 
@@ -60,21 +62,35 @@
       if (coder != nil)
         {
           PBXContainer *pc = [coder unarchive];
-          [pc build];
+          [pc performSelector: sel];
         }
       
       // If the project is in a subdir, return to the previous dir...
       if ([[p pathExtension] isEqualToString: @"xcodeproj"] == NO)
         {
-          printf("@@ Returning to parent dir... %s\n", [cwd cString]);                   
+          printf("@@ %s completed\n", [display cString]);                   
           [mgr changeCurrentDirectoryPath: cwd];
         }
 
       AUTORELEASE(coder);
         
     }
-
   return YES;
+}
+
+- (BOOL) build
+{
+  return [self performLegacyOperation: _cmd];
+}
+
+- (BOOL) clean
+{
+  return [self performLegacyOperation: _cmd];
+}
+
+- (BOOL) install
+{
+  return [self performLegacyOperation: _cmd];
 }
 
 @end
