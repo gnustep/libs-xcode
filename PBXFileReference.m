@@ -170,7 +170,7 @@ extern char **environ;
             {
               continue;
             }
-          [results addObject: [dirToAdd stringByEscapingSpecialCharacters]];
+          [results addObject: [dirToAdd stringByAddingQuotationMarks]];
           NSDebugLog(@"adding dirToAdd = %@", dirToAdd);
         }
     }
@@ -395,7 +395,7 @@ extern char **environ;
 	  if([[derivedSrcHeaderDir pathComponents] count] > 1)
 	    {
 	      headerSearchPaths = [headerSearchPaths stringByAppendingString: 
-						  [NSString stringWithFormat: @" -I%@ ",
+						  [NSString stringWithFormat: @" -I\"%@\" ",
 							    [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
 	    }
 	}
@@ -442,7 +442,7 @@ extern char **environ;
       
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ 2> %@ \"%@\" -c %@ %@ %@ -o \"%@\"";
+      NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o \"%@\"";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
@@ -450,13 +450,13 @@ extern char **environ;
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
                                          errorOutPath,
-					 compilePath,
+					 [compilePath stringByAddingQuotationMarks],
 					 objCflags,
 					 configString,
 					 headerSearchPaths,
 					 outputPath];
 
-      NSDebugLog(@"buildCommand = %@", buildCommand);
+      // NSLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];

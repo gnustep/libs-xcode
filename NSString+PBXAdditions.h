@@ -9,5 +9,6 @@
 - (NSString *) stringByCapitalizingFirstCharacter;
 - (NSString *) stringByDeletingFirstPathComponent;
 - (NSString *) stringByReplacingEnvironmentVariablesWithValues;
+- (NSString *) stringByAddingQuotationMarks;
 
 @end

@@ -105,10 +105,7 @@ extern char **environ;
                forKey: [components firstObject]];
     }
 
-  // NSLog(@"Env = %@", dict);
-  
   // Replace all variables in the plist with the values...
-  // NSDebugLog(@"%@", dict);
   NSArray *keys = [dict allKeys];
   NSEnumerator *en = [keys objectEnumerator];
   NSString *k = nil;
@@ -119,9 +116,12 @@ extern char **environ;
                                                  withString: v];
     }
 
-  // NSLog(@"result = %@", result);
-  
   return result;
+}
+
+- (NSString *) stringByAddingQuotationMarks
+{
+  return [NSString stringWithFormat: @"\"%@\"", self];
 }
 
 @end
