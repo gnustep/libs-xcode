@@ -48,7 +48,7 @@
 - (BOOL) build
 {
   [self applySettings];
-  puts([[NSString stringWithFormat: @"\t* Building %@",[fileRef buildPath]] cString]);
+  puts([[NSString stringWithFormat: @"\t* Building \033[1;34m%@\033[1;0m",[fileRef buildPath]] cString]);
   [fileRef setTarget: target];
   return [fileRef build];
 }

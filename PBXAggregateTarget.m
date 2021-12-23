@@ -4,7 +4,6 @@
 @implementation PBXAggregateTarget
 - (BOOL) build
 {
-  // puts([buildPhases cString]);
   return YES;
 }
 @end

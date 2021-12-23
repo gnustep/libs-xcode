@@ -200,8 +200,10 @@
 
 - (BOOL) build
 {
-  NSString *fn = [[self container] filename];
-  printf("=== Building Project %s\n", [fn cString]);
+  NSString *fn = [[[self container] filename]
+                   stringByDeletingLastPathComponent];
+
+  printf("=== Building Project \033[1;32m%s\033[1;0m\n", [fn cString]);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
 
@@ -238,8 +240,15 @@
       
       result = [target build];
       [context popCurrentContext];
+
+      if (result == NO)
+        {
+          break;
+        }
     }
-  printf("=== Completed Building Project %s\n", [[self projectDirPath] cString]);
+
+  printf("=== Done Building Project \033[1;32m%s\033[1;0m\n", [fn cString]);
+
   return result;
 }
 

@@ -53,7 +53,7 @@
         {
           NSString *nwd = [cwd stringByAppendingPathComponent: p];
 
-          printf("@@ %s project in dir... %s\n", [display cString], [nwd cString]);
+          printf("++ %s project in dir... %s\n", [display cString], [nwd cString]);
           [mgr changeCurrentDirectoryPath: nwd];
         }
 
@@ -68,7 +68,7 @@
       // If the project is in a subdir, return to the previous dir...
       if ([[p pathExtension] isEqualToString: @"xcodeproj"] == NO)
         {
-          printf("@@ %s completed\n", [display cString]);                   
+          printf("++ %s completed\n", [display cString]);                   
           [mgr changeCurrentDirectoryPath: cwd];
         }
 

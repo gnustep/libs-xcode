@@ -61,17 +61,20 @@
 {
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
-
-  printf("@@@ Building projects workspace.. %s\n", [[[self filename] stringByDeletingLastPathComponent] cString]);
+  NSString *display = [[self filename]
+                        stringByDeletingLastPathComponent];
+  
+  printf("+++ Building projects workspace.. %s\n", [display cString]);
   while ((ref = [en nextObject]) != nil)
     {
       BOOL s = [ref build];
       if (s == NO)
         {
+          printf("+++ Workspace build FAILED %s\n", [display cString]);
           return NO;
         }
     }
-  printf("@@@ Workspace build complete\n");
+  printf("+++ Workspace build completed... %s\n", [display cString]);
   
   return YES;
 }
@@ -81,7 +84,7 @@
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
 
-  printf("@@@ Cleaning projects in workspace.. %s\n", [[[self filename] stringByDeletingLastPathComponent] cString]);
+  printf("+++ Cleaning projects in workspace.. %s\n", [[[self filename] stringByDeletingLastPathComponent] cString]);
   while ((ref = [en nextObject]) != nil)
     {
       BOOL s = [ref clean];
@@ -90,7 +93,7 @@
           return NO;
         }
     }
-  printf("@@@ Workspace clean complete\n");
+  printf("+++ Workspace clean complete\n");
   
   return YES;
 }
@@ -100,7 +103,8 @@
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
 
-  printf("@@@ Installing projects in workspace.. %s\n", [[[self filename] stringByDeletingLastPathComponent] cString]);
+  printf("+++ Installing projects in workspace.. %s\n",
+         [[[self filename] stringByDeletingLastPathComponent] cString]);
   while ((ref = [en nextObject]) != nil)
     {
       BOOL s = [ref install];
@@ -109,7 +113,7 @@
           return NO;
         }
     }
-  printf("@@@ Workspace install complete\n");
+  printf("+++ Workspace install complete\n");
   
   return YES;
 }
