@@ -203,7 +203,7 @@
   NSString *fn = [[[self container] filename]
                    stringByDeletingLastPathComponent];
 
-  printf("=== Building Project \033[1;32m%s\033[1;0m\n", [fn cString]);
+  printf("=== Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
 
@@ -247,7 +247,7 @@
         }
     }
 
-  printf("=== Done Building Project \033[1;32m%s\033[1;0m\n", [fn cString]);
+  printf("=== Done Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
 
   return result;
 }

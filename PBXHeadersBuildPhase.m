@@ -16,7 +16,7 @@
      [productType isEqualToString: APPLICATION_TYPE]) // ||
    //[productType isEqualToString: LIBRARY_TYPE])
     {
-      puts([[NSString stringWithFormat: @"\t* \033[1;33mWARN\033[0m: No need to process headers for product type %@",productType] cString]);
+      puts([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
       return YES;
     }
 

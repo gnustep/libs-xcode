@@ -216,13 +216,13 @@
                 }
 
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              puts([[NSString stringWithFormat: @"\t* Copy child resource %@ --> %@", filePath, destPath] cString]);
+              puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, RED, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
               if (copyResult == NO)
                 {
-		  puts([[NSString stringWithFormat: @"\t\033[1;31m** Could not copy file\033[0m %@", filePath] cString]);
+		  puts([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
 		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
                 }
             }
@@ -240,7 +240,7 @@
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      puts([[NSString stringWithFormat: @"\t* Copy resource %@ --> %@",filePath,destPath] cString]);      
+      puts([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, RED, destPath, RESET] cString]);      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
@@ -269,15 +269,6 @@
   // Move Base.lproj to English.lproj until Base.lproj is supported..
   NSString *baseLproj = [resourcesDir
                           stringByAppendingPathComponent: @"Base.lproj"];
-  // NSString *engLproj =  [resourcesDir
-  //                    stringByAppendingPathComponent: @"English.lproj"];
-  // NSError *error = nil;
-  //NSDirectoryEnumerator *den = [[NSDirectoryEnumerator alloc] initWithDirectoryPath: baseLproj
-  //                                                        recurseIntoSubdirectories: NO
-  //                                                                   followSymlinks: NO
-  //                                                                     justContents: YES
-  //for: self];
-
   NSArray *farr = [mgr directoryContentsAtPath: baseLproj];
   NSDebugLog(@"files in dir %@", farr);
 
