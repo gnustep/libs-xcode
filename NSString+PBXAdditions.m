@@ -114,6 +114,8 @@ extern char **environ;
       NSString *v = [dict objectForKey: k];
       result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
                                                  withString: v];
+      result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$%@",k]
+                                                 withString: v];
     }
 
   return result;

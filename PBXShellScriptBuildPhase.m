@@ -1,5 +1,8 @@
+#import <Foundation/NSDictionary.h>
+
 #import "PBXCommon.h"
 #import "PBXShellScriptBuildPhase.h"
+#import "NSString+PBXAdditions.h"
 
 @implementation PBXShellScriptBuildPhase
 
@@ -54,21 +57,69 @@
   ASSIGN(name,object);
 }
 
+- (NSString *) preprocessScript
+{
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSDictionary *searchReplace = [plistFile objectForKey: @"searchReplace"];
+  NSEnumerator *en = [searchReplace keyEnumerator];
+  NSString *key = nil;
+  NSString *result = nil;
+  
+  ASSIGNCOPY(result, shellScript);
+  
+  while ((key = [en nextObject]) != nil)
+    {
+      NSString *v = [searchReplace objectForKey: key];
+      NSError *error = NULL;
+      BOOL done = NO;
+      NSRegularExpression *regex = [NSRegularExpression
+                                     regularExpressionWithPattern: key
+                                                          options: 0
+                                                            error: &error];
+
+      // Iterate through all of the matches, but after each change start over because the ranges
+      // will shift as a result of the substitution.  When there are no matches left, exit.
+      while (done == NO)
+        {
+          NSTextCheckingResult *match = [regex firstMatchInString: result
+                                                          options: 0
+                                                            range: NSMakeRange(0, [key length])];
+          if (match != nil)
+            {
+              NSRange matchRange = [match range];
+              result = [result stringByReplacingCharactersInRange: matchRange
+                                                       withString: v];
+            }
+          else
+            {
+              done = YES;
+            }
+        }
+    }
+
+  return result;
+}
+
 - (BOOL) build
 {
   NSError *error = nil;
   NSString *fileName = [NSString stringWithFormat: @"script_%lu",[shellScript hash]];
   NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,fileName];
-  puts([[NSString stringWithFormat: @"=== Executing Script Build Phase... %@",name] cString]);
-  puts([[NSString stringWithFormat: @"\t%@",command] cString]);
-  [shellScript writeToFile: fileName
-                atomically: YES
-                  encoding: NSASCIIStringEncoding
-                     error: &error];
-  system([shellScript cString]);
-  // NSString *deleteCommand = [NSString stringWithFormat: @"rm -rf %@",fileName];
-  puts([[NSString stringWithFormat: @"=== Done Executing Script Build Phase... %@",name] cString]);
+  BOOL result = NO;
+  NSString *processedScript = [self preprocessScript];
 
-  return YES; // be forgiving since this is not a mac...
+  processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
+  puts([[NSString stringWithFormat: @"=== Executing Script Build Phase... %s%@%s",
+                  CYAN, name, RESET] cString]);
+  puts([[NSString stringWithFormat: @"\t%@",command] cString]);
+  [processedScript writeToFile: fileName
+                    atomically: YES
+                      encoding: NSASCIIStringEncoding
+                         error: &error];
+  result = system([processedScript cString]);
+  puts([[NSString stringWithFormat: @"=== Done Executing Script Build Phase... %s%@%s",
+                  CYAN, name, RESET] cString]);
+
+  return result; // be forgiving since this is not a mac...
 }
 @end
