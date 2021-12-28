@@ -4,7 +4,93 @@
 #import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
 
+#import "PBXAbstractTarget.h"
+#import "PBXTargetDependency.h"
+
 #import <unistd.h>
+
+@interface PBXAbstractTarget (Private)
+
+- (NSArray *) prerequisiteTargets;
+
+@end
+
+@implementation PBXAbstractTarget (Private)
+
+- (NSArray *) prerequisiteTargets
+{
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [dependencies count]];
+  NSEnumerator *en = [dependencies objectEnumerator];
+  PBXTargetDependency *t = nil;
+  
+  while ((t = [en nextObject]) != nil)
+    {
+      [result addObject: [t target]];
+    }
+
+  return result;
+}
+
+@end
+
+@interface PBXProject (Private)
+
+- (void) recurseTargetDependencies: (NSArray *)targets
+                         forTarget: (PBXAbstractTarget *)target
+                            result: (NSMutableArray *)result;
+
+- (NSMutableArray *) arrangedTargets;
+
+@end
+
+@implementation PBXProject (Private)
+
+- (void) recurseTargetDependencies: (NSArray *)targets
+                         forTarget: (PBXAbstractTarget *)target
+                            result: (NSMutableArray *)result
+{
+  if ([targets count] == 0 && target != nil)
+    {
+      if ([result containsObject: target] == NO)
+        {
+          [result insertObject: target
+                       atIndex: 0];
+        }
+    }
+  if ([targets count] == 1 && target == nil)
+    {
+      if ([result containsObject: target] == NO)
+        {
+          [result insertObject: [targets firstObject]
+                       atIndex: 0];
+        }
+    }
+  else
+    {
+      NSEnumerator *en = [targets objectEnumerator];
+      PBXAbstractTarget *t = nil;
+      
+      while ((t = [en nextObject]) != nil)
+        {
+          NSArray *da = [t prerequisiteTargets];
+
+          [self recurseTargetDependencies: da
+                                forTarget: t
+                                   result: result];
+        }
+    }
+}
+
+- (NSMutableArray *) arrangedTargets
+{
+  _arrangedTargets = [NSMutableArray arrayWithCapacity: 100];
+  [self recurseTargetDependencies: [self targets]
+                        forTarget: nil
+                           result: _arrangedTargets];
+  return _arrangedTargets;
+}
+
+@end
 
 @implementation PBXProject
 
@@ -51,12 +137,12 @@
 
 - (NSMutableArray *) targets // getter
 {
-  return targets;
+  return _targets;
 }
 
 - (void) setTargets: (NSMutableArray *)object; // setter
 {
-  ASSIGN(targets,object);
+  ASSIGN(_targets,object);
 }
 
 - (NSString *) projectDirPath // getter
@@ -144,12 +230,19 @@
   return _filename;
 }
 
+- (void) plan
+{
+  printf("=== Planning build -- Recursing dependencies...");
+  _arrangedTargets = [self arrangedTargets];
+  printf(" completed\n");
+  //  NSLog(@"%@", _arrangedTargets);
+}
+
 - (void) _sourceRootFromMainGroup
 {
-  PBXGroup *sourceGroup = [[mainGroup children] objectAtIndex: 0]; 
-  // get first group, which is the source group.
   NSString *sourceRoot = @"./"; // [[sourceGroup path] firstPathComponent];
   
+  // get first group, which is the source group.
   if(sourceRoot == nil || [sourceRoot isEqualToString: @""])
     {
       sourceRoot = @"./";
@@ -157,44 +250,17 @@
 
   setenv("SOURCE_ROOT","./",1);
   setenv("SRCROOT","./",1);
-  // NSLog(@"\tSOURCE_ROOT = %@",sourceRoot);
 }
 
 - (NSString *) buildString
 {
-  FILE *fp;
-  char string[1035];
-  NSString *output = @"";
-
-  /* Open the command for reading. */
-  fp = popen("gnustep-config --debug-flags", "r");
-  if (fp == NULL) {
-    puts("*** Failed to run command\n" );
-    return nil;
-  }
-
-  /* Read the output a line at a time - output it. */
-  while (fgets(string, sizeof(string)-1, fp) != NULL) {
-    int len = strlen(string);
-    int i = 0;
-    for(i = 0; i < len; i++)
-      {
-	if(string[i] == '\n')
-	  {
-	    string[i] = ' ';
-	  }
-      }
-    output = [output stringByAppendingString: 
-		       [NSString stringWithCString: string]];
-  }
+  NSString *output = [NSString stringForCommand: @"gnustep-config --debug-flags"];
   
   // Context...
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   [context setObject: output
 	      forKey: @"CONFIG_STRING"];
 
-  /* close */
-  pclose(fp);
   return output;
 }
 
@@ -206,21 +272,21 @@
   printf("=== Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
-
-  NSFileManager *fileManager = [NSFileManager defaultManager];
+  [self plan];
+  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [targets objectEnumerator];
+  NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
   BOOL result = YES;
+  
   while((target = [en nextObject]) != nil && result)
     {
       BOOL targetInSubdir = NO;
-      NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
-
+      NSFileManager *fileManager = [NSFileManager defaultManager];
+      
       [context contextDictionaryForName: [target name]];
       [self buildString];
 
-      // Go into the target...
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
@@ -259,18 +325,17 @@
 
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [targets objectEnumerator];
+  NSEnumerator *en = [_targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
   
   while((target = [en nextObject]) != nil && result)
     {
       BOOL targetInSubdir = NO;
-      // Go into the target...
+
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
-	  // chdir([[target name] UTF8String]);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -280,12 +345,6 @@
 		  forKey: @"MAIN_GROUP"]; 
       result = [target clean];
       [context popCurrentContext];
-
-      // Back to the current dir...
-      if(YES == targetInSubdir)
-	{
-	  // chdir([currentDirectory UTF8String]);
-	}
     }
   puts("=== Completed Cleaning Project");
   return result;  
@@ -297,7 +356,7 @@
   [buildConfigurationList applyDefaultConfiguration];
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [targets objectEnumerator];
+  NSEnumerator *en = [_targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
   while((target = [en nextObject]) != nil && result)
@@ -320,7 +379,7 @@
 
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [targets objectEnumerator];
+  NSEnumerator *en = [_targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
   while((target = [en nextObject]) != nil && result)
@@ -331,11 +390,9 @@
       [context contextDictionaryForName: [target name]];
       [self buildString];
 
-      // Go into the target...
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  targetInSubdir = YES;
-	  // chdir([[target name] UTF8String]);
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -350,13 +407,8 @@
       
       result = [target generate];
       [context popCurrentContext];
-
-      // Back to the current dir...
-      if(YES == targetInSubdir)
-	{
-	  // chdir([currentDirectory UTF8String]);
-	}
     }
+  
   puts("=== Completed Generating Project");
   return result;
 }

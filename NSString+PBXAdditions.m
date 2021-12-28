@@ -126,4 +126,42 @@ extern char **environ;
   return [NSString stringWithFormat: @"\"%@\"", self];
 }
 
++ (NSString *) stringForCommand: (NSString *)command
+{
+  NSString *output = nil;
+  char string[2048];
+  const char *cmd_string;
+  FILE *fp;
+  
+  cmd_string = [command cString];
+  
+  /* Open the command for reading. */
+  fp = popen(cmd_string, "r");
+  if (fp != NULL)
+    {
+      output = @"";
+      
+      /* Read the output a line at a time - output it. */
+      while (fgets(string, sizeof(string) - 1, fp) != NULL)
+        {
+          int len = strlen(string);
+          int i = 0;
+
+          for(i = 0; i < len; i++)
+            {
+              if(string[i] == '\n')
+                {
+                  string[i] = ' ';
+                }
+            }
+
+          output = [output stringByAppendingString: 
+                             [NSString stringWithCString: string]];
+        }
+      
+      fclose(fp);
+    }
+  
+  return output;
+}
 @end

@@ -52,12 +52,11 @@
 - (BOOL) build
 {
   PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
-  // NSString *currentDir = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PROJECT_ROOT"];
-  containerPortal = [[currentContainer objects] objectForKey: containerPortal];
 
+  containerPortal = [[currentContainer objects] objectForKey: containerPortal];
   if([containerPortal isKindOfClass: [PBXFileReference class]])
     {
-      puts([[NSString stringWithFormat: @"** Reading %@",[containerPortal path]] cString]);
+      puts([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", CYAN, [containerPortal path], RESET] cString]);
       char *dir = getcwd(NULL, 0);
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
       chdir([[coder projectRoot] cString]);

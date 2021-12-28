@@ -11,4 +11,6 @@
 - (NSString *) stringByReplacingEnvironmentVariablesWithValues;
 - (NSString *) stringByAddingQuotationMarks;
 
++ (NSString *) stringForCommand: (NSString *)command;
+
 @end

@@ -14,7 +14,7 @@
   NSMutableArray *knownRegions;
   NSString *compatibilityVersion;
   NSMutableArray *projectReferences;
-  NSMutableArray *targets;
+  NSMutableArray *_targets;
   NSString *projectDirPath;
   NSString *projectRoot;
   XCConfigurationList *buildConfigurationList;
@@ -26,6 +26,7 @@
   NSDictionary *ctx;
 
   NSString *_filename;
+  NSMutableArray *_arrangedTargets;
 }
 
 // Methods....
@@ -56,6 +57,9 @@
 - (void) setContext: (NSDictionary *)ctx;
 - (void) setFilename: (NSString *)fn;
 - (NSString *) filename;
+
+// calculate dependencies
+- (void) plan;
 
 // build
 - (BOOL) build;

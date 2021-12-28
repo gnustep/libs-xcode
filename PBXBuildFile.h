@@ -11,6 +11,7 @@
   PBXFileReference *fileRef;
   NSMutableDictionary *settings;
   PBXNativeTarget *target;
+  NSString *platformFilter;
 }
 
 // Methods....
@@ -18,6 +19,7 @@
 - (void) setFileRef: (PBXFileReference *)object; // setter
 - (NSMutableDictionary *) settings; // getter
 - (void) setSettings: (NSMutableDictionary *)object; // setter
+- (void) setPlatformFilter: (NSString *)f;
 - (void) setTarget: (PBXNativeTarget *)t;
 
 - (NSString *) path;

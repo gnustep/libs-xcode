@@ -5,6 +5,11 @@
 @implementation PBXBuildFile
 
 // Methods....
+- (void) setPlatformFilter: (NSString *)f
+{
+  ASSIGN(platformFilter, f);
+}
+
 - (PBXFileReference *) fileRef // getter
 {
   return fileRef;

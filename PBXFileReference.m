@@ -16,6 +16,11 @@ extern char **environ;
 @implementation PBXFileReference
 
 // Methods....
+- (void) setWrapsLines: (NSString *)o
+{
+  ASSIGN(wrapsLines, o);
+}
+
 - (NSString *) sourceTree // getter
 {
   return sourceTree;
@@ -456,7 +461,7 @@ extern char **environ;
 					 headerSearchPaths,
 					 outputPath];
 
-      // NSLog(@"buildCommand = %@", buildCommand);
+      NSLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];

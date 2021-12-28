@@ -225,7 +225,7 @@
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   
-  puts([[NSString stringWithFormat: @"=== Building Target %@",name] cString]);
+  puts([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, name, RESET] cString]);
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: buildConfigurationList
               forKey: @"buildConfig"];
@@ -564,5 +564,10 @@
   puts([[NSString stringWithFormat: @"=== Completed generation for target %@", name] cString]);
 
   return result;
+}
+
+- (NSString *) description
+{
+  return [NSString stringWithFormat: @"%@-%@", [super description], [self name]];
 }
 @end

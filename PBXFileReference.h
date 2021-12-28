@@ -21,6 +21,7 @@
   NSString *plistStructureDefinitionIdentifier;
   NSString *xcLanguageSpecificationIdentifier;
   NSString *lineEnding;
+  NSString *wrapsLines;
   PBXNativeTarget *target;
 }
 
@@ -43,6 +44,8 @@
 - (NSString *) lineEnding;
 - (void) setLineEnding: (NSString *)object;
 - (void) setTarget: (PBXNativeTarget *)t;
+- (void) setWrapsLines: (NSString *)o;
+
 - (NSString *) productName;
 
 // Build methods...

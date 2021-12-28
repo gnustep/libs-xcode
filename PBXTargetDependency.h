@@ -17,7 +17,7 @@
 - (void) setTargetProxy: (PBXContainerItemProxy *)object; // setter
 - (NSString *) name; // getter
 - (void) setName: (NSString *)object; // setter
-- (PBXNativeTarget *)target;
+- (PBXNativeTarget *) target;
 - (void) setTarget: (PBXNativeTarget *)object;
 
 // build
