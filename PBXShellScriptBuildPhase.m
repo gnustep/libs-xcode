@@ -104,22 +104,25 @@
 {
   NSError *error = nil;
   NSString *fileName = [NSString stringWithFormat: @"script_%lu",[shellScript hash]];
-  NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,fileName];
+  NSString *tmpFilename = [NSString stringWithFormat: @"/tmp/%@", fileName];
+  NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,tmpFilename];
   BOOL result = NO;
   NSString *processedScript = [self preprocessScript];
 
   processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
   puts([[NSString stringWithFormat: @"=== Executing Script Build Phase... %s%@%s",
                   CYAN, name, RESET] cString]);
-  puts([[NSString stringWithFormat: @"\t%@",command] cString]);
-  [processedScript writeToFile: fileName
+  puts([[NSString stringWithFormat: @"=== \t%s%@%s", RED, command, RESET] cString]);
+    
+  [processedScript writeToFile: tmpFilename
                     atomically: YES
                       encoding: NSASCIIStringEncoding
                          error: &error];
-  result = system([processedScript cString]);
+  
+  result = system([command cString]);
   puts([[NSString stringWithFormat: @"=== Done Executing Script Build Phase... %s%@%s",
                   CYAN, name, RESET] cString]);
 
-  return result; // be forgiving since this is not a mac...
+  return result;
 }
 @end

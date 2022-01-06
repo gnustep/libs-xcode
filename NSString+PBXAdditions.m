@@ -164,4 +164,17 @@ extern char **environ;
   
   return output;
 }
+
++ (NSString *) stringForEnvironmentVariable: (char *)envvar
+{
+  char *v = getenv("FRAMEWORK_VERSION");
+
+  if (v != NULL)
+    {
+      return [NSString stringWithCString: v];
+    }
+
+  return nil;
+}
+
 @end

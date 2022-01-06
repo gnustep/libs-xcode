@@ -12,5 +12,6 @@
 - (NSString *) stringByAddingQuotationMarks;
 
 + (NSString *) stringForCommand: (NSString *)command;
++ (NSString *) stringForEnvironmentVariable: (char *)envvar;
 
 @end

@@ -161,7 +161,16 @@ extern char **environ;
       [manager fileExistsAtPath: fileName
                     isDirectory: &isDir];
 
-      if (isDir && [results containsObject: dirToAdd] == NO)
+      if ([[fileName pathExtension] isEqualToString: @".h"])
+        {
+          dirToAdd = [fileName stringByDeletingLastPathComponent];
+        }
+      else
+        {
+          continue;
+        }
+      
+      if ([results containsObject: dirToAdd] == NO)
         {
           NSString *ext = [dirToAdd pathExtension];
           if ([ext isEqualToString: @"app"] ||
@@ -461,7 +470,7 @@ extern char **environ;
 					 headerSearchPaths,
 					 outputPath];
 
-      NSLog(@"buildCommand = %@", buildCommand);
+      NSDebugLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];

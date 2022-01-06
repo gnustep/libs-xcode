@@ -5,6 +5,8 @@
 #import "GSXCBuildContext.h"
 #import "NSArray+Additions.h"
 #import "NSString+PBXAdditions.h"
+#import "PBXAbstractTarget.h"
+
 #import "GSXCCommon.h"
 
 #import <Foundation/NSPathUtilities.h>
@@ -27,9 +29,14 @@
 
 - (void) generateDummyClass
 {
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSArray *libs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSLocalDomainMask, YES);
   NSString *frameworkPath = [([libs firstObject] != nil ? [libs firstObject] : @"") stringByAppendingPathComponent: @"Frameworks"];
-  NSString *frameworkVersion = [NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+  NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
+  if (frameworkVersion == nil)
+    {
+      frameworkVersion = @"0.0.0";
+    }
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *classList = @"";
   NSString *outputDir = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
@@ -39,7 +46,8 @@
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
   NSString *objDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
   NSError *error = nil;
-
+  NSString *targetName = [[self target] name];
+  
   // Create the derived source directory...
   [[NSFileManager defaultManager] createDirectoryAtPath:outputDir
 			    withIntermediateDirectories:YES
@@ -48,14 +56,17 @@
 
   NSString *classesFilename = [[outputDir stringByAppendingPathComponent: executableName] stringByAppendingString: @"-class-list"];
   NSString *classesFormat = 
-    @"echo \"(\" > %@; nm -Pg %@/*.o | grep __objc_class_name | "
+    @"echo \"(\" > %@; nm -Pg %@/%@/*.o | grep __objc_class_name | "
     @"sed -e '/^__objc_class_name_[A-Za-z0-9_.]* [^U]/ {s/^__objc_class_name_\\([A-Za-z0-9_.]*\\) [^U].*/\\1/p;}' | "
     @"grep -v __objc_class_name | sort | uniq | while read class; do echo \"${class},\"; done >> %@; echo \")\" >> %@;"; 
   NSString *classesCommand = [NSString stringWithFormat: classesFormat,
 				       classesFilename,
 				       buildDir,
+                                       targetName,
 				       classesFilename,
 				       classesFilename];
+
+  NSDebugLog(@"classesCommand = %@, %@", classesCommand, [context currentContext]);
   system([classesCommand cString]);
   
   // build the list...
@@ -70,7 +81,7 @@
   // Write the file out...
   NSString *classTemplate = 
     @"#include <Foundation/Foundation.h>\n\n"
-    @"@interface NSFramework_%@\n"
+    @"@interface NSFramework_%@ : NSObject\n"
     @"+ (NSString *)frameworkEnv;\n"
     @"+ (NSString *)frameworkPath;\n"
     @"+ (NSString *)frameworkVersion;\n"
@@ -95,15 +106,13 @@
 		    error: &error];
   
   // compile...
-  NSString *compiler = [NSString stringWithCString: getenv("CC")];
+  NSString *compiler = nil; // [NSString stringWithCString: getenv("CC")];
   NSString *buildPath = outputPath;
   NSString *objPath = [objDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
-  if([compiler isEqualToString: @""] ||
-     compiler == nil)
+  if([compiler isEqualToString: @""] || compiler == nil)
     {
       compiler = [self linkerForBuild]; // @"`gnustep-config --variable=CC`";
     }
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
   NSString *buildTemplate = @"%@ %@ -c %@ -o %@";
   NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
@@ -144,7 +153,6 @@
 
 - (NSString *) processOutputFilesString
 {
-  NSString *outputString = @"";
   NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
 								   @"OUTPUT_FILES"];
   /*
@@ -160,9 +168,8 @@
 	}
     }
   */
-  outputString = outputFiles;
 
-  return outputString;
+  return outputFiles;
 }
 
 - (NSString *) linkString
@@ -262,13 +269,15 @@
 
 - (BOOL) buildTool
 {
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
   puts([[NSString stringWithFormat: @"=== Executing Frameworks Build Phase (Tool)"] cString]);
   // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
   NSString *compiler = (cc == NULL)?[self linkerForBuild]:[NSString stringWithCString: cc];
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   linkString = [linkString stringByAppendingString: @" `gnustep-config --base-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base "];
@@ -281,7 +290,6 @@
 				linkString];
 
   NSDebugLog(@"command = %@", command);
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
@@ -305,8 +313,10 @@
   char *cc = getenv("CC");
   NSString *compiler = (cc == NULL)?[self linkerForBuild]:[NSString stringWithCString: cc];
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
+  // NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  // NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui "];
@@ -339,6 +349,7 @@
 
 - (BOOL) buildStaticLib
 {
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   puts("=== Executing Frameworks Build Phase (Static Library)");
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
@@ -351,7 +362,7 @@
 				outputPath,
 				outputFiles,
 				outputPath];
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
@@ -371,31 +382,35 @@
 
 - (BOOL) buildFramework
 {
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
   int result = 0;
   puts("=== Executing Frameworks Build Phase (Framework)");
   [self generateDummyClass];
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
   NSString *outputFiles = [self processOutputFilesString];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
-  NSString *frameworkVersion = [NSString stringWithCString: getenv("FRAMEWORK_VERSION")];
+  NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
+  if (frameworkVersion == nil)
+    {
+      frameworkVersion = @"0.0.0";
+    }
   NSString *libNameWithVersion =  [NSString stringWithFormat: @"lib%@.so.%@",
 					    executableName,frameworkVersion];
   NSString *libName = [NSString stringWithFormat: @"lib%@.so",executableName];
 
   NSString *libraryPath = [outputDir stringByAppendingPathComponent: libNameWithVersion];
   NSString *libraryPathNoVersion = [outputDir stringByAppendingPathComponent: libName];
-  NSString *systemLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_SYSTEM_ROOT")] 
-				      stringByAppendingPathComponent: @"Library"] 
-				     stringByAppendingPathComponent: @"Libraries"];
-  NSString *localLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_LOCAL_ROOT")] 
-				     stringByAppendingPathComponent: @"Library"] 
-				    stringByAppendingPathComponent: @"Libraries"];
-  NSString *userLibDir = [[[NSString stringWithCString: getenv("GNUSTEP_USER_ROOT")] 
-				    stringByAppendingPathComponent: @"Library"] 
-				   stringByAppendingPathComponent: @"Libraries"];
+  NSString *systemLibDir = [@"`gnustep-config --variable=GNUSTEP_SYSTEM_LIBRARY`/"
+			       stringByAppendingPathComponent: @"Libraries"];
+  NSString *localLibDir = [@"`gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY`/"
+			      stringByAppendingPathComponent: @"Libraries"];
+  NSString *userLibDir = [@"`gnustep-config --variable=GNUSTEP_USER_LIBRARY`/"
+			     stringByAppendingPathComponent: @"Libraries"];
+
   NSString *frameworkRoot = [context objectForKey: @"FRAMEWORK_DIR"];
   NSString *libraryLink = [frameworkRoot stringByAppendingPathComponent: libName];
   NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];
@@ -447,6 +462,7 @@
 
 - (BOOL) buildBundle
 {
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   puts("=== Executing Frameworks Build Phase (Bundle)");
   // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   char *cc = getenv("CC");
@@ -464,7 +480,7 @@
 				outputFiles,
 				linkString];
 
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])

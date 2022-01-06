@@ -122,10 +122,13 @@
 						 attributes:nil
 						      error:&error];
 
-
       setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
       setenv("PRODUCT_NAME",[execName cString],1);
       setenv("EXECUTABLE_NAME",[execName cString],1);
+
+      [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
+      [context setObject: execName forKey: @"PRODUCT_NAME"];
+      [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
     }
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
@@ -184,6 +187,10 @@
       setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
       setenv("PRODUCT_NAME",[execName cString],1);
       setenv("EXECUTABLE_NAME",[execName cString],1);
+
+      [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
+      [context setObject: execName forKey: @"PRODUCT_NAME"];
+      [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
     {
@@ -216,6 +223,10 @@
       setenv("PRODUCT_OUTPUT_DIR",[path cString],1);
       setenv("PRODUCT_NAME",[fileName cString],1);
       setenv("EXECUTABLE_NAME",[fileName cString],1);
+
+      [context setObject: path forKey: @"PRODUCT_OUTPUT_DIR"];
+      [context setObject: fileName forKey: @"PRODUCT_NAME"];
+      [context setObject: fileName forKey: @"EXECUTABLE_NAME"];        
     }
 }
 

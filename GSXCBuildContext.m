@@ -42,6 +42,7 @@ id _sharedBuildContext = nil;
     {
       currentContext = [NSMutableDictionary dictionary];
       [contextDictionary setObject: currentContext forKey: name];
+      [contextDictionary setObject: name forKey: @"TARGET_NAME"];
       [stack addObject: currentContext];
     }
   return currentContext;

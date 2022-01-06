@@ -1,3 +1,23 @@
+2022-01-06 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* GSXCBuildContext.m
+	* NSString+PBXAdditions.h
+	* NSString+PBXAdditions.m: Add code to execute commend and collect
+        output
+	* PBXAbstractBuildPhase.h
+	* PBXAbstractBuildPhase.m: Add call to get target information
+	* PBXBuildFile.h
+	* PBXBuildFile.m: Fixes
+	* PBXContainerItemProxy.m: Fixes for executing proxy'd project
+	* PBXFileReference.h
+	* PBXFileReference.m: Build fixes
+	* PBXFrameworksBuildPhase.m: Fix building of framework, bundle, etc.
+	* PBXNativeTarget.m
+	* PBXProject.h
+	* PBXProject.m: Fixes
+	* PBXShellScriptBuildPhase.m: Move script creation to /tmp
+	* PBXTargetDependency.h: Add declarations for call to get dependencies.
+
 2021-12-17 Gregory John Casamento <greg.casamento@gmail.com>
 
 	* Resources/Framework-mapping.plist: Add OpenGL framework to the

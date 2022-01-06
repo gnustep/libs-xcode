@@ -287,7 +287,7 @@
       [context contextDictionaryForName: [target name]];
       [self buildString];
 
-      if(YES == [fileManager fileExistsAtPath:[target name]])
+      if(YES == [fileManager fileExistsAtPath: [target name]])
 	{
 	  targetInSubdir = YES;
 	  [context setObject: @"YES"

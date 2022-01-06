@@ -49,6 +49,11 @@
   ASSIGN(target, t);
 }
 
+- (PBXNativeTarget *) target
+{
+  return target;
+}
+
 - (void) setName: (NSString *)n
 {
   ASSIGN(_name, n);

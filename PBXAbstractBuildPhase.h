@@ -17,13 +17,19 @@
 // Methods....
 - (NSMutableArray *) files; // getter
 - (void) setFiles: (NSMutableArray *)object; // setter
+
 - (NSString *) buildActionMask; // getter
 - (void) setBuildActionMask: (NSString *)object; // setter
+
 - (NSString *) runOnlyForDeploymentPostprocessing; // getter
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
+
 - (BOOL) showEnvVarsInLog; // setter
 - (void) setEnvVarsInLog: (BOOL)flag;
+
 - (void) setTarget: (PBXNativeTarget *)t;
+- (PBXNativeTarget *) target;
+
 - (void) setName: (NSString *)n;
 - (NSString *) name;
 
