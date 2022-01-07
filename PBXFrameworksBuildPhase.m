@@ -126,7 +126,7 @@
 		  stringByAppendingString: @" "];
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
-  puts([[NSString stringWithFormat: @"\t%@",buildCommand] cString]);
+  NSDebugLog(@"\t%@",buildCommand);
   system([buildCommand cString]);
 }
 

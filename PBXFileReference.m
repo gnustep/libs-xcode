@@ -147,36 +147,59 @@ extern char **environ;
 
 - (NSArray *) allSubdirsAtPath: (NSString *)apath
 {
-  NSDebugLog(@"apath = %@", apath);
   NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
   NSFileManager *manager = [[NSFileManager alloc] init];
   NSDirectoryEnumerator *en = [manager enumeratorAtPath:apath];
-  NSString *fileName = nil;
+  NSString *filename = nil;
+
+  NSDebugLog(@"apath = %@", apath);
   NSDebugLog(@"cwd = %@", [manager currentDirectoryPath]);
   
-  while((fileName = [en nextObject]) != nil)
+  while((filename = [en nextObject]) != nil)
     {
       BOOL isDir = NO;
-      NSString *dirToAdd = fileName; //[fileName stringByDeletingLastPathComponent];
-      [manager fileExistsAtPath: fileName
+      NSString *dirToAdd = nil;
+
+      [manager fileExistsAtPath: filename
                     isDirectory: &isDir];
 
-      if ([[fileName pathExtension] isEqualToString: @".h"])
+      if (isDir == NO)
         {
-          dirToAdd = [fileName stringByDeletingLastPathComponent];
+          if ([filename isEqualToString: @""])
+            {
+              dirToAdd = @"./";
+            }
+
+          if ([[filename pathComponents] count] > 2)
+            {
+              continue;
+            }
+         
+           if ([[filename pathExtension] isEqualToString: @"h"])
+            {
+              NSDebugLog(@"filename = %@", filename); // , isDir = %d", filename, isDir);
+              dirToAdd = [filename stringByDeletingLastPathComponent];
+            }
         }
       else
+        {
+          NSDebugLog(@"dir = %@", filename);
+          continue;
+        }
+
+      if (dirToAdd == nil)
         {
           continue;
         }
       
-      if ([results containsObject: dirToAdd] == NO)
+      if ([results containsObject: [dirToAdd stringByAddingQuotationMarks]] == NO)
         {
           NSString *ext = [dirToAdd pathExtension];
           if ([ext isEqualToString: @"app"] ||
               [ext isEqualToString: @"xcassets"] ||
               [ext isEqualToString: @"lproj"] ||
               [dirToAdd containsString: @"build"] ||
+              [dirToAdd containsString: @"pbxbuild"] ||
               [dirToAdd containsString: @"xcassets"] ||
               [dirToAdd containsString: @"lproj"] ||
               [dirToAdd containsString: @"xcodeproj"] ||
@@ -470,7 +493,7 @@ extern char **environ;
 					 headerSearchPaths,
 					 outputPath];
 
-      NSDebugLog(@"buildCommand = %@", buildCommand);
+      NSLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
