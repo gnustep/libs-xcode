@@ -479,7 +479,7 @@ extern char **environ;
       
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ 2> %@ %@ -c %@ %@ %@ -o \"%@\"";
+      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ -o \"%@\"";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
@@ -491,9 +491,9 @@ extern char **environ;
 					 objCflags,
 					 configString,
 					 headerSearchPaths,
-					 outputPath];
+					 [outputPath stringByAddingQuotationMarks]];
 
-      NSLog(@"buildCommand = %@", buildCommand);
+      NSDebugLog(@"buildCommand = %@", buildCommand);
       
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
@@ -538,6 +538,7 @@ extern char **environ;
       // If the result is not successful, show the error...
       if (result != 0)
         {
+          NSLog(@"FAILED BUILD COMMAND = %@", buildCommand);
           system([[NSString stringWithFormat: @"cat %@", errorOutPath] cString]);
         }
 
