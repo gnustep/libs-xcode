@@ -212,6 +212,11 @@ extern char **environ;
         }
     }
 
+  // For some reason repeating the first -I directive helps resolve some issues with
+  // finding headers.
+  id o = [results count] > 1 ? [results objectAtIndex: 1] : @"./";
+  [results addObject: o];
+
   NSDebugLog(@"results = %@", results);
   RELEASE(manager);
   return results;
@@ -479,14 +484,14 @@ extern char **environ;
       
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ -o \"%@\"";
+      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ -o %@";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
       NSString *errorOutPath = [outputPath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
-                                         errorOutPath,
+                                         [errorOutPath stringByAddingQuotationMarks],
 					 [compilePath stringByAddingQuotationMarks],
 					 objCflags,
 					 configString,
@@ -538,8 +543,11 @@ extern char **environ;
       // If the result is not successful, show the error...
       if (result != 0)
         {
-          NSLog(@"FAILED BUILD COMMAND = %@", buildCommand);
-          system([[NSString stringWithFormat: @"cat %@", errorOutPath] cString]);
+          NSLog(@"%sReturn Value:%s %d", RED, RESET, result);
+          NSLog(@"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET);
+          NSLog(@"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN, [manager currentDirectoryPath], RESET);
+          NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
+          NSLog(@"%sMessage:%s %@", RED, RESET, errorString);
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
