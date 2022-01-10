@@ -357,6 +357,21 @@ extern char **environ;
   return cc;
 }
 
+- (NSArray *) addParentPath: (NSString *)parent toPaths: (NSArray *)paths
+{
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [paths count]];
+  NSEnumerator *en = [paths objectEnumerator];
+  NSString *p = nil;
+
+  while((p = [en nextObject]) != nil)
+    {
+      NSString *newPath = [parent stringByAppendingPathComponent: p];
+      [result addObject: newPath];
+    }
+
+  return result;
+}
+
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -484,10 +499,14 @@ extern char **environ;
       
       BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ -o %@";
+      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ -o %@";
       NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
+      NSString *subpath = [compilePath stringByDeletingLastPathComponent];
+      NSArray  *additionalHeaders = [self allSubdirsAtPath: subpath];
+      NSArray  *additionalHeadersWithParent = [self addParentPath: subpath toPaths: additionalHeaders];
+      NSString *additionalHeaderSearchPaths = [additionalHeadersWithParent implodeArrayWithSeparator:@" -I"];
       NSString *errorOutPath = [outputPath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
@@ -496,6 +515,7 @@ extern char **environ;
 					 objCflags,
 					 configString,
 					 headerSearchPaths,
+                                         additionalHeaderSearchPaths,
 					 [outputPath stringByAddingQuotationMarks]];
 
       NSDebugLog(@"buildCommand = %@", buildCommand);
@@ -548,6 +568,7 @@ extern char **environ;
           NSLog(@"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN, [manager currentDirectoryPath], RESET);
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           NSLog(@"%sMessage:%s %@", RED, RESET, errorString);
+          NSLog(@"%sHeader Search Path:%s %@", RED, RESET, [compilePath stringByDeletingLastPathComponent]);
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];

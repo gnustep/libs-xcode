@@ -1,3 +1,23 @@
+2022-01-10 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* ChangeLog
+	* GSXCBuildContext.m
+	* NSString+PBXAdditions.h
+	* NSString+PBXAdditions.m
+	* PBXAbstractBuildPhase.h
+	* PBXAbstractBuildPhase.m
+	* PBXBuildFile.h
+	* PBXBuildFile.m
+	* PBXContainerItemProxy.m
+	* PBXFileReference.h
+	* PBXFileReference.m
+	* PBXFrameworksBuildPhase.m
+	* PBXNativeTarget.m
+	* PBXProject.h
+	* PBXProject.m
+	* PBXShellScriptBuildPhase.m
+	* PBXTargetDependency.h: Fix issues with resolving headers.
+
 2022-01-06 Gregory John Casamento <greg.casamento@gmail.com>
 
 	* GSXCBuildContext.m
