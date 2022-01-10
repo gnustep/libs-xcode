@@ -7,6 +7,7 @@
                 CoreGraphics = "-lopal";
                 Carbon = "-lboron";
                 OpenGL = "-lGL -lGLU";
+                libobjc.A = "-lobjc";
         };
         Ignored = ("IOKit", "Quartz", "QuartzCore",
                    "QuickTime", "ApplicationServices");
