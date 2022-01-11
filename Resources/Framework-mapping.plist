@@ -10,5 +10,6 @@
                 libobjc.A = "-lobjc";
         };
         Ignored = ("IOKit", "Quartz", "QuartzCore",
-                   "QuickTime", "ApplicationServices");
+                   "QuickTime", "ApplicationServices",
+                   "SystemConfiguration");
 }
