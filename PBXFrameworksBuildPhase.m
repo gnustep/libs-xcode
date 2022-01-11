@@ -31,12 +31,12 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSArray *libs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSLocalDomainMask, YES);
-  NSString *frameworkPath = [([libs firstObject] != nil ? [libs firstObject] : @"") stringByAppendingPathComponent: @"Frameworks"];
+  NSString *frameworkPath = [([libs firstObject] != nil ? [libs firstObject] : @"")
+                              stringByAppendingPathComponent: @"Frameworks"];
   NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
-  if (frameworkVersion == nil)
-    {
-      frameworkVersion = @"0.0.0";
-    }
+
+  frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
+
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *classList = @"";
   NSString *outputDir = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
@@ -54,12 +54,14 @@
 					     attributes:nil
 						  error:&error];
 
-  NSString *classesFilename = [[outputDir stringByAppendingPathComponent: executableName] stringByAppendingString: @"-class-list"];
+  NSString *classesFilename = [[outputDir stringByAppendingPathComponent: executableName]
+                                stringByAppendingString: @"-class-list"];
   NSString *classesFormat = 
-    @"echo \"(\" > %@; nm -Pg %@/%@/*.o | grep __objc_class_name | "
+    @"rm 2> /dev/null %@; echo \"(\" > %@; nm -Pg %@/%@/*.o | grep __objc_class_name | "
     @"sed -e '/^__objc_class_name_[A-Za-z0-9_.]* [^U]/ {s/^__objc_class_name_\\([A-Za-z0-9_.]*\\) [^U].*/\\1/p;}' | "
     @"grep -v __objc_class_name | sort | uniq | while read class; do echo \"${class},\"; done >> %@; echo \")\" >> %@;"; 
   NSString *classesCommand = [NSString stringWithFormat: classesFormat,
+                                       classesFilename,
 				       classesFilename,
 				       buildDir,
                                        targetName,
@@ -106,12 +108,12 @@
 		    error: &error];
   
   // compile...
-  NSString *compiler = nil; // [NSString stringWithCString: getenv("CC")];
+  NSString *compiler = nil; 
   NSString *buildPath = outputPath;
   NSString *objPath = [objDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
   if([compiler isEqualToString: @""] || compiler == nil)
     {
-      compiler = [self linkerForBuild]; // @"`gnustep-config --variable=CC`";
+      compiler = [self linkerForBuild]; 
     }
   NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
   NSString *buildTemplate = @"%@ %@ -c %@ -o %@";
@@ -122,6 +124,7 @@
 				     [objPath stringByEscapingSpecialCharacters]];
   NSString *of = [self processOutputFilesString];
   NSString *outputFiles = (of == nil)?@"":of;
+
   outputFiles = [[outputFiles stringByAppendingString: objPath] 
 		  stringByAppendingString: @" "];
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
@@ -155,20 +158,6 @@
 {
   NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
 								   @"OUTPUT_FILES"];
-  /*
-  NSArray *strings = [outputFiles componentsSeparatedByString: @".o "];
-  NSString *s = nil;
-  NSEnumerator *en = [strings objectEnumerator];
-
-  while ((s = [en nextObject]) != nil)
-    {
-      if ([s isEqualToString: @""] == NO)
-	{
-	  outputString = [outputString stringByAppendingString: [NSString stringWithFormat: @" \"%@.o\" ", s]];
-	}
-    }
-  */
-
   return outputFiles;
 }
 
@@ -188,12 +177,9 @@
 				   systemLibDir];;
   NSFileManager *manager = [NSFileManager defaultManager];
   NSDirectoryEnumerator *dirEnumerator = [manager enumeratorAtPath:uninstalledProductsDir];
-
-  // NSString *s = [self frameworkLinkString: @"AppKit"];
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
 
-  // NSDebugLog(@"*** Frameworks build phase files = %@, %@", files, s);
   while((file = [en nextObject]) != nil)
     {
       PBXFileReference *fileRef = [file fileRef];
@@ -209,10 +195,12 @@
       if([ext isEqualToString:@"framework"])
 	{
 	  NSString *headerDir = [file stringByAppendingPathComponent:@"Headers"];
-	  linkString = [linkString stringByAppendingString:[NSString stringWithFormat:@"-I%@ ",
-								     [uninstalledProductsDir stringByAppendingPathComponent:headerDir]]];
-	  linkString = [linkString stringByAppendingString:[NSString stringWithFormat:@"-L%@ ",
-								     [uninstalledProductsDir stringByAppendingPathComponent:file]]];
+	  linkString = [linkString stringByAppendingString:
+                                [NSString stringWithFormat:@"-I%@ ",
+                                          [uninstalledProductsDir stringByAppendingPathComponent:headerDir]]];
+	  linkString = [linkString stringByAppendingString:
+                                [NSString stringWithFormat:@"-L%@ ",
+                                          [uninstalledProductsDir stringByAppendingPathComponent:file]]];
 	}
     }
 
@@ -227,19 +215,16 @@
           NSString *framework = [en nextObject];
           linkString = [linkString stringByAppendingString: [self frameworkLinkString: framework]];
         }
-      else
-        {
-          //linkString = [linkString stringByAppendingString:];
-        }
     }
 
   linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
 
   // Do substitutions and additions for buildtool.plist...
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
-  NSDebugLog(@"%@",plistFile);
   NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
+
+  NSDebugLog(@"%@",plistFile);
   NSDebugLog(@"%@", additionalFlags);
   if (additionalFlags != nil)
     {
@@ -272,9 +257,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
   puts([[NSString stringWithFormat: @"=== Executing Frameworks Build Phase (Tool)"] cString]);
-  // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?[self linkerForBuild]:[NSString stringWithCString: cc];
+  NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
@@ -310,16 +293,16 @@
 {
   puts("=== Executing Frameworks Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?[self linkerForBuild]:[NSString stringWithCString: cc];
+  NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  // NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  // NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs --base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base -lgnustep-gui "];
+
+  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs " \
+                           @"--base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` " \
+                           @"-lgnustep-base -lgnustep-gui "];
   NSDebugLog(@"LINK: %@", linkString);
            
   NSString *command = [NSString stringWithFormat: 
@@ -344,6 +327,7 @@
     }
 
   puts("=== Frameworks Build Phase Completed");
+
   return (result == 0);
 }
 
@@ -418,8 +402,7 @@
   NSString *commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
     @"-shared-libgcc -o %@ %@ "
     @"-L%@ -L/%@ -L%@";     
-  char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?[self linkerForBuild]:[NSString stringWithCString: cc];
+  NSString *compiler = [self linkerForBuild];
   NSString *command = [NSString stringWithFormat: commandTemplate,
 				compiler,
 				executableName,
@@ -464,9 +447,7 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   puts("=== Executing Frameworks Build Phase (Bundle)");
-  // GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  char *cc = getenv("CC");
-  NSString *compiler = (cc == NULL)?[self linkerForBuild]:[NSString stringWithCString: cc];
+  NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
