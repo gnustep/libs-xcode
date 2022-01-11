@@ -171,8 +171,20 @@
     }
 
   result = [mapped objectForKey: framework];
-  result = result != nil ? [result stringByAppendingString: @" "] : [NSString stringWithFormat: @"-l%@ ", framework];
-
+  if (result == nil)
+    {
+      if ([framework hasPrefix: @"lib"])
+        {
+          framework = [framework stringByReplacingCharactersInRange: NSMakeRange(0,3)
+                                                         withString: @""];
+        }
+      result =  [NSString stringWithFormat: @"-l%@ ", framework];
+    }
+  else
+    {
+      result = [result stringByAppendingString: @" "];
+    }
+  
   return result;
 } 
 
