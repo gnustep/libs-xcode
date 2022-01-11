@@ -205,7 +205,7 @@
 			     stringByAppendingPathComponent: @"Libraries"];
   NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"];
-  NSString *linkString = [NSString stringWithFormat: @"-L%@ -L%@ -L%@ ",
+  NSString *linkString = [NSString stringWithFormat: @"-L/usr/local/lib -L/opt/local/lib -L%@ -L%@ -L%@ ",
 				   userLibDir,
 				   localLibDir,
 				   systemLibDir];;
@@ -311,8 +311,12 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      // puts("\t%@",command);
       result = system([command cString]);
+      if (result != 0)
+        {
+          NSLog(@"%sReturn Value:%s %d", RED, RESET, result);
+          NSLog(@"%sCommand:%s %s%@%s", RED, RESET, CYAN, command, RESET);
+        }
     }
   else
     {
