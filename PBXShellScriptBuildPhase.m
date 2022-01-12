@@ -132,19 +132,18 @@
   NSString *processedScript = [self preprocessScript];
 
   processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
-  puts([[NSString stringWithFormat: @"=== Executing Script Build Phase... %s%@%s",
-                  CYAN, name, RESET] cString]);
-  puts([[NSString stringWithFormat: @"=== \t%s%@%s", RED, command, RESET] cString]);
-    
+  puts("=== Executing Script Build Phase...");
+  puts([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
+  puts("*** script output");
   [processedScript writeToFile: tmpFilename
                     atomically: YES
                       encoding: NSASCIIStringEncoding
                          error: &error];
   
   result = system([command cString]);
-  puts([[NSString stringWithFormat: @"=== Done Executing Script Build Phase... %s%@%s",
-                  CYAN, name, RESET] cString]);
+  puts("*** script completed");
+  puts("=== Done Executing Script Build Phase...");
 
-  return result;
+  return (result == 0);
 }
 @end
