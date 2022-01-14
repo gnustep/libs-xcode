@@ -20,8 +20,14 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/Foundation.h>
+*/
+
+#import <Foundation/Foundation.h>
 
 @interface NSArray (Additions)
+
 - (NSString *) implodeArrayWithSeparator: (NSString *)separator;
+- (NSArray *) arrayByRemovingDuplicateEntries;
+- (NSString *) removeDuplicatesAndImplodeWithSeparator: (NSString *)separator;
+
 @end

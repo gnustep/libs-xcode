@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXProject.h"
 #import "PBXNativeTarget.h"
 #import "GSXCBuildContext.h"
@@ -109,6 +111,20 @@
   [self recurseTargetDependencies: [self targets]
                         forTarget: nil
                            result: _arrangedTargets];
+
+  NSEnumerator *en = [[self targets] objectEnumerator];
+  id o = nil;
+
+  while ((o = [en nextObject]) != nil)
+    {
+      if ([_arrangedTargets containsObject: o] == NO)
+        {
+          [_arrangedTargets addObject: o];
+        }
+    }
+  
+  NSLog(@"arrangedTarget = %ld, targets = %ld", [_arrangedTargets count], [[self targets] count]);
+  
   return _arrangedTargets;
 }
 

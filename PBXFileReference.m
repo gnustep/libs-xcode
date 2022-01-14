@@ -191,7 +191,7 @@ extern char **environ;
         {
           if ([filename isEqualToString: @""])
             {
-              dirToAdd = @"./";
+              dirToAdd = @".";
             }
 
           if ([[filename pathComponents] count] > 2)
@@ -238,7 +238,7 @@ extern char **environ;
 
   // For some reason repeating the first -I directive helps resolve some issues with
   // finding headers.
-  id o = [results count] > 1 ? [results objectAtIndex: 1] : @"./";
+  id o = [results count] > 1 ? [results objectAtIndex: 1] : @".";
   [results addObject: o];
 
   NSDebugLog(@"results = %@", results);
@@ -272,6 +272,14 @@ extern char **environ;
   return result;
 }
 
+- (NSArray *) dedupHeaders: (NSArray *)array
+{
+}
+
+- (NSArray *) substituteHeadersPaths: (NSArray *)array
+{  
+}
+
 - (NSArray *) substituteSearchPaths: (NSArray *)array
                           buildPath: (NSString *)buildPath
 {
@@ -282,8 +290,6 @@ extern char **environ;
   NSMutableArray *allHeaders = [NSMutableArray arrayWithArray: array];
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSArray *headerPaths = [plistFile objectForKey: @"headerPaths"];
-  //  NSLog(@"plist = %@", plistFile);
-  // NSLog(@"BUILD CONFIG: %@", list);
 
   XCBuildConfiguration *config = [[list buildConfigurations] objectAtIndex: 0];
   NSDictionary *buildSettings = [config buildSettings];
@@ -339,11 +345,11 @@ extern char **environ;
                                        withString: projDir];
       // [o stringByReplacingOccurrencesOfString: @"\"" withString: @""];
       NSString *q = [o stringByReplacingEnvironmentVariablesWithValues];
-      NSString *p = [NSString stringWithFormat: @"../%@",o];
+      // NSString *p = [NSString stringWithFormat: @"../%@",o];
       if ([result containsObject: o] == NO)
         {
           [result addObject: o];
-          [result addObject: p];
+          // [result addObject: p];
           [result addObject: q];
         }
     }
@@ -446,9 +452,9 @@ extern char **environ;
       NSString *compiler = [NSString stringWithCString: cc];
       NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"]
                                                        buildPath: buildPath] 
-                                      implodeArrayWithSeparator: @" -I"];
+                                      removeDuplicatesAndImplodeWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
-				  implodeArrayWithSeparator: @" "];
+				  removeDuplicatesAndImplodeWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
       
       buildDir = [buildDir stringByAppendingPathComponent: [target productName]];
@@ -530,7 +536,7 @@ extern char **environ;
       NSString *subpath = [compilePath stringByDeletingLastPathComponent];
       NSArray  *additionalHeaders = [self allSubdirsAtPath: subpath];
       NSArray  *additionalHeadersWithParent = [self addParentPath: subpath toPaths: additionalHeaders];
-      NSString *additionalHeaderSearchPaths = [additionalHeadersWithParent implodeArrayWithSeparator:@" -I"];
+      NSString *additionalHeaderSearchPaths = [additionalHeadersWithParent removeDuplicatesAndImplodeWithSeparator:@" -I"];
       NSString *errorOutPath = [outputPath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
@@ -657,10 +663,10 @@ extern char **environ;
   NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
   NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
   NSString *headerSearchPaths = [[context objectForKey: @"HEADER_SEARCH_PATHS"] 
-				      implodeArrayWithSeparator: @" -I"];
+				      removeDuplicatesAndImplodeWithSeparator: @" -I"];
   NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
-				  implodeArrayWithSeparator: @" "];
-  NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
+				  removeDuplicatesAndImplodeWithSeparator: @" "];
+  NSString *localHeaderPaths = [localHeaderPathsArray removeDuplicatesAndImplodeWithSeparator:@" -I"];
 
   NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
   NSDebugLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);

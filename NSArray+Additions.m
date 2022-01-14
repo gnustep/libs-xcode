@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "NSArray+Additions.h"
+*/
+
+#import "NSArray+Additions.h"
 
 @implementation NSArray (Additions)
 
@@ -35,6 +37,29 @@
       result = [result stringByAppendingString: obj];
     }
   return result;
+}
+
+- (NSArray *) arrayByRemovingDuplicateEntries
+{
+  NSArray *result = [NSArray array];
+  NSEnumerator *en = [self objectEnumerator];
+  id o = nil;
+
+  while ((o = [en nextObject]) != nil)
+    {
+      if ([result containsObject: o] == NO)
+        {
+          result = [result arrayByAddingObject: o];
+        }
+    }
+
+  return result;
+}
+
+- (NSString *) removeDuplicatesAndImplodeWithSeparator: (NSString *)separator
+{
+  NSArray *result = [self arrayByRemovingDuplicateEntries];
+  return [result implodeArrayWithSeparator: separator];
 }
 
 @end
