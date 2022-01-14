@@ -31,3 +31,9 @@
 - (NSString *) removeDuplicatesAndImplodeWithSeparator: (NSString *)separator;
 
 @end
+
+@interface NSMutableArray (Additions)
+
+- (void) prependObjectsFromArray: (NSArray *)array;
+
+@end

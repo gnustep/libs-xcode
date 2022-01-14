@@ -63,3 +63,18 @@
 }
 
 @end
+
+@implementation NSMutableArray (Additional)
+
+- (void) prependObjectsFromArray: (NSArray *)array
+{
+  NSEnumerator *en = [array objectEnumerator];
+  id o = nil;
+
+  while ((o = [en nextObject]) != nil)
+    {
+      [self insertObject: o atIndex: 0];
+    }
+}
+
+@end

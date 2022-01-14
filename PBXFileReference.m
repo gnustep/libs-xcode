@@ -272,14 +272,6 @@ extern char **environ;
   return result;
 }
 
-- (NSArray *) dedupHeaders: (NSArray *)array
-{
-}
-
-- (NSArray *) substituteHeadersPaths: (NSArray *)array
-{  
-}
-
 - (NSArray *) substituteSearchPaths: (NSArray *)array
                           buildPath: (NSString *)buildPath
 {
@@ -304,7 +296,7 @@ extern char **environ;
   if ([headerPaths isKindOfClass: [NSArray class]] &&
       headerPaths != nil)
     {
-      [allHeaders addObjectsFromArray: headerPaths];
+      [allHeaders prependObjectsFromArray: headerPaths];
     }
   
   // get environment variables...
@@ -534,9 +526,9 @@ extern char **environ;
         [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
         [self buildPath];
       NSString *subpath = [compilePath stringByDeletingLastPathComponent];
-      NSArray  *additionalHeaders = [self allSubdirsAtPath: subpath];
-      NSArray  *additionalHeadersWithParent = [self addParentPath: subpath toPaths: additionalHeaders];
-      NSString *additionalHeaderSearchPaths = [additionalHeadersWithParent removeDuplicatesAndImplodeWithSeparator:@" -I"];
+      NSArray  *subdirHeaders = [self allSubdirsAtPath: subpath];
+      NSArray  *subdirHeadersWithParent = [self addParentPath: subpath toPaths: subdirHeaders];
+      NSString *subdirHeaderSearchPaths = [subdirHeadersWithParent removeDuplicatesAndImplodeWithSeparator:@" -I"];
       NSString *errorOutPath = [outputPath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
@@ -545,7 +537,7 @@ extern char **environ;
 					 objCflags,
 					 configString,
 					 headerSearchPaths,
-                                         additionalHeaderSearchPaths,
+                                         subdirHeaderSearchPaths,
 					 [outputPath stringByAddingQuotationMarks]];
 
       NSDebugLog(@"buildCommand = %@", buildCommand);
