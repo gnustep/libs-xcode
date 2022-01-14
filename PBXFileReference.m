@@ -304,10 +304,12 @@ extern char **environ;
   for (env = environ; *env != 0; env++)
     {
       char *thisEnv = *env;
-      NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
+      NSString *envStr = [NSString stringWithCString: thisEnv
+                                            encoding: NSUTF8StringEncoding];
       NSArray *components = [envStr componentsSeparatedByString: @"="];
-      [dict setObject: [components lastObject]
-               forKey: [components firstObject]];
+      
+      [dict setObject: [[components lastObject] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]
+               forKey: [[components firstObject] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
     }
   
   // Get project root
