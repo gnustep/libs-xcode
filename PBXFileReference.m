@@ -426,7 +426,7 @@ extern char **environ;
       if (proj_root == nil ||
           [proj_root isEqualToString: @""])
         {
-          proj_root = @"";
+          proj_root = @".";
         }
 
       if ([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||

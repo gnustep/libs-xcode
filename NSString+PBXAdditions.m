@@ -189,7 +189,7 @@ extern char **environ;
 
 + (NSString *) stringForEnvironmentVariable: (char *)envvar
 {
-  char *v = getenv("FRAMEWORK_VERSION");
+  char *v = getenv(envvar);
 
   if (v != NULL)
     {

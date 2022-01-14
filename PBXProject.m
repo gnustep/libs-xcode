@@ -339,6 +339,8 @@
       [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
       [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
 		  forKey: @"SRCROOT"];
       [context addEntriesFromDictionary:ctx];
       
