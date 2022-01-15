@@ -45,7 +45,8 @@
       [[GSXCBuildContext sharedBuildContext]
         setObject: objects forKey: @"objects"];
 
-      setenv("PROJECT_ROOT","",1);      
+      setenv("PROJECT_DIR","./",1);      
+      setenv("PROJECT_ROOT","./",1);      
       setenv("SRCROOT","./",1);      
     }
   return self;

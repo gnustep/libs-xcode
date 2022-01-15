@@ -121,13 +121,13 @@
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
 
   // NSLog(@"%@ -> %@", imagePath, resourcesDir);
-  NSError *error = nil;
+  // NSError *error = nil;
 
   [mgr copyItemAtPath: imagePath
                toPath: destPath
-                error: &error];
+                error: NULL];
 
-  NSDebugLog(@"error = %@", error);
+  // NSDebugLog(@"error = %@", error);
 
   return filename;
 }
@@ -237,6 +237,9 @@
                   NSLog(@"\tFILE CREATION ERROR:  %@, %@", error, fileDir);
                 }
 
+              destPath = [destPath stringByReplacingOccurrencesOfString: @"Base.lproj/"
+                                                             withString: @""]; // kludge since Base is not supported yet.
+              
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
               puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, RED, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
@@ -288,7 +291,7 @@
   [self processInfoPlistInput: inputPlist
                        output: outputPlist];
 
-  // Move Base.lproj to English.lproj until Base.lproj is supported..
+  /*
   NSString *baseLproj = [resourcesDir
                           stringByAppendingPathComponent: @"Base.lproj"];
   NSArray *farr = [mgr directoryContentsAtPath: baseLproj];
@@ -310,7 +313,8 @@
           NSLog(@"** Error while copying resource: %@", ferror);
         }
     }
-
+  */
+  
   /*
   if (den !=nil)
     {
@@ -326,7 +330,8 @@
               NSLog(@"** Error while copying resource: %@", error);
             }
         }
-        } */
+    } 
+  */
   
   
   puts("=== Resources Build Phase Completed");

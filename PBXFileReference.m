@@ -262,12 +262,20 @@ extern char **environ;
 {
   PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
   BOOL found = NO;
-  NSString *result = nil;
-
+  NSString *result = nil, *r = nil;
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSDictionary *remappedSource = [plistFile objectForKey: @"remappedSource"];
+ 
   // Resolve path for the current file reference...
   result = [self resolvePathFor: self 
 		      withGroup: mainGroup
 			  found: &found];
+
+  if ((r = [remappedSource objectForKey: result]) != nil)
+    {
+      puts([[NSString stringWithFormat: @"\t%@ remapped to -> %@", result, r] cString]);
+      result = r;
+    }
   
   return result;
 }
@@ -409,7 +417,7 @@ extern char **environ;
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
-  
+
   if(modified == nil)
     {
       modified = @"NO";
@@ -521,12 +529,13 @@ extern char **environ;
       objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
-      BOOL exists = [manager fileExistsAtPath: [self buildPath]];
+      // BOOL exists = [manager fileExistsAtPath: [self buildPath]];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ -o %@";
-      NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
-        [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
-        [self buildPath];
+      // NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
+      //   [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
+      //   [self buildPath];
+      NSString *compilePath = [self buildPath];
       NSString *subpath = [compilePath stringByDeletingLastPathComponent];
       NSArray  *subdirHeaders = [self allSubdirsAtPath: subpath];
       NSArray  *subdirHeadersWithParent = [self addParentPath: subpath toPaths: subdirHeaders];
