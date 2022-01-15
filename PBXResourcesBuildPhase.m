@@ -20,9 +20,7 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/
-
-#import <Foundation/NSJSONSerialization.h>
+*/ #import <Foundation/NSJSONSerialization.h>
 
 #import "PBXCommon.h"
 #import "PBXGroup.h"
@@ -84,6 +82,12 @@
 - (NSString *) processAssets
 {
   NSFileManager *mgr = [NSFileManager defaultManager];
+  // char cwd[PATH_MAX];
+  // if (getcwd(cwd, sizeof(cwd)) != NULL)
+  //  {
+  //    NSDebugLog(@"Current working dir is: %s", cwd);
+  //  }
+  
   NSString *filename = nil;
   NSString *productName = [self productName];
   NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"]; 
@@ -115,6 +119,8 @@
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
+
+  // NSLog(@"%@ -> %@", imagePath, resourcesDir);
   NSError *error = nil;
 
   [mgr copyItemAtPath: imagePath
@@ -131,7 +137,6 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *settings = [context objectForKey: @"PRODUCT_SETTINGS_XML"];
-
   if(settings == nil)
     {
       NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
@@ -156,19 +161,18 @@
                    encoding: NSUTF8StringEncoding
                       error: NULL];      
     }
-  
   return YES;
 }
 
 - (BOOL) build
 {
+  puts("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
   NSString *productName = [self productName]; // @""; // [target productName];
 
-  printf("=== Executing Resources Build Phase\n"); //, GREEN, [productName cString], RESET);
   NSDebugLog(@"productName = %@", productName);
   
   // Pre create directory....
@@ -192,14 +196,36 @@
           id child = nil;
           while ((child = [e nextObject]) != nil)
             {
-              NSString *filePath = [child buildPath];
+              NSString *filePath = [child path];
+	      NSDebugLog(@"FILEPATH = %@", filePath);
+              NSString *resourceFilePath = [filePath stringByDeletingLastPathComponent];
+              BOOL edited = NO;
+              if ([mgr fileExistsAtPath: [child path]] == NO)
+                {
+                  edited = YES;
+                  filePath = [productName stringByAppendingPathComponent: [child path]];
+                }
 
-	      NSLog(@"FILEPATH = %@", filePath);
+              NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
+                                                  resourceFilePath];
               NSString *fileName = [filePath lastPathComponent];
               NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
               NSError *error = nil;
               BOOL copyResult = NO; 
-              NSString *fileDir = [filePath stringByDeletingLastPathComponent];
+              
+              // If there is more than one path component...
+              // then the intervening directories need to
+              // be created.
+              if([[filePath pathComponents] count] > 1)
+                {
+                  NSString *dirs = [filePath stringByDeletingLastPathComponent];
+                  if (edited)
+                    {
+                      dirs = [dirs stringByReplacingOccurrencesOfString: productName withString: @""];
+                    }
+                  destPath = [resourcesDir stringByAppendingPathComponent: dirs];
+                  destPath = [destPath stringByAppendingPathComponent: fileName];
+                }
               
               NSDebugLog(@"\tCreate %@",fileDir);
               copyResult = [mgr createDirectoryAtPath: fileDir
@@ -212,29 +238,31 @@
                 }
 
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s",
-                              YELLOW, filePath, RESET, RED, destPath, RESET] cString]);
+              puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, RED, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
               if (copyResult == NO)
                 {
-		  puts([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s",
-                                  BOLD, RED, filePath, RESET] cString]);
+		  puts([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
 		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
                 }
             }
           continue;
         }
       
-      NSString *filePath = [file buildPath];
+      NSString *filePath = [file path];
+      if ([mgr fileExistsAtPath: [file path]] == NO)
+        {
+          filePath = [productName stringByAppendingPathComponent: [file path]];
+        }
+
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      puts([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",
-                      YELLOW, filePath, RESET, RED, destPath, RESET] cString]);      
+      puts([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, RED, destPath, RESET] cString]);      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
@@ -283,8 +311,25 @@
         }
     }
 
+  /*
+  if (den !=nil)
+    {
+      NSString *fn = nil;
+      
+      while ((fn = [den nextObject]) != nil)
+        {
+          [mgr moveItemAtPath: baseLproj
+                       toPath: engLproj
+                        error: NULL];
+          if (error != nil)
+            {
+              NSLog(@"** Error while copying resource: %@", error);
+            }
+        }
+        } */
+  
+  
   puts("=== Resources Build Phase Completed");
-
   return result;
 }
 
