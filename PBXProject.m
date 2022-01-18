@@ -123,7 +123,7 @@
         }
     }
   
-  NSLog(@"arrangedTarget = %ld, targets = %ld", [_arrangedTargets count], [[self targets] count]);
+  NSDebugLog(@"arrangedTarget = %ld, targets = %ld", [_arrangedTargets count], [[self targets] count]);
   
   return _arrangedTargets;
 }
@@ -272,7 +272,7 @@
 {
   printf("=== Planning build -- Recursing dependencies...");
   _arrangedTargets = [self arrangedTargets];
-  printf(" completed\n");
+  printf("%ld targets - completed\n", [_arrangedTargets count]);
   //  NSLog(@"%@", _arrangedTargets);
 }
 
