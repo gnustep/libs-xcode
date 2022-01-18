@@ -241,7 +241,7 @@
                                                              withString: @""]; // kludge since Base is not supported yet.
               
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, RED, destPath, RESET] cString]);
+              puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
@@ -265,7 +265,7 @@
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      puts([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, RED, destPath, RESET] cString]);      
+      puts([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
