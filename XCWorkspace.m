@@ -20,13 +20,15 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "XCWorkspace.h"
+*/
+
+#import "XCWorkspace.h"
 #import "XCFileRef.h"
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
 #import <Foundation/NSEnumerator.h>
-
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSXMLDocument.h>
 
 @implementation XCWorkspace
@@ -89,12 +91,14 @@
   printf("+++ Building projects workspace.. %s\n", [display cString]);
   while ((ref = [en nextObject]) != nil)
     {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
       BOOL s = [ref build];
       if (s == NO)
         {
           printf("+++ Workspace build FAILED %s\n", [display cString]);
           return NO;
         }
+      RELEASE(p);
     }
   printf("+++ Workspace build completed... %s\n", [display cString]);
   

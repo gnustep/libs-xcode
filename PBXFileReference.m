@@ -39,6 +39,27 @@ extern char **environ;
 
 @implementation PBXFileReference
 
+- (void) dealloc
+{
+  RELEASE(sourceTree);
+  RELEASE(lastKnownFileType);
+  RELEASE(path);
+  RELEASE(fileEncoding);
+  RELEASE(explicitFileType);
+  RELEASE(usesTabs);
+  RELEASE(indentWidth);
+  RELEASE(tabWidth);
+  RELEASE(name);
+  RELEASE(includeInIndex);
+  RELEASE(comments);
+  RELEASE(plistStructureDefinitionIdentifier);
+  RELEASE(xcLanguageSpecificationIdentifier);
+  RELEASE(lineEnding);
+  RELEASE(wrapsLines);
+
+  [super dealloc];
+}
+
 // Methods....
 - (void) setWrapsLines: (NSString *)o
 {
@@ -137,7 +158,7 @@ extern char **environ;
 
 - (void) setTarget: (PBXNativeTarget *)t
 {
-  ASSIGN(target, t);
+  target = t;
 }
 
 - (NSString *) resolvePathFor: (id)object 

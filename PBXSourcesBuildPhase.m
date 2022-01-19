@@ -37,8 +37,12 @@
   BOOL result = YES;
   while((file = [en nextObject]) != nil && result)
     {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+      
       [file setTarget: target];
       result = [file build];
+
+      RELEASE(p);
     }
   puts("=== Sources Build Phase Completed");
 

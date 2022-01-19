@@ -287,12 +287,16 @@
   en = [buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+
       [phase setTarget: self];
       result = [phase build];
       if(NO == result)
 	{
 	  puts([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
 	}
+
+      RELEASE(p);
     }
   puts([[NSString stringWithFormat: @"=== Done..."] cString]);
   puts([[NSString stringWithFormat: @"=== Completed Executing Target %@", name] cString]);
@@ -544,12 +548,16 @@
   en = [buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+      
       [phase setTarget: self];
       result = [phase generate];
       if(NO == result)
 	{
 	  puts([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
 	}
+
+      RELEASE(p);
     }
   puts([[NSString stringWithFormat: @"=== Done..."] cString]);
 
