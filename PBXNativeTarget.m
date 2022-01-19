@@ -33,12 +33,13 @@
 
 - (void) dealloc
 {
-  [productReference release];
-  [productInstallPath release];
-  [productType release];
-  [buildRules release];
-  [comments release];
-  [productSettingsXML release];
+  RELEASE(productReference);
+  RELEASE(productInstallPath);
+  RELEASE(productType);
+  RELEASE(buildRules);
+  RELEASE(comments);
+  RELEASE(productSettingsXML);
+  
   [super dealloc];
 }
 

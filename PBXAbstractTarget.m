@@ -29,11 +29,12 @@
 
 - (void) dealloc
 {
-  [dependencies release];
-  [buildConfigurationList release];
-  [productName release];
-  [buildPhases release];
-  [name release];
+  RELEASE(dependencies);
+  RELEASE(buildConfigurationList);
+  RELEASE(productName);
+  RELEASE(buildPhases);
+  RELEASE(name);
+
   [super dealloc];
 }
 

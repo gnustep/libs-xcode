@@ -20,10 +20,22 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXBuildRule.h"
 
 @implementation PBXBuildRule
+
+- (void) dealloc
+{
+  RELEASE(fileType);
+  RELEASE(isEditable);
+  RELEASE(outputFiles);
+  RELEASE(compilerSpec);
+
+  [super dealloc];
+}
 
 // Methods....
 - (NSString *) fileType // getter

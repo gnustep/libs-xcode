@@ -25,6 +25,16 @@
 
 @implementation PBXAbstractBuildPhase
 
+- (void) dealloc
+{
+  RELEASE(files);
+  RELEASE(buildActionMask);
+  RELEASE(runOnlyForDeploymentPostprocessing);
+  RELEASE(target);
+  RELEASE(_name);
+  [super dealloc];
+}
+
 // Methods....
 - (NSMutableArray *) files // getter
 {

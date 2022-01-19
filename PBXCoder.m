@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCoder.h"
+*/
+
+#import "PBXCoder.h"
 #import "PBXContainer.h"
 #import "PBXCommon.h"
 #import "GSXCBuildContext.h"
@@ -87,7 +89,7 @@
       return nil;
     }
 
-  object = [[classInstance alloc] init];
+  object = [[classInstance alloc] init]x;
   object = [self applyKeysAndValuesFromDictionary: dict
 					 toObject: object];
 

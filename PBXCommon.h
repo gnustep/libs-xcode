@@ -20,6 +20,8 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #include <GNUstepBase/GNUstep.h>
+*/
+
+#include <GNUstepBase/GNUstep.h>
 #include <GNUstepBase/GNUstep.h>
 #import "GSXCCommon.h"
