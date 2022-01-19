@@ -20,13 +20,26 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/NSDictionary.h>
+*/
+
+#import <Foundation/NSDictionary.h>
 
 #import "PBXCommon.h"
 #import "PBXShellScriptBuildPhase.h"
 #import "NSString+PBXAdditions.h"
 
 @implementation PBXShellScriptBuildPhase
+
+- (void) dealloc
+{
+  RELEASE(shellPath);
+  RELEASE(shellScript);
+  RELEASE(inputPaths);
+  RELEASE(outputPaths);
+  RELEASE(name);
+
+  [super dealloc];
+}
 
 // Methods....
 - (NSString *) shellPath // getter

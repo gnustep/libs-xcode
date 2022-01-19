@@ -89,7 +89,7 @@
       return nil;
     }
 
-  object = [[classInstance alloc] init]x;
+  object = [[classInstance alloc] init];
   object = [self applyKeysAndValuesFromDictionary: dict
 					 toObject: object];
 

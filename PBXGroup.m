@@ -25,6 +25,18 @@
 
 @implementation PBXGroup
 
+- (void) dealloc
+{
+  RELEASE(sourceTree);
+  RELEASE(children);
+  RELEASE(name);
+  RELEASE(tabWidth);
+  RELEASE(usesTabs);
+  RELEASE(path);
+
+  [super dealloc];
+}
+
 // Methods....
 - (NSString *) sourceTree // getter
 {

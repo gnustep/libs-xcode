@@ -20,10 +20,22 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXReferenceProxy.h"
 
 @implementation PBXReferenceProxy
+
+- (void) dealloc
+{
+  RELEASE(sourceTree);
+  RELEASE(fileType);
+  RELEASE(remoteRef);
+  RELEASE(path);
+  
+  [super dealloc];
+}
 
 // Methods....
 - (NSString *) sourceTree // getter
