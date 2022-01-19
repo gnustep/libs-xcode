@@ -64,7 +64,7 @@
 
 - (void) setTarget: (PBXNativeTarget *)object
 {
-  ASSIGN(target, object);
+  target = object;
 }
 
 - (BOOL) build
