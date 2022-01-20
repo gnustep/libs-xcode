@@ -34,6 +34,8 @@
   NSString *shellScript;
   NSMutableArray *inputPaths;
   NSMutableArray *outputPaths;
+  NSMutableArray *_inputFileListPaths;
+  NSMutableArray *_outputFileListPaths;
   NSString *name;
 }
 
@@ -48,6 +50,10 @@
 - (void) setOutputPaths: (NSMutableArray *)object; // setter
 - (NSString *) name; // getter
 - (void) setName: (NSString *)object; // setter
+- (NSMutableArray *) inputFileListPaths; // getter
+- (void) setInputFileListPaths: (NSMutableArray *)object; // setter
+- (NSMutableArray *) outputFileListPaths; // getter
+- (void) setOutputFileListPaths: (NSMutableArray *)object; // setter
 
 // build...
 - (BOOL) build;

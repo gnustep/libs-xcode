@@ -463,10 +463,22 @@ extern char **environ;
 	{
 	  [context setObject: @"YES" forKey: @"LINK_WITH_CPP"];
 	}
-      
+
+
+      NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile:
+                                                @"buildtool.plist"];
+      NSArray *skippedSource = [plistFile objectForKey:
+                                            @"skippedSource"];
+
+      NSString *bp = [self buildPath];
+      if ([skippedSource containsObject: bp])
+        {
+          printf("\tSkipping file %s\n", [bp cString]);
+          return YES;
+        }
+
       char *cc = [self getCompiler];
-      NSString *buildPath = [proj_root stringByAppendingPathComponent: 
-					 [self buildPath]];
+      NSString *buildPath = [proj_root stringByAppendingPathComponent: bp];
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
       NSString *fileName = [path lastPathComponent];
       NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
@@ -483,7 +495,7 @@ extern char **environ;
       buildDir = [buildDir stringByAppendingPathComponent: [target productName]];
 
       NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
-      NSDebugLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
+      NSDebugLog(@"Build path = %@, %@", bp, [bp stringByDeletingFirstPathComponent]);
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
@@ -550,13 +562,13 @@ extern char **environ;
       objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
-      // BOOL exists = [manager fileExistsAtPath: [self buildPath]];
+      // BOOL exists = [manager fileExistsAtPath: bp];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ -o %@";
-      // NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
-      //   [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
-      //   [self buildPath];
-      NSString *compilePath = [self buildPath];
+      // NSString *compilePath = ([[bp pathComponents] count] > 1 && !exists) ?
+      //   [[bp stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
+      //   bp;
+      NSString *compilePath = bp;
       NSString *subpath = [compilePath stringByDeletingLastPathComponent];
       NSArray  *subdirHeaders = [self allSubdirsAtPath: subpath];
       NSArray  *subdirHeadersWithParent = [self addParentPath: subpath toPaths: subdirHeaders];

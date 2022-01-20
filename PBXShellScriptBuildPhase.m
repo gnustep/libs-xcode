@@ -36,12 +36,34 @@
   RELEASE(shellScript);
   RELEASE(inputPaths);
   RELEASE(outputPaths);
+  RELEASE(_inputFileListPaths);
+  RELEASE(_outputFileListPaths);
   RELEASE(name);
 
   [super dealloc];
 }
 
 // Methods....
+- (NSMutableArray *) inputFileListPaths
+{
+  return _inputFileListPaths;
+}
+
+- (void) setInputFileListPaths: (NSMutableArray *)object
+{
+  ASSIGN(_inputFileListPaths, object);
+}
+
+- (NSMutableArray *) outputFileListPaths
+{
+  return _outputFileListPaths;
+}
+
+- (void) setOutputFileListPaths: (NSMutableArray *)object
+{
+  ASSIGN(_outputFileListPaths, object);
+}
+
 - (NSString *) shellPath // getter
 {
   return shellPath;
