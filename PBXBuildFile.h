@@ -34,6 +34,9 @@
   NSMutableDictionary *settings;
   PBXNativeTarget *target;
   NSString *platformFilter;
+
+  NSUInteger totalFiles;
+  NSUInteger currentFile;
 }
 
 // Methods....
@@ -43,6 +46,9 @@
 - (void) setSettings: (NSMutableDictionary *)object; // setter
 - (void) setPlatformFilter: (NSString *)f;
 - (void) setTarget: (PBXNativeTarget *)t;
+
+- (void) setTotalFiles: (NSUInteger)t;
+- (void) setCurrentFile: (NSUInteger)n;
 
 - (NSString *) path;
 - (NSString *) buildPath;

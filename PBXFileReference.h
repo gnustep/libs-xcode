@@ -45,7 +45,14 @@
   NSString *lineEnding;
   NSString *wrapsLines;
   PBXNativeTarget *target;
+
+  NSUInteger totalFiles;
+  NSUInteger currentFile;
 }
+
+- (void) setTotalFiles: (NSUInteger)t;
+- (void) setCurrentFile: (NSUInteger)n;
+
 
 // Methods....
 - (NSString *) sourceTree; // getter

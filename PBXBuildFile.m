@@ -74,10 +74,22 @@
   target = t;
 }
 
+- (void) setTotalFiles: (NSUInteger)t
+{
+  totalFiles = t;
+}
+
+- (void) setCurrentFile: (NSUInteger)n
+{
+  currentFile = n;
+}
+
 - (BOOL) build
 {
   [self applySettings];
   [fileRef setTarget: target];
+  [fileRef setTotalFiles: totalFiles];
+  [fileRef setCurrentFile: currentFile];
   return [fileRef build];
 }
 

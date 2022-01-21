@@ -60,6 +60,17 @@ extern char **environ;
   [super dealloc];
 }
 
+- (void) setTotalFiles: (NSUInteger)t
+{
+  totalFiles = t;
+}
+
+- (void) setCurrentFile: (NSUInteger)n
+{
+  currentFile = n;
+}
+
+
 // Methods....
 - (void) setWrapsLines: (NSString *)o
 {
@@ -439,7 +450,7 @@ extern char **environ;
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
 
-  printf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s... ",BOLD, BLUE, [self buildPath], RESET] cString]);
+  printf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ", BOLD, MAGENTA, [self buildPath], RESET, currentFile, totalFiles] cString]);
 
   if(modified == nil)
     {

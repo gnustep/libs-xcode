@@ -35,13 +35,18 @@
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   BOOL result = YES;
+  NSUInteger i = 1;
+  
   while((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
       
       [file setTarget: target];
+      [file setTotalFiles: [files count]];
+      [file setCurrentFile: i];
       result = [file build];
-
+      i++;
+      
       RELEASE(p);
     }
   puts("=== Sources Build Phase Completed");

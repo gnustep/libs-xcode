@@ -259,7 +259,11 @@
       NSString *filePath = [file path];
       if ([mgr fileExistsAtPath: [file path]] == NO)
         {
-          filePath = [file buildPath]; // [productName stringByAppendingPathComponent: [file path]];
+          filePath = [file buildPath];
+          if ([mgr fileExistsAtPath: filePath] == NO)
+            {
+              filePath = [productName stringByAppendingPathComponent: [file path]];
+            }
         }
 
       NSString *fileName = [filePath lastPathComponent];
