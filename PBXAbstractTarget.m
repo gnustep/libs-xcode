@@ -93,7 +93,19 @@
 
 - (BOOL) build
 {
-  puts([[NSString stringWithFormat: @"Building %@",self] cString]);
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile:
+                                            @"buildtool.plist"];
+  NSArray *skippedTarget = [plistFile objectForKey:
+                                        @"skippedTarget"];
+  
+  if ([skippedTarget containsObject: [self name]])
+    {
+      puts([[NSString stringWithFormat: @"Skipping %@",self] cString]);
+    }
+  else
+    {
+      puts([[NSString stringWithFormat: @"Building %@",self] cString]);
+    }
   return YES;
 }
 

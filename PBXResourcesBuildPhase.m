@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/NSJSONSerialization.h>
+*/
+
+#import <Foundation/NSJSONSerialization.h>
 
 #import "PBXCommon.h"
 #import "PBXGroup.h"
@@ -203,7 +205,7 @@
               if ([mgr fileExistsAtPath: [child path]] == NO)
                 {
                   edited = YES;
-                  filePath = [productName stringByAppendingPathComponent: [child path]];
+                  filePath = [child buildPath]; // [productName stringByAppendingPathComponent: [child path]];
                 }
 
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
@@ -257,7 +259,7 @@
       NSString *filePath = [file path];
       if ([mgr fileExistsAtPath: [file path]] == NO)
         {
-          filePath = [productName stringByAppendingPathComponent: [file path]];
+          filePath = [file buildPath]; // [productName stringByAppendingPathComponent: [file path]];
         }
 
       NSString *fileName = [filePath lastPathComponent];

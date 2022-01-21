@@ -11,5 +11,5 @@
         };
         Ignored = ("IOKit", "Quartz", "QuartzCore",
                    "QuickTime", "ApplicationServices",
-                   "SystemConfiguration");
+                   "SystemConfiguration", "Security");
 }

@@ -77,7 +77,6 @@
 - (BOOL) build
 {
   [self applySettings];
-  puts([[NSString stringWithFormat: @"\t* Building %s%@%s",YELLOW, [fileRef buildPath], RESET] cString]);
   [fileRef setTarget: target];
   return [fileRef build];
 }

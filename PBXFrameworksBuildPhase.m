@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXFrameworksBuildPhase.h"
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
@@ -178,6 +180,14 @@
           framework = [framework stringByReplacingCharactersInRange: NSMakeRange(0,3)
                                                          withString: @""];
         }
+
+      NSArray *components = [framework componentsSeparatedByString: @"."];
+      if ([components count] > 0)
+        {
+          framework = [[framework componentsSeparatedByString: @"."] objectAtIndex: 0];
+          NSLog(@"framework = %@", framework);
+        }
+      
       result =  [NSString stringWithFormat: @"-l%@ ", framework];
     }
   else
@@ -257,7 +267,9 @@
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
-
+  NSArray *linkerPaths = [plistFile objectForKey: @"linkerPaths"];
+  NSNumber *flag = [plistFile objectForKey: @"translateDylibs"];
+  
   NSDebugLog(@"%@",plistFile);
   NSDebugLog(@"%@", additionalFlags);
   if (additionalFlags != nil)

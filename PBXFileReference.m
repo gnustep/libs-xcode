@@ -294,7 +294,7 @@ extern char **environ;
 
   if ((r = [remappedSource objectForKey: result]) != nil)
     {
-      puts([[NSString stringWithFormat: @"\t%@ remapped to -> %@", result, r] cString]);
+      puts([[NSString stringWithFormat: @"\n\t%@ remapped to -> %@", result, r] cString]);
       result = r;
     }
   
@@ -405,7 +405,7 @@ extern char **environ;
   if (cc == NULL ||
       strcmp(cc, "") == 0)
     {
-      cc = "`gnustep-config --variable=CC`";
+      cc = "`gnustep-config --variable=CC` `gnustep-config --objc-flags`";
     }
   return cc;
 }
@@ -438,6 +438,8 @@ extern char **environ;
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
+
+  printf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s... ",BOLD, BLUE, [self buildPath], RESET] cString]);
 
   if(modified == nil)
     {
@@ -473,7 +475,7 @@ extern char **environ;
       NSString *bp = [self buildPath];
       if ([skippedSource containsObject: bp])
         {
-          printf("\tSkipping file %s\n", [bp cString]);
+          printf("skipping file.\n");
           return YES;
         }
 
@@ -533,13 +535,6 @@ extern char **environ;
 				    [fileName stringByAppendingString: @".o"]];
       outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"\"%@\"",outputPath]] 
 		      stringByAppendingString: @" "];
-
-      if([compiler isEqualToString: @""] ||
-	 compiler == nil)
-	{
-	  compiler = @"`gnustep-config --variable=CC` -DGNUSTEP";
-	}
-
       NSString *objCflags = @"";
       if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
 	{
@@ -611,7 +606,7 @@ extern char **environ;
 	    }
 	  else
 	    {
-	      puts([[NSString stringWithFormat: @"\t** Already built: %@",buildPath] cString]);
+              printf("%salready built%s\n", YELLOW, RESET);
 	    }
 	}
       else
@@ -624,17 +619,25 @@ extern char **environ;
 	      [context setObject: @"YES"
 			  forKey: @"MODIFIED_FLAG"];
 	    }
-	}
+
+          if (result == 0)
+            {
+              printf("%ssuccess%s\n", GREEN, RESET);
+            }
+        }
 
       // If the result is not successful, show the error...
       if (result != 0)
         {
-          NSLog(@"%sReturn Value:%s %d", RED, RESET, result);
-          NSLog(@"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET);
-          NSLog(@"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN, [manager currentDirectoryPath], RESET);
+          printf("%serror%s\n\n", RED, RESET);
+          puts("=======================================================");
+          puts([[NSString stringWithFormat: @"%sReturn Value:%s %d", RED, RESET, result] cString]);
+          puts([[NSString stringWithFormat: @"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET] cString]);
+          puts([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN, [manager currentDirectoryPath], RESET] cString]);
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
-          NSLog(@"%sMessage:%s %@", RED, RESET, errorString);
-          NSLog(@"%sHeader Search Path:%s %@", RED, RESET, [compilePath stringByDeletingLastPathComponent]);
+          puts([[NSString stringWithFormat: @"%sMessage:%s %@", RED, RESET, errorString] cString]);
+          puts([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET, [compilePath stringByDeletingLastPathComponent]] cString]);
+          puts("=======================================================");
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
@@ -764,7 +767,6 @@ extern char **environ;
   
   // remove flags incompatible with gnustep...
   objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
-  
   BOOL exists = [manager fileExistsAtPath: [self buildPath]];
   NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
     [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
