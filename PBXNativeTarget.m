@@ -260,6 +260,16 @@
   BOOL result = YES;
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile:
+                                            @"buildtool.plist"];
+  NSArray *skippedTarget = [plistFile objectForKey:
+                                        @"skippedTarget"];
+  
+  if ([skippedTarget containsObject: [self name]])
+    {
+      puts([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, name, RESET] cString]);
+      return YES;
+    }
   
   puts([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, name, RESET] cString]);
   [buildConfigurationList applyDefaultConfiguration];
