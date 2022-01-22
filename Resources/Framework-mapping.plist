@@ -1,15 +1,20 @@
 {
+        "## Comment" = "This file defines frameworks which are mapped or ignored";
+        
         Mapped = {
                 Cocoa = "`gnustep-config --gui-libs`";
                 Foundation = "`gnustep-config --base-libs`";
                 AppKit = "`gnustep-config --gui-libs`";
-                CoreFoundation = "-lcorebase";
+                CoreFoundation = "-lgnustep-corebase";
                 CoreGraphics = "-lopal";
-                Carbon = "-lboron";
+                Carbon = "-lgnustep-boron -lgnustep-corebase -lopal -licui18n";
                 OpenGL = "-lGL -lGLU";
                 libobjc.A = "-lobjc";
+                libiconv.2 = "";
         };
+        
         Ignored = ("IOKit", "Quartz", "QuartzCore",
                    "QuickTime", "ApplicationServices",
-                   "SystemConfiguration", "Security");
+                   "SystemConfiguration", "Security",
+                   "libiconv.2");
 }

@@ -459,10 +459,10 @@ extern char **environ;
 		  forKey: @"MODIFIED_FLAG"];
     }
 
-  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] ||
-     [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || 
-     [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
-     [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] || [explicitFileType isEqualToString: @"sourcecode.c.objc"] ||
+     [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || [explicitFileType isEqualToString: @"sourcecode.c.c"] || 
+     [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
+     [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
       NSString *proj_root = [bs objectForKey: @"PROJECT_ROOT"];
       if (proj_root == nil ||
@@ -471,8 +471,8 @@ extern char **environ;
           proj_root = @".";
         }
 
-      if ([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
-	  [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+      if ([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
+	  [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
 	{
 	  [context setObject: @"YES" forKey: @"LINK_WITH_CPP"];
 	}

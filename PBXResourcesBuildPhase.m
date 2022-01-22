@@ -205,7 +205,11 @@
               if ([mgr fileExistsAtPath: [child path]] == NO)
                 {
                   edited = YES;
-                  filePath = [child buildPath]; // [productName stringByAppendingPathComponent: [child path]];
+                  filePath = [productName stringByAppendingPathComponent: [child path]];
+                  if ([mgr fileExistsAtPath: filePath] == NO)
+                    {
+                      filePath = [child buildPath];
+                    }
                 }
 
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent:

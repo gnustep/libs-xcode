@@ -162,13 +162,26 @@
   NSString *path = [[NSBundle bundleForClass: [self class]]
                      pathForResource: @"Framework-mapping" ofType: @"plist"];
   NSDictionary *propList = [[NSString stringWithContentsOfFile: path] propertyList];
-  NSArray *ignored = [propList objectForKey: @"Ignored"];
-  NSDictionary *mapped = [propList objectForKey: @"Mapped"];
+  NSMutableArray *ignored = [[propList objectForKey: @"Ignored"] mutableCopy];
+  NSMutableDictionary *mapped = [[propList objectForKey: @"Mapped"] mutableCopy];
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+
+  if ([plistFile objectForKey: @"mapped"] != nil)
+    {
+      [mapped addEntriesFromDictionary: [plistFile objectForKey: @"mapped"]];
+    }
+  
+  if ([plistFile objectForKey: @"ignored"] != nil)
+    {
+      [ignored addObjectsFromArray: [plistFile objectForKey: @"ignored"]];
+    }
+  
   NSString *result = nil;
   
   NSDebugLog(@"path = %@", path);
   if ([ignored containsObject: framework])
     {
+      printf("\t\t- Ignored: %s\n",[framework cString]);
       return @"";
     }
 
@@ -181,18 +194,12 @@
                                                          withString: @""];
         }
 
-      NSArray *components = [framework componentsSeparatedByString: @"."];
-      if ([components count] > 0)
-        {
-          framework = [[framework componentsSeparatedByString: @"."] objectAtIndex: 0];
-          NSLog(@"framework = %@", framework);
-        }
-      
       result =  [NSString stringWithFormat: @"-l%@ ", framework];
     }
   else
     {
       result = [result stringByAppendingString: @" "];
+      printf("\t\t+ Remapped: %s -> %s\n",[framework cString], [result cString]);
     }
   
   return result;
@@ -223,7 +230,17 @@
   NSDirectoryEnumerator *dirEnumerator = [manager enumeratorAtPath:uninstalledProductsDir];
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
+  NSString *lpath = nil;
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSArray *linkerPaths = [plistFile objectForKey: @"linkerPaths"];
 
+  en = [linkerPaths objectEnumerator];
+  while((lpath = [en nextObject]) != nil)
+    {
+      linkString = [linkString stringByAppendingString: [NSString stringWithFormat: @"-L%@ ", lpath]];
+    }
+  
+  en = [files objectEnumerator];
   while((file = [en nextObject]) != nil)
     {
       PBXFileReference *fileRef = [file fileRef];
@@ -264,10 +281,8 @@
   linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
 
   // Do substitutions and additions for buildtool.plist...
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
   NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
-  NSArray *linkerPaths = [plistFile objectForKey: @"linkerPaths"];
   NSNumber *flag = [plistFile objectForKey: @"translateDylibs"];
   
   NSDebugLog(@"%@",plistFile);
@@ -302,7 +317,7 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
-  puts([[NSString stringWithFormat: @"=== Executing Frameworks Build Phase (Tool)"] cString]);
+  puts([[NSString stringWithFormat: @"=== Executing Frameworks / Linking Build Phase (Tool)"] cString]);
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
@@ -335,17 +350,18 @@
       puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks Build Phase Completed");
+  puts("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildApp
 {
-  puts("=== Executing Frameworks Build Phase (Application)");
+  puts("=== Executing Frameworks / Linking Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *errorPath = [outputDir stringByAppendingPathComponent: @"linker.err"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
@@ -357,7 +373,7 @@
            
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
-				compiler, 
+				compiler,
 				outputPath,
 				outputFiles,
 				linkString];
@@ -376,7 +392,7 @@
       puts([[NSString stringWithFormat: @"\t** Nothing to be done for \"%@\", no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks Build Phase Completed");
+  puts("=== Frameworks / Linking Build Phase Completed");
 
   return (result == 0);
 }
@@ -384,12 +400,10 @@
 - (BOOL) buildStaticLib
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  puts("=== Executing Frameworks Build Phase (Static Library)");
+  puts("=== Executing Frameworks / Linking Build Phase (Static Library)");
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
-
-  // NSLog(@"********* EXECUTABLE NAME: %@", executableName);
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,
@@ -409,7 +423,7 @@
       puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks Build Phase Completed");
+  puts("=== Frameworks / Linking Build Phase Completed");
 
   return (result == 0);
 }
@@ -419,7 +433,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
   int result = 0;
-  puts("=== Executing Frameworks Build Phase (Framework)");
+  puts("=== Executing Frameworks / Linking Build Phase (Framework)");
   [self generateDummyClass];
 
   NSString *outputFiles = [self processOutputFilesString];
@@ -489,14 +503,14 @@
       puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks Build Phase Completed");
+  puts("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildBundle
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  puts("=== Executing Frameworks Build Phase (Bundle)");
+  puts("=== Executing Frameworks / Linking Build Phase (Bundle)");
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
@@ -511,7 +525,6 @@
 				outputFiles,
 				linkString];
 
-
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
@@ -524,7 +537,7 @@
       puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks Build Phase Completed");
+  puts("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
