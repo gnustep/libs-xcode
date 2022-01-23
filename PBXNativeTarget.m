@@ -110,15 +110,14 @@
 - (void) _productWrapper
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-
-  NSDebugLog(@"CONTEXT = %@", context);
-  
   NSString *buildDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
-  NSString *prodName = [self productName];
-  buildDir = [buildDir stringByAppendingPathComponent: prodName];
+  NSString *aname = [self name];
+
+  buildDir = [buildDir stringByAppendingPathComponent: aname];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"Products"] 
 			 stringByAppendingPathComponent: [productReference path]];
+
   NSError *error = nil;
   
   // Create directories...
@@ -127,14 +126,6 @@
 					     attributes:nil
 						  error:&error];
   
-  
-  /*
-  [[NSFileManager defaultManager] createDirectoryAtPath:buildDir
-			    withIntermediateDirectories:YES
-					     attributes:nil
-						  error:&error];
-  */
-
   setenv("inherited","",1); // probably from a parent project or target..
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: APPLICATION_TYPE]) 

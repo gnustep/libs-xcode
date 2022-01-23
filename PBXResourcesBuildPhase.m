@@ -36,6 +36,7 @@
 #import "XCConfigurationList.h"
 
 @implementation PBXResourcesBuildPhase
+
 - (instancetype) init
 {
   self = [super init];
@@ -243,9 +244,13 @@
                   NSLog(@"\tFILE CREATION ERROR:  %@, %@", error, fileDir);
                 }
 
+              // kludge since Base/en etc is not supported yet.
               destPath = [destPath stringByReplacingOccurrencesOfString: @"Base.lproj/"
-                                                             withString: @""]; // kludge since Base is not supported yet.
-              
+                                                             withString: @""];
+
+              destPath = [destPath stringByReplacingOccurrencesOfString: @"en.lproj/"
+                                                             withString: @""];
+
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
               puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
@@ -419,6 +424,7 @@
   
   [context setObject: resources forKey: @"RESOURCES"];
   puts("=== Resources Build Phase Completed");
+
   return result;
 }
 

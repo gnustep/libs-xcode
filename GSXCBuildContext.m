@@ -61,6 +61,19 @@ id _sharedBuildContext = nil;
   return config;
 }
 
+- (NSDictionary *) configForTargetName: (NSString *)name
+{
+  NSDictionary *targetDict = [config objectForKey: name];
+  NSMutableDictionary *result = [NSMutableDictionary dictionaryWithDictionary: config];
+
+  if (targetDict != nil)
+    {
+      [result addEntriesFromDictionary: targetDict]; // override existing entries.
+    }
+  
+  return result;
+}
+
 - (NSMutableDictionary *) currentContext
 {
   return currentContext;

@@ -451,7 +451,8 @@ extern char **environ;
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
 
-  printf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ", BOLD, MAGENTA, [self buildPath], RESET, currentFile, totalFiles] cString]);
+  printf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
+                         BOLD, MAGENTA, [self buildPath], RESET, currentFile, totalFiles] cString]);
 
   if(modified == nil)
     {
@@ -505,10 +506,7 @@ extern char **environ;
 				  removeDuplicatesAndImplodeWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
       
-      buildDir = [buildDir stringByAppendingPathComponent: [target productName]];
-
-      NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
-      NSDebugLog(@"Build path = %@, %@", bp, [bp stringByDeletingFirstPathComponent]);
+      buildDir = [buildDir stringByAppendingPathComponent: [target name]];
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
@@ -568,12 +566,8 @@ extern char **environ;
       objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
-      // BOOL exists = [manager fileExistsAtPath: bp];
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
       NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ -o %@";
-      // NSString *compilePath = ([[bp pathComponents] count] > 1 && !exists) ?
-      //   [[bp stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
-      //   bp;
       NSString *compilePath = bp;
       NSString *subpath = [compilePath stringByDeletingLastPathComponent];
       NSArray  *subdirHeaders = [self allSubdirsAtPath: subpath];
@@ -589,9 +583,6 @@ extern char **environ;
 					 headerSearchPaths,
                                          subdirHeaderSearchPaths,
 					 [outputPath stringByAddingQuotationMarks]];
-
-      NSDebugLog(@"buildCommand = %@", buildCommand);
-      
       NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
 											    error: &error];
       NSDictionary *outputPathAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath: outputPath
@@ -599,7 +590,6 @@ extern char **environ;
       NSDate *buildPathDate = [buildPathAttributes fileModificationDate];
       NSDate *outputPathDate = [outputPathAttributes fileModificationDate];
 
-      NSDebugLog(@"buildCommand %@", buildCommand);
       buildCommand = [buildCommand stringByReplacingOccurrencesOfString: @"$(inherited)"
                                                              withString: @"."];
       
@@ -622,7 +612,6 @@ extern char **environ;
 	}
       else
 	{
-          NSDebugLog(@"\t%@",buildCommand); 
 	  result = system([buildCommand cString]);
 	  if([modified isEqualToString: @"NO"])
 	    {
@@ -644,10 +633,12 @@ extern char **environ;
           puts("=======================================================");
           puts([[NSString stringWithFormat: @"%sReturn Value:%s %d", RED, RESET, result] cString]);
           puts([[NSString stringWithFormat: @"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET] cString]);
-          puts([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN, [manager currentDirectoryPath], RESET] cString]);
+          puts([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN,
+                          [manager currentDirectoryPath], RESET] cString]);
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           puts([[NSString stringWithFormat: @"%sMessage:%s %@", RED, RESET, errorString] cString]);
-          puts([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET, [compilePath stringByDeletingLastPathComponent]] cString]);
+          puts([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET,
+                          [compilePath stringByDeletingLastPathComponent]] cString]);
           puts("=======================================================");
         }
 

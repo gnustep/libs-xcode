@@ -159,21 +159,25 @@
 
 - (NSString *) frameworkLinkString: (NSString*)framework
 {
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *path = [[NSBundle bundleForClass: [self class]]
                      pathForResource: @"Framework-mapping" ofType: @"plist"];
   NSDictionary *propList = [[NSString stringWithContentsOfFile: path] propertyList];
   NSMutableArray *ignored = [[propList objectForKey: @"Ignored"] mutableCopy];
   NSMutableDictionary *mapped = [[propList objectForKey: @"Mapped"] mutableCopy];
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSDictionary *configDict = [context configForTargetName: [[self target] name]];
 
-  if ([plistFile objectForKey: @"mapped"] != nil)
+  NSDebugLog(@"config = %@", configDict);
+  NSDebugLog(@"************** target = %@", [[self target] name]);
+  
+  if ([configDict objectForKey: @"mapped"] != nil)
     {
-      [mapped addEntriesFromDictionary: [plistFile objectForKey: @"mapped"]];
+      [mapped addEntriesFromDictionary: [configDict objectForKey: @"mapped"]];
     }
   
-  if ([plistFile objectForKey: @"ignored"] != nil)
+  if ([configDict objectForKey: @"ignored"] != nil)
     {
-      [ignored addObjectsFromArray: [plistFile objectForKey: @"ignored"]];
+      [ignored addObjectsFromArray: [configDict objectForKey: @"ignored"]];
     }
   
   NSString *result = nil;
@@ -181,7 +185,7 @@
   NSDebugLog(@"path = %@", path);
   if ([ignored containsObject: framework])
     {
-      printf("\t\t- Ignored: %s\n",[framework cString]);
+      printf("\t- Ignored: %s\n",[framework cString]);
       return @"";
     }
 
@@ -195,11 +199,12 @@
         }
 
       result =  [NSString stringWithFormat: @"-l%@ ", framework];
+      printf("\t* Linking: %s\n",[result cString]);
     }
   else
     {
       result = [result stringByAppendingString: @" "];
-      printf("\t\t+ Remapped: %s -> %s\n",[framework cString], [result cString]);
+      printf("\t+ Remapped: %s -> %s\n",[framework cString], [result cString]);
     }
   
   return result;
@@ -231,8 +236,9 @@
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   NSString *lpath = nil;
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
-  NSArray *linkerPaths = [plistFile objectForKey: @"linkerPaths"];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *configDict = [context configForTargetName: [[self target] name]];
+  NSArray *linkerPaths = [configDict objectForKey: @"linkerPaths"];
 
   en = [linkerPaths objectEnumerator];
   while((lpath = [en nextObject]) != nil)
@@ -265,7 +271,6 @@
 	}
     }
 
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSArray *otherLDFlags = [context objectForKey: @"OTHER_LDFLAGS"];
   NSDebugLog(@"OTHER_LDFLAGS = %@", otherLDFlags);
   en = [otherLDFlags objectEnumerator];
@@ -281,11 +286,11 @@
   linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
 
   // Do substitutions and additions for buildtool.plist...
-  NSDictionary *substitutionList = [plistFile objectForKey: @"substitutions"];
-  NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
-  NSNumber *flag = [plistFile objectForKey: @"translateDylibs"];
+  NSDictionary *substitutionList = [configDict objectForKey: @"substitutions"];
+  NSArray *additionalFlags = [configDict objectForKey: @"additional"];
+  NSNumber *flag = [configDict objectForKey: @"translateDylibs"];
   
-  NSDebugLog(@"%@",plistFile);
+  NSDebugLog(@"%@",configDict);
   NSDebugLog(@"%@", additionalFlags);
   if (additionalFlags != nil)
     {
@@ -308,6 +313,7 @@
   while ((o = [en nextObject]) != nil)
     {
       linkString = [linkString stringByAppendingFormat: @" %@ ", o];
+      printf("\t+ Additional: %s\n",[o cString]);
     }
   
   return linkString;
@@ -576,9 +582,8 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
-
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
-  NSArray *additionalFlags = [plistFile objectForKey: @"additional"];
+  NSDictionary *configDict = [context configForTargetName: [[self target] name]];
+  NSArray *additionalFlags = [configDict objectForKey: @"additional"];
   
   NSDebugLog(@"%@", additionalFlags);
   if (additionalFlags != nil)

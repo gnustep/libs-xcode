@@ -35,7 +35,10 @@
 - (NSMutableDictionary *) currentContext;
 - (NSMutableDictionary *) contextDictionaryForName: (NSString *)name;
 - (NSMutableDictionary *) popCurrentContext;
+
 - (NSDictionary *) config;
+- (NSDictionary *) configForTargetName: (NSString *)name;
+
 - (void) setObject: (id)object forKey: (id)key;
 - (id) objectForKey: (id)key;
 - (void) addEntriesFromDictionary: (NSDictionary *)dict;
