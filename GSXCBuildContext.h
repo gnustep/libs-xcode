@@ -27,12 +27,15 @@
   NSMutableDictionary *contextDictionary;
   NSMutableDictionary *currentContext;
   NSMutableArray *stack;
+  NSDictionary *config;
 }
 
 + (id) sharedBuildContext;
+
 - (NSMutableDictionary *) currentContext;
 - (NSMutableDictionary *) contextDictionaryForName: (NSString *)name;
 - (NSMutableDictionary *) popCurrentContext;
+- (NSDictionary *) config;
 - (void) setObject: (id)object forKey: (id)key;
 - (id) objectForKey: (id)key;
 - (void) addEntriesFromDictionary: (NSDictionary *)dict;

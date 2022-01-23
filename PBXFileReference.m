@@ -292,10 +292,11 @@ extern char **environ;
 
 - (NSString *) buildPath
 {
-  PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  PBXGroup *mainGroup = [context objectForKey: @"MAIN_GROUP"];
   BOOL found = NO;
   NSString *result = nil, *r = nil;
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSDictionary *plistFile = [context config];
   NSDictionary *remappedSource = [plistFile objectForKey: @"remappedSource"];
  
   // Resolve path for the current file reference...
@@ -320,7 +321,7 @@ extern char **environ;
   NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithCapacity: [array count]];
   XCConfigurationList *list = [context objectForKey: @"buildConfig"];
   NSMutableArray *allHeaders = [NSMutableArray arrayWithArray: array];
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+  NSDictionary *plistFile = [context config];
   NSArray *headerPaths = [plistFile objectForKey: @"headerPaths"];
 
   XCBuildConfiguration *config = [[list buildConfigurations] objectAtIndex: 0];
@@ -478,8 +479,7 @@ extern char **environ;
 	}
 
 
-      NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile:
-                                                @"buildtool.plist"];
+      NSDictionary *plistFile = [context config];
       NSArray *skippedSource = [plistFile objectForKey:
                                             @"skippedSource"];
 
@@ -617,7 +617,7 @@ extern char **environ;
 	    }
 	  else
 	    {
-              printf("%salready built%s\n", YELLOW, RESET);
+              printf("%sexists%s\n", YELLOW, RESET);
 	    }
 	}
       else
