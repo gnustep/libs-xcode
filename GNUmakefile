@@ -13,7 +13,7 @@ include $(GNUSTEP_MAKEFILES)/common.make
 #
 # Framework
 #
-VERSION = 0.1
+VERSION = 0.3.0
 PACKAGE_NAME = XCode
 FRAMEWORK_NAME = XCode
 
