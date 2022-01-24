@@ -26,5 +26,10 @@
 #import "PBXCoder.h"
 #import "PBXAbstractBuildPhase.h"
 
+@class NSOperationQueue;
+
 @interface PBXSourcesBuildPhase : PBXAbstractBuildPhase
+{
+  NSOperationQueue *_queue;
+}
 @end

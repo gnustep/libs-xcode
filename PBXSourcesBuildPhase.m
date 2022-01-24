@@ -22,12 +22,31 @@
    Boston, MA 02110 USA.
 */
 
+#import <Foundation/NSOperation.h>
+
 #import "PBXCommon.h"
 #import "PBXSourcesBuildPhase.h"
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
+#import "GSXCBuildOperation.h"
 
 @implementation PBXSourcesBuildPhase
+
+- (instancetype) init
+{
+  if ((self = [super init]) != nil)
+    {
+      _queue = [[NSOperationQueue alloc] init];
+      [_queue setMaxConcurrentOperationCount: 1];
+    }
+  return self;
+}
+
+- (void) dealloc
+{
+  RELEASE(_queue);
+  [super dealloc];
+}
 
 - (BOOL) build
 {
@@ -36,19 +55,25 @@
   id file = nil;
   BOOL result = YES;
   NSUInteger i = 1;
-  
+  NSMutableArray *ops = [NSMutableArray array];
+                         
   while((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+      GSXCBuildOperation *op = [GSXCBuildOperation operationWithFile: file];
       
       [file setTarget: target];
       [file setTotalFiles: [files count]];
       [file setCurrentFile: i];
-      result = [file build];
+      [ops addObject: op];
+      
+      // result = [file build];
       i++;
       
       RELEASE(p);
     }
+
+  [_queue addOperations: ops waitUntilFinished: YES];
   puts("=== Sources Build Phase Completed");
 
   return result;
