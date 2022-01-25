@@ -28,6 +28,8 @@
 #import <Foundation/NSObject.h>
 #import "PBXProject.h"
 
+@class PBXProject, NSString;
+
 #if	defined(__cplusplus)
 extern "C" {
 #endif
