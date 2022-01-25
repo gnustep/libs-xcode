@@ -108,6 +108,7 @@ XCFileRef.m \
 XCWorkspaceParser.m \
 PBXLegacyTarget.m \
 GSXCBuildOperation.m \
+GSXCBuildDelegate.m \
 xcsystem.m
 
 #
