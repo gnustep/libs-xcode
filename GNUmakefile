@@ -20,7 +20,8 @@ FRAMEWORK_NAME = XCode
 #
 # Resource files
 #
-XCode_RESOURCE_FILES = Resources/Framework-mapping.plist
+XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
+Resources/language-codes.plist
 
 #
 # Header files
@@ -63,7 +64,8 @@ XCWorkspace.h \
 XCFileRef.h \
 XCWorkspaceParser.h \
 PBXLegacyTarget.h \
-GSXCBuildOperation.h
+GSXCBuildOperation.h \
+GSXCBuildDelegate.h
 
 #
 # Class files

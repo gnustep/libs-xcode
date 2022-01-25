@@ -50,13 +50,13 @@
 
 - (BOOL) build
 {
-  puts("=== Executing Sources Build Phase");
-  NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   BOOL result = YES;
   NSUInteger i = 1;
   NSMutableArray *ops = [NSMutableArray array];
+  NSEnumerator *en = [files objectEnumerator];
                          
+  puts("=== Executing Sources Build Phase");
   while((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
@@ -66,14 +66,24 @@
       [file setTotalFiles: [files count]];
       [file setCurrentFile: i];
       [ops addObject: op];
-      
-      // result = [file build];
+
       i++;
       
       RELEASE(p);
     }
 
-  [_queue addOperations: ops waitUntilFinished: YES];
+  // Handle the error...
+  NS_DURING
+    {
+      [_queue addOperations: ops waitUntilFinished: YES];
+    }
+  NS_HANDLER
+    {
+      [_queue cancelAllOperations];
+      NSLog(@"Compilation halted.");
+    }
+  NS_ENDHANDLER;
+  
   puts("=== Sources Build Phase Completed");
 
   return result;

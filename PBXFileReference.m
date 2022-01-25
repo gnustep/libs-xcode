@@ -558,8 +558,8 @@ extern char **environ;
 	    {
 		std = @"gnu99";
 	    }
-	    objCflags = [NSString stringWithFormat: @"%@ -std=%@",
-				  objCflags, std];
+          objCflags = [NSString stringWithFormat: @"%@ -std=%@",
+                                objCflags, std];
         }
 
       // remove flags incompatible with gnustep...
@@ -630,16 +630,22 @@ extern char **environ;
       if (result != 0)
         {
           printf("%serror%s\n\n", RED, RESET);
+
+          NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
+          [NSException raise: NSGenericException
+                      format: @"%sMessage:%s %@", RED, RESET, errorString];
+
+          /*
           puts("=======================================================");
           puts([[NSString stringWithFormat: @"%sReturn Value:%s %d", RED, RESET, result] cString]);
           puts([[NSString stringWithFormat: @"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET] cString]);
           puts([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN,
                           [manager currentDirectoryPath], RESET] cString]);
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
-          puts([[NSString stringWithFormat: @"%sMessage:%s %@", RED, RESET, errorString] cString]);
           puts([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET,
                           [compilePath stringByDeletingLastPathComponent]] cString]);
           puts("=======================================================");
+          */
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
@@ -766,9 +772,16 @@ extern char **environ;
       // objCflags = @"-fconstant-string-class=NSConstantString";
       objCflags = @"";
     }
+
+  if([lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+    {
+      objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu99" withString: @""];
+    }
   
   // remove flags incompatible with gnustep...
   objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
+
+  // get compile path
   BOOL exists = [manager fileExistsAtPath: [self buildPath]];
   NSString *compilePath = ([[[self buildPath] pathComponents] count] > 1 && !exists) ?
     [[[self buildPath] stringByDeletingFirstPathComponent] stringByEscapingSpecialCharacters] :
