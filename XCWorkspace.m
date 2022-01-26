@@ -51,6 +51,16 @@
   return self;
 }
 
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate
+{
+  _delegate = delegate;
+}
+
+- (id<GSXCBuildDelegate>) delegate
+{
+  return _delegate;
+}
+
 - (NSString *) version
 {
   return _version;

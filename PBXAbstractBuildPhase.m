@@ -34,7 +34,18 @@
   RELEASE(runOnlyForDeploymentPostprocessing);
   RELEASE(target);
   RELEASE(_name);
+
   [super dealloc];
+}
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate
+{
+  _delegate = delegate;
+}
+
+- (id<GSXCBuildDelegate>) delegate
+{
+  return _delegate;
 }
 
 // Methods....

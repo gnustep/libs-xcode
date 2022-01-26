@@ -20,13 +20,16 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "XCFileRef.h"
-#import "PBXCoder.h"
-#import "PBXContainer.h"
-#import "NSString+PBXAdditions.h"
+*/
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSDebug.h>
+
+#import "XCFileRef.h"
+#import "PBXCoder.h"
+#import "PBXContainer.h"
+#import "NSString+PBXAdditions.h"
+#import "GSXCBuildDelegate.h"
 
 @implementation XCFileRef
 
@@ -45,6 +48,16 @@
     }
 
   return self;
+}
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate
+{
+  _delegate = delegate;
+}
+
+- (id<GSXCBuildDelegate>) delegate
+{
+  return _delegate;
 }
 
 - (NSString *) location
@@ -84,6 +97,7 @@
       if (coder != nil)
         {
           PBXContainer *pc = [coder unarchive];
+          [pc setDelegate: _delegate];
           [pc performSelector: sel];
         }
       

@@ -23,13 +23,18 @@
 */ #import <Foundation/NSObject.h>
 
 @class NSString;
+@protocol GSXCBuildDelegate;
 
 @interface XCFileRef : NSObject
 {
   NSString *_location;
+  id<GSXCBuildDelegate> _delegate;
 }
 
 + (instancetype) fileRef;
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate;
+- (id<GSXCBuildDelegate>) delegate;
 
 - (NSString *) location;
 - (void) setLocation: (NSString *)loc;

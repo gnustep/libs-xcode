@@ -20,8 +20,12 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/Foundation.h>
+*/
+
+#import <Foundation/Foundation.h>
+
 #import "PBXCoder.h"
+#import "GSXCBuildDelegate.h"
 
 @interface PBXContainer : NSObject
 {
@@ -32,6 +36,8 @@
   id rootObject;
 
   NSString *_filename;
+
+  id<GSXCBuildDelegate> _delegate;
 }
 
 - (void) setArchiveVersion: (NSString *)version;
@@ -47,6 +53,9 @@
 
 - (void) setFilename: (NSString *)fn;
 - (NSString *) filename;
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate;
+- (id<GSXCBuildDelegate>) delegate;
 
 // Build...			  
 - (BOOL) build;

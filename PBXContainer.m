@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXContainer.h"
+*/
+
+#import "PBXContainer.h"
 #import "PBXCommon.h"
 #import "PBXProject.h"
 #import "PBXFileReference.h"
@@ -35,6 +37,16 @@
   RELEASE(objects);
   RELEASE(_filename);
   [super dealloc];
+}
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate
+{
+  _delegate = delegate;
+}
+
+- (id<GSXCBuildDelegate>) delegate
+{
+  return _delegate;
 }
 
 - (void) setFilename: (NSString *)fn
@@ -131,16 +143,19 @@
 {
   [self collectHeaderFileReferences];
   [rootObject setContainer: self];
+  [rootObject setDelegate: _delegate];
   return [rootObject build];
 }
 
 - (BOOL) clean
 {
+  [rootObject setDelegate: _delegate];
   return [rootObject clean];
 }
 
 - (BOOL) install
 {
+  [rootObject setDelegate: _delegate];
   return [rootObject install];
 }
 
@@ -148,6 +163,7 @@
 {
   [self collectHeaderFileReferences];
   [rootObject setContainer: self];
+  [rootObject setDelegate: _delegate];
   return [rootObject generate];
 }
 

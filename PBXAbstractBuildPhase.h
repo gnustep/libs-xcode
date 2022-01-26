@@ -20,11 +20,14 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/Foundation.h>
+*/
+
+#import <Foundation/Foundation.h>
 
 // Local includes
 #import "PBXCoder.h"
 #import "PBXNativeTarget.h"
+#import "GSXCBuildDelegate.h"
 
 @interface PBXAbstractBuildPhase : NSObject
 {
@@ -34,7 +37,11 @@
   BOOL showEnvVarsInLog;
   PBXNativeTarget *target;
   NSString *_name;
+  id<GSXCBuildDelegate> _delegate;
 }
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate;
+- (id<GSXCBuildDelegate>) delegate;
 
 // Methods....
 - (NSMutableArray *) files; // getter

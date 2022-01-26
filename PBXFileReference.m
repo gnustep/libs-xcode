@@ -482,7 +482,6 @@ extern char **environ;
   NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
   NSError *error = nil;
-  NSFileManager *manager = [NSFileManager defaultManager];
   NSDictionary *ctx = [context currentContext];
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];

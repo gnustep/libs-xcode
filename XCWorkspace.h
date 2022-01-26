@@ -23,6 +23,7 @@
 */
 
 #import <Foundation/NSObject.h>
+#import "GSXCBuildDelegate.h"
 
 @class NSString;
 @class NSArray;
@@ -32,9 +33,14 @@
   NSString *_version;
   NSArray *_fileRefs;
   NSString *_filename;
+  
+  id<GSXCBuildDelegate> _delegate;
 }
 
 + (instancetype) workspace;
+
+- (void) setDelegate: (id<GSXCBuildDelegate>)delegate;
+- (id<GSXCBuildDelegate>) delegate;
 
 - (NSString *) version;
 - (void) setVersion: (NSString *)v;
@@ -46,9 +52,7 @@
 - (void) setFilename: (NSString *)filename;
 
 - (BOOL) build;
-
 - (BOOL) clean;
-
 - (BOOL) install;
 
 @end
