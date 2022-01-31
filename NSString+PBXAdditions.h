@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/NSString.h>
+*/
+
+#import <Foundation/NSString.h>
 
 @interface NSString (PBXAdditions)
 
@@ -32,6 +34,7 @@
 - (NSString *) stringByDeletingFirstPathComponent;
 - (NSString *) stringByReplacingEnvironmentVariablesWithValues;
 - (NSString *) stringByAddingQuotationMarks;
+- (NSString *) execPathForString;
 
 + (NSString *) stringForCommand: (NSString *)command;
 + (NSString *) stringForEnvironmentVariable: (char *)envvar;

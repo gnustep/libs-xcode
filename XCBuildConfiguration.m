@@ -20,11 +20,17 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "XCBuildConfiguration.h"
 #import "GSXCBuildContext.h"
 
 #import <stdlib.h>
+
+#ifdef _WIN32
+#import "setenv.h"
+#endif
 
 @implementation XCBuildConfiguration
 
@@ -56,7 +62,7 @@
 
 - (void) apply
 {
-  puts([[NSString stringWithFormat: @"=== Applying Build Configuration %@",name] cString]);
+  puts([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;

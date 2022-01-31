@@ -583,9 +583,9 @@ extern char **environ;
 					 headerSearchPaths,
                                          subdirHeaderSearchPaths,
 					 [outputPath stringByAddingQuotationMarks]];
-      NSDictionary *buildPathAttributes =  [[NSFileManager defaultManager] attributesOfItemAtPath: buildPath
+      NSDictionary *buildPathAttributes =  [manager attributesOfItemAtPath: buildPath
 											    error: &error];
-      NSDictionary *outputPathAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath: outputPath
+      NSDictionary *outputPathAttributes = [manager attributesOfItemAtPath: outputPath
 											    error: &error];
       NSDate *buildPathDate = [buildPathAttributes fileModificationDate];
       NSDate *outputPathDate = [outputPathAttributes fileModificationDate];
@@ -597,7 +597,7 @@ extern char **environ;
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
 	    {	  
-	      result = system([buildCommand cString]);
+	      result = xcsystem(buildCommand);
 	      if([modified isEqualToString: @"NO"])
 		{
 		  modified = @"YES";
@@ -612,7 +612,7 @@ extern char **environ;
 	}
       else
 	{
-	  result = system([buildCommand cString]);
+	  result = xcsystem(buildCommand);
 	  if([modified isEqualToString: @"NO"])
 	    {
 	      modified = @"YES";

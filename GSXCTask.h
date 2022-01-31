@@ -20,16 +20,10 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ 
+*/
 
-#import "GSXCColors.h"
-#import "GSXCBuildContext.h"
-#import "xcsystem.h"
+#import "GSXCCommon.h"
 
-// product types...  
-#define LIBRARY_TYPE @"com.apple.product-type.library.static"
-#define FRAMEWORK_TYPE @"com.apple.product-type.framework"
-#define DYNAMIC_LIBRARY_TYPE @"com.apple.product-type.library"
-#define BUNDLE_TYPE @"com.apple.product-type.bundle"
-#define TOOL_TYPE @"com.apple.product-type.tool"
-#define APPLICATION_TYPE @"com.apple.product-type.application"
+#import <Foundation/NSTask.h>
+
+

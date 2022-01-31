@@ -27,6 +27,10 @@
 #import "PBXCommon.h"
 #import "GSXCBuildContext.h"
 
+#ifdef _WIN32
+#import "setenv.h"
+#endif
+
 @implementation PBXCoder
 
 - (id) initWithContentsOfFile: (NSString *)name

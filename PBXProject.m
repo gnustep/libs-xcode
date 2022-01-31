@@ -24,6 +24,7 @@
 
 #import "PBXCommon.h"
 #import "PBXProject.h"
+#import "PBXContainer.h"
 #import "PBXNativeTarget.h"
 #import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
@@ -32,6 +33,10 @@
 #import "PBXTargetDependency.h"
 
 #import <unistd.h>
+
+#ifdef _WIN32
+#import "setenv.h"
+#endif
 
 @interface PBXAbstractTarget (Private)
 
@@ -272,8 +277,7 @@
 {
   printf("=== Planning build -- Recursing dependencies...");
   _arrangedTargets = [self arrangedTargets];
-  printf("%ld targets - completed\n", [_arrangedTargets count]);
-  //  NSLog(@"%@", _arrangedTargets);
+  printf("%ld targets - completed\n", (long)[_arrangedTargets count]);
 }
 
 - (void) _sourceRootFromMainGroup
@@ -319,7 +323,6 @@
   
   while((target = [en nextObject]) != nil && result)
     {
-      BOOL targetInSubdir = NO;
       NSFileManager *fileManager = [NSFileManager defaultManager];
       
       [context contextDictionaryForName: [target name]];
@@ -327,7 +330,6 @@
 
       if(YES == [fileManager fileExistsAtPath: [target name]])
 	{
-	  targetInSubdir = YES;
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -371,11 +373,8 @@
   
   while((target = [en nextObject]) != nil && result)
     {
-      BOOL targetInSubdir = NO;
-
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
-	  targetInSubdir = YES;
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
@@ -424,7 +423,6 @@
   BOOL result = YES;
   while((target = [en nextObject]) != nil && result)
     {
-      BOOL targetInSubdir = NO;
       NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
 
       [context contextDictionaryForName: [target name]];
@@ -432,7 +430,6 @@
 
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
-	  targetInSubdir = YES;
 	  [context setObject: @"YES"
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}

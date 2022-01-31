@@ -378,10 +378,9 @@
           while ((child = [e nextObject]) != nil)
             {
               NSString *filePath = [child path];
-              BOOL edited = NO;
+
               if ([mgr fileExistsAtPath: [child path]] == NO)
                 {
-                  edited = YES;
                   filePath = [productName stringByAppendingPathComponent: [child path]];
                 }
 

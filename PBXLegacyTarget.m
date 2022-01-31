@@ -20,10 +20,14 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXLegacyTarget.h"
+*/
+
+#import "PBXLegacyTarget.h"
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
+
+#import "xcsystem.h"
 
 @implementation PBXLegacyTarget
 
@@ -77,19 +81,19 @@
 
 - (BOOL) build
 {
-  return system([_buildToolPath cString]);
+  return xcsystem(_buildToolPath);
 }
 
 - (BOOL) clean
 {
   NSString *build_cmd = [_buildToolPath stringByAppendingString: @" clean"];
-  return system([build_cmd cString]);
+  return xcsystem(build_cmd);
 }
 
 - (BOOL) install
 {
   NSString *build_cmd = [_buildToolPath stringByAppendingString: @" install"];
-  return system([build_cmd cString]);
+  return xcsystem(build_cmd);
 }
 
 @end

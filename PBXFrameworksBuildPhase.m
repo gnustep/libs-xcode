@@ -51,6 +51,13 @@
   return compiler;
 }
 
+- (NSString *) processOutputFilesString
+{
+  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
+								   @"OUTPUT_FILES"];
+  return outputFiles;
+}
+
 - (void) generateDummyClass
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -93,7 +100,7 @@
 				       classesFilename];
 
   NSDebugLog(@"classesCommand = %@, %@", classesCommand, [context currentContext]);
-  system([classesCommand cString]);
+  xcsystem(classesCommand);
   
   // build the list...
   NSArray *classArray = [NSArray arrayWithContentsOfFile: classesFilename];
@@ -154,7 +161,7 @@
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
   NSDebugLog(@"\t%@",buildCommand);
-  system([buildCommand cString]);
+  xcsystem(buildCommand);
 }
 
 - (NSString *) frameworkLinkString: (NSString*)framework
@@ -209,13 +216,6 @@
   
   return result;
 } 
-
-- (NSString *) processOutputFilesString
-{
-  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
-								   @"OUTPUT_FILES"];
-  return outputFiles;
-}
 
 - (NSString *) linkString
 {
@@ -288,7 +288,7 @@
   // Do substitutions and additions for buildtool.plist...
   NSDictionary *substitutionList = [configDict objectForKey: @"substitutions"];
   NSArray *additionalFlags = [configDict objectForKey: @"additional"];
-  NSNumber *flag = [configDict objectForKey: @"translateDylibs"];
+  // NSNumber *flag = [configDict objectForKey: @"translateDylibs"];
   
   NSDebugLog(@"%@",configDict);
   NSDebugLog(@"%@", additionalFlags);
@@ -344,7 +344,7 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      result = system([command cString]);
+      result = xcsystem(command);
       if (result != 0)
         {
           NSLog(@"%sReturn Value:%s %d", RED, RESET, result);
@@ -367,7 +367,7 @@
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
-  NSString *errorPath = [outputDir stringByAppendingPathComponent: @"linker.err"];
+  // NSString *errorPath = [outputDir stringByAppendingPathComponent: @"linker.err"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
@@ -391,7 +391,7 @@
   if([modified isEqualToString: @"YES"])
     {
       puts([[NSString stringWithFormat: @"\t* Linking \"%@\"",outputPath] cString]);
-      result = system([command cString]);
+      result = xcsystem(command);
     }
   else
     {
@@ -422,7 +422,7 @@
   if([modified isEqualToString: @"YES"])
     {
       puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
-      result = system([command cString]);
+      result = xcsystem(command);
     }
   else
     {
@@ -502,7 +502,7 @@
   if([modified isEqualToString: @"YES"])
     {
       puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
-      result = system([command cString]);
+      result = xcsystem(command);
     }
   else
     {
@@ -536,7 +536,7 @@
   if([modified isEqualToString: @"YES"])
     {
       puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);            
-      result = system([command cString]);
+      result = xcsystem(command);
     }
   else
     {

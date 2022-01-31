@@ -28,6 +28,8 @@
 #import "PBXShellScriptBuildPhase.h"
 #import "NSString+PBXAdditions.h"
 
+#import "xcsystem.h"
+
 @implementation PBXShellScriptBuildPhase
 
 - (void) dealloc
@@ -175,7 +177,7 @@
                       encoding: NSASCIIStringEncoding
                          error: &error];
   
-  result = system([command cString]);
+  result = xcsystem(command);
   puts("*** script completed");
   puts("=== Done Executing Script Build Phase...");
 

@@ -65,7 +65,8 @@ XCFileRef.h \
 XCWorkspaceParser.h \
 PBXLegacyTarget.h \
 GSXCBuildOperation.h \
-GSXCBuildDelegate.h
+GSXCBuildDelegate.h \
+xcsystem.h
 
 #
 # Class files
@@ -107,7 +108,8 @@ XCWorkspace.m \
 XCFileRef.m \
 XCWorkspaceParser.m \
 PBXLegacyTarget.m \
-GSXCBuildOperation.m
+GSXCBuildOperation.m \
+xcsystem.m
 
 #
 # Makefiles

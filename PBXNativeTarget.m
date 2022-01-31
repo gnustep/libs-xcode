@@ -29,6 +29,10 @@
 #import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
 
+#ifdef _WIN32
+#import "setenv.h"
+#endif
+
 @implementation PBXNativeTarget
 
 - (void) dealloc
@@ -313,7 +317,7 @@
   NSString *command = [NSString stringWithFormat: @"rm -rf \"%@\"",buildDir];
 
   puts([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
-  int result = system([command cString]);
+  int result = xcsystem(command);
 
   if(result == 0)
     {
@@ -321,7 +325,7 @@
 	{
 	  command = @"rm -rf derived_src";
 	  puts([[NSString stringWithFormat: @"Cleaning derived_src directory"] cString]);
-	  result = system([command cString]);
+	  result = xcsystem(command);
 	}
     }
   

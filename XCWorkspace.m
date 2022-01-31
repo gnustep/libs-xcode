@@ -33,7 +33,7 @@
 
 @implementation XCWorkspace
 
-+ (XCWorkspace *) workspace
++ (instancetype) workspace
 {
   return AUTORELEASE([[self alloc] init]);
 }

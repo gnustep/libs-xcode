@@ -148,14 +148,29 @@ extern char **environ;
   return [NSString stringWithFormat: @"\"%@\"", self];
 }
 
+- (NSString *) execPathForString
+{
+  NSString *result;
+  NSString *cmd = self;
+  
+#ifdef _WIN32
+  result = [NSString stringWithFormat: @"c:/msys64/usr/bin/bash -l -c \"%@\"", cmd];
+#else
+  ASSIGNCOPY(result, cmd);
+#endif
+
+  return result;
+}
+
 + (NSString *) stringForCommand: (NSString *)command
 {
   NSString *output = nil;
   char string[2048];
   const char *cmd_string;
   FILE *fp;
-  
-  cmd_string = [command cString];
+  NSString *cmd = [command execPathForString];
+
+  cmd_string = [cmd cString];
   
   /* Open the command for reading. */
   fp = popen(cmd_string, "r");
