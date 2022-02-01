@@ -566,6 +566,7 @@ extern char **environ;
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  removeDuplicatesAndImplodeWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
+      NSFileManager *manager = [[NSFileManager alloc] init];
       
       buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
       // blank these out if they are not used...

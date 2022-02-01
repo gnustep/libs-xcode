@@ -37,6 +37,7 @@
 
 @implementation PBXFrameworksBuildPhase
 
+<<<<<<< HEAD
 - (NSString *) _gsConfigString
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -61,6 +62,12 @@
     }
   
   return configString;
+- (NSString *) processOutputFilesString
+{
+  GSXCBuildContext *c = [GSXCBuildContext sharedBuildContext];
+  NSArray *filesArray = [c objectForKey: @"OUTPUT_FILES"];
+  NSString *outputFiles = [filesArray implodeArrayWithSeparator: @" "];
+  return outputFiles;
 }
 
 - (NSString *) linkerForBuild
@@ -75,13 +82,6 @@
     }
 
   return compiler;
-}
-
-- (NSString *) processOutputFilesString
-{
-  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
-								   @"OUTPUT_FILES"];
-  return outputFiles;
 }
 
 - (void) generateDummyClass
@@ -245,6 +245,7 @@
   return result;
 } 
 
+<<<<<<< HEAD
 /*
 - (NSString *) processOutputFilesString
 {
@@ -255,6 +256,8 @@
 }
 */
 
+=======
+>>>>>>> 8b9364c (Fix merge issues)
 - (NSString *) linkString
 {
   NSString *cfgString = [self _gsConfigString];
