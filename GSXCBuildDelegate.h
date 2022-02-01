@@ -26,6 +26,7 @@
 #define _GSXCBuildDelegate_h_INCLUDE
 
 #import <Foundation/NSObject.h>
+#import "PBXProject.h"
 
 #if	defined(__cplusplus)
 extern "C" {
