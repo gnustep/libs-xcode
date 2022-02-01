@@ -354,19 +354,8 @@ extern char **environ;
     }
   
   // Get project root
-  char *proj_root = getenv("PROJECT_ROOT");
-  if (proj_root == NULL ||
-      strcmp(proj_root, "") == 0)
-    {
-      proj_root = NULL;
-    }
-
-  NSString *projDir = @".";
-  if (proj_root != NULL)
-    projDir = [NSString stringWithFormat: @"%s", proj_root];
-
-  // NSLog(@"All Headers %@", allHeaders);
-  
+  NSString *projDir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
+                                                defaultValue: @"."];
   NSEnumerator *en = [allHeaders objectEnumerator];
   NSString *s = nil;
   while ((s = [en nextObject]) != nil)
@@ -409,17 +398,6 @@ extern char **environ;
     }
   
   return currentPath;
-}
-
-- (char *) getCompiler
-{
-  char *cc = getenv("CC");
-  if (cc == NULL ||
-      strcmp(cc, "") == 0)
-    {
-      cc = "`gnustep-config --variable=CC` `gnustep-config --objc-flags`";
-    }
-  return cc;
 }
 
 - (NSArray *) addParentPath: (NSString *)parent toPaths: (NSArray *)paths
@@ -491,14 +469,14 @@ extern char **environ;
           return YES;
         }
 
-      char *cc = [self getCompiler];
+      NSString *compiler = [NSString stringForEnvironmentVariable: @"CC"
+                                                     defaultValue: @"`gnustep-config --variable=CC` `gnustep-config --objc-flags`"];
       NSString *buildPath = [proj_root stringByAppendingPathComponent: bp];
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
       NSString *fileName = [path lastPathComponent];
-      NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+      NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
-      NSString *compiler = [NSString stringWithCString: cc];
       NSString *headerSearchPaths = [[self substituteSearchPaths: [context objectForKey: @"HEADER_SEARCH_PATHS"]
                                                        buildPath: buildPath] 
                                       removeDuplicatesAndImplodeWithSeparator: @" -I"];
@@ -550,8 +528,9 @@ extern char **environ;
 	  // objCflags = @"-fconstant-string-class=NSConstantString";
           objCflags = @"";
 	}
-      NSString *std = [NSString stringWithCString: getenv("GCC_C_LANGUAGE_STANDARD") != NULL ?
-                                getenv("GCC_C_LANGUAGE_STANDARD") : "" ];
+
+      NSString *std = [NSString stringForEnvironmentVariable: @"GCC_C_LANGUAGE_STANDARD"
+                                                defaultValue: @""];
       if ([std length] > 0)
         {
 	    if([std isEqualToString:@"compiler-default"] == YES)
@@ -676,7 +655,6 @@ extern char **environ;
   NSMutableArray *cppFiles = [self _arrayForKey: @"CPP_FILES"];
   NSMutableArray *objcppFiles = [self _arrayForKey: @"OBJCPP_FILES"];
   NSMutableArray *addlIncDirs = [self _arrayForKey: @"ADDITIONAL_INCLUDE_DIRS"];
-  BOOL targetInSubdir = [[context objectForKey:@"TARGET_IN_SUBDIR"] isEqualToString:@"YES"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputFiles = (of == nil)?@"":of;
@@ -692,20 +670,15 @@ extern char **environ;
     }
 
   // Get project root
-  char *proj_root = getenv("PROJECT_ROOT");
-  if (proj_root == NULL ||
-      strcmp(proj_root, "") == 0)
-    {
-      proj_root = "";
-    }
-
-  NSString *buildPath = [[NSString stringWithCString: proj_root] 
-				         stringByAppendingPathComponent: 
+  NSString *projDir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
+                                                defaultValue: @"."];
+  
+  NSString *buildPath = [projDir stringByAppendingPathComponent: 
                             [self buildPath]];
 
 
   NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
-  NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+  NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
   buildDir = [buildDir stringByAppendingPathComponent: [self productName]];
   NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
   NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
@@ -748,13 +721,6 @@ extern char **environ;
     {
       headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
       headerSearchPaths = [headerSearchPaths stringByAppendingString: localHeaderPaths];
-    }
-  
-  // If the target is in the subdirectory, then override the preprending of
-  // the project root.
-  if(targetInSubdir)
-    {
-      buildPath = [self path]; 
     }
   
   // Sometimes, for some incomprehensible reason, the buildpath doesn't 
