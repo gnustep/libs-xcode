@@ -402,10 +402,9 @@
       [resources addObject: filePath];
     }
 
-  // Handle Info.plist....
-  char *infoplist = getenv("INFOPLIST_FILE") == NULL ? "":getenv("INFOPLIST_FILE");
-  NSString *inputPlist = [NSString stringWithCString:
-                                     infoplist];
+  // Handle Info.plist...
+  NSString *inputPlist = [NSString stringForEnvironmentVariable: @"INFOPLIST_FILE"
+						   defaultValue: @""];
   if ([mgr fileExistsAtPath: inputPlist] == NO)
     {
       inputPlist = [inputPlist lastPathComponent];
