@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/NSArray.h>
+*/
+
+#import <Foundation/NSArray.h>
 #import <Foundation/NSCharacterSet.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
@@ -150,13 +152,13 @@ extern char **environ;
 
 - (NSString *) execPathForString
 {
-  NSString *result;
+  NSString *result = nil;
   NSString *cmd = self;
   
 #ifdef _WIN32
   result = [NSString stringWithFormat: @"c:/msys64/usr/bin/bash -l -c \"%@\"", cmd];
 #else
-  ASSIGNCOPY(result, cmd);
+  result = [cmd copy];
 #endif
 
   return result;
