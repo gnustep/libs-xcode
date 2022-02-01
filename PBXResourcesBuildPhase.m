@@ -118,7 +118,8 @@
     }
 
   // Copy icons to resource dir...
-  NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
+                                                         defaultValue: @""];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
@@ -171,7 +172,8 @@
 {
   puts("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
-  NSString *productOutputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
+                                                         defaultValue: @""];  
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
   NSString *productName = [self productName]; // @""; // [target productName];
@@ -292,18 +294,17 @@
     }
 
   // Handle Info.plist....
-  char *infoplist = getenv("INFOPLIST_FILE") == NULL ? "":getenv("INFOPLIST_FILE");
-  NSString *inputPlist = [NSString stringWithCString:
-                                     infoplist];
-  if ([mgr fileExistsAtPath: inputPlist] == NO)
+  NSString *infoPlist = [NSString stringForEnvironmentVariable: @"INFOPLIST_FILE"
+                                                  defaultValue: @""];
+
+  if ([mgr fileExistsAtPath: infoPlist] == NO)
     {
-      inputPlist = [inputPlist lastPathComponent];
+      infoPlist = [infoPlist lastPathComponent];
     }
   
   NSString *outputPlist = [resourcesDir
                             stringByAppendingPathComponent: @"Info-gnustep.plist"];
-  // NSLog(@"resourcesDir = %@ %s", resourcesDir, infoplist);
-  [self processInfoPlistInput: inputPlist
+  [self processInfoPlistInput: infoPlist
                        output: outputPlist];
 
   /*

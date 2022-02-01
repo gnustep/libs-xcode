@@ -206,14 +206,24 @@ extern char **environ;
 
 + (NSString *) stringForEnvironmentVariable: (char *)envvar
 {
-  char *v = getenv(envvar);
+  NSString *v = [NSString stringWithCString: envvar];
+  return [self stringForEnvironmentVariable: v
+                               defaultValue: nil];
+}
 
-  if (v != NULL)
++ (NSString *) stringForEnvironmentVariable: (NSString *)v
+                               defaultValue: (NSString *)d
+{
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSDictionary *e = [pi environment];
+  NSString *r = [e objectForKey: v];
+
+  if (r == nil)
     {
-      return [NSString stringWithCString: v];
+      r = d;
     }
 
-  return nil;
+  return r;
 }
 
 @end

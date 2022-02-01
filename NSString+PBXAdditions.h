@@ -38,5 +38,7 @@
 
 + (NSString *) stringForCommand: (NSString *)command;
 + (NSString *) stringForEnvironmentVariable: (char *)envvar;
++ (NSString *) stringForEnvironmentVariable: (NSString *)v
+                               defaultValue: (NSString *)d;
 
 @end
