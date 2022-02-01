@@ -506,7 +506,7 @@ extern char **environ;
 	  if([[derivedSrcHeaderDir pathComponents] count] > 1)
 	    {
 	      headerSearchPaths = [headerSearchPaths stringByAppendingString: 
-						  [NSString stringWithFormat: @" -I\"%@\" ",
+						  [NSString stringWithFormat: @" -I'%@' ",
 							    [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
 	    }
 	}
@@ -520,7 +520,7 @@ extern char **environ;
       
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
-      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"\"%@\"",outputPath]] 
+      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
 		      stringByAppendingString: @" "];
       NSString *objCflags = @"";
       if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])

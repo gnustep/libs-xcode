@@ -147,7 +147,7 @@ extern char **environ;
 
 - (NSString *) stringByAddingQuotationMarks
 {
-  return [NSString stringWithFormat: @"\"%@\"", self];
+  return [NSString stringWithFormat: @"'%@'", self];
 }
 
 - (NSString *) execPathForString
