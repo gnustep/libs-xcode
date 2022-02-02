@@ -118,8 +118,10 @@
     }
 
   // Copy icons to resource dir...
-  NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
-                                                         defaultValue: @""];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  //NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
+  //                                                       defaultValue: @""];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
@@ -172,8 +174,8 @@
 {
   xcputs("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
-  NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
-                                                         defaultValue: @""];  
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
   NSString *productName = [self productName]; // @""; // [target productName];
