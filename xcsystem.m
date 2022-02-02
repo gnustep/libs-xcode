@@ -35,8 +35,8 @@ NSInteger xcsystem(NSString *cmd)
 #ifdef _WIN32
   NSString *win_cmd = [cmd execPathForString];
     
-  NSLog(@"win_cmd = %@", win_cmd);
-  r = system([win_cmd cString]); 
+  NSDebugLog(@"win_cmd = %@", win_cmd);
+  r = system([win_cmd cString]);
 #else
   r = system([cmd cString]);
 #endif

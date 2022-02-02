@@ -233,7 +233,7 @@ extern char **environ;
          
            if ([[filename pathExtension] isEqualToString: @"h"])
             {
-              NSDebugLog(@"filename = %@", filename); // , isDir = %d", filename, isDir);
+              NSDebugLog(@"filename = %@", filename);
               dirToAdd = [filename stringByDeletingLastPathComponent];
             }
         }
@@ -381,25 +381,6 @@ extern char **environ;
   return result;
 }
 
-- (NSString *) _findFile: (NSString *)apath
-{
-  NSString *currentPath = apath;
-  NSFileManager *manager = [NSFileManager defaultManager];
-  int i = 0;
-  while ([manager fileExistsAtPath: currentPath] == NO && i < 100)
-    {
-      currentPath = [NSString stringWithFormat: @"../%@", currentPath];
-      i++;
-    }
-
-  if (i == 100)
-    {
-      return nil;
-    }
-  
-  return currentPath;
-}
-
 - (NSArray *) addParentPath: (NSString *)parent toPaths: (NSArray *)paths
 {
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: [paths count]];
@@ -413,6 +394,45 @@ extern char **environ;
     }
 
   return result;
+}
+
+- (NSString *) _compiler
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *plistFile = [context config];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSString *winCompilerPfx = [plistFile objectForKey: @"win_compiler_prefix"];
+  NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
+  NSUInteger os = [pi operatingSystem];
+  NSString *compiler = nil;  
+  
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      if (winCompilerPfx == nil)
+	{
+	  winCompilerPfx = @"/mingw64/bin";
+	}
+
+      if (winCfgPfx == nil)
+	{
+	  winCfgPfx = @"/usr/GNUstep/System/Tools";
+	}
+      
+      NSString *defaultValue = [NSString stringWithFormat: @"`%@/gnustep-config --variable=CC` "
+					 @"`%@/gnustep-config --objc-flags`", winCfgPfx,
+					 winCfgPfx];	  
+      compiler = [NSString stringForEnvironmentVariable: @"CC"
+					   defaultValue: defaultValue]; 
+      compiler = [winCompilerPfx stringByAppendingPathComponent: compiler];	  
+    }
+  else
+    {
+      compiler = [NSString stringForEnvironmentVariable: @"CC"
+					   defaultValue: @"`gnustep-config --variable=CC` "
+			   @"`gnustep-config --objc-flags`"];	  
+    }
+  
+  return compiler;
 }
 
 - (BOOL) build
@@ -469,8 +489,7 @@ extern char **environ;
           return YES;
         }
 
-      NSString *compiler = [NSString stringForEnvironmentVariable: @"CC"
-                                                     defaultValue: @"`gnustep-config --variable=CC` `gnustep-config --objc-flags`"];
+      NSString *compiler = [self _compiler];
       NSString *buildPath = [proj_root stringByAppendingPathComponent: bp];
       NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
       NSString *fileName = [path lastPathComponent];

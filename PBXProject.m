@@ -296,10 +296,38 @@
 
 - (NSString *) buildString
 {
-  NSString *output = [NSString stringForCommand: @"gnustep-config --debug-flags"];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *plistFile = [context config];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSString *winCompilerPfx = [plistFile objectForKey: @"win_compiler_prefix"];
+  NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
+  NSUInteger os = [pi operatingSystem];
+  NSString *output = nil;  
+  NSString *cmd = nil;
+  
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      if (winCompilerPfx == nil)
+	{
+	  winCompilerPfx = @"/mingw64/bin";
+	}
+
+      if (winCfgPfx == nil)
+	{
+	  winCfgPfx = @"/usr/GNUstep/System/Tools";
+	}
+      
+      cmd = [NSString stringWithFormat: @"`%@/gnustep-config --debug-flags` ",
+		      winCfgPfx];
+    }
+  else
+    {
+      cmd = @"gnustep-config --debug-flags";
+    }
+  
   
   // Context...
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  output = [NSString stringForCommand: cmd];
   [context setObject: output
 	      forKey: @"CONFIG_STRING"];
 
