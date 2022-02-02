@@ -296,8 +296,11 @@
     }
 
   // Handle Info.plist....
-  NSString *infoPlist = [NSString stringForEnvironmentVariable: @"INFOPLIST_FILE"
-                                                  defaultValue: @""];
+  NSDictionary *ctx = [context currentContext];
+  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
+  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
+  NSDictionary *bs = [xbc buildSettings];  
+  NSString *infoPlist = [bs objectForKey: @"INFOPLIST_FILE"];
 
   if ([mgr fileExistsAtPath: infoPlist] == NO)
     {
