@@ -31,18 +31,18 @@
 @implementation PBXHeadersBuildPhase
 - (BOOL) build
 {
-  puts("=== Executing Headers Build Phase");
+  xcputs("=== Executing Headers Build Phase");
   NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: TOOL_TYPE] ||
      [productType isEqualToString: APPLICATION_TYPE]) // ||
    //[productType isEqualToString: LIBRARY_TYPE])
     {
-      puts([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
+      xcputs([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
       return YES;
     }
 
-  puts([[NSString stringWithFormat: @"\t* Copying headers to derived sources folder..."] cString]);
+  xcputs([[NSString stringWithFormat: @"\t* Copying headers to derived sources folder..."] cString]);
   NSFileManager *defaultManager = [NSFileManager defaultManager];
   id file = nil;
   BOOL result = YES;
@@ -59,17 +59,17 @@
       BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						toPath: dstFile
 						 error: &error];
-      puts([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, RED, dstFile, RESET] cString]);
+      xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, RED, dstFile, RESET] cString]);
       if(!copyResult)
 	{
-	  puts([[NSString stringWithFormat: @"\t* Already exists"] cString]);
+	  xcputs([[NSString stringWithFormat: @"\t* Already exists"] cString]);
 	}
     }
 
   // Only copy into the framework header folder, if it's a framework...
   if([productType isEqualToString: FRAMEWORK_TYPE])
     {
-      puts([[NSString stringWithFormat: @"\t* Copying headers to framework header folder..."] cString]);
+      xcputs([[NSString stringWithFormat: @"\t* Copying headers to framework header folder..."] cString]);
       en = [files objectEnumerator];
       NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
       while((file = [en nextObject]) != nil && result)
@@ -80,15 +80,15 @@
 	  BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						    toPath: dstFile
 						     error: &error];
-          puts([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, RED, dstFile, RESET] cString]);
+          xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, RED, dstFile, RESET] cString]);
 	  if(!copyResult)
 	    {
-	      puts([[NSString stringWithFormat: @"\t* Already exists"] cString]);
+	      xcputs([[NSString stringWithFormat: @"\t* Already exists"] cString]);
 	    }
 	}
     }
 
-  puts([[NSString stringWithFormat: @"=== Completed Headers Build Phase"] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Headers Build Phase"] cString]);
 
   return result;
 }

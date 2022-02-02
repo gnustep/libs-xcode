@@ -306,7 +306,7 @@ extern char **environ;
 
   if ((r = [remappedSource objectForKey: result]) != nil)
     {
-      puts([[NSString stringWithFormat: @"\n\t%@ remapped to -> %@", result, r] cString]);
+      xcputs([[NSString stringWithFormat: @"\n\t%@ remapped to -> %@", result, r] cString]);
       result = r;
     }
   
@@ -449,7 +449,7 @@ extern char **environ;
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
 
-  printf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
+  xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
                          BOLD, MAGENTA, [self buildPath], RESET, currentFile, totalFiles] cString]);
 
   if(modified == nil)
@@ -485,7 +485,7 @@ extern char **environ;
       NSString *bp = [self buildPath];
       if ([skippedSource containsObject: bp])
         {
-          printf("skipping file.\n");
+          xcprintf("skipping file.\n");
           return YES;
         }
 
@@ -605,7 +605,7 @@ extern char **environ;
 	    }
 	  else
 	    {
-              printf("%sexists%s\n", YELLOW, RESET);
+              xcprintf("%sexists%s\n", YELLOW, RESET);
 	    }
 	}
       else
@@ -620,35 +620,36 @@ extern char **environ;
 
           if (result == 0)
             {
-              printf("%ssuccess%s\n", GREEN, RESET);
+              xcprintf("%ssuccess%s\n", GREEN, RESET);
             }
         }
 
       // If the result is not successful, show the error...
       if (result != 0)
         {
-          printf("%serror%s\n\n", RED, RESET);
+          xcprintf("%serror%s\n\n", RED, RESET);
 
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           [NSException raise: NSGenericException
                       format: @"%sMessage:%s %@", RED, RESET, errorString];
 
           /*
-          puts("=======================================================");
-          puts([[NSString stringWithFormat: @"%sReturn Value:%s %d", RED, RESET, result] cString]);
-          puts([[NSString stringWithFormat: @"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET] cString]);
-          puts([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN,
+          xcputs("=======================================================");
+          xcputs([[NSString stringWithFormat: @"%sReturn Value:%s %d", RED, RESET, result] cString]);
+          xcputs([[NSString stringWithFormat: @"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET] cString]);
+          xcputs([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN,
                           [manager currentDirectoryPath], RESET] cString]);
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
-          puts([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET,
+          xcputs([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET,
                           [compilePath stringByDeletingLastPathComponent]] cString]);
-          puts("=======================================================");
+          xcputs("=======================================================");
           */
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
     }
 
+  fflush(stdout);
   return (result == 0);
 }
 

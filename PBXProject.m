@@ -275,9 +275,9 @@
 
 - (void) plan
 {
-  printf("=== Planning build -- Recursing dependencies...");
+  xcprintf("=== Planning build -- Recursing dependencies...");
   _arrangedTargets = [self arrangedTargets];
-  printf("%ld targets - completed\n", (long)[_arrangedTargets count]);
+  xcprintf("%ld targets - completed\n", (long)[_arrangedTargets count]);
 }
 
 - (void) _sourceRootFromMainGroup
@@ -339,7 +339,7 @@
   NSString *fn = [[[self container] filename]
                    stringByDeletingLastPathComponent];
 
-  printf("=== Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
+  xcprintf("=== Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
   [self plan];
@@ -383,14 +383,14 @@
         }
     }
 
-  printf("=== Done Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
+  xcprintf("=== Done Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
 
   return result;
 }
 
 - (BOOL) clean
 {
-  puts("=== Cleaning Project");
+  xcputs("=== Cleaning Project");
   [buildConfigurationList applyDefaultConfiguration];
 
   NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -413,13 +413,13 @@
       result = [target clean];
       [context popCurrentContext];
     }
-  puts("=== Completed Cleaning Project");
+  xcputs("=== Completed Cleaning Project");
   return result;  
 }
 
 - (BOOL) install
 {
-  puts("=== Installing Project");
+  xcputs("=== Installing Project");
   [buildConfigurationList applyDefaultConfiguration];
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -434,13 +434,13 @@
       result = [target install];
       [context popCurrentContext];
     }
-  puts("=== Completed Installing Project");
+  xcputs("=== Completed Installing Project");
   return result;  
 }
 
 - (BOOL) generate
 {
-  puts("=== Generating Project");
+  xcputs("=== Generating Project");
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
 
@@ -474,7 +474,7 @@
       [context popCurrentContext];
     }
   
-  puts("=== Completed Generating Project");
+  xcputs("=== Completed Generating Project");
   return result;
 }
 

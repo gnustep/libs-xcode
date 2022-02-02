@@ -43,3 +43,29 @@ NSInteger xcsystem(NSString *cmd)
 
   return r;
 }
+
+void xcputs(const char *str)
+{
+  puts(str);
+  fflush(stdout);
+}
+
+void xcput_string(NSString *str)
+{
+  xcputs([str cString]);
+}
+
+int xcprintf(const char *format, ...)
+{
+    int result;
+    va_list args;
+
+    va_start(args, format);
+    result = vprintf(format, args);
+    va_end(args);
+
+    fflush(stdout);
+
+    return result;
+}
+

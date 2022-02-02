@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "XCVersionGroup.h"
 
 @implementation XCVersionGroup
@@ -92,7 +94,7 @@
   BOOL result = YES;
   while((o = [en nextObject]) != nil && result)
     {
-      puts([[NSString stringWithFormat: @"\tProcessing %@",[o path]] cString]);
+      xcputs([[NSString stringWithFormat: @"\tProcessing %@",[o path]] cString]);
     }
   return result;
 }

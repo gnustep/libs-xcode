@@ -89,7 +89,7 @@
   
   if(classInstance == nil)
     {
-      puts([[NSString stringWithFormat: @"Unknown class: %@",className] cString]);
+      xcputs([[NSString stringWithFormat: @"Unknown class: %@",className] cString]);
       return nil;
     }
 
@@ -192,7 +192,7 @@
 	    }
 	  NS_HANDLER
 	    {
-	      puts([[NSString stringWithFormat: @"%@, key = %@, value = %@, object = %@",
+	      xcputs([[NSString stringWithFormat: @"%@, key = %@, value = %@, object = %@",
                               [localException reason], 
                               key, 
                               value, 

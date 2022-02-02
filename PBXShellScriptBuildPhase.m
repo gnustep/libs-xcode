@@ -169,17 +169,17 @@
   NSString *processedScript = [self preprocessScript];
 
   processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
-  puts("=== Executing Script Build Phase...");
-  puts([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
-  puts("*** script output");
+  xcputs("=== Executing Script Build Phase...");
+  xcputs([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
+  xcputs("*** script output");
   [processedScript writeToFile: tmpFilename
                     atomically: YES
                       encoding: NSASCIIStringEncoding
                          error: &error];
   
   result = xcsystem(command);
-  puts("*** script completed");
-  puts("=== Done Executing Script Build Phase...");
+  xcputs("*** script completed");
+  xcputs("=== Done Executing Script Build Phase...");
 
   return (result == 0);
 }

@@ -56,7 +56,7 @@
   NSMutableArray *ops = [NSMutableArray array];
   NSEnumerator *en = [files objectEnumerator];
                          
-  puts("=== Executing Sources Build Phase");
+  xcputs("=== Executing Sources Build Phase");
   while((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
@@ -84,14 +84,14 @@
     }
   NS_ENDHANDLER;
   
-  puts("=== Sources Build Phase Completed");
+  xcputs("=== Sources Build Phase Completed");
 
   return result;
 }
 
 - (BOOL) generate
 {
-  puts("=== Generating using Sources Build Phase");
+  xcputs("=== Generating using Sources Build Phase");
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   BOOL result = YES;
@@ -100,7 +100,7 @@
       [file setTarget: target];
       result = [file generate];
     }
-  puts("=== Sources Build Phase generation completed");
+  xcputs("=== Sources Build Phase generation completed");
 
   return result;
 }

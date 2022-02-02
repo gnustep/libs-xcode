@@ -90,7 +90,7 @@
   containerPortal = [[currentContainer objects] objectForKey: containerPortal];
   if([containerPortal isKindOfClass: [PBXFileReference class]])
     {
-      puts([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", CYAN, [containerPortal path], RESET] cString]);
+      xcputs([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", CYAN, [containerPortal path], RESET] cString]);
       char *dir = getcwd(NULL, 0);
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
       chdir([[coder projectRoot] cString]);
