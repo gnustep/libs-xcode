@@ -62,7 +62,7 @@
 
 - (void) apply
 {
-  puts([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;
@@ -96,6 +96,6 @@
       NSDebugLog(@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
       setenv("BUILT_PRODUCTS_DIR","build",1);
     }
-  puts([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
 }
 @end

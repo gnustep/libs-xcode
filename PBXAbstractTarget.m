@@ -100,24 +100,24 @@
   
   if ([skippedTarget containsObject: [self name]])
     {
-      puts([[NSString stringWithFormat: @"Skipping %@",self] cString]);
+      xcputs([[NSString stringWithFormat: @"Skipping %@",self] cString]);
     }
   else
     {
-      puts([[NSString stringWithFormat: @"Building %@",self] cString]);
+      xcputs([[NSString stringWithFormat: @"Building %@",self] cString]);
     }
   return YES;
 }
 
 - (BOOL) clean
 {
-  puts([[NSString stringWithFormat: @"Cleaning %@",self] cString]);
+  xcputs([[NSString stringWithFormat: @"Cleaning %@",self] cString]);
   return YES;
 }
 
 - (BOOL) install
 {
-  puts([[NSString stringWithFormat: @"Installing %@",self] cString]);
+  xcputs([[NSString stringWithFormat: @"Installing %@",self] cString]);
   return YES;
 }
 

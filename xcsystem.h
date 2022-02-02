@@ -33,6 +33,12 @@ extern "C" {
 
 NSInteger xcsystem(NSString *cmd);
 
+void xcputs(const char *str);
+
+void xcput_string(NSString *str);  
+
+int xcprintf(const char *format, ...);
+
 #if	defined(__cplusplus)
 }
 #endif

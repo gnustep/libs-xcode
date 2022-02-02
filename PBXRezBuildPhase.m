@@ -20,22 +20,24 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXRezBuildPhase.h"
 
 @implementation PBXRezBuildPhase
 
 -(BOOL) build
 {
-  puts("=== Executing Rez Build Phase");
+  xcputs("=== Executing Rez Build Phase");
   NSEnumerator *en = [files objectEnumerator];
   id file = nil;
   BOOL result = YES;
   while((file = [en nextObject]) != nil && result)
     {
-      puts([[NSString stringWithFormat: @"\tFile = %@",file] cString]);
+      xcputs([[NSString stringWithFormat: @"\tFile = %@",file] cString]);
     }
-  puts("=== Completed Rez Build Phase");
+  xcputs("=== Completed Rez Build Phase");
   return result;
 }
 

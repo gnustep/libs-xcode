@@ -170,7 +170,7 @@
 
 - (BOOL) build
 {
-  puts("=== Executing Resources Build Phase");
+  xcputs("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
                                                          defaultValue: @""];  
@@ -254,13 +254,13 @@
                                                              withString: @""];
 
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              puts([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);
+              xcputs([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
               if (copyResult == NO)
                 {
-		  puts([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
+		  xcputs([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
 		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
                 }
             }
@@ -282,7 +282,7 @@
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      puts([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);      
+      xcputs([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
@@ -350,7 +350,9 @@
   */
   
   
-  puts("=== Resources Build Phase Completed");
+  xcputs("=== Resources Build Phase Completed");
+  fflush(stdout);
+
   return result;
 }
 
@@ -359,7 +361,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [files count]];
   
-  puts("=== Generating Resources Entries Build Phase");
+  xcputs("=== Generating Resources Entries Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *productName = [target productName];
   NSString *appName = [productName stringByDeletingPathExtension];
@@ -385,7 +387,7 @@
                   filePath = [productName stringByAppendingPathComponent: [child path]];
                 }
 
-              puts([[NSString stringWithFormat: @"\tAdd child resource entry %@", filePath] cString]);
+              xcputs([[NSString stringWithFormat: @"\tAdd child resource entry %@", filePath] cString]);
               [resources addObject: filePath];
             }
           continue;
@@ -397,7 +399,7 @@
           filePath = [productName stringByAppendingPathComponent: [file path]];
         }
 
-      puts([[NSString stringWithFormat: @"\tAdd resource entry %@",filePath] cString]);      
+      xcputs([[NSString stringWithFormat: @"\tAdd resource entry %@",filePath] cString]);      
 
       [resources addObject: filePath];
     }
@@ -422,7 +424,7 @@
   [resources addObject: outputPlist];
   
   [context setObject: resources forKey: @"RESOURCES"];
-  puts("=== Resources Build Phase Completed");
+  xcputs("=== Resources Build Phase Completed");
 
   return result;
 }

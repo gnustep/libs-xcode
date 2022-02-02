@@ -37,15 +37,41 @@
 
 @implementation PBXFrameworksBuildPhase
 
+- (NSString *) _gsConfigString
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *plistFile = [context config];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
+  NSUInteger os = [pi operatingSystem];
+  NSString *configString = nil;
+  
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      if (winCfgPfx == nil)
+	{
+	  winCfgPfx = @"/usr/GNUstep/System/Tools";
+	}
+      
+      configString = [NSString stringWithFormat: @"%@/gnustep-config", winCfgPfx];
+    }
+  else
+    {
+      configString = @"gnustep-config";
+    }
+  
+  return configString;
+}
+
 - (NSString *) linkerForBuild
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   BOOL linkWithCpp = [[context objectForKey: @"LINK_WITH_CPP"] isEqualToString: @"YES"];
-  NSString *compiler = @"`gnustep-config --variable=CC`";
+  NSString *compiler = [NSString stringWithFormat: @"`%@ --variable=CC`", [self _gsConfigString]];
 
   if (linkWithCpp)
     {
-      compiler = @"`gnustep-config --variable=CXX`";
+      compiler = [NSString stringWithFormat: @"`%@ --variable=CXX`", [self _gsConfigString]];
     }
 
   return compiler;
@@ -192,7 +218,7 @@
   NSDebugLog(@"path = %@", path);
   if ([ignored containsObject: framework])
     {
-      printf("\t- Ignored: %s\n",[framework cString]);
+      xcprintf("\t- Ignored: %s\n",[framework cString]);
       return @"";
     }
 
@@ -206,12 +232,12 @@
         }
 
       result =  [NSString stringWithFormat: @"-l%@ ", framework];
-      printf("\t* Linking: %s\n",[result cString]);
+      xcprintf("\t* Linking: %s\n",[result cString]);
     }
   else
     {
       result = [result stringByAppendingString: @" "];
-      printf("\t+ Remapped: %s -> %s\n",[framework cString], [result cString]);
+      xcprintf("\t+ Remapped: %s -> %s\n",[framework cString], [result cString]);
     }
   
   return result;
@@ -219,13 +245,14 @@
 
 - (NSString *) linkString
 {
-  NSString *systemLibDir = [@"`gnustep-config --variable=GNUSTEP_SYSTEM_LIBRARY`/"
-			       stringByAppendingPathComponent: @"Libraries"];
-  NSString *localLibDir = [@"`gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY`/"
-			      stringByAppendingPathComponent: @"Libraries"];
-  NSString *userLibDir = [@"`gnustep-config --variable=GNUSTEP_USER_LIBRARY`/"
-			     stringByAppendingPathComponent: @"Libraries"];
-  NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
+  NSString *cfgString = [self _gsConfigString];
+  NSString *systemLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_SYSTEM_LIBRARY`/"
+							   stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *localLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_LOCAL_LIBRARY`/"
+							  stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *userLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_USER_LIBRARY`/"
+							 stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"];
   NSString *linkString = [NSString stringWithFormat: @"-L/usr/local/lib -L/opt/local/lib -L%@ -L%@ -L%@ ",
 				   userLibDir,
@@ -313,7 +340,7 @@
   while ((o = [en nextObject]) != nil)
     {
       linkString = [linkString stringByAppendingFormat: @" %@ ", o];
-      printf("\t+ Additional: %s\n",[o cString]);
+      xcprintf("\t+ Additional: %s\n",[o cString]);
     }
   
   return linkString;
@@ -322,22 +349,37 @@
 - (BOOL) buildTool
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *cfgString = [self _gsConfigString];
 
-  puts([[NSString stringWithFormat: @"=== Executing Frameworks / Linking Build Phase (Tool)"] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Executing Frameworks / Linking Build Phase (Tool)"] cString]);
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: @" `gnustep-config --base-libs` `gnustep-config --variable=LDFLAGS` -lgnustep-base "];
+  linkString = [linkString stringByAppendingString: [NSString stringWithFormat:
+								@" `%@ --base-libs` `%@ --variable=LDFLAGS` -lgnustep-base ",
+						     cfgString, cfgString]];
 
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSUInteger os = [pi operatingSystem];
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
 				compiler, 
 				outputPath,
 				outputFiles,
 				linkString];
+  
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      command = [NSString stringWithFormat: 
+			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+			  compiler, 
+			  outputPath,
+			  outputFiles,
+			  linkString];
+    }
 
   NSDebugLog(@"command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
@@ -353,16 +395,16 @@
     }
   else
     {
-      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks / Linking Build Phase Completed");
+  xcputs("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildApp
 {
-  puts("=== Executing Frameworks / Linking Build Phase (Application)");
+  xcputs("=== Executing Frameworks / Linking Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
@@ -371,10 +413,13 @@
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
+  NSString *cfgString = [self _gsConfigString];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSUInteger os = [pi operatingSystem];
 
-  linkString = [linkString stringByAppendingString: @" `gnustep-config --objc-flags --objs-libs " \
-                           @"--base-libs --gui-libs` `gnustep-config --variable=LDFLAGS` " \
-                           @"-lgnustep-base -lgnustep-gui "];
+  linkString = [NSString stringWithFormat: [linkString stringByAppendingString: @" `%@ --objc-flags --objs-libs " \
+						       @"--base-libs --gui-libs` `%@ --variable=LDFLAGS` " \
+						       @"-lgnustep-base -lgnustep-gui "], cfgString, cfgString];
   NSDebugLog(@"LINK: %@", linkString);
            
   NSString *command = [NSString stringWithFormat: 
@@ -383,30 +428,39 @@
 				outputPath,
 				outputFiles,
 				linkString];
-
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      command = [NSString stringWithFormat: 
+			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+			  compiler,
+			  outputPath,
+			  outputFiles,
+			  linkString];
+    }
   
   NSDebugLog(@"command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking \"%@\"",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t* Linking \"%@\"",outputPath] cString]);
       result = xcsystem(command);
     }
   else
     {
-      puts([[NSString stringWithFormat: @"\t** Nothing to be done for \"%@\", no modifications.",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for \"%@\", no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks / Linking Build Phase Completed");
-
+  xcputs("=== Frameworks / Linking Build Phase Completed");
+  fflush(stdout);
+  
   return (result == 0);
 }
 
 - (BOOL) buildStaticLib
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  puts("=== Executing Frameworks / Linking Build Phase (Static Library)");
+  xcputs("=== Executing Frameworks / Linking Build Phase (Static Library)");
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
@@ -421,15 +475,15 @@
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
       result = xcsystem(command);
     }
   else
     {
-      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks / Linking Build Phase Completed");
+  xcputs("=== Frameworks / Linking Build Phase Completed");
 
   return (result == 0);
 }
@@ -439,7 +493,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
   int result = 0;
-  puts("=== Executing Frameworks / Linking Build Phase (Framework)");
+  xcputs("=== Executing Frameworks / Linking Build Phase (Framework)");
   [self generateDummyClass];
 
   NSString *outputFiles = [self processOutputFilesString];
@@ -458,20 +512,29 @@
 
   NSString *libraryPath = [outputDir stringByAppendingPathComponent: libNameWithVersion];
   NSString *libraryPathNoVersion = [outputDir stringByAppendingPathComponent: libName];
-  NSString *systemLibDir = [@"`gnustep-config --variable=GNUSTEP_SYSTEM_LIBRARY`/"
-			       stringByAppendingPathComponent: @"Libraries"];
-  NSString *localLibDir = [@"`gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY`/"
-			      stringByAppendingPathComponent: @"Libraries"];
-  NSString *userLibDir = [@"`gnustep-config --variable=GNUSTEP_USER_LIBRARY`/"
-			     stringByAppendingPathComponent: @"Libraries"];
-
+  NSString *cfgString = [self _gsConfigString];
+  NSString *systemLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_SYSTEM_LIBRARY`/"
+							   stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *localLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_LOCAL_LIBRARY`/"
+							  stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *userLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_USER_LIBRARY`/"
+							 stringByAppendingPathComponent: @"Libraries"], cfgString];
   NSString *frameworkRoot = [context objectForKey: @"FRAMEWORK_DIR"];
   NSString *libraryLink = [frameworkRoot stringByAppendingPathComponent: libName];
   NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSUInteger os = [pi operatingSystem];
 
   NSString *commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
     @"-shared-libgcc -o %@ %@ "
-    @"-L%@ -L/%@ -L%@";     
+    @"-L%@ -L/%@ -L%@";
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@ " 
+	@"-shared-libgcc -o %@ %@ "
+	@"-L%@ -L/%@ -L%@";
+    }
+  
   NSString *compiler = [self linkerForBuild];
   NSString *command = [NSString stringWithFormat: commandTemplate,
 				compiler,
@@ -501,28 +564,30 @@
 
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
+      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
       result = xcsystem(command);
     }
   else
     {
-      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks / Linking Build Phase Completed");
+  xcputs("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildBundle
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  puts("=== Executing Frameworks / Linking Build Phase (Bundle)");
+  xcputs("=== Executing Frameworks / Linking Build Phase (Bundle)");
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSUInteger os = [pi operatingSystem];
 
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
@@ -531,19 +596,29 @@
 				outputFiles,
 				linkString];
 
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      command = [NSString stringWithFormat: 
+			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+			  compiler, 
+			  outputPath,
+			  outputFiles,
+			  linkString];
+    }
+  
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
     {
-      puts([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);            
+      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);            
       result = xcsystem(command);
     }
   else
     {
-      puts([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
     }
 
-  puts("=== Frameworks / Linking Build Phase Completed");
+  xcputs("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
@@ -573,7 +648,7 @@
     }
   else 
     {
-      puts([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
+      xcputs([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
     }
   return NO;
 }
@@ -591,7 +666,7 @@
       [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
     }
 
-  printf("\t* Adding product type entry: %s\n", [productType cStringUsingEncoding: NSUTF8StringEncoding]);
+  xcprintf("\t* Adding product type entry: %s\n", [productType cStringUsingEncoding: NSUTF8StringEncoding]);
   
   if([productType isEqualToString: APPLICATION_TYPE])
     {
@@ -620,7 +695,7 @@
     }
   else 
     {
-      puts([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
+      xcputs([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
     }
   
   return YES;

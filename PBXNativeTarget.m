@@ -262,11 +262,11 @@
   
   if ([skippedTarget containsObject: [self name]])
     {
-      puts([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, name, RESET] cString]);
+      xcputs([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, name, RESET] cString]);
       return YES;
     }
   
-  puts([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, name, RESET] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, name, RESET] cString]);
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: buildConfigurationList
               forKey: @"buildConfig"];
@@ -277,16 +277,16 @@
       [context setObject: productSettingsXML 
                   forKey: @"PRODUCT_SETTINGS_XML"];
     }
-  puts([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
+  xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
   id dependency = nil;
   en = [dependencies objectEnumerator];
   while((dependency = [en nextObject]) != nil && result)
     {
       result = [dependency build];
     }
-  puts([[NSString stringWithFormat: @"=== Done."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
 
-  puts([[NSString stringWithFormat: @"=== Executing build phases..."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Executing build phases..."] cString]);
   [self _productWrapper];
   id phase = nil;
   en = [buildPhases objectEnumerator];
@@ -298,26 +298,26 @@
       result = [phase build];
       if(NO == result)
 	{
-	  puts([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
+	  xcputs([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
 	}
 
       RELEASE(p);
     }
-  puts([[NSString stringWithFormat: @"=== Done..."] cString]);
-  puts([[NSString stringWithFormat: @"=== Completed Executing Target %@", name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Executing Target %@", name] cString]);
 
   return result;
 }
 
 - (BOOL) clean
 {
-  puts([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
   NSString *buildDir = [NSString stringForEnvironmentVariable: @"BUILT_PRODUCTS_DIR"
                                                  defaultValue: @"build"];
   buildDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *command = [NSString stringWithFormat: @"rm -rf \"%@\"",buildDir];
 
-  puts([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
+  xcputs([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
   int result = xcsystem(command);
 
   if(result == 0)
@@ -325,18 +325,18 @@
       if([[NSFileManager defaultManager] fileExistsAtPath: @"derived_src"])
 	{
 	  command = @"rm -rf derived_src";
-	  puts([[NSString stringWithFormat: @"Cleaning derived_src directory"] cString]);
+	  xcputs([[NSString stringWithFormat: @"Cleaning derived_src directory"] cString]);
 	  result = xcsystem(command);
 	}
     }
   
-  puts([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",name] cString]);
   return (result == 0);
 }
 
 - (BOOL) install
 {
-  puts([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
   NSString *buildDir = [NSString stringForEnvironmentVariable: @"BUILT_PRODUCTS_DIR"
                                                  defaultValue: @"build"];
   NSString *outputDir = [buildDir stringByAppendingPathComponent: [self productName]];
@@ -386,7 +386,7 @@
 					    pathContent: [headersLinkDir stringByAppendingPathComponent: @"Headers"]];
       if(!flag)
 	{
-	  puts([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
+	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
 
       [fileManager removeItemAtPath: [librariesDir stringByAppendingPathComponent: 
@@ -398,7 +398,7 @@
 								    [NSString stringWithFormat: @"lib%@.so",execName]]];
       if(!flag)
 	{
-	  puts([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
+	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
@@ -411,13 +411,13 @@
       NSString *derivedSrcHeaderDir = derivedSrcDir;
       NSString *destPath = [librariesDir stringByAppendingPathComponent: [productReference path]];
 
-      puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
+      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
       [fileManager copyItemAtPath: fullPath
 			   toPath: destPath
 			    error: &error];
       if (error != nil)
         {
-          puts([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+          xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
         }
 
       NSString *libName = [fullPath lastPathComponent];
@@ -431,7 +431,7 @@
                                    error: &error];
       if (error != nil)
         {
-          puts([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
+          xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
         }
 
       NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
@@ -440,19 +440,19 @@
 	{
           NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
 	  NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
-	  puts([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
+	  xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
 	  [fileManager copyItemAtPath: srcFile
 			       toPath: destFile
 				error: &error];
           if (error != nil)
             {
-              puts([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+              xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
             }
 	}
     }
     
 
-  puts([[NSString stringWithFormat: @"=== Completed Installing Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",name] cString]);
 
   return YES;
 }
@@ -531,7 +531,7 @@
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   
-  puts([[NSString stringWithFormat: @"=== Generating Target: %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@",name] cString]);
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: productType
 	      forKey: @"PRODUCT_TYPE"];
@@ -540,16 +540,16 @@
       [context setObject: productSettingsXML 
                   forKey: @"PRODUCT_SETTINGS_XML"];
     }
-  puts([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
+  xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
   id dependency = nil;
   en = [dependencies objectEnumerator];
   while((dependency = [en nextObject]) != nil && result)
     {
       result = [dependency generate];
     }
-  puts([[NSString stringWithFormat: @"=== Done."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
 
-  puts([[NSString stringWithFormat: @"=== Interpreting build phases..."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Interpreting build phases..."] cString]);
   [self _productWrapper];
   id phase = nil;
   en = [buildPhases objectEnumerator];
@@ -561,17 +561,17 @@
       result = [phase generate];
       if(NO == result)
 	{
-	  puts([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
+	  xcputs([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
 	}
 
       RELEASE(p);
     }
-  puts([[NSString stringWithFormat: @"=== Done..."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
 
   NSString *appName = [[self name] stringByDeletingPathExtension];
   
   // Construct the makefile out of the data we have thusfar collected.
-  puts("\t** Generating GNUmakefile from data...");
+  xcputs("\t** Generating GNUmakefile from data...");
   NSString *makefileName = @"GNUmakefile";
   NSString *makefileString = @"";
   NSString *objCFilesString = [self _arrayToList: [context objectForKey: @"OBJC_FILES"]];
@@ -612,7 +612,7 @@
 
   NSDebugLog(@"makefile = %@", makefileString);
   [makefileString writeToFile: makefileName atomically: YES];
-  puts([[NSString stringWithFormat: @"=== Completed generation for target %@", name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed generation for target %@", name] cString]);
 
   return result;
 }

@@ -56,7 +56,7 @@
 
 - (void) applySettings
 {
-  // puts("%@",settings);
+  // xcputs("%@",settings);
 }
 
 - (NSString *) buildPath
@@ -96,7 +96,7 @@
 - (BOOL) generate
 {
   [self applySettings];
-  puts([[NSString stringWithFormat: @"\t* Creating entry for %@",[fileRef buildPath]] cString]);
+  xcputs([[NSString stringWithFormat: @"\t* Creating entry for %@",[fileRef buildPath]] cString]);
   [fileRef setTarget: target];
   return [fileRef generate];
 }
