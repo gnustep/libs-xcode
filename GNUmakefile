@@ -66,7 +66,6 @@ XCWorkspaceParser.h \
 PBXLegacyTarget.h \
 GSXCBuildOperation.h \
 GSXCBuildDelegate.h \
-xcsystem.h
 
 #
 # Class files
