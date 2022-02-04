@@ -117,7 +117,10 @@ id _sharedBuildContext = nil;
 
 - (NSString *) description
 {
-  return [NSString stringWithFormat: @"%@ -- contextDictionary = %@, \n currentContext = %@, \n stack = %@ \n\n",
-		   [super description], contextDictionary, currentContext, stack];
+  return [NSString stringWithFormat: @"%@ -- contextDictionary = %@, \n"
+		   @" currentContext = %@, \n stack = %@ \n\n",
+		   [super description], contextDictionary,
+		   currentContext, stack];
 }
+
 @end

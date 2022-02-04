@@ -28,15 +28,12 @@
 
 #import <stdlib.h>
 
-#ifdef _WIN32
-#import "setenv.h"
-#endif
-
 @implementation XCBuildConfiguration
 
 - (NSString *) description
 {
-  return [NSString stringWithFormat: @"%@ -- buildSettings = %@, name = %@", [super description], buildSettings, name];
+  return [NSString stringWithFormat: @"%@ -- buildSettings = %@, name = %@",
+		   [super description], buildSettings, name];
 }
 
 // Methods....
@@ -62,17 +59,17 @@
 
 - (void) apply
 {
-  xcputs([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;
 
+  xcputs([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
   while ((key = [en nextObject]) != nil)
     {
       id value = [buildSettings objectForKey: key];
       if ([value isKindOfClass: [NSString class]])
-	{	  
-	  setenv([key cString],[value cString],1);
+	{
+	  [context setObject: value forKey: value];
 	}
       else if([value isKindOfClass: [NSArray class]])
 	{
@@ -89,13 +86,14 @@
   if ([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
     {
       NSDebugLog(@"\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
-      setenv("TARGET_BUILD_DIR","build",1);
+      [context setObject: @"build" forKey: @"TARGET_BUILD_DIR"];
     }
   if ([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
     {
       NSDebugLog(@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
-      setenv("BUILT_PRODUCTS_DIR","build",1);
+      [context setObject: @"build" forKey: @"TARGET_BUILD_DIR"];
     }
   xcputs([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
 }
+
 @end

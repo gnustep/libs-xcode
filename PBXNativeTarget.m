@@ -29,10 +29,6 @@
 #import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
 
-#ifdef _WIN32
-#import "setenv.h"
-#endif
-
 @implementation PBXNativeTarget
 
 - (void) dealloc
@@ -129,8 +125,8 @@
 			    withIntermediateDirectories:YES
 					     attributes:nil
 						  error:&error];
-  
-  setenv("inherited","",1); // probably from a parent project or target..
+
+  [context setObject: @"" forKey: @"inherited"];
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: APPLICATION_TYPE]) 
     {
@@ -141,10 +137,6 @@
 				withIntermediateDirectories:YES
 						 attributes:nil
 						      error:&error];
-
-      setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
-      setenv("PRODUCT_NAME",[execName cString],1);
-      setenv("EXECUTABLE_NAME",[execName cString],1);
 
       [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
       [context setObject: execName forKey: @"PRODUCT_NAME"];
@@ -204,10 +196,6 @@
       [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
       [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCE_DIR"];
 
-      setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
-      setenv("PRODUCT_NAME",[execName cString],1);
-      setenv("EXECUTABLE_NAME",[execName cString],1);
-
       [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
       [context setObject: execName forKey: @"PRODUCT_NAME"];
       [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
@@ -222,12 +210,12 @@
       NSString *derivedSourceDir = [dir stringByAppendingPathComponent: @"derived_src"];
       NSString *derivedSourceHeaderDir = derivedSourceDir;
       
-      setenv("PRODUCT_OUTPUT_DIR",[path cString],1);
-      setenv("PRODUCT_NAME",[fileName cString],1);
-      setenv("EXECUTABLE_NAME",[fileName cString],1);
-      
       [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
       [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCE_DIR"];
+      
+      [context setObject: path forKey: @"PRODUCT_OUTPUT_DIR"];
+      [context setObject: fileName forKey: @"PRODUCT_NAME"];
+      [context setObject: fileName forKey: @"EXECUTABLE_NAME"];        
 
       [[NSFileManager defaultManager] createDirectoryAtPath:derivedSourceHeaderDir
 				withIntermediateDirectories:YES
@@ -239,10 +227,6 @@
       // for non-bundled packages...
       NSString *fileName = [fullPath lastPathComponent];
       NSString *path = [fullPath stringByDeletingLastPathComponent];
-
-      setenv("PRODUCT_OUTPUT_DIR",[path cString],1);
-      setenv("PRODUCT_NAME",[fileName cString],1);
-      setenv("EXECUTABLE_NAME",[fileName cString],1);
 
       [context setObject: path forKey: @"PRODUCT_OUTPUT_DIR"];
       [context setObject: fileName forKey: @"PRODUCT_NAME"];

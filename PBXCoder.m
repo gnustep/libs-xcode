@@ -27,16 +27,14 @@
 #import "PBXCommon.h"
 #import "GSXCBuildContext.h"
 
-#ifdef _WIN32
-#import "setenv.h"
-#endif
-
 @implementation PBXCoder
 
 - (id) initWithContentsOfFile: (NSString *)name
 {
   if((self = [super init]) != nil)
     {
+      GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
       objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
 
       ASSIGN(fileName, name);
@@ -48,12 +46,11 @@
       ASSIGN(objects, [dictionary objectForKey: @"objects"]);
       
       parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
-      [[GSXCBuildContext sharedBuildContext]
-        setObject: objects forKey: @"objects"];
 
-      setenv("PROJECT_DIR","./",1);      
-      setenv("PROJECT_ROOT","./",1);      
-      setenv("SRCROOT","./",1);      
+      [context setObject: objects forKey: @"objects"];
+      [context setObject: @"./" forKey: @"PROJECT_DIR"];
+      [context setObject: @"./" forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./" forKey: @"SRCROOT"];
     }
   return self;
 }

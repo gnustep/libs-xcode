@@ -119,9 +119,7 @@
 
   // Copy icons to resource dir...
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  //NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
-  //                                                       defaultValue: @""];
+  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
@@ -146,7 +144,7 @@
   if(settings == nil)
     {
       NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
-      NSString *outputFileString = [inputFileString stringByReplacingEnvironmentVariablesWithValues];
+      NSString *outputFileString = [inputFileString stringByReplacingEnvironmentVariablesWithContextValues];
       NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
       NSString *filename = [self processAssets];
 
@@ -172,14 +170,14 @@
 
 - (BOOL) build
 {
-  xcputs("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
   NSString *productName = [self productName]; // @""; // [target productName];
 
+  xcputs("=== Executing Resources Build Phase");
   NSDebugLog(@"productName = %@", productName);
   
   // Pre create directory....

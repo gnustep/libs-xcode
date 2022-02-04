@@ -33,6 +33,7 @@
 - (NSString *) stringByCapitalizingFirstCharacter;
 - (NSString *) stringByDeletingFirstPathComponent;
 - (NSString *) stringByReplacingEnvironmentVariablesWithValues;
+- (NSString *) stringByReplacingEnvironmentVariablesWithContextValues;
 - (NSString *) stringByAddingQuotationMarks;
 - (NSString *) execPathForString;
 

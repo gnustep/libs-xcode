@@ -34,10 +34,6 @@
 
 #import <unistd.h>
 
-#ifdef _WIN32
-#import "setenv.h"
-#endif
-
 @interface PBXAbstractTarget (Private)
 
 - (NSArray *) prerequisiteTargets;
@@ -283,6 +279,7 @@
 - (void) _sourceRootFromMainGroup
 {
   NSString *sourceRoot = @"./"; // [[sourceGroup path] firstPathComponent];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   
   // get first group, which is the source group.
   if(sourceRoot == nil || [sourceRoot isEqualToString: @""])
@@ -290,8 +287,8 @@
       sourceRoot = @"./";
     }
 
-  setenv("SOURCE_ROOT","./",1);
-  setenv("SRCROOT","./",1);
+  [context setObject: @"./" forKey: @"SOURCE_ROOT"];
+  [context setObject: @"./" forKey: @"SRCROOT"];
 }
 
 - (NSString *) buildString

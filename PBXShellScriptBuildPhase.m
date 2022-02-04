@@ -23,6 +23,7 @@
 */
 
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSRegularExpression.h>
 
 #import "PBXCommon.h"
 #import "PBXShellScriptBuildPhase.h"
@@ -129,31 +130,9 @@
   while ((key = [en nextObject]) != nil)
     {
       NSString *v = [searchReplace objectForKey: key];
-      NSError *error = NULL;
-      BOOL done = NO;
-      NSRegularExpression *regex = [NSRegularExpression
-                                     regularExpressionWithPattern: key
-                                                          options: 0
-                                                            error: &error];
 
-      // Iterate through all of the matches, but after each change start over because the ranges
-      // will shift as a result of the substitution.  When there are no matches left, exit.
-      while (done == NO)
-        {
-          NSTextCheckingResult *match = [regex firstMatchInString: result
-                                                          options: 0
-                                                            range: NSMakeRange(0, [key length])];
-          if (match != nil)
-            {
-              NSRange matchRange = [match range];
-              result = [result stringByReplacingCharactersInRange: matchRange
-                                                       withString: v];
-            }
-          else
-            {
-              done = YES;
-            }
-        }
+      result = [result stringByReplacingOccurrencesOfString: key
+						 withString: v];
     }
 
   return result;
@@ -168,7 +147,7 @@
   BOOL result = NO;
   NSString *processedScript = [self preprocessScript];
 
-  processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
+  processedScript = [processedScript stringByReplacingEnvironmentVariablesWithContextValues];
   xcputs("=== Executing Script Build Phase...");
   xcputs([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
   xcputs("*** script output");

@@ -28,6 +28,8 @@
 #import <Foundation/NSDictionary.h>
 
 #import "NSString+PBXAdditions.h"
+#import "GSXCBuildContext.h"
+
 #import <unistd.h>
 
 extern char **environ;
@@ -140,6 +142,35 @@ extern char **environ;
                                                  withString: v];
       result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$%@",k]
                                                  withString: v];
+      result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"(%@)",k]
+                                                 withString: v];
+    }
+
+  return result;
+}
+
+- (NSString *) stringByReplacingEnvironmentVariablesWithContextValues
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSMutableDictionary *dict = [context currentContext];
+  NSString *result = [NSString stringWithString: self];
+  NSArray *keys = [dict allKeys];
+  NSEnumerator *en = [keys objectEnumerator];
+  NSString *k = nil;
+  
+  while ((k = [en nextObject]) != nil)
+    {
+      id v = [dict objectForKey: k];
+
+      if ([v isKindOfClass: [NSString class]] == YES)
+	{
+	  result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$(%@)",k]
+						     withString: v];
+	  result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"$%@",k]
+						     withString: v];
+	  result = [result stringByReplacingOccurrencesOfString: [NSString stringWithFormat: @"(%@)",k]
+						     withString: v];
+	}
     }
 
   return result;

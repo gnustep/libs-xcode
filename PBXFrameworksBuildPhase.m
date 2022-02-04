@@ -94,14 +94,14 @@
 
   frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
 
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *classList = @"";
-  NSString *outputDir = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 
-			  stringByAppendingPathComponent: @"derived_src"];
+  NSString *outputDir = [[context objectForKey: @"PROJECT_ROOT"]
+			    			  stringByAppendingPathComponent: @"derived_src"];
   NSString *fileName = [NSString stringWithFormat: @"NSFramework_%@.m",executableName];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: fileName];
-  NSString *buildDir = [NSString stringWithCString: getenv("TARGET_BUILD_DIR")];
-  NSString *objDir = [NSString stringWithCString: getenv("BUILT_PRODUCTS_DIR")];
+  NSString *buildDir = [context objectForKey: @"TARGET_BUILD_DIR"];
+  NSString *objDir = [context objectForKey: @"BUILT_PRODUCTS_DIR"];
   NSError *error = nil;
   NSString *targetName = [[self target] name];
   
@@ -462,8 +462,8 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   xcputs("=== Executing Frameworks / Linking Build Phase (Static Library)");
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,
@@ -579,23 +579,22 @@
 - (BOOL) buildBundle
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  xcputs("=== Executing Frameworks / Linking Build Phase (Bundle)");
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
-
   NSString *command = [NSString stringWithFormat: 
 				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
 				compiler, 
 				outputPath,
 				outputFiles,
 				linkString];
-
+  
+  xcputs("=== Executing Frameworks / Linking Build Phase (Bundle)");
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       command = [NSString stringWithFormat: 
