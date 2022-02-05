@@ -141,31 +141,34 @@
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
                         output: (NSString *)outputFileName
 {
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *settings = [context objectForKey: @"PRODUCT_SETTINGS_XML"];
-  if(settings == nil)
+  if (inputFileName != nil)
     {
-      NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
-      NSString *outputFileString = [inputFileString stringByReplacingEnvironmentVariablesWithValues];
-      NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
-      NSString *filename = [self processAssets];
-
-      if (filename != nil)
+      GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+      NSString *settings = [context objectForKey: @"PRODUCT_SETTINGS_XML"];
+      if(settings == nil)
         {
-          [plistDict setObject: filename forKey: @"NSIcon"];
+          NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
+          NSString *outputFileString = [inputFileString stringByReplacingEnvironmentVariablesWithValues];
+          NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
+          NSString *filename = [self processAssets];
+          
+          if (filename != nil)
+            {
+              [plistDict setObject: filename forKey: @"NSIcon"];
+            }
+          
+          [plistDict writeToFile: outputFileName
+                      atomically: YES];
+          
+          NSDebugLog(@"%@", plistDict);
         }
-      
-      [plistDict writeToFile: outputFileName
-                  atomically: YES];
-      
-      NSDebugLog(@"%@", plistDict);
-    }
-  else
-    {
-      [settings writeToFile: outputFileName
-                 atomically: YES
-                   encoding: NSUTF8StringEncoding
-                      error: NULL];      
+      else
+        {
+          [settings writeToFile: outputFileName
+                     atomically: YES
+                       encoding: NSUTF8StringEncoding
+                          error: NULL];      
+        }
     }
   return YES;
 }
