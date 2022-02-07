@@ -29,6 +29,7 @@
 - (NSString *) implodeArrayWithSeparator: (NSString *)separator;
 - (NSArray *) arrayByRemovingDuplicateEntries;
 - (NSString *) removeDuplicatesAndImplodeWithSeparator: (NSString *)separator;
+- (NSArray *) arrayByAddingQuotationMarksToEntries;
 
 @end
 

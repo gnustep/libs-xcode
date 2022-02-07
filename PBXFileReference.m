@@ -41,140 +41,140 @@ extern char **environ;
 
 - (void) dealloc
 {
-  RELEASE(sourceTree);
-  RELEASE(lastKnownFileType);
-  RELEASE(path);
-  RELEASE(fileEncoding);
-  RELEASE(explicitFileType);
-  RELEASE(usesTabs);
-  RELEASE(indentWidth);
-  RELEASE(tabWidth);
-  RELEASE(name);
-  RELEASE(includeInIndex);
-  RELEASE(comments);
-  RELEASE(plistStructureDefinitionIdentifier);
-  RELEASE(xcLanguageSpecificationIdentifier);
-  RELEASE(lineEnding);
-  RELEASE(wrapsLines);
+  RELEASE(_sourceTree);
+  RELEASE(_lastKnownFileType);
+  RELEASE(_path);
+  RELEASE(_fileEncoding);
+  RELEASE(_explicitFileType);
+  RELEASE(_usesTabs);
+  RELEASE(_indentWidth);
+  RELEASE(_tabWidth);
+  RELEASE(_name);
+  RELEASE(_includeInIndex);
+  RELEASE(_comments);
+  RELEASE(_plistStructureDefinitionIdentifier);
+  RELEASE(_xcLanguageSpecificationIdentifier);
+  RELEASE(_lineEnding);
+  RELEASE(_wrapsLines);
 
   [super dealloc];
 }
 
 - (void) setTotalFiles: (NSUInteger)t
 {
-  totalFiles = t;
+  _totalFiles = t;
 }
 
 - (void) setCurrentFile: (NSUInteger)n
 {
-  currentFile = n;
+  _currentFile = n;
 }
 
 
 // Methods....
 - (void) setWrapsLines: (NSString *)o
 {
-  ASSIGN(wrapsLines, o);
+  ASSIGN(_wrapsLines, o);
 }
 
 - (NSString *) sourceTree // getter
 {
-  return sourceTree;
+  return _sourceTree;
 }
 
 - (void) setSourceTree: (NSString *)object; // setter
 {
-  ASSIGN(sourceTree,object);
+  ASSIGN(_sourceTree,object);
 }
 
 - (NSString *) lastKnownFileType // getter
 {
-  return lastKnownFileType;
+  return _lastKnownFileType;
 }
 
 - (void) setLastKnownFileType: (NSString *)object; // setter
 {
-  ASSIGN(lastKnownFileType,object);
+  ASSIGN(_lastKnownFileType,object);
 }
 
 - (NSString *) path // getter
 {
-  return path;
+  return _path;
 }
 
 - (void) setPath: (NSString *)object; // setter
 {
-  ASSIGN(path,object);
+  ASSIGN(_path,object);
 }
 
 - (NSString *) fileEncoding // getter
 {
-  return fileEncoding;
+  return _fileEncoding;
 }
 
 - (void) setFileEncoding: (NSString *)object; // setter
 {
-  ASSIGN(fileEncoding,object);
+  ASSIGN(_fileEncoding,object);
 }
 
 - (NSString *) explicitFileType
 {
-  return explicitFileType;
+  return _explicitFileType;
 }
 
 - (void) setExplicitFileType: (NSString *)object
 {
-  ASSIGN(explicitFileType,object);
+  ASSIGN(_explicitFileType,object);
 }
 
 - (NSString *) name;
 {
-  return name;
+  return _name;
 }
 
 - (void) setName: (NSString *)object
 {
-  ASSIGN(name,object);
+  ASSIGN(_name,object);
 }
 
 - (NSString *) plistStructureDefinitionIdentifier
 {
-  return plistStructureDefinitionIdentifier;
+  return _plistStructureDefinitionIdentifier;
 }
 
 - (void) setPlistStructureDefinitionIdentifier: (NSString *)object
 {
-  ASSIGN(plistStructureDefinitionIdentifier,object);
+  ASSIGN(_plistStructureDefinitionIdentifier,object);
 }
 
 - (NSString *) xcLanguageSpecificationIdentifier
 {
-  return xcLanguageSpecificationIdentifier;
+  return _xcLanguageSpecificationIdentifier;
 }
 
 - (void) setXcLanguageSpecificationIdentifier: (NSString *)object
 {
-  ASSIGN(xcLanguageSpecificationIdentifier, object);
+  ASSIGN(_xcLanguageSpecificationIdentifier, object);
 }
 
 - (NSString *) lineEnding
 {
-  return lineEnding;
+  return _lineEnding;
 }
 
 - (void) setLineEnding: (NSString *)object
 {
-  ASSIGN(lineEnding,object);
+  ASSIGN(_lineEnding,object);
 }
 
 - (void) setTarget: (PBXNativeTarget *)t
 {
-  target = t;
+  _target = t;
 }
 
-- (NSString *) resolvePathFor: (id)object 
-		    withGroup: (PBXGroup *)group
-			found: (BOOL *)found
+- (NSString *) _resolvePathFor: (id)object 
+                     withGroup: (PBXGroup *)group
+                         found: (BOOL *)found
 {
   NSString *result = @"";
   NSArray *children = [group children];
@@ -193,15 +193,15 @@ extern char **environ;
 	{
 	  NSString *filePath = ([file path] == nil)?@"":[file path];
 	  result = [filePath stringByAppendingPathComponent: 
-				      [self resolvePathFor: object 
-						 withGroup: file
-						     found: found]];
+                                      [self _resolvePathFor: object 
+                                                  withGroup: file
+                                                      found: found]];
 	}
     }
   return result;
 }
 
-- (NSArray *) allSubdirsAtPath: (NSString *)apath
+- (NSArray *) _allSubdirsAtPath: (NSString *)apath
 {
   NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
   NSFileManager *manager = [[NSFileManager alloc] init];
@@ -248,7 +248,7 @@ extern char **environ;
           continue;
         }
       
-      if ([results containsObject: [dirToAdd stringByAddingQuotationMarks]] == NO)
+      if ([results containsObject: dirToAdd] == NO) // [dirToAdd stringByAddingQuotationMarks]] == NO)
         {
           NSString *ext = [dirToAdd pathExtension];
           if ([ext isEqualToString: @"app"] ||
@@ -263,16 +263,23 @@ extern char **environ;
             {
               continue;
             }
-          [results addObject: [dirToAdd stringByAddingQuotationMarks]];
-          NSDebugLog(@"adding dirToAdd = %@", dirToAdd);
+
+          if ([dirToAdd isEqualToString: @""] == NO)
+            {
+              [results addObject: dirToAdd]; // [dirToAdd stringByAddingQuotationMarks]];
+              NSDebugLog(@"adding dirToAdd = %@", dirToAdd);
+            }
         }
     }
 
   // For some reason repeating the first -I directive helps resolve some issues with
   // finding headers.
   id o = [results count] > 1 ? [results objectAtIndex: 1] : @".";
+  o = [o isEqualToString: @""] ? @"." : o;
+  
   [results addObject: o];
-
+  results = [[results arrayByRemovingDuplicateEntries] mutableCopy];
+  
   NSDebugLog(@"results = %@", results);
   RELEASE(manager);
   return results;
@@ -300,9 +307,9 @@ extern char **environ;
   NSDictionary *remappedSource = [plistFile objectForKey: @"remappedSource"];
  
   // Resolve path for the current file reference...
-  result = [self resolvePathFor: self 
-		      withGroup: mainGroup
-			  found: &found];
+  result = [self _resolvePathFor: self 
+                       withGroup: mainGroup
+                           found: &found];
 
   if ((r = [remappedSource objectForKey: result]) != nil)
     {
@@ -349,8 +356,8 @@ extern char **environ;
                                             encoding: NSUTF8StringEncoding];
       NSArray *components = [envStr componentsSeparatedByString: @"="];
       
-      [dict setObject: [[components lastObject] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]
-               forKey: [[components firstObject] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
+      [dict setObject: [[components lastObject] stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceCharacterSet]]
+               forKey: [[components firstObject] stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceCharacterSet]]];
     }
   
   // Get project root
@@ -358,6 +365,7 @@ extern char **environ;
                                                 defaultValue: @"."];
   NSEnumerator *en = [allHeaders objectEnumerator];
   NSString *s = nil;
+
   while ((s = [en nextObject]) != nil)
     {
       if ([s isEqualToString: @"$(inherited)"])
@@ -367,13 +375,10 @@ extern char **environ;
                                                  withString: projDir];
       o = [o stringByReplacingOccurrencesOfString: @"${PROJECT_DIR}"
                                        withString: projDir];
-      // [o stringByReplacingOccurrencesOfString: @"\"" withString: @""];
       NSString *q = [o stringByReplacingEnvironmentVariablesWithValues];
-      // NSString *p = [NSString stringWithFormat: @"../%@",o];
       if ([result containsObject: o] == NO)
         {
           [result addObject: o];
-          // [result addObject: p];
           [result addObject: q];
         }
     }
@@ -381,12 +386,13 @@ extern char **environ;
   return result;
 }
 
-- (NSArray *) addParentPath: (NSString *)parent toPaths: (NSArray *)paths
+- (NSArray *) _addParentPath: (NSString *)parent toPaths: (NSArray *)paths
 {
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: [paths count]];
   NSEnumerator *en = [paths objectEnumerator];
   NSString *p = nil;
 
+  [result addObject: parent];
   while((p = [en nextObject]) != nil)
     {
       NSString *newPath = [parent stringByAppendingPathComponent: p];
@@ -394,6 +400,20 @@ extern char **environ;
     }
 
   return result;
+}
+
+- (NSString *) _headerStringForPath: (NSString *)apath
+{
+  NSString *subpath = apath; //  [apath stringByDeletingLastPathComponent];
+  NSArray *result = [self _allSubdirsAtPath: subpath];
+
+  result = [result arrayByAddingObjectsFromArray: [self _addParentPath: subpath toPaths: result]];
+  result = [result arrayByAddingObject: subpath];
+  result = [result arrayByRemovingDuplicateEntries];
+  result = [result arrayByAddingQuotationMarksToEntries];
+  // NSLog(@"result = %@", result);
+  
+  return [result removeDuplicatesAndImplodeWithSeparator:@" -I"];
 }
 
 - (NSString *) _compiler
@@ -435,6 +455,20 @@ extern char **environ;
   return compiler;
 }
 
+- (NSMutableArray *) _arrayForKey: (NSString *)keyName
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSMutableArray *result = [context objectForKey: keyName];
+
+  if (result == nil)
+    {
+      result = [NSMutableArray array];
+      [context setObject: result forKey: keyName];
+    }
+
+  return result;
+}
+
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -450,7 +484,7 @@ extern char **environ;
   NSDictionary *bs = [xbc buildSettings];
 
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
-                         BOLD, MAGENTA, [self buildPath], RESET, currentFile, totalFiles] cString]);
+                         BOLD, MAGENTA, [self buildPath], RESET, _currentFile, _totalFiles] cString]);
 
   if(modified == nil)
     {
@@ -459,10 +493,10 @@ extern char **environ;
 		  forKey: @"MODIFIED_FLAG"];
     }
 
-  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"] || [explicitFileType isEqualToString: @"sourcecode.c.objc"] ||
-     [lastKnownFileType isEqualToString: @"sourcecode.c.c"] || [explicitFileType isEqualToString: @"sourcecode.c.c"] || 
-     [lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
-     [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"] || [_explicitFileType isEqualToString: @"sourcecode.c.objc"] ||
+     [_lastKnownFileType isEqualToString: @"sourcecode.c.c"] || [_explicitFileType isEqualToString: @"sourcecode.c.c"] || 
+     [_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
+     [_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
       NSString *proj_root = [bs objectForKey: @"PROJECT_ROOT"];
       if (proj_root == nil ||
@@ -471,8 +505,8 @@ extern char **environ;
           proj_root = @".";
         }
 
-      if ([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
-	  [lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+      if ([_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
+	  [_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
 	{
 	  [context setObject: @"YES" forKey: @"LINK_WITH_CPP"];
 	}
@@ -491,8 +525,8 @@ extern char **environ;
 
       NSString *compiler = [self _compiler];
       NSString *buildPath = [proj_root stringByAppendingPathComponent: bp];
-      NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
-      NSString *fileName = [path lastPathComponent];
+      NSArray *localHeaderPathsArray = [self _allSubdirsAtPath:@"."];
+      NSString *fileName = [_path lastPathComponent];
       NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
       NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
       NSString *derivedSrcHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
@@ -503,7 +537,7 @@ extern char **environ;
 				  removeDuplicatesAndImplodeWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
       
-      buildDir = [buildDir stringByAppendingPathComponent: [target name]];
+      buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
@@ -542,9 +576,8 @@ extern char **environ;
       outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
 		      stringByAppendingString: @" "];
       NSString *objCflags = @"";
-      if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+      if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
 	{
-	  // objCflags = @"-fconstant-string-class=NSConstantString";
           objCflags = @"";
 	}
 
@@ -565,12 +598,10 @@ extern char **environ;
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
       NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ -o %@";
+      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ %@ -o %@";
       NSString *compilePath = bp;
-      NSString *subpath = [compilePath stringByDeletingLastPathComponent];
-      NSArray  *subdirHeaders = [self allSubdirsAtPath: subpath];
-      NSArray  *subdirHeadersWithParent = [self addParentPath: subpath toPaths: subdirHeaders];
-      NSString *subdirHeaderSearchPaths = [subdirHeadersWithParent removeDuplicatesAndImplodeWithSeparator:@" -I"];
+      NSString *subdirHeaderSearchPaths = [self _headerStringForPath: compilePath];
+      NSString *parentHeaderSearchPaths = [self _headerStringForPath: [[compilePath pathComponents] firstObject]];
       NSString *errorOutPath = [outputPath stringByAppendingString: @".err"];
       NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
 					 compiler,
@@ -578,18 +609,21 @@ extern char **environ;
 					 [compilePath stringByAddingQuotationMarks],
 					 objCflags,
 					 configString,
+                                         parentHeaderSearchPaths,
 					 headerSearchPaths,
                                          subdirHeaderSearchPaths,
 					 [outputPath stringByAddingQuotationMarks]];
       NSDictionary *buildPathAttributes =  [manager attributesOfItemAtPath: buildPath
-											    error: &error];
+                                                                     error: &error];
       NSDictionary *outputPathAttributes = [manager attributesOfItemAtPath: outputPath
-											    error: &error];
+                                                                     error: &error];
       NSDate *buildPathDate = [buildPathAttributes fileModificationDate];
       NSDate *outputPathDate = [outputPathAttributes fileModificationDate];
 
       buildCommand = [buildCommand stringByReplacingOccurrencesOfString: @"$(inherited)"
                                                              withString: @"."];
+
+      NSDebugLog(@"%@", buildCommand);
       
       if(outputPathDate != nil)
 	{
@@ -653,20 +687,6 @@ extern char **environ;
   return (result == 0);
 }
 
-- (NSMutableArray *) _arrayForKey: (NSString *)keyName
-{
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSMutableArray *result = [context objectForKey: keyName];
-
-  if (result == nil)
-    {
-      result = [NSMutableArray array];
-      [context setObject: result forKey: keyName];
-    }
-
-  return result;
-}
-
 - (BOOL) generate
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -681,7 +701,7 @@ extern char **environ;
   int result = 0;
   NSFileManager *manager = [NSFileManager defaultManager];
 
-  // NSDebugLog(@"*** %@", sourceTree);
+  // NSDebugLog(@"*** %@", _sourceTree);
   if(modified == nil)
     {
       modified = @"NO";
@@ -697,7 +717,7 @@ extern char **environ;
                             [self buildPath]];
 
 
-  NSArray *localHeaderPathsArray = [self allSubdirsAtPath:@"."];
+  NSArray *localHeaderPathsArray = [self _allSubdirsAtPath:@"."];
   NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
   buildDir = [buildDir stringByAppendingPathComponent: [self productName]];
   NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
@@ -753,13 +773,13 @@ extern char **environ;
     }
   
   NSString *objCflags = @"";
-  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
     {
       // objCflags = @"-fconstant-string-class=NSConstantString";
       objCflags = @"";
     }
 
-  if([lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
       objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu99" withString: @""];
     }
@@ -775,22 +795,22 @@ extern char **environ;
   
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
-  if([lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
     {
       [objcFiles addObject: compilePath];
     }
 
-  if([lastKnownFileType isEqualToString: @"sourcecode.c.c"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.c.c"])
     {
       [cFiles addObject: compilePath];
     }
   
-  if([lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"])
     {
       [cppFiles addObject: compilePath];
     }
 
-  if([lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+  if([_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
       [objcppFiles addObject: compilePath];
     }
@@ -812,6 +832,6 @@ extern char **environ;
 - (NSString *) description
 {
   NSString *s = [super description];
-  return [s stringByAppendingFormat: @" <%@, %@>", path, lastKnownFileType];
+  return [s stringByAppendingFormat: @" <%@, %@>", _path, _lastKnownFileType];
 }
 @end

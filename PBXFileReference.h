@@ -29,25 +29,25 @@
 
 @interface PBXFileReference : NSObject
 {
-  NSString *sourceTree;
-  NSString *lastKnownFileType;
-  NSString *path;
-  NSString *fileEncoding;
-  NSString *explicitFileType;
-  NSString *usesTabs;
-  NSString *indentWidth;
-  NSString *tabWidth;
-  NSString *name;
-  NSString *includeInIndex;
-  NSString *comments;
-  NSString *plistStructureDefinitionIdentifier;
-  NSString *xcLanguageSpecificationIdentifier;
-  NSString *lineEnding;
-  NSString *wrapsLines;
-  PBXNativeTarget *target;
+  NSString *_sourceTree;
+  NSString *_lastKnownFileType;
+  NSString *_path;
+  NSString *_fileEncoding;
+  NSString *_explicitFileType;
+  NSString *_usesTabs;
+  NSString *_indentWidth;
+  NSString *_tabWidth;
+  NSString *_name;
+  NSString *_includeInIndex;
+  NSString *_comments;
+  NSString *_plistStructureDefinitionIdentifier;
+  NSString *_xcLanguageSpecificationIdentifier;
+  NSString *_lineEnding;
+  NSString *_wrapsLines;
+  PBXNativeTarget *_target;
 
-  NSUInteger totalFiles;
-  NSUInteger currentFile;
+  NSUInteger _totalFiles;
+  NSUInteger _currentFile;
 }
 
 - (void) setTotalFiles: (NSUInteger)t;

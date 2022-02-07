@@ -23,6 +23,7 @@
 */
 
 #import "NSArray+Additions.h"
+#import "NSString+PBXAdditions.h"
 
 @implementation NSArray (Additions)
 
@@ -60,6 +61,21 @@
 {
   NSArray *result = [self arrayByRemovingDuplicateEntries];
   return [result implodeArrayWithSeparator: separator];
+}
+
+- (NSArray *) arrayByAddingQuotationMarksToEntries
+{
+  NSEnumerator *en = [self objectEnumerator];
+  NSString *obj = nil;
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [self count]];
+  
+  while ((obj = [en nextObject]) != nil)
+    {
+      NSString *s = [obj stringByAddingQuotationMarks];
+      [result addObject: s];
+    }
+
+  return [NSArray arrayWithArray: result];
 }
 
 @end
