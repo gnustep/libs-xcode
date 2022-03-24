@@ -33,3 +33,5 @@
 #define BUNDLE_TYPE @"com.apple.product-type.bundle"
 #define TOOL_TYPE @"com.apple.product-type.tool"
 #define APPLICATION_TYPE @"com.apple.product-type.application"
+#define TEST_TYPE @"com.apple.product-type.bundle.unit-test"
+

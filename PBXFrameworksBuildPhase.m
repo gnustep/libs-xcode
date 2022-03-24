@@ -622,6 +622,12 @@
   return (result == 0);
 }
 
+- (BOOL) buildTest
+{
+  xcputs("=== Build tests...  currently unsupported...");
+  return YES;
+}
+
 - (BOOL) build
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -645,6 +651,10 @@
   else if([productType isEqualToString: BUNDLE_TYPE])
     {
       return [self buildBundle];
+    }
+  else if([productType isEqualToString: TEST_TYPE])
+    {
+      return [self buildTest];
     }
   else 
     {
@@ -691,6 +701,11 @@
   else if([productType isEqualToString: BUNDLE_TYPE])
     {
       [context setObject: @"bundle"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else if([productType isEqualToString: TEST_TYPE])
+    {
+      [context setObject: @"test"
                   forKey: @"PROJECT_TYPE"];
     }
   else 
