@@ -406,16 +406,14 @@ extern char **environ;
 {
   BOOL isDir;
   NSFileManager *manager = [NSFileManager defaultManager];
-  NSString *subpath = apath; //  [apath stringByDeletingLastPathComponent];
   NSArray *result = [NSArray array];
 
+  [manager fileExistsAtPath:apath isDirectory:&isDir];
   if (isDir)
     {
-      [manager fileExistsAtPath:apath isDirectory:&isDir];
-
-      [self _allSubdirsAtPath: subpath];
-      result = [result arrayByAddingObjectsFromArray: [self _addParentPath: subpath toPaths: result]];
-      result = [result arrayByAddingObject: subpath];
+      result = [self _allSubdirsAtPath: apath];
+      result = [result arrayByAddingObjectsFromArray: [self _addParentPath: apath toPaths: result]];
+      result = [result arrayByAddingObject: apath];
       result = [result arrayByRemovingDuplicateEntries];
       result = [result arrayByAddingQuotationMarksToEntries];
     }
