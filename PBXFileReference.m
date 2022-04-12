@@ -404,14 +404,21 @@ extern char **environ;
 
 - (NSString *) _headerStringForPath: (NSString *)apath
 {
+  BOOL isDir;
+  NSFileManager *manager = [NSFileManager defaultManager];
   NSString *subpath = apath; //  [apath stringByDeletingLastPathComponent];
-  NSArray *result = [self _allSubdirsAtPath: subpath];
+  NSArray *result = [NSArray array];
 
-  result = [result arrayByAddingObjectsFromArray: [self _addParentPath: subpath toPaths: result]];
-  result = [result arrayByAddingObject: subpath];
-  result = [result arrayByRemovingDuplicateEntries];
-  result = [result arrayByAddingQuotationMarksToEntries];
-  // NSLog(@"result = %@", result);
+  if (isDir)
+    {
+      [manager fileExistsAtPath:apath isDirectory:&isDir];
+
+      [self _allSubdirsAtPath: subpath];
+      result = [result arrayByAddingObjectsFromArray: [self _addParentPath: subpath toPaths: result]];
+      result = [result arrayByAddingObject: subpath];
+      result = [result arrayByRemovingDuplicateEntries];
+      result = [result arrayByAddingQuotationMarksToEntries];
+    }
   
   return [result removeDuplicatesAndImplodeWithSeparator:@" -I"];
 }
@@ -558,9 +565,9 @@ extern char **environ;
 	{
 	  if([[derivedSrcHeaderDir pathComponents] count] > 1)
 	    {
-	      headerSearchPaths = [headerSearchPaths stringByAppendingString: 
-						  [NSString stringWithFormat: @" -I'%@' ",
-							    [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
+              headerSearchPaths = [headerSearchPaths stringByAppendingString:
+                                                  [NSString stringWithFormat: @" -I'%@' ",
+                                                            [derivedSrcHeaderDir stringByDeletingLastPathComponent]]];
 	    }
 	}
 

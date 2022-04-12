@@ -1,3 +1,8 @@
+2022-04-12 Riccardo Mottola <rm@gnu.org>
+
+	* PBXFileReference.m (_headerStringForPath):
+	Look for headers only if it is a directory, skip if a file.
+
 2022-01-10 Gregory John Casamento <greg.casamento@gmail.com>
 
 	* PBXFileReference.[hm]: Fix issues with resolving headers.
