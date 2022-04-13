@@ -8,8 +8,7 @@
 
 - (BOOL) build
 {
-  [self notImplemented: _cmd];
-  return NO;
+  return [self notImplemented: _cmd];
 }
 
 @end
