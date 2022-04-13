@@ -37,7 +37,6 @@
 
 @implementation PBXFrameworksBuildPhase
 
-<<<<<<< HEAD
 - (NSString *) _gsConfigString
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -62,6 +61,8 @@
     }
   
   return configString;
+}
+
 - (NSString *) processOutputFilesString
 {
   GSXCBuildContext *c = [GSXCBuildContext sharedBuildContext];
@@ -245,19 +246,6 @@
   return result;
 } 
 
-<<<<<<< HEAD
-/*
-- (NSString *) processOutputFilesString
-{
-  GSXCBuildContext *c = [GSXCBuildContext sharedBuildContext];
-  NSArray *filesArray = [c objectForKey: @"OUTPUT_FILES"];
-  NSString *outputFiles = [filesArray implodeArrayWithSeparator: @" "];
-  return outputFiles;
-}
-*/
-
-=======
->>>>>>> 8b9364c (Fix merge issues)
 - (NSString *) linkString
 {
   NSString *cfgString = [self _gsConfigString];

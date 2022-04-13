@@ -229,7 +229,7 @@ extern char **environ;
 - (NSArray *) _allSubdirsAtPath: (NSString *)apath
 {
   NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
-  NSFileManager *manager = [[NSFileManager alloc] init];
+  NSFileManager *manager = [NSFileManager defaultManager];
   NSDirectoryEnumerator *en = [manager enumeratorAtPath:apath];
   NSString *filename = nil;
 
@@ -473,7 +473,7 @@ extern char **environ;
 					 winCfgPfx];	  
       compiler = [NSString stringForEnvironmentVariable: @"CC"
 					   defaultValue: defaultValue]; 
-      compiler = [winCompilerPfx stringByAppendingPathComponent: compiler];	  
+      compiler = [winCompilerPfx stringByAppendingPathComponent: compiler];
     }
   else
     {
@@ -566,7 +566,6 @@ extern char **environ;
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  removeDuplicatesAndImplodeWithSeparator: @" "];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
-      NSFileManager *manager = [[NSFileManager alloc] init];
       
       buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
       // blank these out if they are not used...
