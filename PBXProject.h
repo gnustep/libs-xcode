@@ -31,6 +31,7 @@
 #import "PBXGroup.h"
 
 @class PBXContainer;
+@protocol GSXCBuildDelegate;
 
 @interface PBXProject : NSObject
 {
@@ -51,7 +52,11 @@
 
   NSString *_filename;
   NSMutableArray *_arrangedTargets;
+  id<GSXCBuildDelegate> _delegate;
 }
+
+- (id<GSXCBuildDelegate>) delegate;
+- (void) setDelegate: (id<GSXCBuildDelegate>) delegate;
 
 // Methods....
 - (NSString *) developmentRegion; // getter

@@ -179,11 +179,13 @@
 				     [buildPath stringByEscapingSpecialCharacters],
 				     configString,
 				     [objPath stringByEscapingSpecialCharacters]];
-  NSString *of = [self processOutputFilesString];
-  NSString *outputFiles = (of == nil)?@"":of;
+  NSMutableArray *outputFiles = [context objectForKey: @"OUTPUT_FILES"];
 
-  outputFiles = [[outputFiles stringByAppendingString: objPath] 
-		  stringByAppendingString: @" "];
+  if (outputFiles == nil)
+    {
+      outputFiles = [NSMutableArray array];
+    }
+  [outputFiles addObject: objPath];
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
   NSDebugLog(@"\t%@",buildCommand);
@@ -242,6 +244,16 @@
   
   return result;
 } 
+
+/*
+- (NSString *) processOutputFilesString
+{
+  GSXCBuildContext *c = [GSXCBuildContext sharedBuildContext];
+  NSArray *filesArray = [c objectForKey: @"OUTPUT_FILES"];
+  NSString *outputFiles = [filesArray implodeArrayWithSeparator: @" "];
+  return outputFiles;
+}
+*/
 
 - (NSString *) linkString
 {

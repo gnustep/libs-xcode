@@ -137,6 +137,16 @@
 
 @implementation PBXProject
 
+- (id<GSXCBuildDelegate>) delegate
+{
+  return _delegate;
+}
+
+- (void) setDelegate: (id<GSXCBuildDelegate>) delegate
+{
+  _delegate = delegate;
+}
+
 // Methods....
 - (NSString *) developmentRegion // getter
 {
@@ -352,7 +362,8 @@
   while((target = [en nextObject]) != nil && result)
     {
       NSFileManager *fileManager = [NSFileManager defaultManager];
-      
+
+      [target setProject: self];
       [context contextDictionaryForName: [target name]];
       [self buildString];
 

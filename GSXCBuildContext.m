@@ -43,6 +43,7 @@ id _sharedBuildContext = nil;
       contextDictionary = [[NSMutableDictionary alloc] init];
       config = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
       NSDebugLog(@"%@",config);
+      _contextLock = [[NSLock alloc] init];
     }
   return self;
 }
@@ -52,7 +53,8 @@ id _sharedBuildContext = nil;
   RELEASE(stack);
   RELEASE(contextDictionary);
   RELEASE(config);
-  
+  RELEASE(_contextLock);
+    
   [super dealloc];
 }
 
@@ -102,7 +104,10 @@ id _sharedBuildContext = nil;
 
 - (void) setObject: (id)object forKey: (id)key
 {
-  [currentContext setObject: object forKey: key];
+  [_contextLock lock];
+  [currentContext setObject: object
+                     forKey: key];
+  [_contextLock unlock];
 }
 
 - (id) objectForKey: (id)key
@@ -112,7 +117,9 @@ id _sharedBuildContext = nil;
 
 - (void) addEntriesFromDictionary: (NSDictionary *)dict;
 {
+  [_contextLock lock];
   [currentContext addEntriesFromDictionary: dict];
+  [_contextLock unlock];
 }
 
 - (NSString *) description

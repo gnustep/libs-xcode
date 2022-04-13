@@ -28,6 +28,8 @@
   NSMutableDictionary *currentContext;
   NSMutableArray *stack;
   NSDictionary *config;
+  
+  NSLock *_contextLock;
 }
 
 + (id) sharedBuildContext;
@@ -42,5 +44,4 @@
 - (void) setObject: (id)object forKey: (id)key;
 - (id) objectForKey: (id)key;
 - (void) addEntriesFromDictionary: (NSDictionary *)dict;
-
 @end

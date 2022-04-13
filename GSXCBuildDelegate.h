@@ -36,8 +36,9 @@ extern "C" {
 
 @protocol GSXCBuildDelegate
 
-@optional
-- (void) project: (PBXProject *)project publishMessage: (NSString *)message;
+@required
+- (void) publishMessage: (NSString *)message;
+- (void) interruptBuild;
 
 @end
 

@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -24,11 +24,13 @@
 
 #import <stdlib.h>
 #import <unistd.h>
+#import <Foundation/Foundation.h>
 
 #import "PBXCommon.h"
 #import "PBXFileReference.h"
 #import "PBXGroup.h"
 #import "GSXCBuildContext.h"
+#import "GSXCBuildDelegate.h"
 #import "NSArray+Additions.h"
 #import "NSString+PBXAdditions.h"
 #import "PBXNativeTarget.h"
@@ -172,9 +174,32 @@ extern char **environ;
   _target = t;
 }
 
+- (void) log: (NSString *)string
+{
+  PBXProject *p = [_target project];
+  id<GSXCBuildDelegate> d = [p delegate];
+
+  if (d != nil)
+    {
+      [d publishMessage: string];
+    }
+}
+
+- (void) stopBuild
+{
+  PBXProject *p = [_target project];
+  id<GSXCBuildDelegate> d = [p delegate];
+
+  if (d != nil)
+    {
+      [d interruptBuild];
+    }
+}
+
 - (NSString *) _resolvePathFor: (id)object 
                      withGroup: (PBXGroup *)group
                          found: (BOOL *)found
+
 {
   NSString *result = @"";
   NSArray *children = [group children];
@@ -477,16 +502,17 @@ extern char **environ;
 - (BOOL) build
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  NSMutableArray *of = [context objectForKey: @"OUTPUT_FILES"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
-  NSString *outputFiles = (of == nil)?@"":of;
+  NSMutableArray *outputFiles = (of == nil) ? [[NSMutableArray alloc] init] : of;
   int result = 0;
   NSError *error = nil;
   NSDictionary *ctx = [context currentContext];
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
-
+  NSFileManager *manager = [NSFileManager defaultManager];
+  
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
                          BOLD, MAGENTA, [self buildPath], RESET, _currentFile, _totalFiles] cString]);
 
@@ -577,8 +603,9 @@ extern char **environ;
       
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
-      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
-		      stringByAppendingString: @" "];
+
+      [outputFiles addObject: [NSString stringWithFormat: @"'%@'",outputPath]];
+      
       NSString *objCflags = @"";
       if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
 	{
@@ -666,10 +693,7 @@ extern char **environ;
       if (result != 0)
         {
           xcprintf("%serror%s\n\n", RED, RESET);
-
-          NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
-          [NSException raise: NSGenericException
-                      format: @"%sMessage:%s %@", RED, RESET, errorString];
+          [self stopBuild];
 
           /*
           xcputs("=======================================================");

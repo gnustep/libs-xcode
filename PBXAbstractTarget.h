@@ -20,13 +20,17 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/Foundation.h>
+*/
+
+#import <Foundation/Foundation.h>
 
 // Local includes
 #import "PBXCoder.h"
 #import "XCConfigurationList.h"
 #import "PBXFileReference.h"
 #import "GSXCBuildContext.h"
+
+@class PBXProject;
 
 @interface PBXAbstractTarget : NSObject
 {
@@ -35,7 +39,12 @@
   NSString *productName;
   NSMutableArray *buildPhases;
   NSString *name;
+
+  PBXProject *_project;
 }
+
+- (PBXProject *) project;
+- (void) setProject: (PBXProject *)project;
 
 // Methods....
 - (NSMutableArray *) dependencies; // getter

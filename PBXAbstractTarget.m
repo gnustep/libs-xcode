@@ -38,6 +38,16 @@
   [super dealloc];
 }
 
+- (PBXProject *) project
+{
+  return _project;
+}
+
+- (void) setProject: (PBXProject *)project
+{
+  _project = project; // weak since the project is the parent.
+}
+
 // Methods....
 - (NSMutableArray *) dependencies // getter
 {

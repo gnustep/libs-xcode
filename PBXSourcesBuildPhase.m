@@ -23,12 +23,14 @@
 */
 
 #import <Foundation/NSOperation.h>
+#import <Foundation/NSProcessInfo.h>
 
 #import "PBXCommon.h"
 #import "PBXSourcesBuildPhase.h"
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
 #import "GSXCBuildOperation.h"
+#import "GSXCBuildContext.h"
 
 @implementation PBXSourcesBuildPhase
 
@@ -50,6 +52,7 @@
 
 - (BOOL) build
 {
+  NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
   id file = nil;
   BOOL result = YES;
   NSUInteger i = 1;
@@ -57,9 +60,23 @@
   NSEnumerator *en = [files objectEnumerator];
                          
   xcputs("=== Executing Sources Build Phase");
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *c = [context config];
+  BOOL parallel = [[c objectForKey: @"parallel"] isEqualToString: @"YES"];
+  NSUInteger n = [[NSProcessInfo processInfo] processorCount];
+
+  if (parallel)
+    {
+      printf(":::::::: Parallel build using %ld processors\n", n);
+      [_queue setMaxConcurrentOperationCount: n];
+    }
+  else
+    {
+      printf(":::::::: Linear build\n");
+    }
+  
   while((file = [en nextObject]) != nil && result)
     {
-      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
       GSXCBuildOperation *op = [GSXCBuildOperation operationWithFile: file];
       
       [file setTarget: target];
@@ -67,9 +84,7 @@
       [file setCurrentFile: i];
       [ops addObject: op];
 
-      i++;
-      
-      RELEASE(p);
+      i++;      
     }
 
   // Handle the error...
@@ -85,6 +100,7 @@
   NS_ENDHANDLER;
   
   xcputs("=== Sources Build Phase Completed");
+  RELEASE(p);
 
   return result;
 }
