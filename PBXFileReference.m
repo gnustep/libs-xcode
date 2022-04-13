@@ -418,7 +418,7 @@ extern char **environ;
       result = [result arrayByAddingQuotationMarksToEntries];
     }
   
-  return [result removeDuplicatesAndImplodeWithSeparator:@" -I"];
+  return [result removeDuplicatesAndImplodeWithSeparator: @" -I"];
 }
 
 - (NSString *) _compiler
