@@ -21,7 +21,12 @@ FRAMEWORK_NAME = XCode
 # Resource files
 #
 XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
-Resources/language-codes.plist
+	Resources/language-codes.plist \
+	Generators/mf/mf.generator \
+	Generators/vs/vs.generator \
+
+# Generator bundles
+SUBPROJECTS = Generators
 
 #
 # Header files
@@ -66,6 +71,7 @@ XCWorkspaceParser.h \
 PBXLegacyTarget.h \
 GSXCBuildOperation.h \
 GSXCBuildDelegate.h \
+GSXCGenerator.h \
 
 #
 # Class files
@@ -108,7 +114,8 @@ XCFileRef.m \
 XCWorkspaceParser.m \
 PBXLegacyTarget.m \
 GSXCBuildOperation.m \
-xcsystem.m
+GSXCGenerator.m \
+xcsystem.m \
 
 #
 # Makefiles

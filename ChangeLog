@@ -1,3 +1,18 @@
+2022-04-13 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* Generators/GNUmakefile
+	* Generators/mf/GNUmakefile
+	* Generators/mf/GSXCMakefileGenerator.h
+	* Generators/mf/GSXCMakefileGenerator.m: Skeleton for building
+        GNUmakefiles from .xcodeproj
+	* Generators/vs/GNUmakefile
+	* Generators/vs/GSXCVisualStudioGenerator.h
+	* Generators/vs/GSXCVisualStudioGenerator.m: Skeleton for building
+        VisualStudio .sln from .xcodeproj
+	* GNUmakefile: Add generator superclass.
+	* GSXCGenerator.h
+	* GSXCGenerator.m: Generator superclass.
+
 2022-04-12 Riccardo Mottola <rm@gnu.org>
 
 	* PBXFileReference.m (_headerStringForPath):
