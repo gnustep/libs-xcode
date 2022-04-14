@@ -22,8 +22,8 @@ FRAMEWORK_NAME = XCode
 #
 XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
 	Resources/language-codes.plist \
-	Generators/mf/mf.generator \
-	Generators/vs/vs.generator \
+	Generators/Makefile/Makefile.generator \
+	Generators/VisualStudio/VisualStudio.generator
 
 # Generator bundles
 SUBPROJECTS = Generators

@@ -3,7 +3,7 @@
 include $(GNUSTEP_MAKEFILES)/common.make
 
 ADDITIONAL_INCLUDE_DIRS += -I../..
-BUNDLE_NAME = mf
+BUNDLE_NAME = Makefile
 BUNDLE_EXTENSION = .generator
 mf_PRINCIPAL_CLASS = GSXCMakefileGenerator
 

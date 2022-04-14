@@ -12,8 +12,8 @@ include $(GNUSTEP_MAKEFILES)/common.make
 
 # Generator bundles
 SUBPROJECTS = \
-	mf \
-	vs
+	Makefile \
+	VisualStudio
 
 #
 # Makefiles
