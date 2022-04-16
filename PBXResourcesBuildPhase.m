@@ -370,6 +370,9 @@
   NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [files count]];
   
   xcputs("=== Generating Resources Entries Build Phase");
+
+  NSLog(@"target = %@", target);
+  
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *productName = [target productName];
   NSString *appName = [productName stringByDeletingPathExtension];

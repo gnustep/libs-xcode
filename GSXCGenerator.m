@@ -12,9 +12,20 @@
   self = [super init];
   if (self != nil)
     {
-      _target = target;
+      [self setTarget: target];
     }
   return self;
+}
+
+- (void) dealloc
+{
+  RELEASE(_target);
+  [super dealloc];
+}
+
+- (void) setTarget: (PBXNativeTarget *)target
+{
+  ASSIGN(_target, target);
 }
 
 - (PBXNativeTarget *) target

@@ -80,7 +80,7 @@
 
 - (void) setTarget: (PBXNativeTarget *)t
 {
-  target = t;
+  ASSIGN(target, t);
 }
 
 - (PBXNativeTarget *) target

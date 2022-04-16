@@ -102,7 +102,10 @@ id _sharedBuildContext = nil;
 
 - (void) setObject: (id)object forKey: (id)key
 {
-  [currentContext setObject: object forKey: key];
+  if (object != nil)
+    {
+      [currentContext setObject: object forKey: key];
+    }
 }
 
 - (id) objectForKey: (id)key
