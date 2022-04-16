@@ -36,6 +36,6 @@
 
 - (PBXNativeTarget *) target;
 
-- (BOOL) build;
+- (BOOL) generate;
 
 @end

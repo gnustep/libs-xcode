@@ -2,7 +2,7 @@
 
 @implementation GSXCMakefileGenerator
 
-- (BOOL) build
+- (BOOL) generate
 {
   return NO;
 }

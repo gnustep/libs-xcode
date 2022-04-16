@@ -2,7 +2,7 @@
 
 @implementation GSXCVisualStudioGenerator
 
-- (BOOL) build
+- (BOOL) generate
 {
   return NO;
 }

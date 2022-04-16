@@ -22,7 +22,7 @@
   return _target;
 }
 
-- (BOOL) build
+- (BOOL) generate
 {
   return ([self notImplemented: _cmd] != nil);
 }

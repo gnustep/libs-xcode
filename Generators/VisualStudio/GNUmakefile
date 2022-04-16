@@ -5,13 +5,13 @@ include $(GNUSTEP_MAKEFILES)/common.make
 ADDITIONAL_INCLUDE_DIRS += -I../..
 BUNDLE_NAME = VisualStudio
 BUNDLE_EXTENSION = .generator
-mf_PRINCIPAL_CLASS = GSXCVisualStudioGenerator
+VisualStudio_PRINCIPAL_CLASS = GSXCVisualStudioGenerator
 
-mf_OBJC_FILES = GSXCVisualStudioGenerator.m 
+VisualStudio_OBJC_FILES = GSXCVisualStudioGenerator.m 
 
-mf_RESOURCE_FILES =
+VisualStudio_RESOURCE_FILES =
 
-mf_STANDARD_INSTALL = no
+VisualStudio_STANDARD_INSTALL = no
 
 -include GNUmakefile.preamble
 -include GNUmakefile.local
