@@ -28,8 +28,8 @@
 
 @interface PBXAbstractBuildPhase : NSObject
 {
-  NSMutableArray *files;
-  NSString *buildActionMask;
+  NSMutableArray *_files;
+  NSString *_buildActionMask;
   NSString *runOnlyForDeploymentPostprocessing;
   BOOL showEnvVarsInLog;
   PBXNativeTarget *target;

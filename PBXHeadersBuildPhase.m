@@ -49,7 +49,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSError *error = nil;
 
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
   while((file = [en nextObject]) != nil && result)
     {
@@ -70,7 +70,7 @@
   if([productType isEqualToString: FRAMEWORK_TYPE])
     {
       xcputs([[NSString stringWithFormat: @"\t* Copying headers to framework header folder..."] cString]);
-      en = [files objectEnumerator];
+      en = [_files objectEnumerator];
       NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
       while((file = [en nextObject]) != nil && result)
 	{

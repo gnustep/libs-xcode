@@ -28,26 +28,6 @@
 @implementation PBXCopyFilesBuildPhase
 
 // Methods....
-- (NSMutableArray *) files // getter
-{
-  return files;
-}
-
-- (void) setFiles: (NSMutableArray *)object; // setter
-{
-  ASSIGN(files,object);
-}
-
-- (NSString *) buildActionMask // getter
-{
-  return buildActionMask;
-}
-
-- (void) setBuildActionMask: (NSString *)object; // setter
-{
-  ASSIGN(buildActionMask,object);
-}
-
 - (NSString *) dstPath // getter
 {
   return dstPath;

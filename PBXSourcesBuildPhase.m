@@ -54,7 +54,7 @@
   BOOL result = YES;
   NSUInteger i = 1;
   NSMutableArray *ops = [NSMutableArray array];
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
                          
   xcputs("=== Executing Sources Build Phase");
   while((file = [en nextObject]) != nil && result)
@@ -63,7 +63,7 @@
       GSXCBuildOperation *op = [GSXCBuildOperation operationWithFile: file];
       
       [file setTarget: target];
-      [file setTotalFiles: [files count]];
+      [file setTotalFiles: [_files count]];
       [file setCurrentFile: i];
       [ops addObject: op];
 
@@ -92,7 +92,7 @@
 - (BOOL) generate
 {
   xcputs("=== Generating using Sources Build Phase");
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   id file = nil;
   BOOL result = YES;
   while((file = [en nextObject]) != nil && result)

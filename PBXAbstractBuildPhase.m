@@ -29,8 +29,8 @@
 
 - (void) dealloc
 {
-  RELEASE(files);
-  RELEASE(buildActionMask);
+  RELEASE(_files);
+  RELEASE(_buildActionMask);
   RELEASE(runOnlyForDeploymentPostprocessing);
   RELEASE(target);
   RELEASE(_name);
@@ -40,22 +40,22 @@
 // Methods....
 - (NSMutableArray *) files // getter
 {
-  return files;
+  return _files;
 }
 
 - (void) setFiles: (NSMutableArray *)object; // setter
 {
-  ASSIGN(files,object);
+  ASSIGN(_files,object);
 }
 
 - (NSString *) buildActionMask // getter
 {
-  return buildActionMask;
+  return _buildActionMask;
 }
 
 - (void) setBuildActionMask: (NSString *)object; // setter
 {
-  ASSIGN(buildActionMask,object);
+  ASSIGN(_buildActionMask,object);
 }
 
 - (NSString *) runOnlyForDeploymentPostprocessing // getter
@@ -100,13 +100,13 @@
 
 - (BOOL) build
 {
-  NSDebugLog(@"Abstract build... %@, %@",self, files);
+  NSDebugLog(@"Abstract build... %@, %@",self, _files);
   return YES;
 }
 
 - (BOOL) generate
 {
-  NSLog(@"Abstract generate... %@, %@",self,files);
+  NSLog(@"Abstract generate... %@, %@",self,_files);
   return YES;
 }
 

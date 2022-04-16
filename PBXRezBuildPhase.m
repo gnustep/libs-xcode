@@ -29,15 +29,19 @@
 
 -(BOOL) build
 {
-  xcputs("=== Executing Rez Build Phase");
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   id file = nil;
   BOOL result = YES;
+
+  xcputs("=== Executing Rez Build Phase");
+
   while((file = [en nextObject]) != nil && result)
     {
       xcputs([[NSString stringWithFormat: @"\tFile = %@",file] cString]);
     }
+
   xcputs("=== Completed Rez Build Phase");
+
   return result;
 }
 

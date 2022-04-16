@@ -47,7 +47,7 @@
                 objectForKey: @"objects"]
                allValues];
       
-      ASSIGNCOPY(files, objs);
+      ASSIGNCOPY(_files, objs);
     }
   return self;
 }
@@ -192,7 +192,7 @@
                        error:&error];
 
   // Copy all resources...
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   BOOL result = YES;
   id file = nil;
   while((file = [en nextObject]) != nil && result)
@@ -319,7 +319,7 @@
   NSString *baseLproj = [resourcesDir
                           stringByAppendingPathComponent: @"Base.lproj"];
   NSArray *farr = [mgr directoryContentsAtPath: baseLproj];
-  NSDebugLog(@"files in dir %@", farr);
+  NSDebugLog(@"_files in dir %@", farr);
 
   NSEnumerator *fen = [farr objectEnumerator];
   NSString *f = nil;
@@ -367,7 +367,7 @@
 - (BOOL) generate
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [files count]];
+  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [_files count]];
   
   xcputs("=== Generating Resources Entries Build Phase");
 
@@ -378,7 +378,7 @@
   NSString *appName = [productName stringByDeletingPathExtension];
   
   // Copy all resources...
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   BOOL result = YES;
   id file = nil;
   while((file = [en nextObject]) != nil && result)
