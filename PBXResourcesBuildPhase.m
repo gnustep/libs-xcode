@@ -70,11 +70,11 @@
   // the product name from the target.
   if ([productName isEqualToString: @"$(TARGET_NAME)"])
     {
-      productName = [target productName];
+      productName = [_target productName];
       NSDebugLog(@"* 2nd try %@", productName);
       if ([productName isEqualToString: @"$(TARGET_NAME)"])
 	{
-	  productName = [target name];
+	  productName = [_target name];
 	  NSDebugLog(@"* 3rd try %@", productName);
 	}
     }
@@ -181,7 +181,7 @@
   NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
-  NSString *productName = [self productName]; // @""; // [target productName];
+  NSString *productName = [self productName]; // @""; // [_target productName];
 
   NSDebugLog(@"productName = %@", productName);
   
@@ -371,10 +371,10 @@
   
   xcputs("=== Generating Resources Entries Build Phase");
 
-  NSLog(@"target = %@", target);
+  NSLog(@"target = %@", _target);
   
   NSFileManager *mgr = [NSFileManager defaultManager];
-  NSString *productName = [target productName];
+  NSString *productName = [_target productName];
   NSString *appName = [productName stringByDeletingPathExtension];
   
   // Copy all resources...

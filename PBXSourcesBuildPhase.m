@@ -28,6 +28,7 @@
 #import "PBXSourcesBuildPhase.h"
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
+
 #import "GSXCBuildOperation.h"
 
 @implementation PBXSourcesBuildPhase
@@ -57,12 +58,13 @@
   NSEnumerator *en = [_files objectEnumerator];
                          
   xcputs("=== Executing Sources Build Phase");
+
   while((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
       GSXCBuildOperation *op = [GSXCBuildOperation operationWithFile: file];
       
-      [file setTarget: target];
+      [file setTarget: _target];
       [file setTotalFiles: [_files count]];
       [file setCurrentFile: i];
       [ops addObject: op];
@@ -91,15 +93,18 @@
 
 - (BOOL) generate
 {
-  xcputs("=== Generating using Sources Build Phase");
   NSEnumerator *en = [_files objectEnumerator];
   id file = nil;
   BOOL result = YES;
+
+  xcputs("=== Generating using Sources Build Phase");
+  
   while((file = [en nextObject]) != nil && result)
     {
-      [file setTarget: target];
+      [file setTarget: _target];
       result = [file generate];
     }
+
   xcputs("=== Sources Build Phase generation completed");
 
   return result;

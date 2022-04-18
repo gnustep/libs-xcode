@@ -30,9 +30,9 @@
 {
   NSMutableArray *_files;
   NSString *_buildActionMask;
-  NSString *runOnlyForDeploymentPostprocessing;
-  BOOL showEnvVarsInLog;
-  PBXNativeTarget *target;
+  NSString *_runOnlyForDeploymentPostprocessing;
+  BOOL _showEnvVarsInLog;
+  PBXNativeTarget *_target;
   NSString *_name;
 }
 

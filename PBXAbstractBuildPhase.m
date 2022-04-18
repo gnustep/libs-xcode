@@ -31,8 +31,8 @@
 {
   RELEASE(_files);
   RELEASE(_buildActionMask);
-  RELEASE(runOnlyForDeploymentPostprocessing);
-  RELEASE(target);
+  RELEASE(_runOnlyForDeploymentPostprocessing);
+  RELEASE(_target);
   RELEASE(_name);
   [super dealloc];
 }
@@ -60,32 +60,32 @@
 
 - (NSString *) runOnlyForDeploymentPostprocessing // getter
 {
-  return runOnlyForDeploymentPostprocessing;
+  return _runOnlyForDeploymentPostprocessing;
 }
 
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
 {
-  ASSIGN(runOnlyForDeploymentPostprocessing,object);
+  ASSIGN(_runOnlyForDeploymentPostprocessing,object);
 }
 
 - (BOOL) showEnvVarsInLog; // setter
 {
-  return showEnvVarsInLog;
+  return _showEnvVarsInLog;
 }
 
 - (void) setEnvVarsInLog: (BOOL)flag
 {
-  showEnvVarsInLog = flag;
+  _showEnvVarsInLog = flag;
 }
 
 - (void) setTarget: (PBXNativeTarget *)t
 {
-  ASSIGN(target, t);
+  ASSIGN(_target, t);
 }
 
 - (PBXNativeTarget *) target
 {
-  return target;
+  return _target;
 }
 
 - (void) setName: (NSString *)n

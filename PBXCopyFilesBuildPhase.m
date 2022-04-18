@@ -48,15 +48,4 @@
   ASSIGN(dstSubfolderSpec,object);
 }
 
-- (NSString *) runOnlyForDeploymentPostprocessing // getter
-{
-  return runOnlyForDeploymentPostprocessing;
-}
-
-- (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
-{
-  ASSIGN(runOnlyForDeploymentPostprocessing,object);
-}
-
-
 @end
