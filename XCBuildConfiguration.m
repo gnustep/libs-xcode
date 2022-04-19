@@ -62,11 +62,11 @@
 
 - (void) apply
 {
-  xcputs([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;
 
+  xcputs([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
   while ((key = [en nextObject]) != nil)
     {
       id value = [buildSettings objectForKey: key];
@@ -74,16 +74,10 @@
 	{	  
 	  setenv([key cString],[value cString],1);
 	}
-      else if([value isKindOfClass: [NSArray class]])
-	{
-	  [context setObject: value
-		      forKey: key];
-	  NSDebugLog(@"\tContext: %@ = %@",key,value);
-	}
-      else
-	{
-	  NSDebugLog(@"\tWARNING: Can't interpret value %@, for environment variable %@", value, key); 
-	}
+      
+      [context setObject: value
+                  forKey: key];
+      NSDebugLog(@"\tContext: %@ = %@",key,value);
     }
   
   if ([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)

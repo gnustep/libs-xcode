@@ -56,14 +56,7 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSDictionary *ctx = [context currentContext];
-  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
-  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
-  NSDictionary *bs = [xbc buildSettings];
-  NSString *productName = [bs objectForKey: @"PRODUCT_NAME"];
-
-  // NSProcessInfo *info = [NSProcessInfo processInfo];
-  // NSDictionary *env = [info environment];
-  NSDebugLog(@"bs = %@", bs);
+  NSString *productName = [ctx objectForKey: @"PRODUCT_NAME"];
   
   // This is kind of a kludge, but better than what was here before.
   // I believe that when the context has the variable name it means to use
@@ -182,8 +175,10 @@
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
   NSString *productName = [self productName]; // @""; // [_target productName];
-
-  NSDebugLog(@"productName = %@", productName);
+  NSString *appName = [[_target productName] stringByDeletingPathExtension];
+  
+  NSLog(@"productName = %@", productName);
+  NSLog(@"[_target productName] = %@", [_target productName]);
   
   // Pre create directory....
   [mgr createDirectoryAtPath:resourcesDir
@@ -207,19 +202,26 @@
           while ((child = [e nextObject]) != nil)
             {
               NSString *filePath = [child path];
-	      NSDebugLog(@"FILEPATH = %@", filePath);
+	      NSLog(@"FILEPATH = %@", filePath);
               NSString *resourceFilePath = [filePath stringByDeletingLastPathComponent];
               BOOL edited = NO;
               if ([mgr fileExistsAtPath: [child path]] == NO)
                 {
+                  NSLog(@"No file found at %@", [child path]);
+                  NSString *newFilePath = [productName stringByAppendingPathComponent: [child path]];
+                  
                   edited = YES;
-                  filePath = [productName stringByAppendingPathComponent: [child path]];
-                  if ([mgr fileExistsAtPath: filePath] == NO)
+                  if ([mgr fileExistsAtPath: newFilePath] == YES)
+                    {
+                      filePath = newFilePath;
+                    }
+                  else
                     {
                       filePath = [child buildPath];
                     }
                 }
-
+	      NSLog(@"UPDATED FILEPATH = %@", filePath);
+                            
               NSString *fileDir = [resourcesDir stringByAppendingPathComponent:
                                                   resourceFilePath];
               NSString *fileName = [filePath lastPathComponent];
@@ -298,13 +300,22 @@
 	}
     }
 
-  // Handle Info.plist....
+  // Handle Info.plist...
   NSDictionary *ctx = [context currentContext];
-  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
-  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
-  NSDictionary *bs = [xbc buildSettings];  
-  NSString *infoPlist = [bs objectForKey: @"INFOPLIST_FILE"];
+  NSString *inputPlist = [ctx objectForKey: @"INFOPLIST_FILE"];
+  if ([mgr fileExistsAtPath: inputPlist] == NO)
+    {
+      inputPlist = [inputPlist lastPathComponent];
+    }
 
+  
+  NSString *outputPlist = [NSString stringWithFormat: @"%@Info.plist",appName] ;
+  [self processInfoPlistInput: inputPlist
+                       output: outputPlist];
+
+  /*
+  NSDictionary *ctx = [context currentContext];
+  NSString *infoPlist = [ctx objectForKey: @"INFOPLIST_FILE"];
   if ([mgr fileExistsAtPath: infoPlist] == NO)
     {
       infoPlist = [infoPlist lastPathComponent];
@@ -314,7 +325,8 @@
                             stringByAppendingPathComponent: @"Info-gnustep.plist"];
   [self processInfoPlistInput: infoPlist
                        output: outputPlist];
-
+  */
+  
   /*
   NSString *baseLproj = [resourcesDir
                           stringByAppendingPathComponent: @"Base.lproj"];
@@ -416,8 +428,8 @@
     }
 
   // Handle Info.plist...
-  NSString *inputPlist = [NSString stringForEnvironmentVariable: @"INFOPLIST_FILE"
-						   defaultValue: @""];
+  NSDictionary *ctx = [context currentContext];
+  NSString *inputPlist = [ctx objectForKey: @"INFOPLIST_FILE"];
   if ([mgr fileExistsAtPath: inputPlist] == NO)
     {
       inputPlist = [inputPlist lastPathComponent];

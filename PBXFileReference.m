@@ -289,10 +289,7 @@ extern char **environ;
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSDictionary *ctx = [context currentContext];
-  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
-  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
-  NSDictionary *bs = [xbc buildSettings];
-  NSString *productName = [bs objectForKey: @"PRODUCT_NAME"];
+  NSString *productName = [ctx objectForKey: @"PRODUCT_NAME"];
 
   return productName;
 }
@@ -484,9 +481,6 @@ extern char **environ;
   NSError *error = nil;
   NSFileManager *manager = [NSFileManager defaultManager];
   NSDictionary *ctx = [context currentContext];
-  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
-  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
-  NSDictionary *bs = [xbc buildSettings];
 
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
                          BOLD, MAGENTA, [self buildPath], RESET, _currentFile, _totalFiles] cString]);
@@ -503,7 +497,7 @@ extern char **environ;
      [_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
      [_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
-      NSString *proj_root = [bs objectForKey: @"PROJECT_ROOT"];
+      NSString *proj_root = [ctx objectForKey: @"PROJECT_ROOT"];
       if (proj_root == nil ||
           [proj_root isEqualToString: @""])
         {

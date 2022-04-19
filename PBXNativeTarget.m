@@ -458,8 +458,50 @@
 - (BOOL) generate
 {
   BOOL result = NO;
+  NSEnumerator *en = nil;
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  
+  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", name] cString]);
+  [buildConfigurationList applyDefaultConfiguration];
+  [context setObject: productType
+	      forKey: @"PRODUCT_TYPE"];
+  if(productSettingsXML != nil)
+    {
+      [context setObject: productSettingsXML 
+                  forKey: @"PRODUCT_SETTINGS_XML"];
+    }
+  xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
+  id dependency = nil;
+  en = [[self dependencies] objectEnumerator];
+  while((dependency = [en nextObject]) != nil && result)
+    {
+      result = [dependency generate];
+    }
+  xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
+
+  xcputs([[NSString stringWithFormat: @"=== Interpreting build phases..."] cString]);
+
+  // [self _productWrapper];
+  id phase = nil;
+  en = [[self buildPhases] objectEnumerator];
+  while((phase = [en nextObject]) != nil && result)
+    {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+      
+      [phase setTarget: self];
+      result = [phase generate];
+      if(NO == result)
+	{
+	  xcputs([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
+	}
+
+      RELEASE(p);
+    }
+  xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
+
+  // Invoke generator bundle....
   NSBundle *bundle = [NSBundle bundleForClass: [self class]];
-  NSString *generatorName = @"Makefile";
+  NSString *generatorName = @"Makefile";  // default if not specified...
   NSString *bundlePath = [bundle pathForResource: generatorName
                                           ofType: @"generator"];
   NSBundle *generatorBundle = [NSBundle bundleWithPath: bundlePath];

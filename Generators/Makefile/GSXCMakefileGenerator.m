@@ -76,51 +76,9 @@
   BOOL result = YES;
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSArray *buildPhases = [_target buildPhases];
-  NSArray *dependencies = [_target dependencies];
   NSString *name = [_target name];
-  XCConfigurationList *buildConfigurationList = [_target buildConfigurationList];
   NSString *productType = [_target productType];
-  NSString *productSettingsXML = [_target productSettingsXML];
-  
-  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@",name] cString]);
-  [buildConfigurationList applyDefaultConfiguration];
-  [context setObject: productType
-	      forKey: @"PRODUCT_TYPE"];
-  if(productSettingsXML != nil)
-    {
-      [context setObject: productSettingsXML 
-                  forKey: @"PRODUCT_SETTINGS_XML"];
-    }
-  xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
-  id dependency = nil;
-  en = [dependencies objectEnumerator];
-  while((dependency = [en nextObject]) != nil && result)
-    {
-      result = [dependency generate];
-    }
-  xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
-
-  xcputs([[NSString stringWithFormat: @"=== Interpreting build phases..."] cString]);
-
-  // [self _productWrapper];
-  id phase = nil;
-  en = [buildPhases objectEnumerator];
-  while((phase = [en nextObject]) != nil && result)
-    {
-      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
-      
-      [phase setTarget: _target];
-      result = [phase generate];
-      if(NO == result)
-	{
-	  xcputs([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
-	}
-
-      RELEASE(p);
-    }
-  xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
-
+  NSString *productSettingsXML = [_target productSettingsXML];  
   NSString *appName = [name stringByDeletingPathExtension];
   
   // Construct the makefile out of the data we have thusfar collected.

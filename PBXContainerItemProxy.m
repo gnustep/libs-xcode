@@ -85,29 +85,27 @@
 
 - (BOOL) build
 {
+  BOOL result = NO;
   PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
 
   containerPortal = [[currentContainer objects] objectForKey: containerPortal];
+  xcputs([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", CYAN,
+                    [containerPortal path], RESET] cString]);
+
   if([containerPortal isKindOfClass: [PBXFileReference class]])
     {
-      xcputs([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", CYAN, [containerPortal path], RESET] cString]);
-      char *dir = getcwd(NULL, 0);
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
-      chdir([[coder projectRoot] cString]);
       PBXContainer *container = [coder unarchive];
-      [container setFilename: [containerPortal path]];
-      BOOL result = [container build];
-      chdir(dir);
-      free(dir);
 
-      return result;
+      [container setFilename: [containerPortal path]];
+      result = [container build];
     }
   else
     {
-      return YES;
+      result = YES;
     }
 
-  return NO;
+  return result;
 }
 
 @end
