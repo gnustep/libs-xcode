@@ -27,6 +27,7 @@
 #import "PBXNativeTarget.h"
 #import "GSXCCommon.h"
 #import "GSXCBuildContext.h"
+#import "GSXCGenerator.h"
 #import "NSString+PBXAdditions.h"
 
 #ifdef _WIN32
@@ -530,6 +531,100 @@
   BOOL result = YES;
   NSEnumerator *en = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  id o = nil;
+
+  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", name] cString]);
+  [buildConfigurationList applyDefaultConfiguration];
+  [context setObject: productType
+	      forKey: @"PRODUCT_TYPE"];
+  if(productSettingsXML != nil)
+    {
+      [context setObject: productSettingsXML 
+                  forKey: @"PRODUCT_SETTINGS_XML"];
+    }
+
+  // Iterate over dependecies...
+  xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
+  en = [[self dependencies] objectEnumerator];
+  while((o = [en nextObject]) != nil && result)
+    {
+      result = [o generate];
+      if(NO == result)
+	{
+	  xcputs([[NSString stringWithFormat: @"*** Failed to generate dependency: %@", o] cString]);
+	}
+
+    }  
+  xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
+  
+  // Interate over phases...
+  xcputs([[NSString stringWithFormat: @"=== Interpreting build phases..."] cString]);
+  en = [[self buildPhases] objectEnumerator];
+  while((o = [en nextObject]) != nil && result)
+    {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+
+      NSDebugLog(@"Phase = %@", o);
+
+      [o setTarget: self];
+      result = [o generate];
+      if(NO == result)
+	{
+	  xcputs([[NSString stringWithFormat: @"*** Failed to generate build phase: %@", o] cString]);
+	}
+
+      RELEASE(p);
+    }
+  xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
+  
+  // Invoke generator bundle....
+  NSBundle *bundle = [NSBundle bundleForClass: [self class]];
+  NSString *generatorName = @"Makefile";  // default if not specified...
+  NSString *bundlePath = [bundle pathForResource: generatorName
+                                          ofType: @"generator"];
+  NSBundle *generatorBundle = [NSBundle bundleWithPath: bundlePath];
+
+  if (generatorBundle != nil)
+    {
+      NSString *className = [[generatorBundle infoDictionary] objectForKey: @"NSPrincipalClass"];
+
+      if (className != nil)
+        {
+          Class cls = [generatorBundle classNamed: className];
+
+          if (cls != nil)
+            {
+              GSXCGenerator *generator = [[cls alloc] initWithTarget: self];
+              
+              if (generator != nil)
+                {
+                  result = [generator generate];
+                }
+              else
+                {
+                  NSLog(@"Could not instantiate generator: %@", className);
+                }
+            }
+          else
+            {
+              NSLog(@"Could not build class from string: %@", className);
+            }
+        }
+      else
+        {
+          NSLog(@"NSPrincipalClass not specified in plist for bundle: %@", bundlePath);
+        }
+    }
+
+  return result;
+}
+
+/*
+- (BOOL) generate
+{
+  BOOL result = YES;
+  NSEnumerator *en = nil;
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   
   xcputs([[NSString stringWithFormat: @"=== Generating Target: %@",name] cString]);
   [buildConfigurationList applyDefaultConfiguration];
@@ -616,6 +711,7 @@
 
   return result;
 }
+*/
 
 - (NSString *) description
 {
