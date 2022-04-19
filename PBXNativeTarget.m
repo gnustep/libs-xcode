@@ -526,6 +526,50 @@
   return result;
 }
 
+- (BOOL) invokeGeneratorBundle
+{
+  BOOL result = NO;
+  NSBundle *bundle = [NSBundle bundleForClass: [self class]];
+  NSString *generatorName = @"Makefile";  // default if not specified...
+  NSString *bundlePath = [bundle pathForResource: generatorName
+                                          ofType: @"generator"];
+  NSBundle *generatorBundle = [NSBundle bundleWithPath: bundlePath];
+
+  if (generatorBundle != nil)
+    {
+      NSString *className = [[generatorBundle infoDictionary] objectForKey: @"NSPrincipalClass"];
+
+      if (className != nil)
+        {
+          Class cls = [generatorBundle classNamed: className];
+
+          if (cls != nil)
+            {
+              GSXCGenerator *generator = [[cls alloc] initWithTarget: self];
+              
+              if (generator != nil)
+                {
+                  result = [generator generate];
+                }
+              else
+                {
+                  NSLog(@"Could not instantiate generator: %@", className);
+                }
+            }
+          else
+            {
+              NSLog(@"Could not build class from string: %@", className);
+            }
+        }
+      else
+        {
+          NSLog(@"NSPrincipalClass not specified in plist for bundle: %@", bundlePath);
+        }
+    }
+
+  return result;
+}
+
 - (BOOL) generate
 {
   BOOL result = YES;
@@ -576,47 +620,8 @@
       RELEASE(p);
     }
   xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
-  
-  // Invoke generator bundle....
-  NSBundle *bundle = [NSBundle bundleForClass: [self class]];
-  NSString *generatorName = @"Makefile";  // default if not specified...
-  NSString *bundlePath = [bundle pathForResource: generatorName
-                                          ofType: @"generator"];
-  NSBundle *generatorBundle = [NSBundle bundleWithPath: bundlePath];
 
-  if (generatorBundle != nil)
-    {
-      NSString *className = [[generatorBundle infoDictionary] objectForKey: @"NSPrincipalClass"];
-
-      if (className != nil)
-        {
-          Class cls = [generatorBundle classNamed: className];
-
-          if (cls != nil)
-            {
-              GSXCGenerator *generator = [[cls alloc] initWithTarget: self];
-              
-              if (generator != nil)
-                {
-                  result = [generator generate];
-                }
-              else
-                {
-                  NSLog(@"Could not instantiate generator: %@", className);
-                }
-            }
-          else
-            {
-              NSLog(@"Could not build class from string: %@", className);
-            }
-        }
-      else
-        {
-          NSLog(@"NSPrincipalClass not specified in plist for bundle: %@", bundlePath);
-        }
-    }
-
-  return result;
+  return [self invokeGeneratorBundle];
 }
 
 /*
