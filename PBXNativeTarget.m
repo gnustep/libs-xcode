@@ -462,7 +462,7 @@
 {
   BOOL result = NO;
   NSBundle *bundle = [NSBundle bundleForClass: [self class]];
-  NSString *generatorName = @"Makefile";  // default if not specified...
+  NSString *generatorName = [[_project container] parameter]; // @"Makefile";  // default if not specified...
   NSString *bundlePath = [bundle pathForResource: generatorName
                                           ofType: @"generator"];
   NSBundle *generatorBundle = [NSBundle bundleWithPath: bundlePath];

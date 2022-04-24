@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/Foundation.h>
+*/
+
+#import <Foundation/Foundation.h>
 #import "PBXCoder.h"
 
 @interface PBXContainer : NSObject
@@ -32,8 +34,11 @@
   id rootObject;
 
   NSString *_filename;
+  NSString *_parameter;
 }
 
+- (void) setParameter: (NSString *)p;
+- (NSString *) parameter;
 - (void) setArchiveVersion: (NSString *)version;
 - (NSString *) archiveVersion;
 - (void) setClasses: (NSMutableDictionary *)dict;

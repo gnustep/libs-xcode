@@ -36,7 +36,18 @@
   RELEASE(objectVersion);
   RELEASE(objects);
   RELEASE(_filename);
+  RELEASE(_parameter);
   [super dealloc];
+}
+
+- (void) setParameter: (NSString *)p
+{
+  ASSIGN(_parameter, p);
+}
+  
+- (NSString *) parameter
+{
+  return _parameter;
 }
 
 - (void) setFilename: (NSString *)fn

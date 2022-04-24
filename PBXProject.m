@@ -363,6 +363,7 @@
   
   while((target = [en nextObject]) != nil && result)
     {
+      [target setProject: self];
       [context contextDictionaryForName: [target name]];
       [self buildString];
 
@@ -411,6 +412,7 @@
   
   while((target = [en nextObject]) != nil && result)
     {
+      [target setProject: self];
       if(YES == [fileManager fileExistsAtPath:[target name]])
 	{
 	  [context setObject: @"YES"
@@ -438,6 +440,7 @@
   BOOL result = YES;
   while((target = [en nextObject]) != nil && result)
     {
+      [target setProject: self];
       [context contextDictionaryForName: [target name]];
       [context setObject: mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
@@ -453,7 +456,7 @@
   NSString *fn = [[[self container] filename]
                    stringByDeletingLastPathComponent];
 
-  xcprintf("=== Generating GNUmakefile for Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
+  xcprintf("=== Generating %@ for Project %s%s%s%s\n", [container parameter], BOLD, GREEN, [fn cString], RESET);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
   [self plan];
@@ -463,9 +466,10 @@
   NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
   BOOL result = YES;
-
+  
   while((target = [en nextObject]) != nil && result)
     {
+      [target setProject: self];
       [context contextDictionaryForName: [target name]];
       [self buildString];
 

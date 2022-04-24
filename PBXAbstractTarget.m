@@ -20,10 +20,13 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <stdlib.h>
+*/
+
+#import <stdlib.h>
 #import "PBXCommon.h"
 #import "PBXAbstractTarget.h"
 #import "NSString+PBXAdditions.h"
+#import "PBXProject.h"
 
 @implementation PBXAbstractTarget
 
@@ -34,11 +37,17 @@
   RELEASE(productName);
   RELEASE(buildPhases);
   RELEASE(name);
+  RELEASE(_project);
 
   [super dealloc];
 }
 
 // Methods....
+- (void) setProject: (PBXProject *)project
+{
+  ASSIGN(_project, project); 
+}
+
 - (NSMutableArray *) dependencies // getter
 {
   return dependencies;
