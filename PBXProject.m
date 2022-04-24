@@ -137,6 +137,17 @@
 
 @implementation PBXProject
 
+- (instancetype) init
+{
+  self = [super init];
+
+  if (self != nil)
+    {
+    }
+  
+  return self;
+}
+
 // Methods....
 - (NSString *) developmentRegion // getter
 {
