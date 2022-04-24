@@ -85,56 +85,47 @@
 - (NSString *) processAssets
 {
   NSFileManager *mgr = [NSFileManager defaultManager];
-  // char cwd[PATH_MAX];
-  // if (getcwd(cwd, sizeof(cwd)) != NULL)
-  //  {
-  //    NSDebugLog(@"Current working dir is: %s", cwd);
-  //  }
-  
   NSString *filename = nil;
-  NSString *productName = [self productName];
+  NSString *productName = [target name]; // [self productName];
   NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"]; 
   NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
   NSString *contentsJson = [appIconDir stringByAppendingPathComponent: @"Contents.json"];
   NSData *data = [NSData dataWithContentsOfFile: contentsJson];
-  NSDictionary *dict = [NSJSONSerialization JSONObjectWithData: data
-                                                       options: 0L
-                                                         error: NULL];
-  NSArray *imagesArray = [dict objectForKey: @"images"];
-  NSDictionary *imageDict = nil;
-  NSEnumerator *en = [imagesArray objectEnumerator];
-  
-  while ((imageDict = [en nextObject]) != nil)
+
+  if (data != nil)
     {
-      NSString *size = [imageDict objectForKey: @"size"];
-      NSString *scale = [imageDict objectForKey: @"scale"];
-
-      if ([size isEqualToString: @"32x32"] &&
-          [scale isEqualToString: @"1x"])
+      NSDictionary *dict = [NSJSONSerialization JSONObjectWithData: data
+                                                           options: 0L
+                                                             error: NULL];
+      NSArray *imagesArray = [dict objectForKey: @"images"];
+      NSDictionary *imageDict = nil;
+      NSEnumerator *en = [imagesArray objectEnumerator];
+      
+      while ((imageDict = [en nextObject]) != nil)
         {
-          filename = [imageDict objectForKey: @"filename"];
-          break;
+          NSString *size = [imageDict objectForKey: @"size"];
+          NSString *scale = [imageDict objectForKey: @"scale"];
+          
+          if ([size isEqualToString: @"32x32"] &&
+              [scale isEqualToString: @"1x"])
+            {
+              filename = [imageDict objectForKey: @"filename"];
+              break;
+            }
         }
+      
+      // Copy icons to resource dir...
+      GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+      NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+      NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
+      NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
+      NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
+      
+      [mgr copyItemAtPath: imagePath
+                   toPath: destPath
+                    error: NULL];
     }
-
-  // Copy icons to resource dir...
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  //NSString *productOutputDir = [NSString stringForEnvironmentVariable: @"PRODUCT_OUTPUT_DIR"
-  //                                                       defaultValue: @""];
-  NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
-  NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
-  NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
-
-  // NSLog(@"%@ -> %@", imagePath, resourcesDir);
-  // NSError *error = nil;
-
-  [mgr copyItemAtPath: imagePath
-               toPath: destPath
-                error: NULL];
-
-  // NSDebugLog(@"error = %@", error);
-
+  
   return filename;
 }
 
@@ -413,13 +404,16 @@
     }
 
   // Handle Info.plist...
-  NSString *inputPlist = [NSString stringForEnvironmentVariable: @"INFOPLIST_FILE"
-						   defaultValue: @""];
+  NSDictionary *ctx = [context currentContext];
+  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
+  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
+  NSDictionary *bs = [xbc buildSettings];  
+  NSString *inputPlist = [bs objectForKey: @"INFOPLIST_FILE"];
   if ([mgr fileExistsAtPath: inputPlist] == NO)
     {
       inputPlist = [inputPlist lastPathComponent];
     }
-
+  
   
   NSString *outputPlist = [NSString stringWithFormat: @"%@Info.plist",appName] ;
   [self processInfoPlistInput: inputPlist

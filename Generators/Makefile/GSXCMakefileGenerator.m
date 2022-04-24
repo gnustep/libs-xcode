@@ -89,7 +89,7 @@
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Construct the makefile out of the data we have thusfar collected.
-  xcputs("\t** Generating GNUmakefile from data...");
+  xcputs("\t* Generating GNUmakefile");
 
   // Sometimes the build will generate all of the target makefiles in one place, depending on the version of
   // Xcode the project was created with.

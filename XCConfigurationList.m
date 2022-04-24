@@ -64,6 +64,9 @@
     @"Release":defaultConfigurationName;
   XCBuildConfiguration *config = nil;
 
+  NSLog(@"Number of build configurations = %ld\n%@",
+        [buildConfigurations count], buildConfigurations);
+
   while((config = [en nextObject]) != nil)
     {
       if([[config name] 

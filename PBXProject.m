@@ -344,6 +344,7 @@
   [self _sourceRootFromMainGroup];
   [self plan];
   
+  NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
@@ -351,8 +352,6 @@
   
   while((target = [en nextObject]) != nil && result)
     {
-      NSFileManager *fileManager = [NSFileManager defaultManager];
-      
       [context contextDictionaryForName: [target name]];
       [self buildString];
 
@@ -440,19 +439,22 @@
 
 - (BOOL) generate
 {
-  xcputs("=== Generating Project");
+  NSString *fn = [[[self container] filename]
+                   stringByDeletingLastPathComponent];
+
+  xcprintf("=== Generating GNUmakefile for Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
   [buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
-
+  [self plan];
+  
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [_targets objectEnumerator];
+  NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
   BOOL result = YES;
+
   while((target = [en nextObject]) != nil && result)
     {
-      NSString *currentDirectory = [NSString stringWithCString: getcwd(NULL,0)];
-
       [context contextDictionaryForName: [target name]];
       [self buildString];
 
@@ -466,12 +468,21 @@
 		  forKey: @"MAIN_GROUP"]; 
       [context setObject: container
 		  forKey: @"CONTAINER"];
-      [context setObject: currentDirectory
+      [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
       [context addEntriesFromDictionary:ctx];
       
       result = [target generate];
       [context popCurrentContext];
+
+      if (result == NO)
+        {
+          break;
+        }
     }
   
   xcputs("=== Completed Generating Project");
