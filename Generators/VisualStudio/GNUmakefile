@@ -7,7 +7,10 @@ BUNDLE_NAME = VisualStudio
 BUNDLE_EXTENSION = .generator
 VisualStudio_PRINCIPAL_CLASS = GSXCVisualStudioGenerator
 
-VisualStudio_OBJC_FILES = GSXCVisualStudioGenerator.m 
+VisualStudio_OBJC_FILES = GSXCVisualStudioGenerator.m \
+	GSXCVSSolution.m \
+	GSXCVSProject.m \
+	GSXCVSGlobalSection.m
 
 VisualStudio_RESOURCE_FILES =
 
