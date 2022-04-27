@@ -25,9 +25,13 @@
 #import <stdlib.h>
 #import "PBXCommon.h"
 #import "PBXNativeTarget.h"
+#import "PBXProject.h"
+#import "PBXContainer.h"
+
 #import "GSXCCommon.h"
 #import "GSXCBuildContext.h"
 #import "GSXCGenerator.h"
+
 #import "NSString+PBXAdditions.h"
 
 #ifdef _WIN32
