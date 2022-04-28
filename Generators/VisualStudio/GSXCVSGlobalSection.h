@@ -30,4 +30,3 @@ typedef NSUInteger GSXCVSGlobalSectionType;
 - (void) setType: (GSXCVSGlobalSectionType)type;
 
 @end
-
