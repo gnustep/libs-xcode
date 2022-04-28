@@ -9,6 +9,11 @@
 
 @implementation GSXCVSProject
 
++ (instancetype) project
+{
+  return AUTORELEASE([[self alloc] init]);
+}
+
 - (instancetype) init
 {
   self = [super init];

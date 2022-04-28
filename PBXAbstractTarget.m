@@ -130,4 +130,9 @@
   return YES;
 }
 
+- (BOOL) generate
+{
+  return YES;
+}
+
 @end

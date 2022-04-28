@@ -12,6 +12,8 @@
   NSUUID   *_uuid;
 }
 
++ (instancetype) project;
+
 - (NSString *) string;
 - (NSString *) name;
 - (NSString *) path;

@@ -4,6 +4,7 @@
 #import "GSXCVSProject.h"
 #import "GSXCCommon.h"
 #import "GSXCVSGlobalSection.h"
+#import "GSXCVSGlobalSectionContainer.h"
 
 @implementation GSXCVSSolution
 
@@ -13,11 +14,19 @@
 
   if (self != nil)
     {
-      _uuid = [NSUUID UUID];
-      _sections = [[NSMutableArray alloc] init];
+      ASSIGN(_uuid, [NSUUID UUID]);
+      ASSIGN(_project, [GSXCVSProject project]);
+      [self setSections: [NSMutableArray array]];
     }
   
   return self;
+}
+
+- (void) dealloc
+{
+  RELEASE(_uuid);
+  RELEASE(_sections);
+  [super dealloc];
 }
 
 - (NSUUID *) uuid
@@ -25,9 +34,9 @@
   return _uuid;
 }
 
-- (NSString *) uuidString
+- (void) setSections: (NSMutableArray *) sections
 {
-  return [_uuid uuidString];
+  ASSIGN(_sections, sections);
 }
 
 - (NSMutableArray *) sections
@@ -37,55 +46,22 @@
 
 - (NSString *) string
 {
-  NSUUID *uuid = [NSUUID UUID];
-  NSString *solutionUUID = [uuid uuidString];
   GSXCVSProject *project = [[GSXCVSProject alloc] init];
-  NSString *header = nil;
+  NSString *result = nil;
 
-  header =  [NSString stringWithFormat:
-                        @"Microsoft Visual Studio Solution File, Format Version 12.00\n"
-                      @"# Visual Studio Version 17\n"
-                      @"VisualStudioVersion = 17.0.31919.166\n"
-                      @"MinimumVisualStudioVersion = 10.0.40219.1\n" // Copied from example...
-                      @"Project(\"{%@}\") = \"%@\", \"%@\%@.vcproj\", \"{%@}\"\n"
-                      @"EndProject\n"
-                      @"Global\n"
-                      @"\tGlobalSection(SolutionConfigurationPlatform) = preSolution\n"
-                      @"\t\tDebug|x64 = Debug|x64\n"
-                      @"\t\tDebug|x86 = Debug|x86\n"
-                      @"\t\tRelease|x64 = Release|x64\n"
-                      @"\t\tRelease|x86 = Release|x86\n"
-                      @"\tEndGlobalSection\n"
-                      @"\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\n"
-                      @"\t\t{%@}.Debug|x64.ActiveCfg = Debug|x64\n"
-                      @"\t\t{%@}.Debug|x64.Build.0 = Debug|x64\n"
-                      @"\t\t{%@}.Debug|x86.ActiveCfg = Debug|Win32\n"
-                      @"\t\t{%@}.Debug|x86.Build.0 = Debug|Win32\n"
-                      @"\t\t{%@}.Release|x64.ActiveCfg = Debug|x64\n"
-                      @"\t\t{%@}.Release|x64.Build.0 = Debug|x64\n"
-                      @"\t\t{%@}.Release|x86.ActiveCfg = Debug|Win32\n"
-                      @"\t\t{%@}.Release|x86.Build.0 = Debug|Win32\n"
-                      @"\tEndGlobalSection\n"
-                      @"\tGlobalSection(SolutionProperties) = preSolution\n"
-                      @"\t\tHideSolutionNode = FALSE\n"
-                      @"\tEndGlobalSection\n"
-                      @"\tGlobalSection(ExtensibilityGlobals) = postSolution\n"
-                      @"\t\tSolutionGuid = {%@}\n"
-                      @"\tEndGlobalSection\n"
-                      @"EndGlobal\n", solutionUUID, [project name], [project path], [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],
-                      [project projectTypeUUID],  
-                      [self uuidString]];
-
-  NSLog(@"header = %@", header);
-
-  return header;
+  result = [NSString stringWithFormat:
+                       @"Microsoft Visual Studio Solution File, Format Version 12.00\n"
+                     @"# Visual Studio Version 17\n"
+                     @"VisualStudioVersion = 17.0.31919.166\n"
+                     @"MinimumVisualStudioVersion = 10.0.40219.1\n" // Copied from example...
+                     @"%@" // project
+                     // @"Project(\"{%@}\") = \"%@\", \"%@\%@.vcproj\", \"{%@}\"\n"
+                     // @"EndProject\n"
+                     @"%@"]; // global container and sections...
+  
+  NSLog(@"result = %@", result);
+  
+  return result;
 }
 
 @end

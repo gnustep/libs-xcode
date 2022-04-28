@@ -5,11 +5,13 @@
 @class NSString;
 @class NSMutableArray;
 @class NSUUID;
+@class GSXCVSProject;
 
 @interface GSXCVSSolution : NSObject
 {
   NSMutableArray *_sections;
   NSUUID *_uuid;
+  GSXCVSProject *_project;
 }
 
 - (NSUUID *) uuid;

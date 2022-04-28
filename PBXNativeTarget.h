@@ -55,8 +55,4 @@
 // - (XCConfigurationList *) buildConfigurationList;
 // - (void) setBuildConfigurationList: (XCConfigurationList *)list;
 
-// build
-- (BOOL) build;
-- (BOOL) generate;
-
 @end
