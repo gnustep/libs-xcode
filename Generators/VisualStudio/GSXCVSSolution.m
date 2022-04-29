@@ -15,8 +15,8 @@
   if (self != nil)
     {
       ASSIGN(_uuid, [NSUUID UUID]);
-      ASSIGN(_project, [GSXCVSProject project]);
-      [self setSections: [NSMutableArray array]];
+      ASSIGN(_project, [GSXCVSProject projectWithSolution: self]);
+      ASSIGN(_container, [GSXCVSGlobalSectionContainer containerWithSolution: self]);
     }
   
   return self;
@@ -25,7 +25,9 @@
 - (void) dealloc
 {
   RELEASE(_uuid);
-  RELEASE(_sections);
+  RELEASE(_container);
+  RELEASE(_project);
+  
   [super dealloc];
 }
 
@@ -34,19 +36,18 @@
   return _uuid;
 }
 
-- (void) setSections: (NSMutableArray *) sections
+- (GSXCVSProject *) project
 {
-  ASSIGN(_sections, sections);
+  return _project;
 }
 
-- (NSMutableArray *) sections
+- (GSXCVSGlobalSectionContainer *) container
 {
-  return _sections;
+  return _container;
 }
 
 - (NSString *) string
 {
-  GSXCVSProject *project = [[GSXCVSProject alloc] init];
   NSString *result = nil;
 
   result = [NSString stringWithFormat:
@@ -55,13 +56,17 @@
                      @"VisualStudioVersion = 17.0.31919.166\n"
                      @"MinimumVisualStudioVersion = 10.0.40219.1\n" // Copied from example...
                      @"%@" // project
-                     // @"Project(\"{%@}\") = \"%@\", \"%@\%@.vcproj\", \"{%@}\"\n"
-                     // @"EndProject\n"
-                     @"%@"]; // global container and sections...
+                     @"%@", [_project string],
+                     [_container string]]; // global container and sections...
   
   NSLog(@"result = %@", result);
   
   return result;
+}
+
+- (NSString *) description
+{
+  return [self string];
 }
 
 @end

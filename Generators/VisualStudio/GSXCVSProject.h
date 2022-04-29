@@ -4,20 +4,24 @@
 
 @class NSString;
 @class NSUUID;
+@class GSXCVSSolution;
 
 @interface GSXCVSProject : NSObject
 {
   NSString *_name;
   NSString *_path;
   NSUUID   *_uuid;
+  GSXCVSSolution *_solution;
 }
 
 + (instancetype) project;
++ (instancetype) projectWithSolution: (GSXCVSSolution *)s;
 
 - (NSString *) string;
 - (NSString *) name;
 - (NSString *) path;
-- (NSString *) uuidString;
 - (NSUUID *) uuid;
+
+- (GSXCVSSolution *) solution;
 
 @end

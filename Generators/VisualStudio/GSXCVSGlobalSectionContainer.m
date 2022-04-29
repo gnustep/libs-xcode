@@ -6,6 +6,20 @@
 
 @implementation GSXCVSGlobalSectionContainer
 
++ (instancetype) containerWithSolution: (GSXCVSSolution *)solution
+{
+  return AUTORELEASE([[self alloc] initWithSolution: solution]);
+}
+
+- (instancetype) initWithSolution: (GSXCVSSolution *)solution
+{
+  self = [super init];
+  if (self != nil)
+    {
+    }
+  return self;
+}
+
 - (instancetype) initWithSections: (NSArray *)sections
 {
   self = [super init];
@@ -20,6 +34,11 @@
 {
   RELEASE(_sections);
   [super dealloc];
+}
+
+- (void) setSections: (NSArray *)sections
+{
+  ASSIGN(_sections, sections);
 }
 
 - (NSArray *) sections

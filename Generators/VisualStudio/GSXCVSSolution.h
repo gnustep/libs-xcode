@@ -3,20 +3,19 @@
 #import <Foundation/NSObject.h>
 
 @class NSString;
-@class NSMutableArray;
 @class NSUUID;
 @class GSXCVSProject;
+@class GSXCVSGlobalSectionContainer;
 
 @interface GSXCVSSolution : NSObject
 {
-  NSMutableArray *_sections;
   NSUUID *_uuid;
   GSXCVSProject *_project;
+  GSXCVSGlobalSectionContainer *_container;
 }
 
 - (NSUUID *) uuid;
-- (NSString *) uuidString;
-- (NSMutableArray *) sections;
+- (GSXCVSGlobalSectionContainer *) container;
 - (NSString *) string;
 
 @end

@@ -4,14 +4,19 @@
 
 @class NSArray;
 @class NSString;
+@class GSXCVSSolution;
 
 @interface GSXCVSGlobalSectionContainer : NSObject
 {
   NSArray *_sections;
 }
 
++ (instancetype) containerWithSolution: (GSXCVSSolution *)solution;
+
+- (instancetype) initWithSolution: (GSXCVSSolution *)solution;
 - (instancetype) initWithSections: (NSArray *)sections;
 
+- (void) setSections: (NSArray *)sections;
 - (NSArray *) sections;
 - (NSString *) string;
 

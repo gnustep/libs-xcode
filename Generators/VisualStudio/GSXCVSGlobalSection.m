@@ -26,6 +26,16 @@
   _type = type;
 }
 
+- (BOOL) preSolution
+{
+  return _preSolution;
+}
+
+- (void) setPreSolution: (BOOL)f
+{
+  _preSolution = f;
+}
+
 - (NSString *) stringForType
 {
   NSString *result = nil;
@@ -64,7 +74,7 @@
 
 - (NSString *) string
 {
-  NSString *result = [NSString stringWithFormat: @"\tGlobalSection(%@)\n", [self stringForType]];
+  NSString *result = [NSString stringWithFormat: @"\tGlobalSection(%@) = %@\n", [self stringForType], _preSolution ? @"preSolution":@"postSolution"];
   NSEnumerator *en = [_values keyEnumerator];
   NSString *k = nil;
 
