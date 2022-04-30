@@ -21,4 +21,3 @@
 - (NSString *) string;
 
 @end
-

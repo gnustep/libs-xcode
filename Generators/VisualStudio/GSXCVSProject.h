@@ -11,6 +11,7 @@
   NSString *_name;
   NSString *_path;
   NSUUID   *_uuid;
+  NSUUID   *_root;
   GSXCVSSolution *_solution;
 }
 
@@ -21,6 +22,7 @@
 - (NSString *) name;
 - (NSString *) path;
 - (NSUUID *) uuid;
+- (NSUUID *) root;
 
 - (GSXCVSSolution *) solution;
 

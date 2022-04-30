@@ -27,8 +27,19 @@
   RELEASE(_uuid);
   RELEASE(_container);
   RELEASE(_project);
+  RELEASE(_dictionary);
   
   [super dealloc];
+}
+
+- (NSDictionary *) dictionary
+{
+  return _dictionary;
+}
+
+- (void) setDictionary: (NSDictionary *)d
+{
+  ASSIGN(_dictionary, d);
 }
 
 - (NSUUID *) uuid
@@ -55,8 +66,8 @@
                      @"# Visual Studio Version 17\n"
                      @"VisualStudioVersion = 17.0.31919.166\n"
                      @"MinimumVisualStudioVersion = 10.0.40219.1\n" // Copied from example...
-                     @"%@" // project
-                     @"%@", [_project string],
+                     @"Project(\"{%@}\") = \"%@\", \"%@\", \"{%@}\"\nEndProject\n"
+                     @"%@", [_project root], [_project name], [_project path], [_project uuid],
                      [_container string]]; // global container and sections...
   
   NSLog(@"result = %@", result);

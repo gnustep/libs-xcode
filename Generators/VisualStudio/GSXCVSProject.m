@@ -27,6 +27,7 @@
   if (self != nil)
     {
       ASSIGN(_uuid, [NSUUID UUID]);
+      ASSIGN(_root, [NSUUID UUID]);
     }
   
   return self;
@@ -55,6 +56,11 @@
 - (NSUUID *) uuid
 {
   return _uuid;
+}
+
+- (NSUUID *) root
+{
+  return _root;
 }
 
 - (GSXCVSSolution *) solution
