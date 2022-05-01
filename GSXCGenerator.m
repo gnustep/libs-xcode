@@ -1,3 +1,5 @@
+// Released under the terms of LGPLv2.1, please see COPYING.LIB
+
 #import <Foundation/NSObject.h>
 #import <GNUstepBase/NSObject+GNUstepBase.h>
 

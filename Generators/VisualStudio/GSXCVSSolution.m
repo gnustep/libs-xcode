@@ -15,8 +15,8 @@
   if (self != nil)
     {
       ASSIGN(_uuid, [NSUUID UUID]);
-      ASSIGN(_project, [GSXCVSProject projectWithSolution: self]);
       ASSIGN(_container, [GSXCVSGlobalSectionContainer containerWithSolution: self]);
+      _project = nil;
     }
   
   return self;
@@ -26,11 +26,14 @@
                           andTarget: (PBXAbstractTarget *)t
 {
   self = [self init];
+
   if(self != nil)
     {
       ASSIGN(_dictionary, d);
       ASSIGN(_target, t);
+      ASSIGN(_project, [GSXCVSProject projectWithSolution: self]);
     }
+  
   return self;
 }
 
@@ -70,12 +73,17 @@
   return _container;
 }
 
+- (PBXAbstractTarget *) target
+{
+  return _target;
+}
+
 - (NSString *) string
 {
   NSString *result = nil;
 
   result = [NSString stringWithFormat:
-                       @"Microsoft Visual Studio Solution File, Format Version 12.00\n"
+                       @"\nMicrosoft Visual Studio Solution File, Format Version 12.00\n"
                      @"# Visual Studio Version 17\n"
                      @"VisualStudioVersion = 17.0.31919.166\n"
                      @"MinimumVisualStudioVersion = 10.0.40219.1\n" // Copied from example...

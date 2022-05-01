@@ -38,7 +38,13 @@
   self = [self init];
   if (self != nil)
     {
+      PBXAbstractTarget *target = [s target];
+      NSString *name = [target name];
+      NSString *path = [NSString stringWithFormat: @"%@\\%@.vcxproj", name, name];
+
       ASSIGN(_solution, s);
+      ASSIGN(_name, name);
+      ASSIGN(_path, path);      
     }
   return self;
 }

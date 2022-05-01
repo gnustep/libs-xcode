@@ -28,5 +28,6 @@
 - (GSXCVSGlobalSectionContainer *) container;
 - (GSXCVSProject *) project;
 - (NSString *) string;
+- (PBXAbstractTarget *) target;
 
 @end
