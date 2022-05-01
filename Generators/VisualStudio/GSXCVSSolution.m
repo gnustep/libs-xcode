@@ -22,12 +22,25 @@
   return self;
 }
 
+- (instancetype) initWithDictionary: (NSDictionary *)d
+                          andTarget: (PBXAbstractTarget *)t
+{
+  self = [self init];
+  if(self != nil)
+    {
+      ASSIGN(_dictionary, d);
+      ASSIGN(_target, t);
+    }
+  return self;
+}
+
 - (void) dealloc
 {
   RELEASE(_uuid);
   RELEASE(_container);
   RELEASE(_project);
   RELEASE(_dictionary);
+  RELEASE(_target);
   
   [super dealloc];
 }
@@ -67,7 +80,7 @@
                      @"VisualStudioVersion = 17.0.31919.166\n"
                      @"MinimumVisualStudioVersion = 10.0.40219.1\n" // Copied from example...
                      @"Project(\"{%@}\") = \"%@\", \"%@\", \"{%@}\"\nEndProject\n"
-                     @"%@", [_project root], [_project name], [_project path], [_project uuid],
+                     @"%@", [[_project root] UUIDString], [_project name], [_project path], [[_project uuid] UUIDString],
                      [_container string]]; // global container and sections...
   
   NSLog(@"result = %@", result);

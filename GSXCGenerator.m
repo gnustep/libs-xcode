@@ -3,11 +3,11 @@
 
 #import "GSXCGenerator.h"
 #import "GSXCCommon.h"
-#import "PBXNativeTarget.h"
+#import "PBXAbstractTarget.h"
 
 @implementation GSXCGenerator
 
-- (instancetype) initWithTarget: (PBXNativeTarget *)target
+- (instancetype) initWithTarget: (PBXAbstractTarget *)target
 {
   self = [super init];
   if (self != nil)
@@ -23,12 +23,12 @@
   [super dealloc];
 }
 
-- (void) setTarget: (PBXNativeTarget *)target
+- (void) setTarget: (PBXAbstractTarget *)target
 {
   ASSIGN(_target, target);
 }
 
-- (PBXNativeTarget *) target
+- (PBXAbstractTarget *) target
 {
   return _target;
 }

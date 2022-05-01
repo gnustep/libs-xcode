@@ -8,6 +8,7 @@
 
 @class GSXCVSProject;
 @class GSXCVSGlobalSectionContainer;
+@class PBXAbstractTarget;
 
 @interface GSXCVSSolution : NSObject
 {
@@ -15,7 +16,11 @@
   NSDictionary *_dictionary;
   GSXCVSProject *_project;
   GSXCVSGlobalSectionContainer *_container;
+  PBXAbstractTarget *_target;
 }
+
+- (instancetype) initWithDictionary: (NSDictionary *)d
+                          andTarget: (PBXAbstractTarget *)t;
 
 - (NSUUID *) uuid;
 - (NSDictionary *) dictionary;
