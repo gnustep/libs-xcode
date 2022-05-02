@@ -5,6 +5,11 @@
 
 @implementation GSXCVSGlobalSection
 
++ (instancetype) globalSection
+{
+  return AUTORELEASE([[GSXCVSGlobalSection alloc] init]);
+}    
+
 - (id) objectForKey: (NSString *)k
 {
   return [_values objectForKey: k];
@@ -14,6 +19,11 @@
 {
   [_values setObject: o
               forKey: k];
+}
+
+- (NSMutableDictionary *) values
+{
+  return _values;
 }
 
 - (GSXCVSGlobalSectionType) type
@@ -87,6 +97,17 @@
   result = [result stringByAppendingString: @"\tEndGlobalSection"];
   
   return result;
+}
+
+- (id) copyWithZone: (NSZone *)z
+{
+  id copy = [[GSXCVSGlobalSection allocWithZone: z] init];
+
+  [[copy values] addEntriesFromDictionary: _values];
+  [copy setType: _type];
+  [copy setPreSolution: _preSolution];
+
+  return copy;
 }
 
 @end

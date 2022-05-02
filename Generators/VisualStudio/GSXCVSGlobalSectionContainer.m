@@ -16,6 +16,7 @@
   self = [super init];
   if (self != nil)
     {
+      _sections = [[NSMutableArray alloc] init];
     }
   return self;
 }
@@ -25,7 +26,8 @@
   self = [super init];
   if (self != nil)
     {
-      ASSIGN(_sections, sections);
+      _sections = [[NSMutableArray alloc] init];
+      [self setSections: sections];
     }
   return self;
 }
@@ -38,12 +40,23 @@
 
 - (void) setSections: (NSArray *)sections
 {
-  ASSIGN(_sections, sections);
+  [_sections removeAllObjects];
+  [_sections addObjectsFromArray: sections];
 }
 
 - (NSArray *) sections
 {
   return _sections;
+}
+
+- (void) addSection: (GSXCVSGlobalSection *)section
+{
+  [_sections addObject: section];
+}
+
+- (void) addSections: (NSArray *)sections
+{
+  [_sections addObjectsFromArray: sections];
 }
 
 - (NSString *) string

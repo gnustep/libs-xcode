@@ -29,9 +29,14 @@
 
   if(self != nil)
     {
+      
       ASSIGN(_dictionary, d);
       ASSIGN(_target, t);
       ASSIGN(_project, [GSXCVSProject projectWithSolution: self]);
+      
+      GSXCVSGlobalSection *solutionConfigPlatforms = [GSXCVSGlobalSection globalSection];
+      
+      
     }
   
   return self;

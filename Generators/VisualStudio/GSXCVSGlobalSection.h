@@ -15,12 +15,14 @@ enum
   };
 typedef NSUInteger GSXCVSGlobalSectionType;
 
-@interface GSXCVSGlobalSection : NSObject
+@interface GSXCVSGlobalSection : NSObject <NSCopying>
 {
   NSMutableDictionary *_values; /* choosing to contain rather than subclass */
   GSXCVSGlobalSectionType _type;
   BOOL _preSolution;
 }
+
++ (instancetype) globalSection;
 
 - (NSString *) string;
 
