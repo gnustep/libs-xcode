@@ -22,21 +22,59 @@
   return self;
 }
 
+- (void) build
+{        
+  GSXCVSGlobalSection *section = nil;
+  NSString *config = nil;
+  
+  // Solution
+  section = [GSXCVSGlobalSection globalSection];
+  [section setPreSolution: YES];
+  [section setType: SolutionConfigurationPlatforms];
+  [section setObject: @"Release|x64"
+              forKey: @"Release|x64"];
+  [_container addSection: section];
+  
+  // Project
+  section = [GSXCVSGlobalSection globalSection];
+  config = [NSString stringWithFormat: @"{%@}.Release|x64.ActiveCfg",
+                     [[_project uuid] UUIDString]];      
+  [section setType: ProjectConfigurationPlatforms];
+  [section setObject: @"Release|x64"
+              forKey: config];
+  config = [NSString stringWithFormat: @"{%@}.Release|x64.Build.0",
+                     [[_project uuid] UUIDString]];
+  [section setObject: @"Release|x64"
+              forKey: config];
+  [_container addSection: section];
+
+  // Properties
+  section = [GSXCVSGlobalSection globalSection];
+  [section setPreSolution: YES];
+  [section setType: SolutionProperties];
+  [section setObject: @"FALSE"
+              forKey: @"HideSolutionNode"];
+  [_container addSection: section];
+  
+  // Properties
+  section = [GSXCVSGlobalSection globalSection];
+  [section setType: ExtensibilityGlobals];
+  [section setObject: [_uuid UUIDString]
+              forKey: @"SolutionGuid"];
+  [_container addSection: section];
+}
+
 - (instancetype) initWithDictionary: (NSDictionary *)d
                           andTarget: (PBXAbstractTarget *)t
 {
   self = [self init];
 
   if(self != nil)
-    {
-      
+    {     
       ASSIGN(_dictionary, d);
       ASSIGN(_target, t);
       ASSIGN(_project, [GSXCVSProject projectWithSolution: self]);
-      
-      GSXCVSGlobalSection *solutionConfigPlatforms = [GSXCVSGlobalSection globalSection];
-      
-      
+      [self build];
     }
   
   return self;
@@ -95,8 +133,6 @@
                      @"Project(\"{%@}\") = \"%@\", \"%@\", \"{%@}\"\nEndProject\n"
                      @"%@", [[_project root] UUIDString], [_project name], [_project path], [[_project uuid] UUIDString],
                      [_container string]]; // global container and sections...
-  
-  NSLog(@"result = %@", result);
   
   return result;
 }

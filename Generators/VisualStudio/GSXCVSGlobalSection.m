@@ -8,7 +8,24 @@
 + (instancetype) globalSection
 {
   return AUTORELEASE([[GSXCVSGlobalSection alloc] init]);
-}    
+}
+
+- (instancetype) init
+{
+  self = [super init];
+  if (self != nil)
+    {
+      _values = [[NSMutableDictionary alloc] init];
+    }
+  return self;
+}
+
+- (void) dealloc
+{
+  RELEASE(_values);
+
+  [super dealloc];
+}
 
 - (id) objectForKey: (NSString *)k
 {
@@ -62,9 +79,9 @@
         result = @"ProjectConfigurationPlatforms";
         break;
       }
-    case ProjectSolutionProperties: 
+    case SolutionProperties: 
       {
-        result = @"ProjectSolutionProperties";
+        result = @"SolutionProperties";
         break;
       }
     case ExtensibilityGlobals:
@@ -94,7 +111,7 @@
       result = [result stringByAppendingString: [NSString stringWithFormat: @"\t\t%@ = %@\n", k, v]];
     }
 
-  result = [result stringByAppendingString: @"\tEndGlobalSection"];
+  result = [result stringByAppendingString: @"\tEndGlobalSection\n"];
   
   return result;
 }

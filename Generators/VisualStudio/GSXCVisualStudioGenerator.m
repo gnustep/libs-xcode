@@ -45,9 +45,27 @@
 - (BOOL) generate
 {
   NSString *solutionString = [_solution string];
-  NSString *projectString = [[_solution project] string];
-  NSLog(@"solutionString = %@", solutionString);
-  NSLog(@"projectString = %@", projectString);
+  NSString *slnPath = [[_target name] stringByAppendingPathExtension: @"sln"];
+  NSError *error = nil;
+  BOOL success = NO;
+  
+  success = [solutionString writeToFile: slnPath atomically: YES encoding: NSUTF8StringEncoding error: &error];
+  if (success)
+    {
+      GSXCVSProject *project = [_solution project];
+      NSString *projectString = [project string];
+      NSString *projectPath = [[project path] stringByReplacingOccurrencesOfString: @"\\" withString: @"/"];
+      
+      success = [projectString writeToFile: projectPath atomically: YES encoding: NSUTF8StringEncoding error: &error];
+      if (!success)
+        {
+          NSLog(@"Error writing %@ file: %@", projectPath, error);
+        }
+    }
+  else
+    {
+      NSLog(@"Error writing %@ file: %@", slnPath, error);
+    }
   
   return YES;
 }

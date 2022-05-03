@@ -67,7 +67,7 @@
   
   while((s = [en nextObject]) != nil)
     {
-      result = [NSString stringWithFormat: @"\t%@", [s string]];
+      result = [result stringByAppendingString: [NSString stringWithFormat: @"%@", [s string]]];
     }
 
   result = [result stringByAppendingString: @"EndGlobal\n"];

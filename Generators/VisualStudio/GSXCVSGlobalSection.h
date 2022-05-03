@@ -10,7 +10,7 @@ enum
   {
     SolutionConfigurationPlatforms = 0, 
     ProjectConfigurationPlatforms,
-    ProjectSolutionProperties,
+    SolutionProperties,
     ExtensibilityGlobals,
   };
 typedef NSUInteger GSXCVSGlobalSectionType;

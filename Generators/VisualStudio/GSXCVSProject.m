@@ -8,6 +8,36 @@
 #import "GSXCVSSolution.h"
 #import "GSXCCommon.h"
 
+@interface GSXCVSItem : NSObject <NSCopying>
+{
+  NSString *_label;
+}
+
+- (void) label;
+
+@end
+
+@interface GSXCVSProjectConfiguration : GSXCVSItem
+{
+  NSString *_configuration;
+  NSString *_platform;
+}
+
+- (NSString *) configuration;
+- (NSString *) platform;
+
+@end
+
+@interface GSXCVSItemGroup : NSObject <NSCopying>
+{
+  NSMutableArray *_items;
+}
+
+- (NSArray *) items;
+
+@end
+
+
 @implementation GSXCVSProject
 
 + (instancetype) project
@@ -74,10 +104,27 @@
   return _solution;
 }
 
+
+- (NSString *) build
+{
+  NSString *url = @"http://schemas.microsoft.com/developer/msbuild/2003";
+  NSXMLDocument *projectXml = [[NSXMLDocument alloc] init];
+  NSXMLElement *rootElement = [[NSXMLElement alloc] initWithName: @"Project"];
+
+  NSXMLNode *attr = [NSXMLNode attributeWithName: @"DefaultTargets" stringValue: @"Build"];
+  [rootElement addAttribute: attr];
+  attr = [NSXMLNode attributeWithName: @"xmlns" stringValue: url];
+  [rootElement addAttribute: attr];
+  [projectXml setRootElement: rootElement];
+
+  NSData *data = [projectXml XMLDataWithOptions: NSXMLNodePrettyPrint];
+  NSString *xmlString = [[NSString alloc] initWithData: data encoding: NSUTF8StringEncoding];
+  return xmlString;
+}
+
 - (NSString *) string
 {
-  NSString *result = @"";
-
+  NSString *result = [self build];
   return result;
 }
 
