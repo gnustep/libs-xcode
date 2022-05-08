@@ -161,6 +161,16 @@
                           error: NULL];      
         }
     }
+  else
+    {
+      NSArray *keys = [NSArray arrayWithObjects: @"NSPrincipalClass", @"NSMainNibFile", nil];
+      NSArray *objs = [NSArray arrayWithObjects: @"NSApplication", @"MainMenu", nil];
+      NSDictionary *ipl = [NSDictionary dictionaryWithObjects: objs
+                                                      forKeys: keys];
+      [ipl writeToFile: outputFileName
+            atomically: YES];
+    }
+  
   return YES;
 }
 
