@@ -78,5 +78,9 @@
   ASSIGN(runOnlyForDeploymentPostprocessing,object);
 }
 
+- (BOOL) generate
+{
+  return YES;
+}
 
 @end

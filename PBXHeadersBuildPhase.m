@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import <Foundation/Foundation.h>
+*/
+
+#import <Foundation/Foundation.h>
 #import "PBXCommon.h"
 #import "PBXHeadersBuildPhase.h"
 #import "PBXFileReference.h"
@@ -35,8 +37,7 @@
   NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
   if([productType isEqualToString: BUNDLE_TYPE] ||
      [productType isEqualToString: TOOL_TYPE] ||
-     [productType isEqualToString: APPLICATION_TYPE]) // ||
-   //[productType isEqualToString: LIBRARY_TYPE])
+     [productType isEqualToString: APPLICATION_TYPE])
     {
       xcputs([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
       return YES;
@@ -89,6 +90,38 @@
     }
 
   xcputs([[NSString stringWithFormat: @"=== Completed Headers Build Phase"] cString]);
+
+  return result;
+}
+
+- (BOOL) generate
+{
+  xcputs("=== Executing Headers Build Phase (Generate)");
+  NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
+  if([productType isEqualToString: BUNDLE_TYPE] ||
+     [productType isEqualToString: TOOL_TYPE] ||
+     [productType isEqualToString: APPLICATION_TYPE])
+    {
+      xcputs([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
+      return YES;
+    }
+
+  BOOL result = YES;
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
+  // NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
+  [context setObject: files forKey: @"DERIVED_HEADERS"];
+  xcputs([[NSString stringWithFormat: @"\tAdding entry for derived header files"] cString]);
+
+  // Only copy into the framework header folder, if it's a framework...
+  if([productType isEqualToString: FRAMEWORK_TYPE])
+    {
+      // NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
+      [context setObject: files forKey: @"HEADERS"];
+      xcputs([[NSString stringWithFormat: @"\tAdding entry for derived header"] cString]);    
+    }
+
+  xcputs([[NSString stringWithFormat: @"=== Completed Headers Build Phase (Generate)"] cString]);
 
   return result;
 }

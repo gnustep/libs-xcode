@@ -1,3 +1,5 @@
+// Released under the terms of LGPL 2.1, Please see COPYING.LIB
+
 #import "GSXCMakefileGenerator.h"
 #import "PBXNativeTarget.h"
 #import "XCConfigurationList.h"
@@ -79,6 +81,7 @@
   NSString *appName = [name stringByDeletingPathExtension];
   NSString *makefileName = @"GNUmakefile";
   NSString *makefileString = @"";
+  NSString *headerFilesString = [self _arrayToList: [context objectForKey: @"HEADERS"]];
   NSString *objCFilesString = [self _arrayToList: [context objectForKey: @"OBJC_FILES"]];
   NSString *cFilesString = [self _arrayToList: [context objectForKey: @"C_FILES"]];
   NSString *cppFilesString = [self _arrayToList: [context objectForKey: @"CPP_FILES"]];
@@ -115,6 +118,8 @@
                                 [NSString stringWithFormat: @"%@_CPP_FILES = %@\n\n", appName, cppFilesString]];
   makefileString = [makefileString stringByAppendingString:
                                 [NSString stringWithFormat: @"%@_OBJCPP_FILES = %@\n\n", appName, objCPPFilesString]];
+  makefileString = [makefileString stringByAppendingString:
+                                [NSString stringWithFormat: @"%@_HEADER_FILES = %@\n\n", appName, headerFilesString]];
   makefileString = [makefileString stringByAppendingString:
                                 [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, resourceFilesString]];
   makefileString = [makefileString stringByAppendingString:
