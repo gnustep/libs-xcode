@@ -19,6 +19,10 @@ PACKAGE_NAME = XCode
 # Generator bundles
 SUBPROJECTS = XCode Generators
 
+XCode_RESOURCE_FILES = \
+	Generators/Makefile/Makefile.generator \
+	Generators/VisualStudio/VisualStudio.generator
+
 #
 # Makefiles
 #
