@@ -11,116 +11,17 @@ endif
 include $(GNUSTEP_MAKEFILES)/common.make
 
 #
-# Framework
+# Aggregate
 #
 VERSION = 0.3.0
 PACKAGE_NAME = XCode
-FRAMEWORK_NAME = XCode
-
-#
-# Resource files
-#
-XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
-	Resources/language-codes.plist \
-	Generators/Makefile/Makefile.generator \
-	Generators/VisualStudio/VisualStudio.generator
 
 # Generator bundles
-SUBPROJECTS = Generators
-
-#
-# Header files
-#
-XCode_HEADER_FILES = \
-GSXCBuildContext.h \
-GSXCCommon.h \
-NSArray+Additions.h \
-NSString+PBXAdditions.h \
-PBXAbstractBuildPhase.h \
-PBXAbstractTarget.h \
-PBXApplicationTarget.h \
-PBXAggregateTarget.h \
-PBXBuildFile.h \
-PBXBuildRule.h \
-PBXBundleTarget.h \
-PBXCoder.h \
-PBXCommon.h \
-PBXContainer.h \
-PBXContainerItemProxy.h \
-PBXCopyFilesBuildPhase.h \
-PBXFileReference.h \
-PBXFrameworksBuildPhase.h \
-PBXFrameworkTarget.h \
-PBXGroup.h \
-PBXHeadersBuildPhase.h \
-PBXNativeTarget.h \
-PBXProject.h \
-PBXReferenceProxy.h \
-PBXResourcesBuildPhase.h \
-PBXRezBuildPhase.h \
-PBXShellScriptBuildPhase.h \
-PBXSourcesBuildPhase.h \
-PBXTargetDependency.h \
-PBXVariantGroup.h \
-XCBuildConfiguration.h \
-XCConfigurationList.h \
-XCVersionGroup.h \
-XCWorkspace.h \
-XCFileRef.h \
-XCWorkspaceParser.h \
-PBXLegacyTarget.h \
-GSXCBuildOperation.h \
-GSXCBuildDelegate.h \
-GSXCGenerator.h \
-
-#
-# Class files
-#
-XCode_OBJC_FILES = \
-GSXCBuildContext.m \
-NSArray+Additions.m \
-NSString+PBXAdditions.m \
-PBXAbstractBuildPhase.m \
-PBXAbstractTarget.m \
-PBXApplicationTarget.m \
-PBXAggregateTarget.m \
-PBXBuildFile.m \
-PBXBuildRule.m \
-PBXBundleTarget.m \
-PBXCoder.m \
-PBXCommon.m \
-PBXContainerItemProxy.m \
-PBXContainer.m \
-PBXCopyFilesBuildPhase.m \
-PBXFileReference.m \
-PBXFrameworksBuildPhase.m \
-PBXFrameworkTarget.m \
-PBXGroup.m \
-PBXHeadersBuildPhase.m \
-PBXNativeTarget.m \
-PBXProject.m \
-PBXReferenceProxy.m \
-PBXResourcesBuildPhase.m \
-PBXRezBuildPhase.m \
-PBXShellScriptBuildPhase.m \
-PBXSourcesBuildPhase.m \
-PBXTargetDependency.m \
-PBXVariantGroup.m \
-XCBuildConfiguration.m \
-XCConfigurationList.m \
-XCVersionGroup.m \
-XCWorkspace.m \
-XCFileRef.m \
-XCWorkspaceParser.m \
-PBXLegacyTarget.m \
-GSXCBuildOperation.m \
-GSXCGenerator.m \
-xcsystem.m \
+SUBPROJECTS = XCode Generators
 
 #
 # Makefiles
 #
 -include GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/aggregate.make
-include $(GNUSTEP_MAKEFILES)/framework.make
 -include GNUmakefile.postamble
