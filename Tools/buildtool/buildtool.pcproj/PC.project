@@ -1,0 +1,71 @@
+{
+    "BUILDER_TARGETS" = (
+	all,
+	install,
+	uninstall,
+	clean,
+	distclean,
+	dist
+    );
+    "CLASS_FILES" = (
+    );
+    COMPILEROPTIONS = "";
+    CPPOPTIONS = "";
+    "CREATION_DATE" = "2011-08-20 11:42:51 -0400";
+    "DOCU_FILES" = (
+    );
+    FRAMEWORKS = (
+    );
+    "HEADER_FILES" = (
+    );
+    IMAGES = (
+    );
+    INSTALLDIR = "$(HOME)/GNUstep/Tools";
+    LANGUAGE = English;
+    LIBRARIES = (
+	"gnustep-base",
+	XCode
+    );
+    LINKEROPTIONS = "";
+    "LOCALIZED_RESOURCES" = (
+    );
+    MAKEFILEDIR = "$(GNUSTEP_MAKEFILES)";
+    "OBJC_COMPILEROPTIONS" = "";
+    "OTHER_RESOURCES" = (
+	Version
+    );
+    "OTHER_SOURCES" = (
+	"main.m"
+    );
+    "PROJECT_AUTHORS" = (
+    );
+    "PROJECT_COPYRIGHT" = "Copyright (C) 200x";
+    "PROJECT_COPYRIGHT_DESC" = "Released under ...";
+    "PROJECT_CREATOR" = "Gregory John Casamento,,,";
+    "PROJECT_DESCRIPTION" = "No description available!";
+    "PROJECT_GROUP" = "No group available!";
+    "PROJECT_MAINTAINER" = "Gregory John Casamento,,,";
+    "PROJECT_NAME" = buildtool;
+    "PROJECT_RELEASE" = "0.1";
+    "PROJECT_SUMMARY" = "No summary available!";
+    "PROJECT_TYPE" = Tool;
+    "PROJECT_URL" = "";
+    "SEARCH_HEADER_DIRS" = (
+    );
+    "SEARCH_LIB_DIRS" = (
+	"/usr/GNUstep/System/Library/Libraries"
+    );
+    SUBPROJECTS = (
+    );
+    "SUPPORTING_FILES" = (
+	"GNUmakefile.preamble",
+	GNUmakefile,
+	"GNUmakefile.postamble",
+	"buildtoolInfo.plist"
+    );
+    TOOLICON = "";
+    "USER_LANGUAGES" = (
+	AmericanEnglish,
+	English
+    );
+}

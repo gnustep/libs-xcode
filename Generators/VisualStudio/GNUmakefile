@@ -7,6 +7,8 @@ BUNDLE_NAME = VisualStudio
 BUNDLE_EXTENSION = .generator
 VisualStudio_PRINCIPAL_CLASS = GSXCVisualStudioGenerator
 
+VisualStudio_HAS_RESOURCE_BUNDLE = yes
+
 VisualStudio_OBJC_FILES = GSXCVisualStudioGenerator.m \
 	GSXCVSSolution.m \
 	GSXCVSProject.m \
@@ -15,7 +17,7 @@ VisualStudio_OBJC_FILES = GSXCVisualStudioGenerator.m \
 
 VisualStudio_RESOURCE_FILES =
 
-VisualStudio_STANDARD_INSTALL = no
+VisualStudio_STANDARD_INSTALL = yes
 
 -include GNUmakefile.preamble
 -include GNUmakefile.local

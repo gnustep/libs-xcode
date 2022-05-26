@@ -14,14 +14,12 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # Aggregate
 #
 VERSION = 0.3.0
-PACKAGE_NAME = XCode
+PACKAGE_NAME = XCode_Tools
 
-# Generator bundles
+# Tools
 SUBPROJECTS = \
-	XCode \
-	Generators \
-#	Tools \
-#	Applications
+	buildtool \
+	pcpg \
 
 #
 # Makefiles

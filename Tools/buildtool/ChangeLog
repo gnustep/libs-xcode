@@ -1,0 +1,18 @@
+2013-05-12 23:36-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* main.m: Do not use hidden version of xcodeproj file.
+
+2013-04-24 13:42-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* main.m: Fix error detecting the xcodeproj file.
+
+2013-04-24 02:38-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* main.m: Handle command if it is either the first or second
+	argument depending on whether we can locate the project file.
+
+2012-10-15 13:40-EDT Gregory John Casamento <greg.casamento@gmail.com>
+
+	* main.m: Changes to automatically detect and build the correct
+	project file.
+
