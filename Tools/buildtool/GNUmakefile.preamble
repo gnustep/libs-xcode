@@ -18,7 +18,7 @@ ADDITIONAL_LDFLAGS +=
 ADDITIONAL_INCLUDE_DIRS += -I../../
 
 # Additional library directories the linker should search
-ADDITIONAL_LIB_DIRS += -L../../XCode/$(GNUSTEP_OBJ_DIR)
+ADDITIONAL_LIB_DIRS += -L../../XCode/XCode.framework
 
 # Additional TOOL libraries to link
 ADDITIONAL_TOOL_LIBS += -lXCode 
