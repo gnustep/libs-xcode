@@ -10,18 +10,9 @@ endif
 
 include $(GNUSTEP_MAKEFILES)/common.make
 
-#
-# Aggregate
-#
-VERSION = 0.3.0
-PACKAGE_NAME = XCode
-
 # Generator bundles
 SUBPROJECTS = \
-	XCode \
-	Generators \
-	Tools \
-	Applications
+	ycode
 
 #
 # Makefiles
