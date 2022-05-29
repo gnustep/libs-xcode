@@ -9,6 +9,7 @@
     GSMainMarkupFile = "";
     NOTE = "Automatically generated, do not edit!";
     NSExecutable = Ycode;
+    NSIcon = "Ycode.tiff";
     NSMainNibFile = "Ycode.gorm";
     NSMainStoryboardFile = "";
     NSPrincipalClass = NSApplication;

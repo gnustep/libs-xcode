@@ -25,41 +25,41 @@ include $(GNUSTEP_MAKEFILES)/common.make
 VERSION = 0.1
 PACKAGE_NAME = Ycode
 APP_NAME = Ycode
-Ycode_APPLICATION_ICON = 
+Ycode_APPLICATION_ICON = Ycode.tiff
 
 
 #
 # Resource files
 #
 Ycode_RESOURCE_FILES = \
-Resources/Ycode.gorm \
-
+	Resources/Ycode.gorm \
+	Resources/Ycode.tiff \
 
 #
 # Header files
 #
 Ycode_HEADER_FILES = \
-AppController.h \
-YCodeDocumentController.h \
-YCTreeView.h \
-YCEditorView.h \
-YCInspectorView.h
+	AppController.h \
+	YCodeDocumentController.h \
+	YCTreeView.h \
+	YCEditorView.h \
+	YCInspectorView.h
 
 #
 # Objective-C Class files
 #
 Ycode_OBJC_FILES = \
-AppController.m \
-YCodeDocumentController.m \
-YCTreeView.m \
-YCEditorView.m \
-YCInspectorView.m
+	AppController.m \
+	YCodeDocumentController.m \
+	YCTreeView.m \
+	YCEditorView.m \
+	YCInspectorView.m
 
 #
 # Other sources
 #
 Ycode_OBJC_FILES += \
-Ycode_main.m 
+	Ycode_main.m 
 
 #
 # Makefiles
