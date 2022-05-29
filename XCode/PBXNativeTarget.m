@@ -462,15 +462,13 @@
   return YES;
 }
 
-- (BOOL) invokeGeneratorBundle
+- (GSXCGenerator *) _loadGeneratorBundleFromDirectory: (NSString *)dir
+                                             withName: (NSString *)bname
 {
-  BOOL result = NO;
-  NSBundle *bundle = [NSBundle bundleForClass: [self class]];
-  NSString *generatorName = [[_project container] parameter]; // @"Makefile";  // default if not specified...
-  NSString *bundlePath = [bundle pathForResource: generatorName
-                                          ofType: @"generator"];
+  NSString *bundleName = [bname stringByAppendingPathExtension: @"generator"];
+  NSString *bundlePath = [dir stringByAppendingPathComponent: bundleName];
   NSBundle *generatorBundle = [NSBundle bundleWithPath: bundlePath];
-
+  
   if (generatorBundle != nil)
     {
       NSString *className = [[generatorBundle infoDictionary] objectForKey: @"NSPrincipalClass"];
@@ -478,14 +476,14 @@
       if (className != nil)
         {
           Class cls = [generatorBundle classNamed: className];
-
+          
           if (cls != nil)
-            {
+            {              
               GSXCGenerator *generator = [[cls alloc] initWithTarget: self];
               
               if (generator != nil)
                 {
-                  result = [generator generate];
+                  return generator;
                 }
               else
                 {
@@ -502,9 +500,38 @@
           NSLog(@"NSPrincipalClass not specified in plist for bundle: %@", bundlePath);
         }
     }
-
-  return result;
+  
+  return nil;
 }
+
+
+- (BOOL) invokeGeneratorBundle
+{
+  NSString *generatorName = [[_project container] parameter]; // @"Makefile";  // default if not specified...
+  NSString *bundlesDir = nil;
+  GSXCGenerator *generator = nil;
+  
+  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
+  bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
+  generator = [self _loadGeneratorBundleFromDirectory: bundlesDir
+                                             withName: generatorName];
+  if (generator) return [generator generate];
+
+  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES) lastObject];
+  bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
+  generator = [self _loadGeneratorBundleFromDirectory: bundlesDir
+                                             withName: generatorName];
+  if (generator) return [generator generate];
+
+  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSSystemDomainMask, YES) lastObject];
+  bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
+  generator = [self _loadGeneratorBundleFromDirectory: bundlesDir
+                                             withName: generatorName];
+  if (generator) return [generator generate];
+
+  return NO;
+}
+
 
 - (BOOL) generate
 {
