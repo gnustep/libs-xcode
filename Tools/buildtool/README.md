@@ -15,7 +15,7 @@ How to use it:
    that builds the Xcode project using the build phases and
    settings defined there
 3) buildtool will create a build directory with the following structure:
-   * build/$(TARGET_NAME)/Products/$(PRODUCT_NAME).app
+   * ```build/$(TARGET_NAME)/Products/$(PRODUCT_NAME).app```
 
 The tool will copy all the resources into the directory for the application.
 The above is simply an example, you can build any kind of target based on the
