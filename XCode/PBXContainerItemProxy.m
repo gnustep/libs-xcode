@@ -22,13 +22,13 @@
    Boston, MA 02110 USA.
 */
 
+#import <Foundation/NSFileManager.h>
+
 #import "PBXCommon.h"
 #import "PBXContainerItemProxy.h"
 #import "PBXCoder.h"
 #import "PBXContainer.h"
 #import "GSXCBuildContext.h"
-
-#import <unistd.h>
 
 @implementation PBXContainerItemProxy
 
@@ -86,19 +86,19 @@
 - (BOOL) build
 {
   PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
-
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  
   containerPortal = [[currentContainer objects] objectForKey: containerPortal];
   if([containerPortal isKindOfClass: [PBXFileReference class]])
     {
       xcputs([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", CYAN, [containerPortal path], RESET] cString]);
-      char *dir = getcwd(NULL, 0);
+      NSString *dir = [mgr currentDirectoryPath];
       PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
-      chdir([[coder projectRoot] cString]);
+      [mgr changeCurrentDirectoryPath: [coder projectRoot]];
       PBXContainer *container = [coder unarchive];
       [container setFilename: [containerPortal path]];
       BOOL result = [container build];
-      chdir(dir);
-      free(dir);
+      [mgr changeCurrentDirectoryPath: dir];
 
       return result;
     }

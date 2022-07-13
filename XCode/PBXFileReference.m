@@ -23,7 +23,7 @@
 */
 
 #import <stdlib.h>
-#import <unistd.h>
+// #import <unistd.h>
 
 #import "PBXCommon.h"
 #import "PBXFileReference.h"
@@ -489,7 +489,7 @@ extern char **environ;
   NSDictionary *bs = [xbc buildSettings];
 
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
-                         BOLD, MAGENTA, [self buildPath], RESET, _currentFile, _totalFiles] cString]);
+			   BOLD, MAGENTA, [self buildPath], RESET, (long)_currentFile, (long)_totalFiles] cString]);
 
   if(modified == nil)
     {

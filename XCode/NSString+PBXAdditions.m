@@ -28,7 +28,13 @@
 #import <Foundation/NSDictionary.h>
 
 #import "NSString+PBXAdditions.h"
+
+#ifdef _MSC_VER
+#import <stdio.h>
+#define popen _popen
+#else
 #import <unistd.h>
+#endif
 
 extern char **environ;
 

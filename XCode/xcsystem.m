@@ -23,7 +23,10 @@
 */
 
 #import <stdlib.h>
+
+#ifndef _MSC_VER
 #import <unistd.h>
+#endif
 
 #import "NSString+PBXAdditions.h"
 #import "xcsystem.h"

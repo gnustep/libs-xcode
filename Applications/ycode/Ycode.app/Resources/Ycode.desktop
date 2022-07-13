@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Categories=X-GNUstep;
-Name=Ycode
-StartupWMClass=Ycode
-Comment=No description avaliable!
-Icon=/usr/GNUstep/Local/Applications/Ycode.app/Resources/Ycode.tiff
-Exec=/usr/GNUstep/System/Tools/openapp Ycode

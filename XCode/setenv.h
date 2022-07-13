@@ -23,7 +23,9 @@
 */
 
 #include <stdlib.h>
+#ifndef _MSC_VER
 #include <strings.h>
+#endif
 #include <stdio.h>
 
 int setenv(const char *key, const char *value, int overwrite);

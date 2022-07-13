@@ -32,7 +32,9 @@
 #import "PBXAbstractTarget.h"
 #import "PBXTargetDependency.h"
 
+#ifndef _MSC_VER
 #import <unistd.h>
+#endif
 
 #ifdef _WIN32
 #import "setenv.h"
