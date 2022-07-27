@@ -87,6 +87,17 @@
 {
 }
 
+- (void) setTotalFiles: (NSUInteger)total
+{
+  _totalFiles = total;
+}
+
+- (NSUInteger) totalFiles
+{
+  return _totalFiles;
+}
+
+
 - (BOOL) build
 {
   NSEnumerator *en = [children objectEnumerator];
