@@ -7,9 +7,9 @@ ADDITIONAL_LIB_DIRS += \
 
 ADDITIONAL_GUI_LIBS += -lXCode
 endif
-ifeq ($(GNUSTEP_TARGET_OS),cygwin)
+ifeq ($(GNUSTEP_TARGET_OS),windows)
 ADDITIONAL_LIB_DIRS += \
         -L../../XCode/$(GNUSTEP_OBJ_DIR) \
 
-0Menus_LIBRARIES_DEPEND_UPON += -lXCode
+ADDITIONAL_GUI_LIBS += -lXCode
 endif

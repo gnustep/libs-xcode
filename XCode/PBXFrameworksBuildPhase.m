@@ -39,27 +39,10 @@
 
 - (NSString *) _gsConfigString
 {
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSDictionary *plistFile = [context config];
-  NSProcessInfo *pi = [NSProcessInfo processInfo];
-  NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
-  NSUInteger os = [pi operatingSystem];
   NSString *configString = nil;
   
-  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
-    {
-      if (winCfgPfx == nil)
-	{
-	  winCfgPfx = @"/usr/GNUstep/System/Tools";
-	}
-      
-      configString = [NSString stringWithFormat: @"%@/gnustep-config", winCfgPfx];
-    }
-  else
-    {
-      configString = @"gnustep-config";
-    }
-  
+  configString = @"gnustep-config";
+    
   return configString;
 }
 
@@ -417,21 +400,33 @@
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
 
+  NSDebugLog(@"Output files = %@", outputFiles);
+
+  if (outputFiles == nil)
+    {
+      xcputs("\n+++++ Error during compilation, no object files... +++++\n");
+      return NO;
+    }
+
   linkString = [NSString stringWithFormat: [linkString stringByAppendingString: @" `%@ --objc-flags --objs-libs " \
 						       @"--base-libs --gui-libs` `%@ --variable=LDFLAGS` " \
 						       @"-lgnustep-base -lgnustep-gui "], cfgString, cfgString];
   NSDebugLog(@"LINK: %@", linkString);
            
-  NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
-				compiler,
-				outputPath,
-				outputFiles,
-				linkString];
+  NSString *command = nil;
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       command = [NSString stringWithFormat: 
 			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+			  compiler,
+			  outputPath,
+			  outputFiles,
+			  linkString];
+    }
+  else
+    {
+      command = [NSString stringWithFormat: 
+			    @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
 			  compiler,
 			  outputPath,
 			  outputFiles,

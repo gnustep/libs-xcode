@@ -26,6 +26,7 @@
 #import <Foundation/NSCharacterSet.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSFileManager.h>
 
 #import "NSString+PBXAdditions.h"
 
@@ -37,6 +38,7 @@
 #endif
 
 extern char **environ;
+static NSString *_cachedRootPath = nil;
 
 @implementation NSString (PBXAdditions)
 
@@ -156,13 +158,52 @@ extern char **environ;
   return [NSString stringWithFormat: @"'%@'", self];
 }
 
+- (NSString *) findRootPath
+{
+  NSString *result = nil;
+
+  if (_cachedRootPath == nil)
+    {
+      NSString *driveLetters = @"cdefghijklmnopqrstuvwxyz", *b = nil;
+      NSArray *base = [NSArray arrayWithObjects: @"/msys64", @"/tools/msys64", nil];
+      NSEnumerator *en = [base objectEnumerator];
+      NSFileManager *fm = [NSFileManager defaultManager];
+      
+      while ((b = [en nextObject]) != nil)
+	{
+	  NSUInteger i = 0;
+
+	  for(i = 0; i < [driveLetters length]; i++)
+	    {
+	      unichar letter = [driveLetters characterAtIndex: i];
+	      
+	      result = [NSString stringWithFormat: @"%c:%@", letter, b];
+	      if ([fm fileExistsAtPath: result])
+		{
+		  _cachedRootPath = result;
+		  break;
+		}
+	    }
+	}
+    }
+  else
+    {
+      result = _cachedRootPath;
+    }
+  
+  NSDebugLog(@"root path = %@", result);
+  
+  return result;
+}
+
 - (NSString *) execPathForString
 {
   NSString *result = nil;
   NSString *cmd = self;
   
 #ifdef _WIN32
-  result = [NSString stringWithFormat: @"c:/msys64/usr/bin/bash -l -c \"%@\"", cmd];
+  NSString *rootPath = [self findRootPath];  
+  result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
 #else
   result = [cmd copy];
 #endif
