@@ -23,7 +23,7 @@
 */
 
 #import <stdlib.h>
-#import <unistd.h>
+// #import <unistd.h>
 
 #import "PBXCommon.h"
 #import "PBXFileReference.h"
@@ -423,39 +423,11 @@ extern char **environ;
 
 - (NSString *) _compiler
 {
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSDictionary *plistFile = [context config];
-  NSProcessInfo *pi = [NSProcessInfo processInfo];
-  NSString *winCompilerPfx = [plistFile objectForKey: @"win_compiler_prefix"];
-  NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
-  NSUInteger os = [pi operatingSystem];
   NSString *compiler = nil;  
   
-  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
-    {
-      if (winCompilerPfx == nil)
-	{
-	  winCompilerPfx = @"/mingw64/bin";
-	}
-
-      if (winCfgPfx == nil)
-	{
-	  winCfgPfx = @"/usr/GNUstep/System/Tools";
-	}
-      
-      NSString *defaultValue = [NSString stringWithFormat: @"`%@/gnustep-config --variable=CC` "
-					 @"`%@/gnustep-config --objc-flags`", winCfgPfx,
-					 winCfgPfx];	  
-      compiler = [NSString stringForEnvironmentVariable: @"CC"
-					   defaultValue: defaultValue]; 
-      compiler = [winCompilerPfx stringByAppendingPathComponent: compiler];	  
-    }
-  else
-    {
-      compiler = [NSString stringForEnvironmentVariable: @"CC"
-					   defaultValue: @"`gnustep-config --variable=CC` "
-			   @"`gnustep-config --objc-flags`"];	  
-    }
+  compiler = [NSString stringForEnvironmentVariable: @"CC"
+				       defaultValue: @"`gnustep-config --variable=CC` "
+		       @"`gnustep-config --objc-flags`"];	  
   
   return compiler;
 }
@@ -489,7 +461,7 @@ extern char **environ;
   NSDictionary *bs = [xbc buildSettings];
 
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
-                         BOLD, MAGENTA, [self buildPath], RESET, _currentFile, _totalFiles] cString]);
+			   BOLD, MAGENTA, [self buildPath], RESET, (long)_currentFile, (long)_totalFiles] cString]);
 
   if(modified == nil)
     {

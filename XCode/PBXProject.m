@@ -32,7 +32,9 @@
 #import "PBXAbstractTarget.h"
 #import "PBXTargetDependency.h"
 
+#ifndef _MSC_VER
 #import <unistd.h>
+#endif
 
 #ifdef _WIN32
 #import "setenv.h"
@@ -315,7 +317,8 @@
   NSUInteger os = [pi operatingSystem];
   NSString *output = nil;  
   NSString *cmd = nil;
-  
+
+  /*
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       if (winCompilerPfx == nil)
@@ -331,7 +334,7 @@
       cmd = [NSString stringWithFormat: @"`%@/gnustep-config --debug-flags` ",
 		      winCfgPfx];
     }
-  else
+  else */
     {
       cmd = @"gnustep-config --debug-flags";
     }
