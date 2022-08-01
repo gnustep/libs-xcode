@@ -326,7 +326,7 @@
   cmd = @"gnustep-config --debug-flags";
     
   // Context...
-  output = [NSString stringForCommand: cmd];
+  output = @"`gnustep-config --debug-flags`"; //[NSString stringForCommand: cmd];
   [context setObject: output
 	      forKey: @"CONFIG_STRING"];
 

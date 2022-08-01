@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -30,6 +30,7 @@
 
 #import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
+#import "GSXCBuildContext.h"
 
 #ifdef _MSC_VER
 #import <stdio.h>
@@ -39,7 +40,6 @@
 #endif
 
 extern char **environ;
-static NSString *_cachedRootPath = nil;
 
 @implementation NSString (PBXAdditions)
 
@@ -162,6 +162,7 @@ static NSString *_cachedRootPath = nil;
 - (NSString *) findRootPath
 {
   NSString *result = nil;
+  //  static NSString *_cachedRootPath = nil;
 
   if (_cachedRootPath == nil)
     {
@@ -201,14 +202,32 @@ static NSString *_cachedRootPath = nil;
 {
   NSString *result = nil;
   NSString *cmd = self;
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *config = [ctx config];
+  NSString *setupScript = nil; // [config objectForKey: @"setupScript"];
   
 #ifdef _WIN32
-  NSString *rootPath = [self findRootPath];  
-  result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
+  NSString *rootPath = [self findRootPath];
+  if (setupScript == nil)
+    {
+      result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
+    }
+  else
+    {
+      result = [NSString stringWithFormat: @"%@/usr/bin/bash -c '. %@ > /dev/null && %@'", rootPath, setupScript, cmd];
+    }
 #else
-  result = [cmd copy];
+  if (setupScript == nil)
+    {
+      result = [NSString stringWithFormat: @"%@ && %@", setupScript, cmd];
+    }
+  else
+    {
+      result = [cmd copy];
+    }
 #endif
-
+  NSLog(@"%@", result);
+  
   return result;
 }
 

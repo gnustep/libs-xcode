@@ -230,12 +230,9 @@
 - (NSString *) linkString
 {
   NSString *cfgString = [self _gsConfigString];
-  NSString *systemLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_SYSTEM_LIBRARY`/"
-							   stringByAppendingPathComponent: @"Libraries"], cfgString];
-  NSString *localLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_LOCAL_LIBRARY`/"
-							  stringByAppendingPathComponent: @"Libraries"], cfgString];
-  NSString *userLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_USER_LIBRARY`/"
-							 stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *systemLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
+  NSString *localLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
+  NSString *userLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
   NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"];
   NSString *linkString = [NSString stringWithFormat: @"-L/usr/local/lib -L/opt/local/lib -L%@ -L%@ -L%@ ",
@@ -294,8 +291,9 @@
         }
     }
 
-  linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
-
+  // linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
+  linkString = [linkString stringByAppendingString: @" -lobjc "];
+  
   // Do substitutions and additions for buildtool.plist...
   NSDictionary *substitutionList = [configDict objectForKey: @"substitutions"];
   NSArray *additionalFlags = [configDict objectForKey: @"additional"];
@@ -409,7 +407,7 @@
       return NO;
     }
 
-  linkString = [NSString stringWithFormat: [linkString stringByAppendingString: @" `%@ --objc-flags --objs-libs " \
+  linkString = [NSString stringWithFormat: [linkString stringByAppendingString: @" `%@ --objc-flags --objc-libs " \
 						       @"--base-libs --gui-libs` `%@ --variable=LDFLAGS` " \
 						       @"-lgnustep-base -lgnustep-gui "], cfgString, cfgString];
   NSDebugLog(@"LINK: %@", linkString);
@@ -509,12 +507,9 @@
   NSString *libraryPath = [outputDir stringByAppendingPathComponent: libNameWithVersion];
   NSString *libraryPathNoVersion = [outputDir stringByAppendingPathComponent: libName];
   NSString *cfgString = [self _gsConfigString];
-  NSString *systemLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_SYSTEM_LIBRARY`/"
-							   stringByAppendingPathComponent: @"Libraries"], cfgString];
-  NSString *localLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_LOCAL_LIBRARY`/"
-							  stringByAppendingPathComponent: @"Libraries"], cfgString];
-  NSString *userLibDir = [NSString stringWithFormat: [@"`%@ --variable=GNUSTEP_USER_LIBRARY`/"
-							 stringByAppendingPathComponent: @"Libraries"], cfgString];
+  NSString *systemLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
+  NSString *localLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
+  NSString *userLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
   NSString *frameworkRoot = [context objectForKey: @"FRAMEWORK_DIR"];
   NSString *libraryLink = [frameworkRoot stringByAppendingPathComponent: libName];
   NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];

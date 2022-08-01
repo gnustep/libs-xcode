@@ -22,28 +22,67 @@
    Boston, MA 02110 USA.
 */
 
-#import <stdlib.h>
+#import <Foundation/NSUUID.h>
 
+#import "GSXCBuildContext.h"
+#import "NSString+PBXAdditions.h"
+#import "xcsystem.h"
+
+#import <stdlib.h>
 #ifndef _MSC_VER
 #import <unistd.h>
 #endif
 
-#import "NSString+PBXAdditions.h"
-#import "xcsystem.h"
-
 NSInteger xcsystem(NSString *cmd)
 {
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *dict = [ctx config];
+  NSString *setupScript = [dict objectForKey: @"setupScript"];
   NSInteger r = 0;
-  
-#ifdef _WIN32
-  NSString *win_cmd = [cmd execPathForString];
-    
-  NSDebugLog(@"win_cmd = %@", win_cmd);
-  r = system([win_cmd cString]);
-#else
-  r = system([cmd cString]);
-#endif
 
+  if(setupScript == nil)
+    {
+#ifdef _WIN32
+      NSString *win_cmd = [cmd execPathForString];
+      
+      NSDebugLog(@"win_cmd = %@", win_cmd);
+      r = system([win_cmd cString]);
+#else
+      r = system([cmd cString]);
+#endif
+    }
+  else
+    {
+      NSUUID *uuid = [NSUUID UUID];
+      NSString *filename = [NSString stringWithFormat: @"bt_%@.sh", [uuid UUIDString]];
+      NSString *scriptFormat = @"#!/bin/bash\n\n%@\nexit 0\n";
+      NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
+      NSString *body = @"";
+      NSString *script = nil;
+      
+      body = [body stringByAppendingString: [NSString stringWithFormat: @". %@ > /dev/null\n", setupScript]];
+      body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", cmd]];
+
+      script = [NSString stringWithFormat: scriptFormat, body];
+      BOOL f = [script writeToFile: scriptCmd
+			atomically: YES
+			  encoding: NSUTF8StringEncoding
+			     error: NULL];
+      if (f)
+	{
+#ifdef _WIN32
+	  NSString *win_cmd = [scriptCmd execPathForString];
+	  NSDebugLog(@"win_cmd = %@", win_cmd);
+	  r = system([win_cmd cString]);
+#else
+	  r = system([scriptCmd cString]);
+#endif
+	}
+      else
+	{
+	  NSLog(@"Failed to write out temporary script %@", scriptCmd);
+	}
+    }
   return r;
 }
 
@@ -71,4 +110,3 @@ int xcprintf(const char *format, ...)
 
     return result;
 }
-
