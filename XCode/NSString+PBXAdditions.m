@@ -42,8 +42,6 @@
 
 extern char **environ;
 
-static NSString *_cachedRootPath = nil;
-
 @implementation NSString (PBXAdditions)
 
 - (NSString *) firstPathComponent
@@ -229,6 +227,10 @@ static NSString *_cachedRootPath = nil;
       result = [cmd copy];
     }
 #endif
+<<<<<<< HEAD
+=======
+  NSLog(@"%@", result);
+>>>>>>> 7c35cd5 (Update to cross compile to MSVC environment)
   
   return result;
 }
