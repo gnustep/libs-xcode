@@ -30,10 +30,13 @@
 
 @interface PBXBuildRule : NSObject
 {
-  NSString *fileType;
-  NSString *isEditable;
-  NSMutableArray *outputFiles;
-  NSString *compilerSpec;
+  NSString *_fileType;
+  NSString *_isEditable;
+  NSMutableArray *_outputFiles;
+  NSString *_compilerSpec;
+  NSString *_script;
+  NSMutableArray *_inputFiles;
+  NSString *_filePatterns;
 }
 
 // Methods....
@@ -43,7 +46,14 @@
 - (void) setIsEditable: (NSString *)object; // setter
 - (NSMutableArray *) outputFiles; // getter
 - (void) setOutputFiles: (NSMutableArray *)object; // setter
+- (NSMutableArray *) inputFiles; // getter
+- (void) setInputFiles: (NSMutableArray *)object; // setter
 - (NSString *) compilerSpec; // getter
 - (void) setCompilerSpec: (NSString *)object; // setter
+- (NSString *) script; // getter
+- (void) setScript: (NSString *)object; // setter
+- (NSString *) filePatterns; // getter
+- (void) setFilePatterns: (NSString *)object; // setter
+
 
 @end

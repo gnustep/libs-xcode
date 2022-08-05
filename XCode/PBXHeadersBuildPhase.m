@@ -60,7 +60,7 @@
       BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						toPath: dstFile
 						 error: &error];
-      xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, RED, dstFile, RESET] cString]);
+      xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, CYAN, dstFile, RESET] cString]);
       if(!copyResult)
 	{
 	  xcputs([[NSString stringWithFormat: @"\t* Already exists"] cString]);
@@ -81,7 +81,7 @@
 	  BOOL copyResult = [defaultManager copyItemAtPath: srcFile
 						    toPath: dstFile
 						     error: &error];
-          xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, RED, dstFile, RESET] cString]);
+          xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, CYAN, dstFile, RESET] cString]);
 	  if(!copyResult)
 	    {
 	      xcputs([[NSString stringWithFormat: @"\t* Already exists"] cString]);

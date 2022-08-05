@@ -42,12 +42,12 @@
 
 - (void) dealloc
 {
-  RELEASE(productReference);
-  RELEASE(productInstallPath);
-  RELEASE(productType);
-  RELEASE(buildRules);
-  RELEASE(comments);
-  RELEASE(productSettingsXML);
+  RELEASE(_productReference);
+  RELEASE(_productInstallPath);
+  RELEASE(_productType);
+  RELEASE(_buildRules);
+  RELEASE(_comments);
+  RELEASE(_productSettingsXML);
   
   [super dealloc];
 }
@@ -55,52 +55,52 @@
 // Methods....
 - (PBXFileReference *) productReference // getter
 {
-  return productReference;
+  return _productReference;
 }
 
 - (void) setProductReference: (PBXFileReference *)object; // setter
 {
-  ASSIGN(productReference,object);
+  ASSIGN(_productReference,object);
 }
 
 - (NSString *) productInstallPath // getter
 {
-  return productInstallPath;
+  return _productInstallPath;
 }
 
 - (void) setProductInstallPath: (NSString *)object; // setter
 {
-  ASSIGN(productInstallPath,object);
+  ASSIGN(_productInstallPath,object);
 }
 
 - (NSString *) productType // getter
 {
-  return productType;
+  return _productType;
 }
 
 - (void) setProductType: (NSString *)object; // setter
 {
-  ASSIGN(productType,object);
+  ASSIGN(_productType,object);
 }
 
 - (NSMutableArray *) buildRules // getter
 {
-  return buildRules;
+  return _buildRules;
 }
 
 - (void) setBuildRules: (NSMutableArray *)object; // setter
 {
-  ASSIGN(buildRules,object);
+  ASSIGN(_buildRules,object);
 }
 
 - (NSString *) productSettingsXML // getter
 {
-  return productSettingsXML;
+  return _productSettingsXML;
 }
 
 - (void) setProductSettingsXML: (NSString *)object // setter
 {
-  ASSIGN(productSettingsXML,object);
+  ASSIGN(_productSettingsXML,object);
 }
 
 /*
@@ -125,7 +125,7 @@
   buildDir = [buildDir stringByAppendingPathComponent: aname];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"Products"] 
-			 stringByAppendingPathComponent: [productReference path]];
+			 stringByAppendingPathComponent: [_productReference path]];
 
   NSError *error = nil;
   
@@ -136,8 +136,8 @@
 						  error:&error];
   
   setenv("inherited","",1); // probably from a parent project or target..
-  if([productType isEqualToString: BUNDLE_TYPE] ||
-     [productType isEqualToString: APPLICATION_TYPE]) 
+  if([_productType isEqualToString: BUNDLE_TYPE] ||
+     [_productType isEqualToString: APPLICATION_TYPE]) 
     {
       NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
 
@@ -155,7 +155,7 @@
       [context setObject: execName forKey: @"PRODUCT_NAME"];
       [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
     }
-  else if([productType isEqualToString: FRAMEWORK_TYPE])
+  else if([_productType isEqualToString: FRAMEWORK_TYPE])
     {
       NSString *dir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
                                                 defaultValue: @"./"];
@@ -217,7 +217,7 @@
       [context setObject: execName forKey: @"PRODUCT_NAME"];
       [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
     }
-  else if([productType isEqualToString: LIBRARY_TYPE])
+  else if([_productType isEqualToString: LIBRARY_TYPE])
     {
       // for non-bundled packages...
       NSString *fileName = [fullPath lastPathComponent];
@@ -275,11 +275,11 @@
   [buildConfigurationList applyDefaultConfiguration];
   [context setObject: buildConfigurationList
               forKey: @"buildConfig"];
-  [context setObject: productType
+  [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];
-  if(productSettingsXML != nil)
+  if(_productSettingsXML != nil)
     {
-      [context setObject: productSettingsXML 
+      [context setObject: _productSettingsXML 
                   forKey: @"PRODUCT_SETTINGS_XML"];
     }
   xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
@@ -346,13 +346,13 @@
                                                  defaultValue: @"build"];
   NSString *outputDir = [buildDir stringByAppendingPathComponent: [self productName]];
   NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
-  NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [productReference path]];
+  NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];
   NSString *fileName = [fullPath lastPathComponent];
   NSString *execName = [fileName stringByDeletingPathExtension];
   NSFileManager *fileManager = [NSFileManager defaultManager];
   NSError *error = nil;
 
-  if([productType isEqualToString: APPLICATION_TYPE])
+  if([_productType isEqualToString: APPLICATION_TYPE])
     {
       NSArray *apps = NSSearchPathForDirectoriesInDomains(NSAllApplicationsDirectory, NSLocalDomainMask, YES);
       NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
@@ -361,20 +361,20 @@
 			   toPath: installDest
 			    error: &error];
     }
-  else if([productType isEqualToString: FRAMEWORK_TYPE])
+  else if([_productType isEqualToString: FRAMEWORK_TYPE])
     {
       NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
       NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
       NSString *frameworkPath = [libraryPath stringByAppendingPathComponent: @"Frameworks"];
       NSString *installDest = frameworkPath;
-      NSString *productDir = [installDest stringByAppendingPathComponent: [productReference path]];
+      NSString *productDir = [installDest stringByAppendingPathComponent: [_productReference path]];
       NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
       NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
-      NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [productReference path]]
+      NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [_productReference path]]
                                        stringByAppendingPathComponent:@"Versions"]
                                       stringByAppendingPathComponent:@"Current"];
       NSString *headersLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent:
-                                       [productReference path]] stringByAppendingPathComponent:@"Versions"]
+                                       [_productReference path]] stringByAppendingPathComponent:@"Versions"]
                                    stringByAppendingPathComponent:@"Current"];
 
       // Copy
@@ -406,7 +406,7 @@
 	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
     }
-  else if([productType isEqualToString: LIBRARY_TYPE])
+  else if([_productType isEqualToString: LIBRARY_TYPE])
     {
       NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
       NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
@@ -414,7 +414,7 @@
       NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
       NSString *derivedSrcDir = @"derived_src";
       NSString *derivedSrcHeaderDir = derivedSrcDir;
-      NSString *destPath = [librariesDir stringByAppendingPathComponent: [productReference path]];
+      NSString *destPath = [librariesDir stringByAppendingPathComponent: [_productReference path]];
 
       xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
       [fileManager copyItemAtPath: fullPath
@@ -542,13 +542,13 @@
 
   xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", name] cString]);
   [[self buildConfigurationList] applyDefaultConfiguration];
-  [context setObject: productType
+  [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];
   [context setObject: [self buildConfigurationList]
               forKey: @"buildConfig"];
-  if(productSettingsXML != nil)
+  if(_productSettingsXML != nil)
     {
-      [context setObject: productSettingsXML 
+      [context setObject: _productSettingsXML 
                   forKey: @"PRODUCT_SETTINGS_XML"];
     }
 
