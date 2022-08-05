@@ -32,13 +32,13 @@
 
 @interface PBXNativeTarget : PBXAbstractTarget
 {
-  PBXFileReference *productReference;
-  NSString *productInstallPath;
-  NSString *productType;
-  NSMutableArray *buildRules;
-  NSString *comments;
-  NSString *productSettingsXML;
-  XCConfigurationList *xcConfigurationList;
+  PBXFileReference *_productReference;
+  NSString *_productInstallPath;
+  NSString *_productType;
+  NSMutableArray *_buildRules;
+  NSString *_comments;
+  NSString *_productSettingsXML;
+  XCConfigurationList *_xcConfigurationList;
 }
 
 // Methods....
