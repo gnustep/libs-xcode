@@ -310,11 +310,11 @@
 - (NSString *) buildString
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSDictionary *plistFile = [context config];
-  NSProcessInfo *pi = [NSProcessInfo processInfo];
-  NSString *winCompilerPfx = [plistFile objectForKey: @"win_compiler_prefix"];
-  NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
-  NSUInteger os = [pi operatingSystem];
+  //NSDictionary *plistFile = [context config];
+  //NSProcessInfo *pi = [NSProcessInfo processInfo];
+  //NSString *winCompilerPfx = [plistFile objectForKey: @"win_compiler_prefix"];
+  //NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
+  //NSUInteger os = [pi operatingSystem];
   NSString *output = nil;  
   NSString *cmd = nil;
 

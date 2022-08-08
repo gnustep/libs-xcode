@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -29,9 +29,9 @@
 
 - (void) dealloc
 {
-  RELEASE(targetProxy);
-  RELEASE(name);
-  RELEASE(target);
+  RELEASE(_targetProxy);
+  RELEASE(_name);
+  RELEASE(_target);
 
   [super dealloc];
 }
@@ -39,36 +39,36 @@
 // Methods....
 - (PBXContainerItemProxy *) targetProxy // getter
 {
-  return targetProxy;
+  return _targetProxy;
 }
 
 - (void) setTargetProxy: (PBXContainerItemProxy *)object; // setter
 {
-  ASSIGN(targetProxy,object);
+  ASSIGN(_targetProxy,object);
 }
 
 - (NSString *) name // getter
 {
-  return name;
+  return _name;
 }
 
 - (void) setName: (NSString *)object; // setter
 {
-  ASSIGN(name,object);
+  ASSIGN(_name,object);
 }
 
 - (PBXNativeTarget *)target
 {
-  return target;
+  return _target;
 }
 
 - (void) setTarget: (PBXNativeTarget *)object
 {
-  target = object;
+  _target = object;
 }
 
 - (BOOL) build
 {
-  return [targetProxy build];
+  return [_targetProxy build];
 }
 @end

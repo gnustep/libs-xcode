@@ -31,9 +31,9 @@
 
 @interface PBXTargetDependency : NSObject
 {
-  PBXContainerItemProxy *targetProxy;
-  NSString *name;
-  PBXNativeTarget *target;
+  PBXContainerItemProxy *_targetProxy;
+  NSString *_name;
+  PBXNativeTarget *_target;
 }
 
 // Methods....
