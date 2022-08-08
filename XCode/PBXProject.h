@@ -34,20 +34,20 @@
 
 @interface PBXProject : NSObject
 {
-  NSString *developmentRegion;
-  NSMutableArray *knownRegions;
-  NSString *compatibilityVersion;
-  NSMutableArray *projectReferences;
+  NSString *_developmentRegion;
+  NSMutableArray *_knownRegions;
+  NSString *_compatibilityVersion;
+  NSMutableArray *_projectReferences;
   NSMutableArray *_targets;
-  NSString *projectDirPath;
-  NSString *projectRoot;
-  XCConfigurationList *buildConfigurationList;
-  PBXGroup *mainGroup;
-  NSString *hasScannedForEncodings;
-  PBXGroup *productRefGroup;
-  PBXContainer *container;
-  NSDictionary *attributes;
-  NSDictionary *ctx;
+  NSString *_projectDirPath;
+  NSString *_projectRoot;
+  XCConfigurationList *_buildConfigurationList;
+  PBXGroup *_mainGroup;
+  NSString *_hasScannedForEncodings;
+  PBXGroup *_productRefGroup;
+  PBXContainer *_container;
+  NSDictionary *_attributes;
+  NSDictionary *_ctx;
 
   NSString *_filename;
   NSMutableArray *_arrangedTargets;

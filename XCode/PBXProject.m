@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -153,42 +153,42 @@
 // Methods....
 - (NSString *) developmentRegion // getter
 {
-  return developmentRegion;
+  return _developmentRegion;
 }
 
 - (void) setDevelopmentRegion: (NSString *)object; // setter
 {
-  ASSIGN(developmentRegion,object);
+  ASSIGN(_developmentRegion,object);
 }
 
 - (NSMutableArray *) knownRegions // getter
 {
-  return knownRegions;
+  return _knownRegions;
 }
 
 - (void) setKnownRegions: (NSMutableArray *)object; // setter
 {
-  ASSIGN(knownRegions,object);
+  ASSIGN(_knownRegions,object);
 }
 
 - (NSString *) compatibilityVersion // getter
 {
-  return compatibilityVersion;
+  return _compatibilityVersion;
 }
 
 - (void) setCompatibilityVersion: (NSString *)object; // setter
 {
-  ASSIGN(compatibilityVersion,object);
+  ASSIGN(_compatibilityVersion,object);
 }
 
 - (NSMutableArray *) projectReferences // getter
 {
-  return projectReferences;
+  return _projectReferences;
 }
 
 - (void) setProjectReferences: (NSMutableArray *)object; // setter
 {
-  ASSIGN(projectReferences,object);
+  ASSIGN(_projectReferences,object);
 }
 
 - (NSMutableArray *) targets // getter
@@ -203,77 +203,77 @@
 
 - (NSString *) projectDirPath // getter
 {
-  return projectDirPath;
+  return _projectDirPath;
 }
 
 - (void) setProjectDirPath: (NSString *)object; // setter
 {
-  ASSIGN(projectDirPath,object);
+  ASSIGN(_projectDirPath,object);
 }
 
 - (NSString *) projectRoot // getter
 {
-  return projectRoot;
+  return _projectRoot;
 }
 
 - (void) setProjectRoot: (NSString *)object; // setter
 {
-  ASSIGN(projectRoot,object);
+  ASSIGN(_projectRoot,object);
 }
 
 - (XCConfigurationList *) buildConfigurationList // getter
 {
-  return buildConfigurationList;
+  return _buildConfigurationList;
 }
 
 - (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
 {
-  ASSIGN(buildConfigurationList,object);
+  ASSIGN(_buildConfigurationList,object);
 }
 
 - (PBXGroup *) mainGroup // getter
 {
-  return mainGroup;
+  return _mainGroup;
 }
 
 - (void) setMainGroup: (PBXGroup *)object; // setter
 {
-  ASSIGN(mainGroup,object);
+  ASSIGN(_mainGroup,object);
 }
 
 - (NSString *) hasScannedForEncodings // getter
 {
-  return hasScannedForEncodings;
+  return _hasScannedForEncodings;
 }
 
 - (void) setHasScannedForEncodings: (NSString *)object; // setter
 {
-  ASSIGN(hasScannedForEncodings,object);
+  ASSIGN(_hasScannedForEncodings,object);
 }
 
 - (PBXGroup *) productRefGroup // getter
 {
-  return productRefGroup;
+  return _productRefGroup;
 }
 
 - (void) setProductRefGroup: (PBXGroup *)object; // setter
 {
-  ASSIGN(productRefGroup,object);
+  ASSIGN(_productRefGroup,object);
 }
 
 - (PBXContainer *) container
 {
-  return container;
+  return _container;
 }
 
 - (void) setContainer: (PBXContainer *)object
 {
-  container = object; // container retains us, do not retain it...
+  _container = object; // container retains us, do not retain it...
 }
 
 - (void) setContext: (NSDictionary *)context
 {
-  ASSIGN(ctx,context);
+  ASSIGN(_ctx,context);
 }
 
 - (void) setFilename: (NSString *)fn
@@ -310,36 +310,11 @@
 - (NSString *) buildString
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  //NSDictionary *plistFile = [context config];
-  //NSProcessInfo *pi = [NSProcessInfo processInfo];
-  //NSString *winCompilerPfx = [plistFile objectForKey: @"win_compiler_prefix"];
-  //NSString *winCfgPfx = [plistFile objectForKey: @"win_config_prefix"];
-  //NSUInteger os = [pi operatingSystem];
   NSString *output = nil;  
   NSString *cmd = nil;
 
-  /*
-  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
-    {
-      if (winCompilerPfx == nil)
-	{
-	  winCompilerPfx = @"/mingw64/bin";
-	}
-
-      if (winCfgPfx == nil)
-	{
-	  winCfgPfx = @"/usr/GNUstep/System/Tools";
-	}
-      
-      cmd = [NSString stringWithFormat: @"`%@/gnustep-config --debug-flags` ",
-		      winCfgPfx];
-    }
-  else */
-    {
-      cmd = @"gnustep-config --debug-flags";
-    }
-  
-  
+  cmd = @"gnustep-config --debug-flags";
+    
   // Context...
   output = [NSString stringForCommand: cmd];
   [context setObject: output
@@ -354,7 +329,7 @@
                    stringByDeletingLastPathComponent];
 
   xcprintf("=== Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
-  [buildConfigurationList applyDefaultConfiguration];
+  [_buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
   [self plan];
   
@@ -376,9 +351,9 @@
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
 
-      [context setObject: mainGroup 
+      [context setObject: _mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
-      [context setObject: container
+      [context setObject: _container
 		  forKey: @"CONTAINER"];
       [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
@@ -386,7 +361,7 @@
 		  forKey: @"PROJECT_DIR"];
       [context setObject: @"./"
 		  forKey: @"SRCROOT"];
-      [context addEntriesFromDictionary:ctx];
+      [context addEntriesFromDictionary: _ctx];
       
       result = [target build];
       [context popCurrentContext];
@@ -405,7 +380,7 @@
 - (BOOL) clean
 {
   xcputs("=== Cleaning Project");
-  [buildConfigurationList applyDefaultConfiguration];
+  [_buildConfigurationList applyDefaultConfiguration];
 
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -423,7 +398,7 @@
 	}
 
       [context contextDictionaryForName: [target name]];
-      [context setObject: mainGroup 
+      [context setObject: _mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
       result = [target clean];
       [context popCurrentContext];
@@ -435,7 +410,7 @@
 - (BOOL) install
 {
   xcputs("=== Installing Project");
-  [buildConfigurationList applyDefaultConfiguration];
+  [_buildConfigurationList applyDefaultConfiguration];
 
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [_targets objectEnumerator];
@@ -445,7 +420,7 @@
     {
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
-      [context setObject: mainGroup 
+      [context setObject: _mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
       result = [target install];
       [context popCurrentContext];
@@ -459,8 +434,8 @@
   NSString *fn = [[[self container] filename]
                    stringByDeletingLastPathComponent];
 
-  xcprintf("=== Generating %@ for Project %s%s%s%s\n", [container parameter], BOLD, GREEN, [fn cString], RESET);
-  [buildConfigurationList applyDefaultConfiguration];
+  xcprintf("=== Generating %@ for Project %s%s%s%s\n", [_container parameter], BOLD, GREEN, [fn cString], RESET);
+  [_buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
   [self plan];
   
@@ -482,9 +457,9 @@
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
 
-      [context setObject: mainGroup 
+      [context setObject: _mainGroup 
 		  forKey: @"MAIN_GROUP"]; 
-      [context setObject: container
+      [context setObject: _container
 		  forKey: @"CONTAINER"];
       [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
@@ -492,7 +467,7 @@
 		  forKey: @"PROJECT_DIR"];
       [context setObject: @"./"
 		  forKey: @"SRCROOT"];
-      [context addEntriesFromDictionary:ctx];
+      [context addEntriesFromDictionary: _ctx];
       
       result = [target generate];
       [context popCurrentContext];
