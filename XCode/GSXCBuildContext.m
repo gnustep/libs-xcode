@@ -41,7 +41,7 @@ id _sharedBuildContext = nil;
     {
       stack = [[NSMutableArray alloc] initWithCapacity: 10];
       contextDictionary = [[NSMutableDictionary alloc] init];
-      config = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
+      config = [[NSDictionary alloc] initWithContentsOfFile: @"buildtool.plist"];
       NSDebugLog(@"%@",config);
     }
   return self;

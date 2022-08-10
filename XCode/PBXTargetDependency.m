@@ -71,4 +71,9 @@
 {
   return [_targetProxy build];
 }
+
+- (NSString *) description
+{
+  return [NSString stringWithFormat: @"<%@> - %@", [super description], _name];
+}
 @end

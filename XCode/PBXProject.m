@@ -56,7 +56,15 @@
   
   while ((t = [en nextObject]) != nil)
     {
-      [result addObject: [t target]];
+      id tg = [t target];
+      if (tg != nil)
+        {
+          [result addObject: [t target]];
+        }
+      else
+        {
+          NSLog(@"%@ has a nil target", t);
+        }
     }
 
   return result;
