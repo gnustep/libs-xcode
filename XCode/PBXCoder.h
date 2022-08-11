@@ -26,12 +26,12 @@
 
 @interface PBXCoder : NSObject
 {
-  NSString *fileName;
-  NSString *projectRoot;
-  NSMutableDictionary *dictionary;
-  NSMutableDictionary *objects;
-  NSMutableDictionary *objectCache;
-  NSMutableDictionary *parents;
+  NSString *_fileName;
+  NSString *_projectRoot;
+  NSMutableDictionary *_dictionary;
+  NSMutableDictionary *_objects;
+  NSMutableDictionary *_objectCache;
+  NSMutableDictionary *_parents;
 }
 
 - (id) initWithProjectFile: (NSString *)name;

@@ -37,19 +37,19 @@
 {
   if((self = [super init]) != nil)
     {
-      objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
+      _objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
 
-      ASSIGN(fileName, name);
-      ASSIGN(projectRoot,
-             [[fileName stringByDeletingLastPathComponent]
+      ASSIGN(_fileName, name);
+      ASSIGN(_projectRoot,
+             [[_fileName stringByDeletingLastPathComponent]
                stringByDeletingLastPathComponent]);
-      ASSIGN(dictionary,
-             [NSMutableDictionary dictionaryWithContentsOfFile: fileName]);
-      ASSIGN(objects, [dictionary objectForKey: @"objects"]);
+      ASSIGN(_dictionary,
+             [NSMutableDictionary dictionaryWithContentsOfFile: _fileName]);
+      ASSIGN(_objects, [_dictionary objectForKey: @"objects"]);
       
-      parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
+      _parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
       [[GSXCBuildContext sharedBuildContext]
-        setObject: objects forKey: @"objects"];
+        setObject: _objects forKey: @"objects"];
 
       setenv("PROJECT_DIR","./",1);      
       setenv("PROJECT_ROOT","./",1);      
@@ -66,18 +66,18 @@
 
 - (void) dealloc
 {
-  RELEASE(objectCache);
-  RELEASE(fileName);
-  RELEASE(dictionary);
-  RELEASE(objects);
-  RELEASE(parents);
+  RELEASE(_objectCache);
+  RELEASE(_fileName);
+  RELEASE(_dictionary);
+  RELEASE(_objects);
+  RELEASE(_parents);
 
   [super dealloc];
 }
 
 - (id) unarchive
 {
-  return [self unarchiveFromDictionary: dictionary];
+  return [self unarchiveFromDictionary: _dictionary];
 }
 
 - (id) unarchiveFromDictionary: (NSDictionary *)dict
@@ -99,8 +99,8 @@
 
   if([object isKindOfClass: [PBXContainer class]])
     {
-      [object setObjects: objectCache];
-      [object setFilename: fileName];
+      [object setObjects: _objectCache];
+      [object setFilename: _fileName];
     }
 
   return object;
@@ -108,18 +108,18 @@
 
 - (id) unarchiveObjectForKey: (NSString *)key
 {
-  id obj = [objectCache objectForKey: key];
+  id obj = [_objectCache objectForKey: key];
   if(obj != nil)
     {
       return obj;
     }
 
   // cache the object, if it exists in objects... if not return nil
-  NSDictionary *dict = [objects objectForKey: key];
+  NSDictionary *dict = [_objects objectForKey: key];
   if(dict != nil)
     {
       obj = [self unarchiveFromDictionary: dict];
-      [objectCache setObject: obj forKey: key];
+      [_objectCache setObject: obj forKey: key];
     }
 
   return obj;
@@ -170,8 +170,7 @@
 	      
 	      // search the global dictionary...
 	      if([key isEqualToString: @"containerPortal"] == NO &&
-		 [key isEqualToString: @"remoteGlobalIDString"] == NO)
-                // FIXME: Find a more generalized way to do lazy instantiation...
+                 [key isEqualToString: @"remoteGlobalIDString"] == NO)
 		{
 		  id newValue = [self unarchiveObjectForKey: value];  
 		  if(newValue != nil)
@@ -179,7 +178,11 @@
 		      value = newValue;
 		    }
 		}
-	      
+              else
+                {
+                  // value = [
+                }
+              
 	      if(value != nil)
 		{
 		  id currentValue = [object valueForKey: key];
@@ -207,6 +210,6 @@
 
 - (NSString *) projectRoot
 {
-  return projectRoot;
+  return _projectRoot;
 }
 @end

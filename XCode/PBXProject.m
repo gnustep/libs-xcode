@@ -59,11 +59,12 @@
       id tg = [t target];
       if (tg != nil)
         {
-          [result addObject: [t target]];
+          [result addObject: tg];
+          NSLog(@"%@ - Added to dependencies", tg);
         }
       else
         {
-          NSLog(@"%@ has a nil target", t);
+          NSLog(@"%@ - has a nil target", t);
         }
     }
 
