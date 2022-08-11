@@ -520,14 +520,18 @@
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
 
-  NSString *commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
-    @"-shared-libgcc -o %@ %@ "
-    @"-L%@ -L/%@ -L%@";
+  NSString *commandTemplate = nil;
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@ " 
 	@"-shared-libgcc -o %@ %@ "
 	@"-L%@ -L/%@ -L%@";
+    }
+  else
+    {
+      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
+        @"-shared-libgcc -o %@ %@ "
+        @"-L%@ -L/%@ -L%@";
     }
   
   NSString *compiler = [self linkerForBuild];
@@ -585,7 +589,7 @@
   NSUInteger os = [pi operatingSystem];
 
   NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+				  @"%@ -rdynamic -shared-libgcc -o \"%@\" %@ %@",
 				compiler, 
 				outputPath,
 				outputFiles,
@@ -594,7 +598,7 @@
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       command = [NSString stringWithFormat: 
-			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+			    @"%@ -shared-libgcc -o \"%@\" %@ %@",
 			  compiler, 
 			  outputPath,
 			  outputFiles,
