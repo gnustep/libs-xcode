@@ -589,7 +589,7 @@
   NSUInteger os = [pi operatingSystem];
 
   NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -o \"%@\" %@ %@",
+				  @"%@ -rdynamic -shared -o \"%@\" %@ %@",
 				compiler, 
 				outputPath,
 				outputFiles,
@@ -598,7 +598,7 @@
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       command = [NSString stringWithFormat: 
-			    @"%@ -shared-libgcc -o \"%@\" %@ %@",
+			    @"%@ -shared  -o \"%@\" %@ %@",
 			  compiler, 
 			  outputPath,
 			  outputFiles,

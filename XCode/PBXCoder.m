@@ -180,7 +180,7 @@
 		}
               else
                 {
-                  // value = [
+                  value = [_objectCache objectForKey: key];
                 }
               
 	      if(value != nil)

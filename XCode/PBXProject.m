@@ -60,12 +60,13 @@
       if (tg != nil)
         {
           [result addObject: tg];
-          NSLog(@"%@ - Added to dependencies", tg);
-        }
-      else
+          xcputs([[NSString stringWithFormat: @"\t* %@ - Added to dependencies", tg] cString]);
+        } /*
+      else if ([tg isKindOfClass: [PBXTargetDependency class]])
         {
-          NSLog(@"%@ - has a nil target", t);
-        }
+          NSLog(@"++++++++++++++++++++ %@",tg);
+          
+          } */
     }
 
   return result;
