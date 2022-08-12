@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -31,27 +31,27 @@
 // Methods....
 - (void) setPlatformFilter: (NSString *)f
 {
-  ASSIGN(platformFilter, f);
+  ASSIGN(_platformFilter, f);
 }
 
 - (PBXFileReference *) fileRef // getter
 {
-  return fileRef;
+  return _fileRef;
 }
 
 - (void) setFileRef: (PBXFileReference *)object; // setter
 {
-  ASSIGN(fileRef,object);
+  ASSIGN(_fileRef,object);
 }
 
 - (NSMutableDictionary *) settings // getter
 {
-  return settings;
+  return _settings;
 }
 
 - (void) setSettings: (NSMutableDictionary *)object; // setter
 {
-  ASSIGN(settings,object);
+  ASSIGN(_settings,object);
 }
 
 - (void) applySettings
@@ -61,50 +61,50 @@
 
 - (NSString *) buildPath
 {
-  return [fileRef buildPath];
+  return [_fileRef buildPath];
 }
 
 - (NSString *) path
 {
-  return [fileRef path];
+  return [_fileRef path];
 }
 
 - (void) setTarget: (PBXNativeTarget *)t
 {
-  target = t;
+  _target = t;
 }
 
 - (void) setTotalFiles: (NSUInteger)t
 {
-  totalFiles = t;
+  _totalFiles = t;
 }
 
 - (void) setCurrentFile: (NSUInteger)n
 {
-  currentFile = n;
+  _currentFile = n;
 }
 
 - (BOOL) build
 {
   [self applySettings];
-  [fileRef setTarget: target];
-  [fileRef setTotalFiles: totalFiles];
-  [fileRef setCurrentFile: currentFile];
-  return [fileRef build];
+  [_fileRef setTarget: _target];
+  [_fileRef setTotalFiles: _totalFiles];
+  [_fileRef setCurrentFile: _currentFile];
+  return [_fileRef build];
 }
 
 - (BOOL) generate
 {
   [self applySettings];
-  xcputs([[NSString stringWithFormat: @"\t* Creating entry for %@",[fileRef buildPath]] cString]);
-  [fileRef setTarget: target];
-  return [fileRef generate];
+  xcputs([[NSString stringWithFormat: @"\t* Creating entry for %@",[_fileRef buildPath]] cString]);
+  [_fileRef setTarget: _target];
+  return [_fileRef generate];
 }
 
 - (NSString *) description
 {
   NSString *s = [super description];
-  return [s stringByAppendingFormat: @" <%@>", fileRef]; 
+  return [s stringByAppendingFormat: @" <%@>", _fileRef]; 
 }
 
 @end
