@@ -227,10 +227,8 @@ extern char **environ;
       result = [cmd copy];
     }
 #endif
-<<<<<<< HEAD
-=======
-  NSLog(@"%@", result);
->>>>>>> 7c35cd5 (Update to cross compile to MSVC environment)
+
+  NSDebugLog(@"%@", result);
   
   return result;
 }
