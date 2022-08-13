@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -70,8 +70,6 @@ extern char **environ;
   _currentFile = n;
 }
 
-
-// Methods....
 - (void) setWrapsLines: (NSString *)o
 {
   ASSIGN(_wrapsLines, o);
@@ -446,7 +444,7 @@ extern char **environ;
   return result;
 }
 
-- (BOOL) build
+- (BOOL) buildWithPath: (NSString *)bp
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
@@ -459,7 +457,16 @@ extern char **environ;
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
-
+  NSDictionary *plistFile = [context config];
+  NSArray *skippedSource = [plistFile objectForKey:
+                                        @"skippedSource"];
+  
+  if ([skippedSource containsObject: bp])
+    {
+      xcprintf("skipping file.\n");
+      return YES;
+    }
+  
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
 			   BOLD, MAGENTA, [self buildPath], RESET, (long)_currentFile, (long)_totalFiles] cString]);
 
@@ -488,17 +495,6 @@ extern char **environ;
 	  [context setObject: @"YES" forKey: @"LINK_WITH_CPP"];
 	}
 
-
-      NSDictionary *plistFile = [context config];
-      NSArray *skippedSource = [plistFile objectForKey:
-                                            @"skippedSource"];
-
-      NSString *bp = [self buildPath];
-      if ([skippedSource containsObject: bp])
-        {
-          xcprintf("skipping file.\n");
-          return YES;
-        }
 
       NSString *compiler = [self _compiler];
       NSString *buildPath = [proj_root stringByAppendingPathComponent: bp];
@@ -643,25 +639,48 @@ extern char **environ;
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           [NSException raise: NSGenericException
                       format: @"%sMessage:%s %@", RED, RESET, errorString];
-
-          /*
-          xcputs("=======================================================");
-          xcputs([[NSString stringWithFormat: @"%sReturn Value:%s %d", RED, RESET, result] cString]);
-          xcputs([[NSString stringWithFormat: @"%sCommand:%s %s%@%s", RED, RESET, CYAN, buildCommand, RESET] cString]);
-          xcputs([[NSString stringWithFormat: @"%sCurrent Directory:%s %s%@%s", RED, RESET, CYAN,
-                          [manager currentDirectoryPath], RESET] cString]);
-          NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
-          xcputs([[NSString stringWithFormat: @"%sHeader Search Path:%s %@", RED, RESET,
-                          [compilePath stringByDeletingLastPathComponent]] cString]);
-          xcputs("=======================================================");
-          */
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
     }
+  else if ([_lastKnownFileType isEqualToString: @"sourcecode.lex"] || [_explicitFileType isEqualToString: @"sourcecode.lex"])
+    {
+      NSString *ex = [bp pathExtension];
+      NSString *nx = [ex substringFromIndex: [ex length] - 1];
+      NSString *op = [@"lex.yy" stringByAppendingPathExtension: nx];
+      NSString *command = [NSString stringWithFormat: @"flex > /dev/null 2> /dev/null -o %@ %@", op, bp];
+      BOOL f = NO;
+      
+      xcprintf("%s%sprocessing%s\n", BOLD, YELLOW, RESET);
+      f = xcsystem(command);
 
+      if (f == NO)
+        {
+        }
+    }
+  else if ([_lastKnownFileType isEqualToString: @"sourcecode.yacc"] || [_explicitFileType isEqualToString: @"sourcecode.yacc"])
+    {
+      NSString *ex = [bp pathExtension];
+      NSString *nx = [ex substringFromIndex: [ex length] - 1];
+      NSString *op = [@"y.tab" stringByAppendingPathExtension: nx];
+      NSString *command = [NSString stringWithFormat: @"bison > /dev/null 2> /dev/null -o %@ %@", op, bp];
+      BOOL f = NO;
+      
+      xcprintf("%s%sprocessing%s\n", BOLD, YELLOW, RESET);
+      f = xcsystem(command);
+
+      if (f == NO)
+        {
+        }
+    }
+  
   fflush(stdout);
   return (result == 0);
+}
+
+- (BOOL) build
+{
+  return [self buildWithPath: [self buildPath]];
 }
 
 - (BOOL) generate
