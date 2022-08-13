@@ -658,8 +658,8 @@ extern char **environ;
 
       if (f == NO)
         {
-          result = [self buildWithPath: fp
-                           andFileType: @"sourcecode.c.objc"];
+          return [self buildWithPath: fp
+                         andFileType: @"sourcecode.c.objc"];
         }
     }
   else if ([ft isEqualToString: @"sourcecode.yacc"] || [_explicitFileType isEqualToString: @"sourcecode.yacc"])
@@ -676,8 +676,8 @@ extern char **environ;
 
       if (f == NO)
         {
-          result = [self buildWithPath: fp
-                           andFileType: @"sourcecode.c.objc"];
+          return [self buildWithPath: fp
+                         andFileType: @"sourcecode.c.objc"];
         }
     }
   
