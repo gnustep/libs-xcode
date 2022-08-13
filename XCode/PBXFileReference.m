@@ -512,11 +512,13 @@ extern char **environ;
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
       
       buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
+      
       // blank these out if they are not used...
       if(headerSearchPaths == nil)
 	{
 	  headerSearchPaths = @"";
 	}
+
       if(localHeaderPaths == nil)
         {
 	  localHeaderPaths = @"";
