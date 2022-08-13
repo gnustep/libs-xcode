@@ -445,6 +445,7 @@ extern char **environ;
 }
 
 - (BOOL) buildWithPath: (NSString *)bp
+           andFileType: (NSString *)ft
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
@@ -468,7 +469,7 @@ extern char **environ;
     }
   
   xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
-			   BOLD, MAGENTA, [self buildPath], RESET, (long)_currentFile, (long)_totalFiles] cString]);
+			   BOLD, MAGENTA, bp, RESET, (long)_currentFile, (long)_totalFiles] cString]);
 
   if(modified == nil)
     {
@@ -477,24 +478,24 @@ extern char **environ;
 		  forKey: @"MODIFIED_FLAG"];
     }
 
-  if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"] || [_explicitFileType isEqualToString: @"sourcecode.c.objc"] ||
-     [_lastKnownFileType isEqualToString: @"sourcecode.c.c"] || [_explicitFileType isEqualToString: @"sourcecode.c.c"] || 
-     [_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
-     [_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+  if([ft isEqualToString: @"sourcecode.c.objc"] || 
+     [ft isEqualToString: @"sourcecode.c.c"] ||
+     [ft isEqualToString: @"sourcecode.cpp.cpp"] ||
+     [ft isEqualToString: @"sourcecode.cpp.objcpp"]) 
     {
       NSString *proj_root = [bs objectForKey: @"PROJECT_ROOT"];
+
       if (proj_root == nil ||
           [proj_root isEqualToString: @""])
         {
           proj_root = @".";
         }
 
-      if ([_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.cpp"] ||
-	  [_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"] || [_explicitFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+      if ([ft isEqualToString: @"sourcecode.cpp.cpp"] ||
+	  [ft isEqualToString: @"sourcecode.cpp.objcpp"])
 	{
 	  [context setObject: @"YES" forKey: @"LINK_WITH_CPP"];
 	}
-
 
       NSString *compiler = [self _compiler];
       NSString *buildPath = [proj_root stringByAppendingPathComponent: bp];
@@ -549,7 +550,7 @@ extern char **environ;
       outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
 		      stringByAppendingString: @" "];
       NSString *objCflags = @"";
-      if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+      if([ft isEqualToString: @"sourcecode.c.objc"])
 	{
           objCflags = @"";
 	}
@@ -643,12 +644,13 @@ extern char **environ;
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
     }
-  else if ([_lastKnownFileType isEqualToString: @"sourcecode.lex"] || [_explicitFileType isEqualToString: @"sourcecode.lex"])
+  else if ([ft isEqualToString: @"sourcecode.lex"] || [_explicitFileType isEqualToString: @"sourcecode.lex"])
     {
       NSString *ex = [bp pathExtension];
       NSString *nx = [ex substringFromIndex: [ex length] - 1];
       NSString *op = [@"lex.yy" stringByAppendingPathExtension: nx];
-      NSString *command = [NSString stringWithFormat: @"flex > /dev/null 2> /dev/null -o %@ %@", op, bp];
+      NSString *fp = [[bp stringByDeletingLastPathComponent] stringByAppendingPathComponent: op];
+      NSString *command = [NSString stringWithFormat: @"flex > /dev/null 2> /dev/null -o %@ %@", fp, bp];
       BOOL f = NO;
       
       xcprintf("%s%sprocessing%s\n", BOLD, YELLOW, RESET);
@@ -656,14 +658,17 @@ extern char **environ;
 
       if (f == NO)
         {
+          result = [self buildWithPath: fp
+                           andFileType: @"sourcecode.c.objc"];
         }
     }
-  else if ([_lastKnownFileType isEqualToString: @"sourcecode.yacc"] || [_explicitFileType isEqualToString: @"sourcecode.yacc"])
+  else if ([ft isEqualToString: @"sourcecode.yacc"] || [_explicitFileType isEqualToString: @"sourcecode.yacc"])
     {
       NSString *ex = [bp pathExtension];
       NSString *nx = [ex substringFromIndex: [ex length] - 1];
       NSString *op = [@"y.tab" stringByAppendingPathExtension: nx];
-      NSString *command = [NSString stringWithFormat: @"bison > /dev/null 2> /dev/null -o %@ %@", op, bp];
+      NSString *fp = [[bp stringByDeletingLastPathComponent] stringByAppendingPathComponent: op];
+      NSString *command = [NSString stringWithFormat: @"bison > /dev/null 2> /dev/null -o %@ %@", fp, bp];
       BOOL f = NO;
       
       xcprintf("%s%sprocessing%s\n", BOLD, YELLOW, RESET);
@@ -671,6 +676,8 @@ extern char **environ;
 
       if (f == NO)
         {
+          result = [self buildWithPath: fp
+                           andFileType: @"sourcecode.c.objc"];
         }
     }
   
@@ -680,7 +687,9 @@ extern char **environ;
 
 - (BOOL) build
 {
-  return [self buildWithPath: [self buildPath]];
+  NSString *ft = (_explicitFileType == nil) ? _lastKnownFileType : _explicitFileType;
+  return [self buildWithPath: [self buildPath]
+                 andFileType: ft];
 }
 
 - (BOOL) generate
