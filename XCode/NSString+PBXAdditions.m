@@ -226,7 +226,6 @@ extern char **environ;
       result = [cmd copy];
     }
 #endif
-  NSLog(@"%@", result);
   
   return result;
 }
