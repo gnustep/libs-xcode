@@ -40,7 +40,6 @@
   RELEASE(_outputPaths);
   RELEASE(_inputFileListPaths);
   RELEASE(_outputFileListPaths);
-  RELEASE(_name);
 
   [super dealloc];
 }
