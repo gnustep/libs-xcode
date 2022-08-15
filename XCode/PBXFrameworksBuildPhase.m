@@ -373,7 +373,7 @@
       if (result != 0)
         {
           NSLog(@"%sReturn Value:%s %d", RED, RESET, result);
-          NSLog(@"%sCommand:%s %s%@%s", RED, RESET, CYAN, command, RESET);
+          NSLog(@"%sCommand:%s %s%@%s", RED, RESET, GREEN, command, RESET);
         }
     }
   else

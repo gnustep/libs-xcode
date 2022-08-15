@@ -120,41 +120,49 @@
 {
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSDictionary *searchReplace = [plistFile objectForKey: @"searchReplace"];
-  NSEnumerator *en = [searchReplace keyEnumerator];
-  NSString *key = nil;
   NSString *result = nil;
   
   ASSIGNCOPY(result, shellScript);
-  
-  while ((key = [en nextObject]) != nil)
-    {
-      NSString *v = [searchReplace objectForKey: key];
-      NSError *error = NULL;
-      BOOL done = NO;
-      NSRegularExpression *regex = [NSRegularExpression
-                                     regularExpressionWithPattern: key
-                                                          options: 0
-                                                            error: &error];
 
-      // Iterate through all of the matches, but after each change start over because the ranges
-      // will shift as a result of the substitution.  When there are no matches left, exit.
-      while (done == NO)
+  // Search & replace as defined in the plist file..
+  if (searchReplace != nil)
+    {
+      NSEnumerator *en = [searchReplace keyEnumerator];
+      NSString *key = nil;
+      
+      while ((key = [en nextObject]) != nil)
         {
-          NSTextCheckingResult *match = [regex firstMatchInString: result
-                                                          options: 0
-                                                            range: NSMakeRange(0, [key length])];
-          if (match != nil)
+          NSString *v = [searchReplace objectForKey: key];
+          NSError *error = NULL;
+          BOOL done = NO;
+          NSRegularExpression *regex = [NSRegularExpression
+                                         regularExpressionWithPattern: key
+                                                              options: 0
+                                                                error: &error];
+          
+          // Iterate through all of the matches, but after each change start over because the ranges
+          // will shift as a result of the substitution.  When there are no matches left, exit.
+          while (done == NO)
             {
-              NSRange matchRange = [match range];
-              result = [result stringByReplacingCharactersInRange: matchRange
-                                                       withString: v];
-            }
-          else
-            {
-              done = YES;
+              NSTextCheckingResult *match = [regex firstMatchInString: result
+                                                              options: 0
+                                                                range: NSMakeRange(0, [key length])];
+              if (match != nil)
+                {
+                  NSRange matchRange = [match range];
+                  result = [result stringByReplacingCharactersInRange: matchRange
+                                                           withString: v];
+                }
+              else
+                {
+                  done = YES;
+                }
             }
         }
     }
+
+  // Replace any variables defined in the context
+  result = [result stringByReplacingEnvironmentVariablesWithValues];
 
   return result;
 }
@@ -168,8 +176,8 @@
   BOOL result = NO;
   NSString *processedScript = [self preprocessScript];
 
-  processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
-  xcputs("=== Executing Script Build Phase...");
+  // processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
+  xcprintf("=== Executing Script Build Phase... %s%s%s\n", GREEN, [[self name] cString], RESET);
   xcputs([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
   xcputs("*** script output");
   [processedScript writeToFile: tmpFilename

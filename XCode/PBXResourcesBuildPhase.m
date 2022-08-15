@@ -260,7 +260,7 @@
                                                              withString: @""];
 
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              xcputs([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);
+              xcputs([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", YELLOW, filePath, RESET, GREEN, destPath, RESET] cString]);
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
@@ -288,7 +288,7 @@
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      xcputs([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, CYAN, destPath, RESET] cString]);      
+      xcputs([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s",YELLOW, filePath, RESET, GREEN, destPath, RESET] cString]);      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];

@@ -180,7 +180,7 @@ static NSString *_cachedRootPath = nil;
 	      result = [NSString stringWithFormat: @"%c:%@", letter, b];
 	      if ([fm fileExistsAtPath: result])
 		{
-		  _cachedRootPath = result;
+		  ASSIGN(_cachedRootPath, result);
 		  break;
 		}
 	    }

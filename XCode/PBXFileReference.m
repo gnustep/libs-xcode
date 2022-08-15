@@ -641,7 +641,7 @@ extern char **environ;
 
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           [NSException raise: NSGenericException
-                      format: @"%sMessage:%s %@", RED, RESET, errorString];
+                      format: @"\n\n%sMessage:%s %@\n", RED, RESET, errorString];
         }
 
       [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
@@ -653,12 +653,12 @@ extern char **environ;
       NSString *op = [@"lex.yy" stringByAppendingPathExtension: nx];
       NSString *fp = [[bp stringByDeletingLastPathComponent] stringByAppendingPathComponent: op];
       NSString *command = [NSString stringWithFormat: @"flex > /dev/null 2> /dev/null -o %@ %@", fp, bp];
-      BOOL f = NO;
+      NSInteger f = 0;
       
       xcprintf("%s%sprocessing%s\n", BOLD, YELLOW, RESET);
       f = xcsystem(command);
 
-      if (f == NO)
+      if (f == 0)
         {
           return [self buildWithPath: fp
                          andFileType: @"sourcecode.c.objc"];
@@ -671,16 +671,20 @@ extern char **environ;
       NSString *op = [@"y.tab" stringByAppendingPathExtension: nx];
       NSString *fp = [[bp stringByDeletingLastPathComponent] stringByAppendingPathComponent: op];
       NSString *command = [NSString stringWithFormat: @"bison > /dev/null 2> /dev/null -o %@ %@", fp, bp];
-      BOOL f = NO;
+      NSInteger f = 0;
       
       xcprintf("%s%sprocessing%s\n", BOLD, YELLOW, RESET);
       f = xcsystem(command);
 
-      if (f == NO)
+      if (f == 0)
         {
           return [self buildWithPath: fp
                          andFileType: @"sourcecode.c.objc"];
         }
+    }
+  else
+    {
+      NSLog(@"Unknown file type... %@", ft);
     }
   
   fflush(stdout);

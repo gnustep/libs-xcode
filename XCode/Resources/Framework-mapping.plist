@@ -16,5 +16,5 @@
         Ignored = ("IOKit", "Quartz", "QuartzCore",
                    "QuickTime", "ApplicationServices",
                    "SystemConfiguration", "Security",
-                   "libiconv.2");
+                   "libiconv.2","liby");
 }
