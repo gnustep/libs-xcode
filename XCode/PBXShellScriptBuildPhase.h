@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -30,13 +30,12 @@
 
 @interface PBXShellScriptBuildPhase : PBXAbstractBuildPhase
 {
-  NSString *shellPath;
-  NSString *shellScript;
-  NSMutableArray *inputPaths;
-  NSMutableArray *outputPaths;
+  NSString *_shellPath;
+  NSString *_shellScript;
+  NSMutableArray *_inputPaths;
+  NSMutableArray *_outputPaths;
   NSMutableArray *_inputFileListPaths;
   NSMutableArray *_outputFileListPaths;
-  NSString *name;
 }
 
 // Methods....
@@ -48,8 +47,6 @@
 - (void) setInputPaths: (NSMutableArray *)object; // setter
 - (NSMutableArray *) outputPaths; // getter
 - (void) setOutputPaths: (NSMutableArray *)object; // setter
-- (NSString *) name; // getter
-- (void) setName: (NSString *)object; // setter
 - (NSMutableArray *) inputFileListPaths; // getter
 - (void) setInputFileListPaths: (NSMutableArray *)object; // setter
 - (NSMutableArray *) outputFileListPaths; // getter

@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -34,13 +34,13 @@
 
 - (void) dealloc
 {
-  RELEASE(shellPath);
-  RELEASE(shellScript);
-  RELEASE(inputPaths);
-  RELEASE(outputPaths);
+  RELEASE(_shellPath);
+  RELEASE(_shellScript);
+  RELEASE(_inputPaths);
+  RELEASE(_outputPaths);
   RELEASE(_inputFileListPaths);
   RELEASE(_outputFileListPaths);
-  RELEASE(name);
+  RELEASE(_name);
 
   [super dealloc];
 }
@@ -68,52 +68,42 @@
 
 - (NSString *) shellPath // getter
 {
-  return shellPath;
+  return _shellPath;
 }
 
 - (void) setShellPath: (NSString *)object; // setter
 {
-  ASSIGN(shellPath,object);
+  ASSIGN(_shellPath,object);
 }
 
 - (NSString *) shellScript // getter
 {
-  return shellScript;
+  return _shellScript;
 }
 
 - (void) setShellScript: (NSString *)object; // setter
 {
-  ASSIGN(shellScript,object);
+  ASSIGN(_shellScript,object);
 }
 
 - (NSMutableArray *) inputPaths // getter
 {
-  return inputPaths;
+  return _inputPaths;
 }
 
 - (void) setInputPaths: (NSMutableArray *)object; // setter
 {
-  ASSIGN(inputPaths,object);
+  ASSIGN(_inputPaths,object);
 }
 
 - (NSMutableArray *) outputPaths // getter
 {
-  return outputPaths;
+  return _outputPaths;
 }
 
 - (void) setOutputPaths: (NSMutableArray *)object; // setter
 {
-  ASSIGN(outputPaths,object);
-}
-
-- (NSString *) name // getter
-{
-  return name;
-}
-
-- (void) setName: (NSString *)object; // setter
-{
-  ASSIGN(name,object);
+  ASSIGN(_outputPaths,object);
 }
 
 - (NSString *) preprocessScript
@@ -122,7 +112,7 @@
   NSDictionary *searchReplace = [plistFile objectForKey: @"searchReplace"];
   NSString *result = nil;
   
-  ASSIGNCOPY(result, shellScript);
+  ASSIGNCOPY(result, _shellScript);
 
   // Search & replace as defined in the plist file..
   if (searchReplace != nil)
@@ -170,14 +160,14 @@
 - (BOOL) build
 {
   NSError *error = nil;
-  NSString *fileName = [NSString stringWithFormat: @"script_%lu",[shellScript hash]];
+  NSString *fileName = [NSString stringWithFormat: @"script_%lu",[_shellScript hash]];
   NSString *tmpFilename = [NSString stringWithFormat: @"/tmp/%@", fileName];
-  NSString *command = [NSString stringWithFormat: @"%@ %@",shellPath,tmpFilename];
+  NSString *command = [NSString stringWithFormat: @"%@ %@",_shellPath,tmpFilename];
   BOOL result = NO;
   NSString *processedScript = [self preprocessScript];
 
   // processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
-  xcprintf("=== Executing Script Build Phase... %s%s%s\n", GREEN, [[self name] cString], RESET);
+  xcprintf("=== Executing Script Build Phase... %s%s%s\n", GREEN, [_name cString], RESET);
   xcputs([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
   xcputs("*** script output");
   [processedScript writeToFile: tmpFilename
