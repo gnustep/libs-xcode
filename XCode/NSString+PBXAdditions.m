@@ -28,6 +28,7 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSFileManager.h>
 
+#import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
 
 #ifdef _MSC_VER

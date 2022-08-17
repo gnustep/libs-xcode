@@ -344,7 +344,7 @@
   xcputs([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
   NSString *buildDir = [NSString stringForEnvironmentVariable: @"BUILT_PRODUCTS_DIR"
                                                  defaultValue: @"build"];
-  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self productName]];
+  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];
   NSString *fileName = [fullPath lastPathComponent];
@@ -352,7 +352,17 @@
   NSFileManager *fileManager = [NSFileManager defaultManager];
   NSError *error = nil;
 
-  if([_productType isEqualToString: APPLICATION_TYPE])
+  if([_productType isEqualToString: TOOL_TYPE])
+    {
+      NSArray *apps = NSSearchPathForDirectoriesInDomains(GSToolsDirectory, NSLocalDomainMask, YES);
+      NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
+      NSString *installDest = [installDir stringByAppendingPathComponent: fileName];
+      NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
+      [fileManager copyItemAtPath: fullPath
+			   toPath: installDest
+			    error: &error];
+    }
+  else if([_productType isEqualToString: APPLICATION_TYPE])
     {
       NSArray *apps = NSSearchPathForDirectoriesInDomains(NSAllApplicationsDirectory, NSLocalDomainMask, YES);
       NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
@@ -405,6 +415,23 @@
 	{
 	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
+      
+      // NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
+      
+      // frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
+      
+      NSString *majorVersion = @"0"; // [[frameworkVersion componentsSeparatedByString: @"0"] objectAtIndex: 0];
+      [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: [NSString stringWithFormat: @"lib%@.so.0.0.0", execName]]
+			      error:NULL];
+      flag = [fileManager createSymbolicLinkAtPath: [librariesDir stringByAppendingPathComponent: 
+                                                                      [NSString stringWithFormat: @"lib%@.so.0.0.0",execName]]
+				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
+                                                                           [NSString stringWithFormat: @"lib%@.so",execName]]];
+      if(!flag)
+	{
+	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link... 0"] cString]);
+	}
+
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
     {

@@ -342,10 +342,12 @@
   [_buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
   [self plan];
+
+  NSLog(@"arrangedTargets = %@", _arrangedTargets);
   
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [_arrangedTargets objectEnumerator];
+  NSEnumerator *en = [_targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
   

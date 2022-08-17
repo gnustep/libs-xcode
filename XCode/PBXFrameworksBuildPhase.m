@@ -76,7 +76,8 @@
   NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
 
   frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
-
+  
+  // NSString *majorVersion = [[frameworkVersion componentsSeparatedByString: @"."] objectAtIndex: 0];
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *classList = @"";
   NSString *outputDir = [[NSString stringWithCString: getenv("PROJECT_ROOT")] 

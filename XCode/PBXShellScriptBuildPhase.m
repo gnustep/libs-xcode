@@ -30,6 +30,8 @@
 
 #import "xcsystem.h"
 
+extern char **environ;
+
 @implementation PBXShellScriptBuildPhase
 
 - (void) dealloc
@@ -105,13 +107,82 @@
   ASSIGN(_outputPaths,object);
 }
 
+- (NSString *) environmentVariableString
+{
+  NSString *result = [NSString stringWithFormat: @"\n# Environment variables\n\n"];
+  char **env = NULL;
+  
+  for (env = environ; *env != 0; env++)
+    {
+      char *thisEnv = *env;
+      NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
+      NSArray *arr = [envStr componentsSeparatedByString: @"="];
+
+      if ([arr count] == 2)
+        {
+          NSString *var = [arr objectAtIndex: 0];
+          NSString *val = [arr objectAtIndex: 1];
+
+          if ([val containsString: @"%"] == NO)
+            {
+              if ([val containsString: @"\""] ) // val is already quoted
+                {
+                  result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=%@\n", var, val]];
+                }
+              else
+                {
+                  result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=\"%@\"\n", var, val]];
+                }
+            }
+        }
+    }
+
+  result = [result stringByAppendingString: @"# Done with environment setup...\n\n"];
+  
+  return result;
+}
+
+- (NSString *) contextString
+{
+  NSString *result = [NSString stringWithFormat: @"#!%@\n# Context variables\n\n", _shellPath];;
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *dict = [ctx currentContext];
+  NSArray *keys = [dict allKeys];
+  NSEnumerator *en = [keys objectEnumerator];
+  NSString *k = nil;
+  
+  while ((k = [en nextObject]) != nil)
+    {
+      id v = [dict objectForKey: k];
+      if ([v isKindOfClass: [NSString class]])
+        {
+          if ([v containsString: @"%"] == NO)
+            {
+              if ([v containsString: @"\""] ) // val is already quoted
+                {
+                  result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=%@\n", k, v]];
+                }
+              else
+                {
+                  result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=\"%@\"\n", k, v]];
+                }
+            }          
+        }
+    }
+
+  result = [result stringByAppendingString: @"# Done with context setup...\n\n"];
+  
+  return result;
+}
+
 - (NSString *) preprocessScript
 {
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSDictionary *searchReplace = [plistFile objectForKey: @"searchReplace"];
+  NSString *script = nil;
   NSString *result = nil;
-  
-  ASSIGNCOPY(result, _shellScript);
+
+  ASSIGNCOPY(script, _shellScript);
 
   // Search & replace as defined in the plist file..
   if (searchReplace != nil)
@@ -133,13 +204,13 @@
           // will shift as a result of the substitution.  When there are no matches left, exit.
           while (done == NO)
             {
-              NSTextCheckingResult *match = [regex firstMatchInString: result
+              NSTextCheckingResult *match = [regex firstMatchInString: script
                                                               options: 0
                                                                 range: NSMakeRange(0, [key length])];
               if (match != nil)
                 {
                   NSRange matchRange = [match range];
-                  result = [result stringByReplacingCharactersInRange: matchRange
+                  script = [script stringByReplacingCharactersInRange: matchRange
                                                            withString: v];
                 }
               else
@@ -151,7 +222,11 @@
     }
 
   // Replace any variables defined in the context
-  result = [result stringByReplacingEnvironmentVariablesWithValues];
+  result = [self contextString];
+  result = [result stringByAppendingString: [self environmentVariableString]];
+  result = [result stringByAppendingString: @"\n# Script from project file...\n"];
+  result = [result stringByAppendingString: script]; 
+  result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit 0\n"];
 
   return result;
 }
@@ -159,8 +234,8 @@
 - (BOOL) build
 {
   NSError *error = nil;
-  NSString *fileName = [NSString stringWithFormat: @"script_%lu",[_shellScript hash]];
-  NSString *tmpFilename = [NSString stringWithFormat: @"/tmp/%@", fileName];
+  NSString *fileName = [NSString stringWithFormat: @"script_%@_%lu", [[self name] stringByEliminatingSpecialCharacters], [_shellScript hash]];
+  NSString *tmpFilename = [NSString stringWithFormat: @"build/%@", fileName];
   NSString *command = [NSString stringWithFormat: @"%@ %@",_shellPath,tmpFilename];
   BOOL result = NO;
   NSString *processedScript = [self preprocessScript];
