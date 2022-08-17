@@ -29,3 +29,4 @@
 #include <stdio.h>
 
 int setenv(const char *key, const char *value, int overwrite);
+// char *getenv(const char *key);

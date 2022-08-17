@@ -90,12 +90,16 @@
     {
       NSDebugLog(@"\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
       setenv("TARGET_BUILD_DIR","build",1);
+      [context setObject: @"build" forKey: @"TARGET_BUILD_DIR"];
     }
+  
   if ([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
     {
       NSDebugLog(@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
       setenv("BUILT_PRODUCTS_DIR","build",1);
+      [context setObject: @"build" forKey: @"BUILD_PRODUCTS_DIR"];
     }
+
   xcputs([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
 }
 @end

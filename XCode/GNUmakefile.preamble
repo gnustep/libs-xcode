@@ -24,11 +24,11 @@ ADDITIONAL_LIB_DIRS +=
 ADDITIONAL_TOOL_LIBS += 
 
 ifeq ($(GNUSTEP_TARGET_OS),mingw32)
-XCode_C_FILES = setenv.c
+XCode_OBJC_FILES += setenv.m
 else ifeq ($(GNUSTEP_TARGET_OS),mingw64)
-XCode_C_FILES = setenv.c
+XCode_OBJC_FILES += setenv.m
 else ifeq ($(GNUSTEP_TARGET_OS),windows)
-XCode_C_FILES = setenv.c
+XCode_OBJC_FILES += setenv.m
 endif
 
 

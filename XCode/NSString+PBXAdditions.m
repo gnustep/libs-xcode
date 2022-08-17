@@ -41,6 +41,8 @@
 
 extern char **environ;
 
+static NSString *_cachedRootPath = nil;
+
 @implementation NSString (PBXAdditions)
 
 - (NSString *) firstPathComponent

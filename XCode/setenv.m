@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -22,22 +22,39 @@
    Boston, MA 02110 USA.
 */
 
-#include "setenv.h"
+#import "setenv.h"
+#import "GSXCBuildContext.h"
 
 int setenv(const char *key, const char *value, int overwrite)
 {
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
   int result = 255; // failure...
   char *current = getenv(key);
+
   if(overwrite && current)
     {
       int key_len = strlen(key);
       int val_len = strlen(value);
       int len = key_len + 1 + val_len + 1; // key + "=" + value + '\0'
       char *buffer = malloc(len);
+
       memset(buffer, 0, len);
       sprintf(buffer,"%s=%s",key,value);
       result = putenv(buffer);
+
+      [ctx setObject: [NSString stringWithCString: value]
+	      forKey: [NSString stringWithCString: key]];
+      
       free(buffer);
     }
+
   return result;
 }
+/*
+char *getenv(const char *key)
+{
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  char *result = [[ctx objectForKey: [NSString stringWithCString: key]] cString];
+  return result;
+}
+*/
