@@ -223,7 +223,7 @@ extern char **environ;
 
   // Replace any variables defined in the context
   result = [self contextString];
-  result = [result stringByAppendingString: [self environmentVariableString]];
+  // result = [result stringByAppendingString: [self environmentVariableString]];
   result = [result stringByAppendingString: @"\n# Script from project file...\n"];
   result = [result stringByAppendingString: script]; 
   result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit 0\n"];
@@ -242,7 +242,7 @@ extern char **environ;
 
   // processedScript = [processedScript stringByReplacingEnvironmentVariablesWithValues];
   xcprintf("=== Executing Script Build Phase... %s%s%s\n", GREEN, [_name cString], RESET);
-  xcputs([[NSString stringWithFormat: @"=== Command: \t%s%@%s", RED, command, RESET] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Command: %s%@%s using shell %@", YELLOW, command, RESET, _shellPath] cString]);
   xcputs("*** script output");
   [processedScript writeToFile: tmpFilename
                     atomically: YES

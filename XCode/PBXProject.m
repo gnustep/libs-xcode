@@ -373,6 +373,8 @@
 		  forKey: @"PROJECT_DIR"];
       [context setObject: @"./"
 		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
       
       result = [target build];
@@ -479,6 +481,8 @@
 		  forKey: @"PROJECT_DIR"];
       [context setObject: @"./"
 		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
       
       result = [target generate];

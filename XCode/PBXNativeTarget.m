@@ -119,8 +119,7 @@
 - (void) _productWrapper
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *buildDir = [NSString stringForEnvironmentVariable: @"BUILT_PRODUCTS_DIR"
-                                                 defaultValue: @"build"];
+  NSString *buildDir = @"./build";
   NSString *aname = [self name];
   buildDir = [buildDir stringByAppendingPathComponent: aname];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
@@ -128,6 +127,14 @@
 			 stringByAppendingPathComponent: [_productReference path]];
 
   NSError *error = nil;
+
+  // Set up some target specific vars, based on the build dir...
+  [context setObject: buildDir
+              forKey: @"TARGET_BUILD_DIR"];
+  [context setObject: aname
+              forKey: @"TARGET_NAME"];
+  [context setObject: uninstalledProductsDir
+              forKey: @"BUILT_PRODUCTS_DIR"];
   
   // Create directories...
   [[NSFileManager defaultManager] createDirectoryAtPath:uninstalledProductsDir
@@ -207,7 +214,7 @@
       [context setObject: headerDir forKey: @"HEADER_DIR"];
       [context setObject: resourceDir forKey: @"RESOURCE_DIR"];
       [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
-      [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCE_DIR"];
+      [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCES_DIR"];
 
       setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
       setenv("PRODUCT_NAME",[execName cString],1);
@@ -219,7 +226,6 @@
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
     {
-      // for non-bundled packages...
       NSString *fileName = [fullPath lastPathComponent];
       NSString *path = [fullPath stringByDeletingLastPathComponent];
       NSString *dir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
@@ -232,23 +238,29 @@
       setenv("EXECUTABLE_NAME",[fileName cString],1);
       
       [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
-      [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCE_DIR"];
+      [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCES_DIR"];
 
       [[NSFileManager defaultManager] createDirectoryAtPath:derivedSourceHeaderDir
 				withIntermediateDirectories:YES
 						 attributes:nil
 						      error:&error];
     }
-  else 
+  else // For non bundled packages 
     {
-      // for non-bundled packages...
       NSString *fileName = [fullPath lastPathComponent];
       NSString *path = [fullPath stringByDeletingLastPathComponent];
+      NSString *dir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
+                                                defaultValue: @"./"];      
+      NSString *derivedSourceDir = [dir stringByAppendingPathComponent: @"derived_src"];
+      NSString *derivedSourceHeaderDir = derivedSourceDir;
 
       setenv("PRODUCT_OUTPUT_DIR",[path cString],1);
       setenv("PRODUCT_NAME",[fileName cString],1);
       setenv("EXECUTABLE_NAME",[fileName cString],1);
 
+      [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
+      [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCES_DIR"];
+      
       [context setObject: path forKey: @"PRODUCT_OUTPUT_DIR"];
       [context setObject: fileName forKey: @"PRODUCT_NAME"];
       [context setObject: fileName forKey: @"EXECUTABLE_NAME"];        
@@ -292,6 +304,7 @@
   xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
 
   xcputs([[NSString stringWithFormat: @"=== Executing build phases..."] cString]);
+
   [self _productWrapper];
   id phase = nil;
   en = [buildPhases objectEnumerator];
@@ -317,8 +330,7 @@
 - (BOOL) clean
 {
   xcputs([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
-  NSString *buildDir = [NSString stringForEnvironmentVariable: @"BUILT_PRODUCTS_DIR"
-                                                 defaultValue: @"build"];
+  NSString *buildDir = @"./build";
   buildDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *command = [NSString stringWithFormat: @"rm -rf \"%@\"",buildDir];
 
@@ -342,8 +354,7 @@
 - (BOOL) install
 {
   xcputs([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
-  NSString *buildDir = [NSString stringForEnvironmentVariable: @"BUILT_PRODUCTS_DIR"
-                                                 defaultValue: @"build"];
+  NSString *buildDir = @"./build";
   NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];
@@ -419,7 +430,7 @@
       // NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
       
       // frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
-      
+      /*
       NSString *majorVersion = @"0"; // [[frameworkVersion componentsSeparatedByString: @"0"] objectAtIndex: 0];
       [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: [NSString stringWithFormat: @"lib%@.so.0.0.0", execName]]
 			      error:NULL];
@@ -430,7 +441,7 @@
       if(!flag)
 	{
 	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link... 0"] cString]);
-	}
+          }*/
 
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
