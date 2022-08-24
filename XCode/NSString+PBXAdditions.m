@@ -33,6 +33,7 @@
 #import "GSXCBuildContext.h"
 
 #ifdef _MSC_VER
+#import <stdint.h>
 #import <stdio.h>
 #define popen _popen
 #else

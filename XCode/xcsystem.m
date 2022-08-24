@@ -53,10 +53,7 @@ NSInteger xcsystem(NSString *cmd)
     }
   else
     {
-      NSUUID *uuid = [NSUUID UUID];
-      NSString *filename = [NSString stringWithFormat: @"bt_%@.sh", [uuid UUIDString]];
       NSString *scriptFormat = @"#!/bin/bash\n\n%@\nexit 0\n";
-      NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
       NSString *body = @"";
       NSString *script = nil;
       
@@ -64,6 +61,9 @@ NSInteger xcsystem(NSString *cmd)
       body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", cmd]];
 
       script = [NSString stringWithFormat: scriptFormat, body];
+
+      NSString *filename = [NSString stringWithFormat: @"bt_%u.sh", [script hash]];
+      NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
       BOOL f = [script writeToFile: scriptCmd
 			atomically: YES
 			  encoding: NSUTF8StringEncoding

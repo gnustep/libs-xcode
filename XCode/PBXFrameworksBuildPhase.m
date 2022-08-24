@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -86,6 +86,8 @@
   NSString *objDir = [context objectForKey: @"BUILT_PRODUCTS_DIR"];
   NSError *error = nil;
   NSString *targetName = [[self target] name];
+
+  objDir = (objDir == nil) ? buildDir : objDir;
   
   // Create the derived source directory...
   [[NSFileManager defaultManager] createDirectoryAtPath:outputDir
@@ -513,31 +515,42 @@
   NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
-
+  NSString *compiler = [self linkerForBuild];
+  NSString *command = nil;
   NSString *commandTemplate = nil;
+  
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
-      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@ " 
+      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so " 
 	@"-shared-libgcc -o %@ %@ "
 	@"-L%@ -L/%@ -L%@";
+
+      command = [NSString stringWithFormat: commandTemplate,
+			  compiler,
+			  executableName,
+			  libraryPath,
+			  outputFiles,
+			  userLibDir,
+			  localLibDir,
+			  systemLibDir];
     }
   else
     {
       commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
         @"-shared-libgcc -o %@ %@ "
         @"-L%@ -L/%@ -L%@";
+
+      command = [NSString stringWithFormat: commandTemplate,
+			  compiler,
+			  executableName,
+			  frameworkVersion,
+			  libraryPath,
+			  outputFiles,
+			  userLibDir,
+			  localLibDir,
+			  systemLibDir];
     }
   
-  NSString *compiler = [self linkerForBuild];
-  NSString *command = [NSString stringWithFormat: commandTemplate,
-				compiler,
-				executableName,
-				frameworkVersion,
-				libraryPath,
-				outputFiles,
-				userLibDir,
-				localLibDir,
-				systemLibDir];
 
   // Create link to library...
   [[NSFileManager defaultManager] createSymbolicLinkAtPath: outputPath
