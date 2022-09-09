@@ -98,14 +98,13 @@
   NSString *classesFilename = [[outputDir stringByAppendingPathComponent: executableName]
                                 stringByAppendingString: @"-class-list"];
   NSString *classesFormat = 
-    @"rm 2> /dev/null %@; echo \"(\" > %@; nm -Pg %@/%@/*.o | grep __objc_class_name | "
+    @"rm 2> /dev/null %@; echo \"(\" > %@; nm -Pg %@/*.o | grep __objc_class_name | "
     @"sed -e '/^__objc_class_name_[A-Za-z0-9_.]* [^U]/ {s/^__objc_class_name_\\([A-Za-z0-9_.]*\\) [^U].*/\\1/p;}' | "
     @"grep -v __objc_class_name | sort | uniq | while read class; do echo \"${class},\"; done >> %@; echo \")\" >> %@;"; 
   NSString *classesCommand = [NSString stringWithFormat: classesFormat,
                                        classesFilename,
 				       classesFilename,
 				       buildDir,
-                                       targetName,
 				       classesFilename,
 				       classesFilename];
 
@@ -145,7 +144,7 @@
 				   classList];
   [dummyClass writeToFile: outputPath 
 	       atomically: YES
-		 encoding: NSASCIIStringEncoding
+		 encoding: NSUTF8StringEncoding
 		    error: &error];
   
   // compile...
