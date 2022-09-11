@@ -110,4 +110,14 @@
   return NO;
 }
 
+- (BOOL) generate
+{
+  return YES;
+}
+
+- (BOOL) clean
+{
+  return YES;
+}
+
 @end

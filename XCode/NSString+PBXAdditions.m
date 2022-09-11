@@ -205,29 +205,13 @@ static NSString *_cachedRootPath = nil;
 {
   NSString *result = nil;
   NSString *cmd = self;
-  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
-  NSDictionary *config = [ctx config];
-  NSString *setupScript = nil; // [config objectForKey: @"setupScript"];
   
 #ifdef _WIN32
   NSString *rootPath = [self findRootPath];
-  if (setupScript == nil)
-    {
-      result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
-    }
-  else
-    {
-      result = [NSString stringWithFormat: @"%@/usr/bin/bash -c '. %@ > /dev/null && %@'", rootPath, setupScript, cmd];
-    }
+
+  result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
 #else
-  if (setupScript == nil)
-    {
-      result = [NSString stringWithFormat: @"%@ && %@", setupScript, cmd];
-    }
-  else
-    {
-      result = [cmd copy];
-    }
+  result = [cmd copy];
 #endif
 
   NSDebugLog(@"%@", result);

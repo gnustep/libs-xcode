@@ -72,6 +72,15 @@
   return [_targetProxy build];
 }
 
+- (BOOL) generate
+{
+  return [_targetProxy generate];
+}
+
+- (BOOL) clean
+{
+}
+
 - (NSString *) description
 {
   return [NSString stringWithFormat: @"<%@> - %@", [super description], _name];

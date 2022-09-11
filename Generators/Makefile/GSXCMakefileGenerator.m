@@ -3,6 +3,8 @@
 #import "GSXCMakefileGenerator.h"
 #import "PBXNativeTarget.h"
 #import "XCConfigurationList.h"
+#import "PBXBuildFile.h"
+#import "PBXFileReference.h"
 
 @implementation GSXCMakefileGenerator
 
@@ -52,22 +54,37 @@
 {
   NSString *result = @"";
   NSEnumerator *en = [arr objectEnumerator];
-  NSString *aname = nil;
-
-  while((aname = [en nextObject]) != nil)
+  id o = nil;
+  
+  while((o = [en nextObject]) != nil)
     {
-      if ([aname isEqualToString: [arr firstObject]] == YES)
+      NSString *aname = nil;          
+      if ([o isKindOfClass: [NSString class]])
         {
-          result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+          aname = o;
         }
-      else
+      else if ([o isKindOfClass: [PBXBuildFile class]])
         {
-          result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+          PBXBuildFile *f = o;
+          PBXFileReference *r = [f fileRef];
+          aname = [r path];
         }
-      
-      if ([aname isEqualToString: [arr lastObject]] == NO)
+
+      if (aname != nil)
         {
-          result = [result stringByAppendingString: @"\\\n"];
+          if ([aname isEqualToString: [arr firstObject]] == YES)
+            {
+              result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+            }
+          else
+            {
+              result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+            }
+          
+          if ([aname isEqualToString: [arr lastObject]] == NO)
+            {
+              result = [result stringByAppendingString: @"\\\n"];
+            }
         }
     }
   return result;
@@ -109,7 +126,7 @@
   makefileString = [makefileString stringByAppendingString: @"#\n\n"];
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n\n"];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"APP_NAME = %@\n\n", appName]];
+                                [NSString stringWithFormat: @"%@_NAME= %@\n\n", [projectType uppercaseString], appName]];
   makefileString = [makefileString stringByAppendingString:
                                 [NSString stringWithFormat: @"%@_OBJC_FILES = %@\n\n", appName, objCFilesString]];
   makefileString = [makefileString stringByAppendingString:

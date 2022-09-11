@@ -240,7 +240,7 @@
 				   systemLibDir];;
   NSFileManager *manager = [NSFileManager defaultManager];
   NSDirectoryEnumerator *dirEnumerator = [manager enumeratorAtPath:uninstalledProductsDir];
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   id file = nil;
   NSString *lpath = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
@@ -253,7 +253,7 @@
       linkString = [linkString stringByAppendingString: [NSString stringWithFormat: @"-L%@ ", lpath]];
     }
   
-  en = [files objectEnumerator];
+  en = [_files objectEnumerator];
   while((file = [en nextObject]) != nil)
     {
       PBXFileReference *fileRef = [file fileRef];

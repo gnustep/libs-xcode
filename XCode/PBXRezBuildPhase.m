@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -29,15 +29,17 @@
 
 -(BOOL) build
 {
-  xcputs("=== Executing Rez Build Phase");
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   id file = nil;
   BOOL result = YES;
+
+  xcputs("=== Executing Rez Build Phase");
   while((file = [en nextObject]) != nil && result)
     {
       xcputs([[NSString stringWithFormat: @"\tFile = %@",file] cString]);
     }
   xcputs("=== Completed Rez Build Phase");
+  
   return result;
 }
 

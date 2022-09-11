@@ -29,10 +29,10 @@
 
 - (void) dealloc
 {
-  RELEASE(files);
-  RELEASE(buildActionMask);
-  RELEASE(runOnlyForDeploymentPostprocessing);
-  RELEASE(target);
+  RELEASE(_files);
+  RELEASE(_buildActionMask);
+  RELEASE(_runOnlyForDeploymentPostprocessing);
+  RELEASE(_target);
   RELEASE(_name);
   [super dealloc];
 }
@@ -40,52 +40,52 @@
 // Methods....
 - (NSMutableArray *) files // getter
 {
-  return files;
+  return _files;
 }
 
 - (void) setFiles: (NSMutableArray *)object; // setter
 {
-  ASSIGN(files,object);
+  ASSIGN(_files,object);
 }
 
 - (NSString *) buildActionMask // getter
 {
-  return buildActionMask;
+  return _buildActionMask;
 }
 
 - (void) setBuildActionMask: (NSString *)object; // setter
 {
-  ASSIGN(buildActionMask,object);
+  ASSIGN(_buildActionMask,object);
 }
 
 - (NSString *) runOnlyForDeploymentPostprocessing // getter
 {
-  return runOnlyForDeploymentPostprocessing;
+  return _runOnlyForDeploymentPostprocessing;
 }
 
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
 {
-  ASSIGN(runOnlyForDeploymentPostprocessing,object);
+  ASSIGN(_runOnlyForDeploymentPostprocessing,object);
 }
 
 - (BOOL) showEnvVarsInLog; // setter
 {
-  return showEnvVarsInLog;
+  return _showEnvVarsInLog;
 }
 
 - (void) setEnvVarsInLog: (BOOL)flag
 {
-  showEnvVarsInLog = flag;
+  _showEnvVarsInLog = flag;
 }
 
 - (void) setTarget: (PBXNativeTarget *)t
 {
-  target = t;
+  _target = t;
 }
 
 - (PBXNativeTarget *) target
 {
-  return target;
+  return _target;
 }
 
 - (void) setName: (NSString *)n
@@ -100,13 +100,13 @@
 
 - (BOOL) build
 {
-  NSDebugLog(@"Abstract build... %@, %@",self, files);
+  NSDebugLog(@"Abstract build... %@, %@",self, _files);
   return YES;
 }
 
 - (BOOL) generate
 {
-  NSLog(@"Abstract generate... %@, %@",self,files);
+  NSLog(@"Abstract generate... %@, %@",self,_files);
   return YES;
 }
 

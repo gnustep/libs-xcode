@@ -46,4 +46,6 @@
 
 // build
 - (BOOL) build;
+- (BOOL) generate;
+- (BOOL) clean;
 @end

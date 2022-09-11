@@ -46,8 +46,8 @@
       objs = [[[GSXCBuildContext sharedBuildContext]
                 objectForKey: @"objects"]
                allValues];
-      
-      ASSIGNCOPY(files, objs);
+
+      [self setFiles: [objs mutableCopy]];
     }
   return self;
 }
@@ -70,11 +70,11 @@
   // the product name from the target.
   if ([productName isEqualToString: @"$(TARGET_NAME)"])
     {
-      productName = [target productName];
+      productName = [_target productName];
       NSDebugLog(@"* 2nd try %@", productName);
       if ([productName isEqualToString: @"$(TARGET_NAME)"])
 	{
-	  productName = [target name];
+	  productName = [_target name];
 	  NSDebugLog(@"* 3rd try %@", productName);
 	}
     }
@@ -86,7 +86,7 @@
 {
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *filename = nil;
-  NSString *productName = [target name]; // [self productName];
+  NSString *productName = [_target name]; // [self productName];
   NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"]; 
   NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
   NSString *contentsJson = [appIconDir stringByAppendingPathComponent: @"Contents.json"];
@@ -182,7 +182,7 @@
   NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSError *error = nil;
-  NSString *productName = [self productName]; // @""; // [target productName];
+  NSString *productName = [self productName]; // @""; // [_target productName];
 
   NSDebugLog(@"productName = %@", productName);
   
@@ -193,7 +193,7 @@
                        error:&error];
 
   // Copy all resources...
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   BOOL result = YES;
   id file = nil;
   while((file = [en nextObject]) != nil && result)
@@ -368,15 +368,15 @@
 - (BOOL) generate
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [files count]];
+  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [_files count]];
   
   xcputs("=== Generating Resources Entries Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
-  NSString *productName = [target productName];
+  NSString *productName = [_target productName];
   NSString *appName = [productName stringByDeletingPathExtension];
   
   // Copy all resources...
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [_files objectEnumerator];
   BOOL result = YES;
   id file = nil;
   while((file = [en nextObject]) != nil && result)
