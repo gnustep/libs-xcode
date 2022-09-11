@@ -85,7 +85,7 @@
   NSString *buildDir = [context objectForKey: @"TARGET_BUILD_DIR"];
   NSString *objDir = [context objectForKey: @"BUILT_PRODUCTS_DIR"];
   NSError *error = nil;
-  NSString *targetName = [[self target] name];
+  // NSString *targetName = [[self target] name];
 
   objDir = (objDir == nil) ? buildDir : objDir;
   
@@ -108,7 +108,7 @@
 				       classesFilename,
 				       classesFilename];
 
-  NSDebugLog(@"classesCommand = %@, %@", classesCommand, [context currentContext]);
+  NSLog(@"classesCommand = %@\n\n Environment = %@", classesCommand, [context currentContext]);
   xcsystem(classesCommand);
   
   // build the list...
@@ -431,7 +431,7 @@
 			  linkString];
     }
   
-  NSDebugLog(@"command = %@", command);
+  NSLog(@"Link command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
@@ -484,8 +484,10 @@
 - (BOOL) buildFramework
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-
+  NSDictionary *config = [context config];
+  NSString *ctarget = [config objectForKey: @"target"];
   int result = 0;
+  
   xcputs("=== Executing Frameworks / Linking Build Phase (Framework)");
   [self generateDummyClass];
 
@@ -520,24 +522,47 @@
   
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
-      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so " 
-	@"-shared-libgcc -o %@ %@ "
-	@"-L%@ -L/%@ -L%@";
+      if ([ctarget containsString: @"msvc"])
+	{
+	  NSString *msvcLibname = [executableName stringByAppendingPathExtension: @"lib"];
 
-      command = [NSString stringWithFormat: commandTemplate,
-			  compiler,
-			  executableName,
-			  libraryPath,
-			  outputFiles,
-			  userLibDir,
-			  localLibDir,
-			  systemLibDir];
+	  commandTemplate = @"%@ -shared -Wl -o %@ %@ `gnustep-config --base-libs` "	    
+	    @"-L%@ -L%@ -L%@";
+	  libraryPath = [outputDir stringByAppendingPathComponent: msvcLibname];
+
+	  
+	  command = [NSString stringWithFormat: commandTemplate,
+			      compiler,
+			      @"",
+			      libraryPath,
+			      outputFiles,
+			      userLibDir,
+			      localLibDir,
+			      systemLibDir];
+	  
+	}
+      else
+	{
+	  commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so " 
+	    @"-shared-libgcc -o %@ %@ "
+	    @"-L%@ -L%@ -L%@";
+	  
+	  
+	  command = [NSString stringWithFormat: commandTemplate,
+			      compiler,
+			      executableName,
+			      libraryPath,
+			      outputFiles,
+			      userLibDir,
+			      localLibDir,
+			      systemLibDir];
+	}
     }
   else
     {
       commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
         @"-shared-libgcc -o %@ %@ "
-        @"-L%@ -L/%@ -L%@";
+        @"-L%@ -L%@ -L%@";
 
       command = [NSString stringWithFormat: commandTemplate,
 			  compiler,
@@ -567,8 +592,9 @@
 				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
 
 
+  NSLog(@"Link command = %@", command);
   if([modified isEqualToString: @"YES"])
-    {
+    {      
       xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
       result = xcsystem(command);
     }
