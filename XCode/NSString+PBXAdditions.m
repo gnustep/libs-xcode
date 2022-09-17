@@ -52,6 +52,13 @@ static NSString *_cachedRootPath = nil;
   return ([components count] > 0)?[components objectAtIndex: 0]:@"";
 }
 
+- (NSString *) stringByReplacingPathExtensionWith: (NSString *)ext
+{
+  NSString *result = [self stringByDeletingPathExtension];
+  result = [result stringByAppendingPathExtension: ext];
+  return result;
+}
+
 - (NSString *) stringByEscapingSpecialCharacters
 {
   NSString *result = nil;

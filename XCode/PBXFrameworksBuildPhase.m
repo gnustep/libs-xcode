@@ -456,7 +456,38 @@
   xcputs("=== Executing Frameworks / Linking Build Phase (Static Library)");
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *executableName = [[NSString stringWithCString: getenv("EXECUTABLE_NAME")] stringByReplacingPathExtensionWith: @"a"];
+  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
+  NSString *command = [NSString stringWithFormat: commandTemplate,
+				outputPath,
+				outputFiles,
+				outputPath];
+
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  int result = 0;
+  if([modified isEqualToString: @"YES"])
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
+      result = xcsystem(command);
+    }
+  else
+    {
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+    }
+
+  xcputs("=== Frameworks / Linking Build Phase Completed");
+
+  return (result == 0);
+}
+
+- (BOOL) buildDynamicLib
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  xcputs("=== Executing Frameworks / Linking Build Phase (Dynamic Library)");
+  NSString *outputFiles = [self processOutputFilesString];
+  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *executableName = [[NSString stringWithCString: getenv("EXECUTABLE_NAME")] stringByReplacingPathExtensionWith: @"so"];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,
@@ -524,17 +555,19 @@
     {
       if ([ctarget containsString: @"msvc"])
 	{
-	  NSString *msvcLibname = [executableName stringByAppendingPathExtension: @"lib"];
-
-	  commandTemplate = @"%@ -shared -Wl -o %@ %@ `gnustep-config --base-libs` "	    
+	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
+          NSString *dllLibname = [libraryPathNoVersion stringByReplacingPathExtensionWith: @"dll"];
+          
+	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` "	    
 	    @"-L%@ -L%@ -L%@";
 	  libraryPath = [outputDir stringByAppendingPathComponent: msvcLibname];
 
 	  
 	  command = [NSString stringWithFormat: commandTemplate,
 			      compiler,
-			      @"",
-			      libraryPath,
+                              libraryPath,
+                              dllLibname,
+//			      libraryPath,
 			      outputFiles,
 			      userLibDir,
 			      localLibDir,
@@ -675,6 +708,10 @@
     {
       return [self buildStaticLib];
     }
+  else if([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
+    {
+      return [self buildDynamicLib];
+    }
   else if([productType isEqualToString: FRAMEWORK_TYPE])
     {
       return [self buildFramework];
@@ -720,6 +757,11 @@
                   forKey: @"PROJECT_TYPE"];
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
+    {
+      [context setObject: @"library"
+                  forKey: @"PROJECT_TYPE"];
+    }
+  else if([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
     {
       [context setObject: @"library"
                   forKey: @"PROJECT_TYPE"];

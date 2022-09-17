@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -29,7 +29,7 @@
 // product types...  
 #define LIBRARY_TYPE @"com.apple.product-type.library.static"
 #define FRAMEWORK_TYPE @"com.apple.product-type.framework"
-#define DYNAMIC_LIBRARY_TYPE @"com.apple.product-type.library"
+#define DYNAMIC_LIBRARY_TYPE @"com.apple.product-type.library.dynamic"
 #define BUNDLE_TYPE @"com.apple.product-type.bundle"
 #define TOOL_TYPE @"com.apple.product-type.tool"
 #define APPLICATION_TYPE @"com.apple.product-type.application"

@@ -28,6 +28,7 @@
 
 - (NSString *) firstPathComponent;
 
+- (NSString *) stringByReplacingPathExtensionWith: (NSString *)ext;
 - (NSString *) stringByEscapingSpecialCharacters;
 - (NSString *) stringByEliminatingSpecialCharacters;
 - (NSString *) stringByCapitalizingFirstCharacter;
