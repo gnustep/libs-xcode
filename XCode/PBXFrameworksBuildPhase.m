@@ -490,8 +490,9 @@
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
-  NSString *libName = [NSString stringWithFormat: @"lib%@.so",executableName];
+  NSString *executableNameStripped = [executableName stringByDeletingPathExtension];
+  NSString *libName = [NSString stringWithFormat: @"%@.so",executableNameStripped];
+  NSString *outputPath = [outputDir stringByAppendingPathComponent: libName];
 
   NSString *libraryPath = [outputDir stringByAppendingPathComponent: libName];
   NSString *cfgString = [self _gsConfigString];
