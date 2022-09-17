@@ -62,7 +62,7 @@ NSInteger xcsystem(NSString *cmd)
 
       script = [NSString stringWithFormat: scriptFormat, body];
 
-      NSString *filename = [NSString stringWithFormat: @"bt_%u.sh", [script hash]];
+      NSString *filename = [NSString stringWithFormat: @"bt_%lu.sh", [script hash]];
       NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
       BOOL f = [script writeToFile: scriptCmd
 			atomically: YES

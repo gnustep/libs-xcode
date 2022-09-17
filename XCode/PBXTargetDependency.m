@@ -79,6 +79,7 @@
 
 - (BOOL) clean
 {
+  return YES;
 }
 
 - (NSString *) description

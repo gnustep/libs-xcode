@@ -48,4 +48,6 @@
 - (void) setRemoteInfo: (NSString *)object; // setter
 
 - (BOOL) build;
+- (BOOL) generate;
+- (BOOL) clean;
 @end

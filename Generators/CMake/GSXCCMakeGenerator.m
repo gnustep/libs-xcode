@@ -1,12 +1,12 @@
 // Released under the terms of LGPL 2.1, Please see COPYING.LIB
 
-#import "GSXCMakefileGenerator.h"
+#import "GSXCCMakeGenerator.h"
 #import "PBXNativeTarget.h"
 #import "XCConfigurationList.h"
 #import "PBXBuildFile.h"
 #import "PBXFileReference.h"
 
-@implementation GSXCMakefileGenerator
+@implementation GSXCCMakeGenerator
 
 - (NSString *) _arrayToLinkList: (NSArray *)arr
 {

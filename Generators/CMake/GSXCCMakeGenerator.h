@@ -1,4 +1,4 @@
 #import "GSXCGenerator.h"
 
-@interface GSXCMakeGenerator : GSXCGenerator
+@interface GSXCCMakeGenerator : GSXCGenerator
 @end

@@ -453,7 +453,7 @@
 - (BOOL) buildStaticLib
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  xcputs("=== Executing Frameworks / Linking Build Phase (Static Library)");
+  xcputs("=== Executing Frameworks / Archiving Build Phase (Static Library)");
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
   NSString *executableName = [[NSString stringWithCString: getenv("EXECUTABLE_NAME")] stringByReplacingPathExtensionWith: @"a"];
@@ -484,22 +484,86 @@
 - (BOOL) buildDynamicLib
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  xcputs("=== Executing Frameworks / Linking Build Phase (Dynamic Library)");
+  NSDictionary *config = [context config];
+  NSString *ctarget = [config objectForKey: @"target"];
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [[NSString stringWithCString: getenv("EXECUTABLE_NAME")] stringByReplacingPathExtensionWith: @"so"];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
-  NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
-  NSString *command = [NSString stringWithFormat: commandTemplate,
-				outputPath,
-				outputFiles,
-				outputPath];
-
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
-  int result = 0;
-  if([modified isEqualToString: @"YES"])
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
+  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *libName = [NSString stringWithFormat: @"lib%@.so",executableName];
+
+  NSString *libraryPath = [outputDir stringByAppendingPathComponent: libName];
+  NSString *cfgString = [self _gsConfigString];
+  NSString *systemLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
+  NSString *localLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
+  NSString *userLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSUInteger os = [pi operatingSystem];
+  NSString *compiler = [self linkerForBuild];
+  NSString *command = nil;
+  NSString *commandTemplate = nil;
+  NSInteger result = 0;
+  
+  xcputs("=== Executing Frameworks / Linking Build Phase (Dynamic Library");
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
-      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
+      if ([ctarget containsString: @"msvc"])
+	{
+	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
+          NSString *dllLibname = [libraryPath stringByReplacingPathExtensionWith: @"dll"];
+          
+	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` "	    
+	    @"-L%@ -L%@ -L%@";
+	  libraryPath = [outputDir stringByAppendingPathComponent: msvcLibname];
+
+	  
+	  command = [NSString stringWithFormat: commandTemplate,
+			      compiler,
+                              libraryPath,
+                              dllLibname,
+			      outputFiles,
+			      userLibDir,
+			      localLibDir,
+			      systemLibDir];
+	  
+	}
+      else
+	{
+	  commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so " 
+	    @"-shared-libgcc -o %@ %@ "
+	    @"-L%@ -L%@ -L%@";
+	  
+	  
+	  command = [NSString stringWithFormat: commandTemplate,
+			      compiler,
+			      executableName,
+			      libraryPath,
+			      outputFiles,
+			      userLibDir,
+			      localLibDir,
+			      systemLibDir];
+	}
+    }
+  else
+    {
+      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so  -rdynamic " 
+        @"-shared-libgcc -o %@ %@ "
+        @"-L%@ -L%@ -L%@";
+
+      command = [NSString stringWithFormat: commandTemplate,
+			  compiler,
+			  executableName,
+			  libraryPath,
+			  outputFiles,
+			  userLibDir,
+			  localLibDir,
+			  systemLibDir];
+    }
+
+  if([modified isEqualToString: @"YES"])
+    {      
+      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
       result = xcsystem(command);
     }
   else
@@ -508,7 +572,6 @@
     }
 
   xcputs("=== Frameworks / Linking Build Phase Completed");
-
   return (result == 0);
 }
 
@@ -517,8 +580,8 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSDictionary *config = [context config];
   NSString *ctarget = [config objectForKey: @"target"];
-  int result = 0;
-  
+  NSInteger result = 0;
+
   xcputs("=== Executing Frameworks / Linking Build Phase (Framework)");
   [self generateDummyClass];
 
