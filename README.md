@@ -1,6 +1,5 @@
 1 README
 ==
-![libs-xcode workflow](https://github.com/gnustep/libs-xcode/actions/workflows/main.yml/badge.svg)
 
 The GNUstep Xcode Library is a library for building xcode projects. 
 It can be used to parse and provide information regarding an 
