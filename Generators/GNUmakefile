@@ -13,7 +13,6 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # Generator bundles
 SUBPROJECTS = \
 	Makefile \
-	VisualStudio \
 	CMake
 
 #
