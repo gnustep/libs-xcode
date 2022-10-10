@@ -38,12 +38,21 @@ NSInteger xcsystem(NSString *cmd)
   GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
   NSDictionary *dict = [ctx config];
   NSString *setupScript = [dict objectForKey: @"setupScript"];
+  NSString *srcroot = [dict objectForKey: @"SRCROOT"];
   NSInteger r = 0;
 
+  if (srcroot == nil)
+    {
+      srcroot = @"./"; // assume current dir
+    }
+  
   if(setupScript == nil)
     {
 #ifdef _WIN32
       NSString *win_cmd = [cmd execPathForString];
+
+      win_cmd = [win_cmd stringByReplacingOccurrencesOfString: @"$(SRCROOT)"
+						   withString: srcroot];
       
       NSDebugLog(@"win_cmd = %@", win_cmd);
       r = system([win_cmd cString]);
@@ -53,25 +62,30 @@ NSInteger xcsystem(NSString *cmd)
     }
   else
     {
-      NSString *scriptFormat = @"#!/bin/bash\n\n%@\nexit 0\n";
       NSString *body = @"";
       NSString *script = nil;
+      NSString *filename = nil;
+      NSString *scriptCmd = nil;
+      BOOL f = NO;
       
       body = [body stringByAppendingString: [NSString stringWithFormat: @". %@ > /dev/null\n", setupScript]];
       body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", cmd]];
+      body = [body stringByReplacingOccurrencesOfString: @"$(SRCROOT)"
+					     withString: srcroot];
 
-      script = [NSString stringWithFormat: scriptFormat, body];
+      script = [NSString stringWithFormat: @"#!/bin/bash\n\n%@\n# end of script\n", body];
+      filename = [NSString stringWithFormat: @"bt_%lu.sh", [script hash]];
 
-      NSString *filename = [NSString stringWithFormat: @"bt_%lu.sh", [script hash]];
-      NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
-      BOOL f = [script writeToFile: scriptCmd
-			atomically: YES
-			  encoding: NSUTF8StringEncoding
-			     error: NULL];
+      scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
+      f = [script writeToFile: scriptCmd
+		   atomically: YES
+		     encoding: NSUTF8StringEncoding
+			error: NULL];
       if (f)
 	{
 #ifdef _WIN32
 	  NSString *win_cmd = [scriptCmd execPathForString];
+	  
 	  NSDebugLog(@"win_cmd = %@", win_cmd);
 	  r = system([win_cmd cString]);
 #else
@@ -83,6 +97,7 @@ NSInteger xcsystem(NSString *cmd)
 	  NSLog(@"Failed to write out temporary script %@", scriptCmd);
 	}
     }
+  
   return r;
 }
 

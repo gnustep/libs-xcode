@@ -118,16 +118,20 @@
 
 - (void) _productWrapper
 {
+  NSFileManager *mgr = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *buildDir = @"./build";
   NSString *aname = [self name];
-  buildDir = [buildDir stringByAppendingPathComponent: aname];
+  NSString *buildDir = [@"./build" stringByAppendingPathComponent: aname];
   NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [[buildDir stringByAppendingPathComponent: @"Products"] 
 			 stringByAppendingPathComponent: [_productReference path]];
-
   NSError *error = nil;
+  NSString *dir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
+                                                defaultValue: @"./"];      
+  NSString *derivedSourceDir = [dir stringByAppendingPathComponent: @"derived_src"];
+  NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
 
+  
   // Set up some target specific vars, based on the build dir...
   [context setObject: buildDir
               forKey: @"TARGET_BUILD_DIR"];
@@ -137,37 +141,33 @@
               forKey: @"BUILT_PRODUCTS_DIR"];
   
   // Create directories...
-  [[NSFileManager defaultManager] createDirectoryAtPath:uninstalledProductsDir
-			    withIntermediateDirectories:YES
-					     attributes:nil
-						  error:&error];
+  [mgr createDirectoryAtPath:uninstalledProductsDir
+       withIntermediateDirectories:YES
+		  attributes:nil
+		       error:&error];
   
   setenv("inherited","",1); // probably from a parent project or target..
+
+
+  setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
+  setenv("PRODUCT_NAME",[execName cString],1);
+  setenv("EXECUTABLE_NAME",[execName cString],1);
+  
+  [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
+  [context setObject: execName forKey: @"PRODUCT_NAME"];
+  [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
+
   if([_productType isEqualToString: BUNDLE_TYPE] ||
      [_productType isEqualToString: APPLICATION_TYPE]) 
     {
-      NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
-
       // Create directories...
-      [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
-				withIntermediateDirectories:YES
-						 attributes:nil
-						      error:&error];
-
-      setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
-      setenv("PRODUCT_NAME",[execName cString],1);
-      setenv("EXECUTABLE_NAME",[execName cString],1);
-
-      [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
-      [context setObject: execName forKey: @"PRODUCT_NAME"];
-      [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
+      [mgr createDirectoryAtPath:fullPath
+	   withIntermediateDirectories:YES
+		      attributes:nil
+			   error:&error];
     }
   else if([_productType isEqualToString: FRAMEWORK_TYPE])
     {
-      NSString *dir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
-                                                defaultValue: @"./"];
-      NSString *derivedSourceDir = [dir stringByAppendingPathComponent: @"derived_src"];
-      NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
       NSString *derivedSourceHeaderDir = [derivedSourceDir stringByAppendingPathComponent: execName];
       NSString *frameworkVersion = [NSString stringForEnvironmentVariable: @"FRAMEWORK_VERSION"
                                                              defaultValue: @"0.0.0"];
@@ -186,30 +186,30 @@
       NSString *resourceDir = [fullPath stringByAppendingPathComponent: @"Resources"];
  
       // Create directories...
-      [[NSFileManager defaultManager] createDirectoryAtPath:fullPath
-				withIntermediateDirectories:YES
-						 attributes:nil
-						      error:&error];
+      [mgr createDirectoryAtPath:fullPath
+	   withIntermediateDirectories:YES
+		      attributes:nil
+			   error:&error];
 
-      [[NSFileManager defaultManager] createDirectoryAtPath:derivedSourceHeaderDir
-				withIntermediateDirectories:YES
-						 attributes:nil
-						      error:&error];
-
-      [[NSFileManager defaultManager] createDirectoryAtPath:headerDir
-				withIntermediateDirectories:YES
-						 attributes:nil
-						      error:&error];
+      [mgr createDirectoryAtPath:derivedSourceHeaderDir
+	   withIntermediateDirectories:YES
+		      attributes:nil
+			   error:&error];
+      
+      [mgr createDirectoryAtPath:headerDir
+	   withIntermediateDirectories:YES
+		      attributes:nil
+			   error:&error];
       // Create links....
-      [[NSFileManager defaultManager] createSymbolicLinkAtPath: currentLink
-						   pathContent: frameworkVersion];
-
-      [[NSFileManager defaultManager] createSymbolicLinkAtPath: headersLink
-						   pathContent: @"Versions/Current/Headers"];
-
-      [[NSFileManager defaultManager] createSymbolicLinkAtPath: resourcesLink
-						   pathContent: @"Versions/Current/Resources"];
-
+      [mgr createSymbolicLinkAtPath: currentLink
+			pathContent: frameworkVersion];
+      
+      [mgr createSymbolicLinkAtPath: headersLink
+			pathContent: @"Versions/Current/Headers"];
+      
+      [mgr createSymbolicLinkAtPath: resourcesLink
+			pathContent: @"Versions/Current/Resources"];
+      
       // Things to pass on to the next phase...
       [context setObject: headerDir forKey: @"HEADER_DIR"];
       [context setObject: resourceDir forKey: @"RESOURCE_DIR"];
@@ -217,33 +217,20 @@
       [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCES_DIR"];
 
       setenv("PRODUCT_OUTPUT_DIR",[fullPath cString],1);
-      setenv("PRODUCT_NAME",[execName cString],1);
-      setenv("EXECUTABLE_NAME",[execName cString],1);
-
       [context setObject: fullPath forKey: @"PRODUCT_OUTPUT_DIR"];
-      [context setObject: execName forKey: @"PRODUCT_NAME"];
-      [context setObject: execName forKey: @"EXECUTABLE_NAME"];        
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
     {
-      NSString *fileName = [fullPath lastPathComponent];
-      NSString *path = [fullPath stringByDeletingLastPathComponent];
-      NSString *dir = [NSString stringForEnvironmentVariable: @"PROJECT_ROOT"
-                                                defaultValue: @"./"];      
       NSString *derivedSourceDir = [dir stringByAppendingPathComponent: @"derived_src"];
       NSString *derivedSourceHeaderDir = derivedSourceDir;
-      
-      setenv("PRODUCT_OUTPUT_DIR",[path cString],1);
-      setenv("PRODUCT_NAME",[fileName cString],1);
-      setenv("EXECUTABLE_NAME",[fileName cString],1);
       
       [context setObject: derivedSourceHeaderDir forKey: @"DERIVED_SOURCE_HEADER_DIR"];
       [context setObject: derivedSourceDir forKey: @"DERIVED_SOURCES_DIR"];
 
-      [[NSFileManager defaultManager] createDirectoryAtPath:derivedSourceHeaderDir
-				withIntermediateDirectories:YES
-						 attributes:nil
-						      error:&error];
+      [mgr createDirectoryAtPath:derivedSourceHeaderDir
+	   withIntermediateDirectories:YES
+		      attributes:nil
+			   error:&error];
     }
   else // For non bundled packages 
     {
@@ -336,10 +323,11 @@
 
   xcputs([[NSString stringWithFormat: @"Cleaning build directory"] cString]);
   int result = xcsystem(command);
-
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  
   if(result == 0)
     {
-      if([[NSFileManager defaultManager] fileExistsAtPath: @"derived_src"])
+      if([mgr fileExistsAtPath: @"derived_src"])
 	{
 	  command = @"rm -rf derived_src";
 	  xcputs([[NSString stringWithFormat: @"Cleaning derived_src directory"] cString]);

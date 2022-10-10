@@ -226,7 +226,7 @@ extern char **environ;
   // result = [result stringByAppendingString: [self environmentVariableString]];
   result = [result stringByAppendingString: @"\n# Script from project file...\n"];
   result = [result stringByAppendingString: script]; 
-  result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit 0\n"];
+  result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit $?\n"];
 
   return result;
 }

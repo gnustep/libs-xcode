@@ -489,7 +489,9 @@
   NSString *outputFiles = [self processOutputFilesString];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSLog(@"outputDir = %@", outputDir);
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
+  NSLog(@"executableName = %@", executableName);
   NSString *executableNameStripped = [executableName stringByDeletingPathExtension];
   NSString *libName = [NSString stringWithFormat: @"%@.so",executableNameStripped];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: libName];
@@ -506,7 +508,7 @@
   NSString *commandTemplate = nil;
   NSInteger result = 0;
   
-  xcputs("=== Executing Frameworks / Linking Build Phase (Dynamic Library");
+  xcputs("=== Executing Frameworks / Linking Build Phase (Dynamic Library)");
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       if ([ctarget containsString: @"msvc"])
@@ -759,7 +761,10 @@
 - (BOOL) build
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *config = [context config];
+  NSString *ctarget = [config objectForKey: @"target"];
   NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
+
   if([productType isEqualToString: APPLICATION_TYPE])
     {
       return [self buildApp];
@@ -770,6 +775,10 @@
     }
   else if([productType isEqualToString: LIBRARY_TYPE])
     {
+      if ([ctarget isEqualToString: @"msvc"])
+	{
+	  return [self buildDynamicLib];
+	}
       return [self buildStaticLib];
     }
   else if([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
