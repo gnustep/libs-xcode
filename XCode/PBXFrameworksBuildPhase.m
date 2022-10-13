@@ -108,7 +108,7 @@
 				       classesFilename,
 				       classesFilename];
 
-  NSLog(@"classesCommand = %@\n\n Environment = %@", classesCommand, [context currentContext]);
+  NSDebugLog(@"classesCommand = %@\n\n Environment = %@", classesCommand, [context currentContext]);
   xcsystem(classesCommand);
   
   // build the list...
@@ -511,6 +511,8 @@
     {
       if ([ctarget containsString: @"msvc"])
 	{
+	  outputPath = [outputPath stringByReplacingString: @"lib" withStrung: @""];
+
 	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
           NSString *dllLibname = [libraryPath stringByReplacingPathExtensionWith: @"dll"];
           
@@ -624,7 +626,7 @@
           
 	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` "	    
 	    @"-L%@ -L%@ -L%@";
-	  libraryPath = [outputDir stringByAppendingPathComponent: msvcLibname];
+	  libraryPath = msvcLibname;
 
 	  
 	  command = [NSString stringWithFormat: commandTemplate,

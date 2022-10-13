@@ -150,7 +150,10 @@ extern char **environ;
   NSArray *keys = [dict allKeys];
   NSEnumerator *en = [keys objectEnumerator];
   NSString *k = nil;
-  
+
+  result = [result stringByAppendingString: @"set -eo pipefail\n"
+		   @"shopt -s inherit_errexit\n\n"];
+
   while ((k = [en nextObject]) != nil)
     {
       id v = [dict objectForKey: k];
@@ -226,7 +229,7 @@ extern char **environ;
   // result = [result stringByAppendingString: [self environmentVariableString]];
   result = [result stringByAppendingString: @"\n# Script from project file...\n"];
   result = [result stringByAppendingString: script]; 
-  result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit 0\n"];
+  result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit $?\n"];
 
   return result;
 }

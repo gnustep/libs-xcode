@@ -53,7 +53,11 @@ NSInteger xcsystem(NSString *cmd)
     }
   else
     {
-      NSString *scriptFormat = @"#!/bin/bash\n\n%@\nexit 0\n";
+      NSString *scriptFormat = @"#!/bin/bash\n"
+	@"set -eo pipefail\n"
+	@"shopt -s inherit_errexit\n\n"
+	@"%@\n\n"
+	@"exit $?\n";
       NSString *body = @"";
       NSString *script = nil;
       
