@@ -22,11 +22,7 @@ FRAMEWORK_NAME = XCode
 #
 XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
 	Resources/language-codes.plist \
-#	../Generators/Makefile/Makefile.generator \
-#	../Generators/VisualStudio/VisualStudio.generator
-
-# Generator bundles
-# SUBPROJECTS = Generators
+	Resources/create-dummy-class.sh \
 
 #
 # Header files

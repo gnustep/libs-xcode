@@ -70,107 +70,52 @@
 - (void) generateDummyClass
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSArray *libs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSLocalDomainMask, YES);
-  NSString *frameworkPath = [([libs firstObject] != nil ? [libs firstObject] : @"")
-                              stringByAppendingPathComponent: @"Frameworks"];
-  NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
-
-  frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  NSString *classList = @"";
   NSString *outputDir = [[context objectForKey: @"PROJECT_ROOT"]
 			  stringByAppendingPathComponent: @"derived_src"];
   NSString *fileName = [NSString stringWithFormat: @"NSFramework_%@.m",executableName];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: fileName];
   NSString *buildDir = [context objectForKey: @"TARGET_BUILD_DIR"];
   NSString *objDir = [context objectForKey: @"BUILT_PRODUCTS_DIR"];
-  NSError *error = nil;
-  // NSString *targetName = [[self target] name];
-
-  objDir = (objDir == nil) ? buildDir : objDir;
-  
-  // Create the derived source directory...
-  [[NSFileManager defaultManager] createDirectoryAtPath:outputDir
-			    withIntermediateDirectories:YES
-					     attributes:nil
-						  error:&error];
-
-  NSString *classesFilename = [[outputDir stringByAppendingPathComponent: executableName]
-                                stringByAppendingString: @"-class-list"];
-  NSString *classesFormat = 
-    @"rm 2> /dev/null %@; echo \"(\" > %@; nm -Pg %@/*.o | grep __objc_class_name | "
-    @"sed -e '/^__objc_class_name_[A-Za-z0-9_.]* [^U]/ {s/^__objc_class_name_\\([A-Za-z0-9_.]*\\) [^U].*/\\1/p;}' | "
-    @"grep -v __objc_class_name | sort | uniq | while read class; do echo \"${class},\"; done >> %@; echo \")\" >> %@;"; 
-  NSString *classesCommand = [NSString stringWithFormat: classesFormat,
-                                       classesFilename,
-				       classesFilename,
-				       buildDir,
-				       classesFilename,
-				       classesFilename];
-
-  NSDebugLog(@"classesCommand = %@\n\n Environment = %@", classesCommand, [context currentContext]);
-  xcsystem(classesCommand);
-  
-  // build the list...
-  NSArray *classArray = [NSArray arrayWithContentsOfFile: classesFilename];
-  NSEnumerator *en = [classArray objectEnumerator];
-  NSString *className = nil;
-  while((className = [en nextObject]) != nil)
-    {
-      classList = [classList stringByAppendingString: [NSString stringWithFormat: @"@\"%@\",",className]];
-    }
-
-  // Write the file out...
-  NSString *classTemplate = 
-    @"#include <Foundation/Foundation.h>\n\n"
-    @"@interface NSFramework_%@ : NSObject\n"
-    @"+ (NSString *)frameworkEnv;\n"
-    @"+ (NSString *)frameworkPath;\n"
-    @"+ (NSString *)frameworkVersion;\n"
-    @"+ (NSString *const*)frameworkClasses;\n"
-    @"@end\n\n"
-    @"@implementation NSFramework_%@\n"
-    @"+ (NSString *)frameworkEnv { return nil; }\n"
-    @"+ (NSString *)frameworkPath { return @\"%@\"; }\n"
-    @"+ (NSString *)frameworkVersion { return @\"%@\"; }\n"
-    @"static NSString *allClasses[] = {%@NULL};\n"
-    @"+ (NSString *const*)frameworkClasses { return allClasses; }\n"
-    @"@end\n";
-  NSString *dummyClass = [NSString stringWithFormat: classTemplate, 
-				   executableName,
-				   executableName,
-				   frameworkPath,
-				   frameworkVersion,
-				   classList];
-  [dummyClass writeToFile: outputPath 
-	       atomically: YES
-		 encoding: NSUTF8StringEncoding
-		    error: &error];
-  
-  // compile...
-  NSString *compiler = nil; 
-  NSString *buildPath = outputPath;
-  NSString *objPath = [objDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
-  if([compiler isEqualToString: @""] || compiler == nil)
-    {
-      compiler = [self linkerForBuild]; 
-    }
-  NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
-  NSString *buildTemplate = @"%@ %@ -c %@ -o %@";
-  NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
-				     compiler,
-				     [buildPath stringByEscapingSpecialCharacters],
-				     configString,
-				     [objPath stringByEscapingSpecialCharacters]];
+  NSString *scriptPath = [[NSBundle bundleForClass: [self class]]
+			   pathForResource: @"create-dummy-class" ofType: @"sh"];
   NSString *of = [self processOutputFilesString];
   NSString *outputFiles = (of == nil)?@"":of;
+  NSString *files = [outputFiles stringByReplacingOccurrencesOfString: @"'" withString: @""];
+  
+  objDir = (objDir == nil) ? buildDir : objDir;
 
-  outputFiles = [[outputFiles stringByAppendingString: objPath] 
-		  stringByAppendingString: @" "];
-  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+  BOOL f = NO;
+  NSString *classesCommand = [NSString stringWithFormat: @"%@ '%@' '%@'", scriptPath, files, executableName];  
+  NSDebugLog(@"classesCommand = %@\n", classesCommand); // [context currentContext]);
+  f = xcsystem(classesCommand);
 
-  NSDebugLog(@"\t%@",buildCommand);
-  xcsystem(buildCommand);
+  if( f )
+    {
+      NSString *compiler = nil; 
+      NSString *buildPath = outputPath;
+      NSString *objPath = [objDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
+      if([compiler isEqualToString: @""] || compiler == nil)
+	{
+	  compiler = [self linkerForBuild]; 
+	}
+
+      NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
+      NSString *buildTemplate = @"%@ %@ -c %@ -o %@";
+      NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
+					 compiler,
+					 [buildPath stringByEscapingSpecialCharacters],
+					 configString,
+					 [objPath stringByEscapingSpecialCharacters]];
+      NSString *of = [self processOutputFilesString];
+      NSString *outputFiles = (of == nil)?@"":of;
+      
+      outputFiles = [outputFiles stringByAppendingString: @" "];
+      [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+      
+      NSDebugLog(@"\t%@",buildCommand);
+      xcsystem(buildCommand);
+    }
 }
 
 - (NSString *) frameworkLinkString: (NSString*)framework
@@ -511,7 +456,7 @@
     {
       if ([ctarget containsString: @"msvc"])
 	{
-	  outputPath = [outputPath stringByReplacingString: @"lib" withStrung: @""];
+	  outputPath = [outputPath stringByReplacingOccurrencesOfString: @"lib" withString: @""];
 
 	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
           NSString *dllLibname = [libraryPath stringByReplacingPathExtensionWith: @"dll"];
@@ -587,7 +532,7 @@
 
   xcputs("=== Executing Frameworks / Linking Build Phase (Framework)");
   [self generateDummyClass];
-
+  
   NSString *outputFiles = [self processOutputFilesString];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
@@ -596,7 +541,7 @@
   NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
   if (frameworkVersion == nil)
     {
-      frameworkVersion = @"0.0.0";
+      frameworkVersion = @"0";
     }
   NSString *libNameWithVersion =  [NSString stringWithFormat: @"lib%@.so.%@",
 					    executableName,frameworkVersion];
@@ -624,8 +569,9 @@
 	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
           NSString *dllLibname = [libraryPathNoVersion stringByReplacingPathExtensionWith: @"dll"];
           
-	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` "	    
-	    @"-L%@ -L%@ -L%@";
+	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` `gnustep-config --gui-libs` "	    
+	    @"-L%@ -L%@ -L%@ "
+	    @"-lgnustep-base -lgnustep-gui ";
 	  libraryPath = msvcLibname;
 
 	  
@@ -633,7 +579,6 @@
 			      compiler,
                               libraryPath,
                               dllLibname,
-//			      libraryPath,
 			      outputFiles,
 			      userLibDir,
 			      localLibDir,
@@ -691,7 +636,7 @@
 				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
 
 
-  NSLog(@"Link command = %@", command);
+  NSDebugLog(@"Link command = %@", command);
   if([modified isEqualToString: @"YES"])
     {      
       xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      

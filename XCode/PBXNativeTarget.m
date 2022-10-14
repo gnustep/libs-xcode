@@ -170,7 +170,7 @@
       NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
       NSString *derivedSourceHeaderDir = [derivedSourceDir stringByAppendingPathComponent: execName];
       NSString *frameworkVersion = [NSString stringForEnvironmentVariable: @"FRAMEWORK_VERSION"
-                                                             defaultValue: @"0.0.0"];
+                                                             defaultValue: @"0"];
       [context setObject: [NSString stringWithString: fullPath]
 		  forKey: @"FRAMEWORK_DIR"];
 
@@ -426,23 +426,6 @@
 	{
 	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
 	}
-      
-      // NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
-      
-      // frameworkVersion = (frameworkVersion == nil) ? @"0.0.0" : frameworkVersion;
-      /*
-      NSString *majorVersion = @"0"; // [[frameworkVersion componentsSeparatedByString: @"0"] objectAtIndex: 0];
-      [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: [NSString stringWithFormat: @"lib%@.so.0.0.0", execName]]
-			      error:NULL];
-      flag = [fileManager createSymbolicLinkAtPath: [librariesDir stringByAppendingPathComponent: 
-                                                                      [NSString stringWithFormat: @"lib%@.so.0.0.0",execName]]
-				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
-                                                                           [NSString stringWithFormat: @"lib%@.so",execName]]];
-      if(!flag)
-	{
-	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link... 0"] cString]);
-          }*/
-
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
     {
