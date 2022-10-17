@@ -87,8 +87,8 @@
 
   BOOL f = NO;
   NSString *classesCommand = [NSString stringWithFormat: @"%@ '%@' '%@'", scriptPath, files, executableName];  
-  NSDebugLog(@"classesCommand = %@\n", classesCommand); // [context currentContext]);
-  f = xcsystem(classesCommand);
+  NSLog(@"classesCommand = %@\n", classesCommand); // [context currentContext]);
+  f = xcsystem(classesCommand) == 0;
 
   if( f )
     {
@@ -109,12 +109,21 @@
 					 [objPath stringByEscapingSpecialCharacters]];
       NSString *of = [self processOutputFilesString];
       NSString *outputFiles = (of == nil)?@"":of;
-      
-      outputFiles = [outputFiles stringByAppendingString: @" "];
-      [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
-      
-      NSDebugLog(@"\t%@",buildCommand);
-      xcsystem(buildCommand);
+      NSLog(@"\t%@ %@",buildCommand, outputFiles);
+      BOOL success = xcsystem(buildCommand) == 0;
+      if (success)
+	{
+	  outputFiles = [outputFiles stringByAppendingString: [NSString stringWithFormat: @" %@", objPath]];
+	  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+	}
+      else
+	{
+	  NSLog(@"** build of framework dummy class failed.");
+	}
+    }
+  else
+    {
+      NSLog(@"** failed to run dummy class generation script");
     }
 }
 
@@ -569,9 +578,9 @@
 	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
           NSString *dllLibname = [libraryPathNoVersion stringByReplacingPathExtensionWith: @"dll"];
           
-	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` `gnustep-config --gui-libs` "	    
+	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ "
 	    @"-L%@ -L%@ -L%@ "
-	    @"-lgnustep-base -lgnustep-gui ";
+	    @"`gnustep-config --gui-libs` ";
 	  libraryPath = msvcLibname;
 
 	  
@@ -587,10 +596,10 @@
 	}
       else
 	{
-	  commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so " 
+	  commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so "
 	    @"-shared-libgcc -o %@ %@ "
-	    @"-L%@ -L%@ -L%@";
-	  
+	    @"-L%@ -L%@ -L%@ "
+	    @"`gnustep-config --gui-libs` ";
 	  
 	  command = [NSString stringWithFormat: commandTemplate,
 			      compiler,
@@ -636,7 +645,7 @@
 				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
 
 
-  NSDebugLog(@"Link command = %@", command);
+  NSLog(@"Link command = %@", command);
   if([modified isEqualToString: @"YES"])
     {      
       xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
