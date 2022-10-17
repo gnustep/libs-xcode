@@ -31,6 +31,10 @@
 - (NSString *) removeDuplicatesAndImplodeWithSeparator: (NSString *)separator;
 - (NSArray *) arrayByAddingQuotationMarksToEntries;
 
+- (NSString *) arrayToLinkList;
+- (NSString *) arrayToIncludeList;
+- (NSString *) arrayToList;
+
 @end
 
 @interface NSMutableArray (Additions)

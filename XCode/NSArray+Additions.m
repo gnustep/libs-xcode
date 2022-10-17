@@ -22,6 +22,7 @@
    Boston, MA 02110 USA.
 */
 
+#import "PBXBuildFile.h"
 #import "NSArray+Additions.h"
 #import "NSString+PBXAdditions.h"
 
@@ -76,6 +77,92 @@
     }
 
   return [NSArray arrayWithArray: result];
+}
+
+
+- (NSString *) arrayToLinkList
+{
+  NSString *result = @"";
+  NSEnumerator *en = [self objectEnumerator];
+  NSString *aname = nil;
+
+  while((aname = [en nextObject]) != nil)
+    {
+      if ([aname isEqualToString: [self firstObject]] == YES)
+        {
+          result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+        }
+      else
+        {
+          result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+        }
+      
+      if ([aname isEqualToString: [self lastObject]] == NO)
+        {
+          result = [result stringByAppendingString: @"\\\n"];
+        }
+    }
+  
+  return result;
+}
+
+- (NSString *) arrayToIncludeList
+{
+  NSString *result = @"-I. \\\n";
+  NSEnumerator *en = [self objectEnumerator];
+  NSString *aname = nil;
+
+  while((aname = [en nextObject]) != nil)
+    {
+      result = [result stringByAppendingString: [NSString stringWithFormat: @"\t-I./%@ ", aname]];
+      if ([aname isEqualToString: [self lastObject]] == NO)
+        {
+          result = [result stringByAppendingString: @"\\\n"];
+        }
+    }
+  
+  return result;
+}
+
+- (NSString *) arrayToList
+{
+  NSString *result = @"";
+  NSEnumerator *en = [self objectEnumerator];
+  id o = nil;
+  
+  while((o = [en nextObject]) != nil)
+    {
+      NSString *aname = nil;          
+      if ([o isKindOfClass: [NSString class]])
+        {
+          aname = o;
+        }
+      else if ([o isKindOfClass: [PBXBuildFile class]])
+        {
+          PBXBuildFile *f = o;
+          PBXFileReference *r = [f fileRef];
+          aname = [r path];
+        }
+
+      if (aname != nil)
+        {
+          if ([aname isEqualToString: [self firstObject]] == YES)
+            {
+              result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+            }
+          else
+            {
+              result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+            }
+          
+          if ([aname isEqualToString: [self lastObject]] == NO)
+            {
+              result = [result stringByAppendingString: @"\\\n"];
+            }
+        }
+    }
+  
+  return result;
 }
 
 @end

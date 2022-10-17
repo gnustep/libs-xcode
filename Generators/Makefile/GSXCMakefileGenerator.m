@@ -6,89 +6,9 @@
 #import "PBXBuildFile.h"
 #import "PBXFileReference.h"
 
+#import "NSArray+Additions.h"
+
 @implementation GSXCMakefileGenerator
-
-- (NSString *) _arrayToLinkList: (NSArray *)arr
-{
-  NSString *result = @"";
-  NSEnumerator *en = [arr objectEnumerator];
-  NSString *aname = nil;
-
-  while((aname = [en nextObject]) != nil)
-    {
-      if ([aname isEqualToString: [arr firstObject]] == YES)
-        {
-          result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
-        }
-      else
-        {
-          result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
-        }
-      
-      if ([aname isEqualToString: [arr lastObject]] == NO)
-        {
-          result = [result stringByAppendingString: @"\\\n"];
-        }
-    }
-  return result;
-}
-
-- (NSString *) _arrayToIncludeList: (NSArray *)arr
-{
-  NSString *result = @"-I. \\\n";
-  NSEnumerator *en = [arr objectEnumerator];
-  NSString *aname = nil;
-
-  while((aname = [en nextObject]) != nil)
-    {
-      result = [result stringByAppendingString: [NSString stringWithFormat: @"\t-I./%@ ", aname]];
-      if ([aname isEqualToString: [arr lastObject]] == NO)
-        {
-          result = [result stringByAppendingString: @"\\\n"];
-        }
-    }
-  return result;
-}
-
-- (NSString *) _arrayToList: (NSArray *)arr
-{
-  NSString *result = @"";
-  NSEnumerator *en = [arr objectEnumerator];
-  id o = nil;
-  
-  while((o = [en nextObject]) != nil)
-    {
-      NSString *aname = nil;          
-      if ([o isKindOfClass: [NSString class]])
-        {
-          aname = o;
-        }
-      else if ([o isKindOfClass: [PBXBuildFile class]])
-        {
-          PBXBuildFile *f = o;
-          PBXFileReference *r = [f fileRef];
-          aname = [r path];
-        }
-
-      if (aname != nil)
-        {
-          if ([aname isEqualToString: [arr firstObject]] == YES)
-            {
-              result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
-            }
-          else
-            {
-              result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
-            }
-          
-          if ([aname isEqualToString: [arr lastObject]] == NO)
-            {
-              result = [result stringByAppendingString: @"\\\n"];
-            }
-        }
-    }
-  return result;
-}
 
 - (BOOL) generate
 {
@@ -98,14 +18,14 @@
   NSString *appName = [name stringByDeletingPathExtension];
   NSString *makefileName = @"GNUmakefile";
   NSString *makefileString = @"";
-  NSString *headerFilesString = [self _arrayToList: [context objectForKey: @"HEADERS"]];
-  NSString *objCFilesString = [self _arrayToList: [context objectForKey: @"OBJC_FILES"]];
-  NSString *cFilesString = [self _arrayToList: [context objectForKey: @"C_FILES"]];
-  NSString *cppFilesString = [self _arrayToList: [context objectForKey: @"CPP_FILES"]];
-  NSString *objCPPFilesString = [self _arrayToList: [context objectForKey: @"OBJCPP_FILES"]];  
-  NSString *resourceFilesString = [self _arrayToList: [context objectForKey: @"RESOURCES"]];
-  NSString *additionalIncludes = [self _arrayToIncludeList: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"]];
-  NSString *additionalOCflags = [self _arrayToLinkList: [context objectForKey: @"ADDITIONAL_OBJC_LIBS"]];
+  NSString *headerFilesString = [[context objectForKey: @"HEADERS"] arrayToList];
+  NSString *objCFilesString = [[context objectForKey: @"OBJC_FILES"] arrayToList];
+  NSString *cFilesString = [[context objectForKey: @"C_FILES"] arrayToList];
+  NSString *cppFilesString = [[context objectForKey: @"CPP_FILES"] arrayToList];
+  NSString *objCPPFilesString = [[context objectForKey: @"OBJCPP_FILES"] arrayToList];  
+  NSString *resourceFilesString = [[context objectForKey: @"RESOURCES"] arrayToList];
+  NSString *additionalIncludes = [[context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"] arrayToIncludeList];
+  NSString *additionalOCflags = [[context objectForKey: @"ADDITIONAL_OBJC_LIBS"] arrayToLinkList];
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Construct the makefile out of the data we have thusfar collected.
