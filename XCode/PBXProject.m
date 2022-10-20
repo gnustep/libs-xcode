@@ -50,23 +50,19 @@
 
 - (NSArray *) prerequisiteTargets
 {
-  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [dependencies count]];
-  NSEnumerator *en = [dependencies objectEnumerator];
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [_dependencies count]];
+  NSEnumerator *en = [_dependencies objectEnumerator];
   PBXTargetDependency *t = nil;
   
   while ((t = [en nextObject]) != nil)
     {
       id tg = [t target];
+
       if (tg != nil)
         {
           [result addObject: tg];
           xcputs([[NSString stringWithFormat: @"\t* %@ - Added to dependencies", tg] cString]);
-        } /*
-      else if ([tg isKindOfClass: [PBXTargetDependency class]])
-        {
-          NSLog(@"++++++++++++++++++++ %@",tg);
-          
-          } */
+        }
     }
 
   return result;
@@ -321,9 +317,8 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *output = nil;  
-  NSString *cmd = nil;
-
-  cmd = @"gnustep-config --debug-flags";
+  // NSString *cmd = nil;
+  // cmd = @"gnustep-config --debug-flags";
     
   // Context...
   output = @"`gnustep-config --debug-flags`"; //[NSString stringForCommand: cmd];

@@ -34,11 +34,11 @@
 
 @interface PBXAbstractTarget : NSObject
 {
-  NSMutableArray *dependencies;
-  XCConfigurationList *buildConfigurationList;
-  NSString *productName;
-  NSMutableArray *buildPhases;
-  NSString *name;
+  NSMutableArray *_dependencies;
+  XCConfigurationList *_buildConfigurationList;
+  NSString *_productName;
+  NSMutableArray *_buildPhases;
+  NSString *_name;
 
   PBXProject *_project;
 }

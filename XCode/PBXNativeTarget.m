@@ -279,13 +279,13 @@
   
   if ([skippedTarget containsObject: [self name]])
     {
-      xcputs([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, name, RESET] cString]);
+      xcputs([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, _name, RESET] cString]);
       return YES;
     }
   
-  xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, name, RESET] cString]);
-  [buildConfigurationList applyDefaultConfiguration];
-  [context setObject: buildConfigurationList
+  xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, _name, RESET] cString]);
+  [_buildConfigurationList applyDefaultConfiguration];
+  [context setObject: _buildConfigurationList
               forKey: @"buildConfig"];
   [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];
@@ -296,7 +296,7 @@
     }
   xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
   id dependency = nil;
-  en = [dependencies objectEnumerator];
+  en = [_dependencies objectEnumerator];
   while((dependency = [en nextObject]) != nil && result)
     {
       result = [dependency build];
@@ -307,7 +307,7 @@
 
   [self _productWrapper];
   id phase = nil;
-  en = [buildPhases objectEnumerator];
+  en = [_buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
@@ -322,14 +322,14 @@
       RELEASE(p);
     }
   xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
-  xcputs([[NSString stringWithFormat: @"=== Completed Executing Target %@", name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Executing Target %@", _name] cString]);
 
   return result;
 }
 
 - (BOOL) clean
 {
-  xcputs([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Cleaning Target %@",_name] cString]);
   NSString *buildDir = @"./build";
   buildDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *command = [NSString stringWithFormat: @"rm -rf \"%@\"",buildDir];
@@ -347,13 +347,13 @@
 	}
     }
   
-  xcputs([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",_name] cString]);
   return (result == 0);
 }
 
 - (BOOL) install
 {
-  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",_name] cString]);
   NSString *buildDir = @"./build";
   NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
@@ -478,7 +478,7 @@
     }
     
 
-  xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",_name] cString]);
 
   return YES;
 }
@@ -561,7 +561,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   id o = nil;
 
-  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", _name] cString]);
   [[self buildConfigurationList] applyDefaultConfiguration];
   [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];

@@ -29,7 +29,7 @@
 {
   NSString *_buildArgumentsString;
   NSString *_buildToolPath;
-  NSMutableArray *_dependencies;
+  //  NSMutableArray *_dependencies;
   BOOL _passBuildSettingsInEnvironment;
 }
 
@@ -38,10 +38,10 @@
 
 - (NSString *) buildToolPath;
 - (void) setBuildToolPath: (NSString *)path;
-
+/*
 - (NSArray *) dependencies;
 - (void) setDependencies: (NSArray *)deps;
-
+*/
 - (BOOL) passBuildSettingsInEnvironment;
 - (void) setPassBuildSettingsInEnvironment: (BOOL)f;
 

@@ -35,7 +35,7 @@
 {
   RELEASE(_buildArgumentsString);
   RELEASE(_buildToolPath);
-  RELEASE(_dependencies);
+  //  RELEASE(_dependencies);
   [super dealloc];
 }
 
@@ -59,6 +59,7 @@
   ASSIGN(_buildToolPath, path);
 }
 
+/*
 - (NSArray *) dependencies
 {
   return _dependencies;
@@ -68,6 +69,7 @@
 {
   ASSIGN(_dependencies, deps);
 }
+*/
 
 - (BOOL) passBuildSettingsInEnvironment
 {
