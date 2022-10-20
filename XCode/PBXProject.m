@@ -408,7 +408,19 @@
 
       [context contextDictionaryForName: [target name]];
       [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+		  forKey: @"MAIN_GROUP"];
+      [context setObject: _container
+		  forKey: @"CONTAINER"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
+      [context addEntriesFromDictionary: _ctx];
+      
       result = [target clean];
       [context popCurrentContext];
     }
@@ -430,7 +442,19 @@
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
       [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+		  forKey: @"MAIN_GROUP"];
+      [context setObject: _container
+		  forKey: @"CONTAINER"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
+      [context addEntriesFromDictionary: _ctx];
+      
       result = [target install];
       [context popCurrentContext];
     }

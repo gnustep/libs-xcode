@@ -362,11 +362,12 @@
   NSString *execName = [fileName stringByDeletingPathExtension];
   NSFileManager *fileManager = [NSFileManager defaultManager];
   NSError *error = nil;
+  NSString *cwd = [fileManager currentDirectoryPath];
 
+  NSLog(@"******* CWD = %@", cwd);
   if([_productType isEqualToString: TOOL_TYPE])
     {
-      NSArray *apps = NSSearchPathForDirectoriesInDomains(GSToolsDirectory, NSLocalDomainMask, YES);
-      NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_TOOLS"];
       NSString *installDest = [installDir stringByAppendingPathComponent: fileName];
       NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
       [fileManager copyItemAtPath: fullPath
@@ -375,8 +376,7 @@
     }
   else if([_productType isEqualToString: APPLICATION_TYPE])
     {
-      NSArray *apps = NSSearchPathForDirectoriesInDomains(NSAllApplicationsDirectory, NSLocalDomainMask, YES);
-      NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_APPS"];
       NSString *installDest = [installDir stringByAppendingPathComponent: fileName]; 
       [fileManager copyItemAtPath: fullPath
 			   toPath: installDest
@@ -384,8 +384,9 @@
     }
   else if([_productType isEqualToString: FRAMEWORK_TYPE])
     {
-      NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
-      NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY"];      
+      // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
+      NSString *libraryPath = installDir; // ([paths firstObject] != nil ? [paths firstObject] : @""); 
       NSString *frameworkPath = [libraryPath stringByAppendingPathComponent: @"Frameworks"];
       NSString *installDest = frameworkPath;
       NSString *productDir = [installDest stringByAppendingPathComponent: [_productReference path]];
@@ -428,6 +429,56 @@
 	}
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
+    {
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARIES"];            
+      // NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
+      NSString *libraryPath = installDir; //  ([paths firstObject] != nil ? [paths firstObject] : @""); 
+      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
+      NSString *headersDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_HEADERS"]; //[libraryPath stringByAppendingPathComponent: @"Headers"];
+      NSString *derivedSrcDir = @"derived_src";
+      NSString *derivedSrcHeaderDir = derivedSrcDir;
+      NSString *destPath = [librariesDir stringByAppendingPathComponent: [_productReference path]];
+
+      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
+      [fileManager copyItemAtPath: fullPath
+			   toPath: destPath
+			    error: &error];
+      if (error != nil)
+        {
+          xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+        }
+
+      NSString *libName = [fullPath lastPathComponent];
+      NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
+      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
+      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
+      NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
+      [fileManager createDirectoryAtPath: libHeadersPath
+             withIntermediateDirectories: NO
+                              attributes: nil
+                                   error: &error];
+      if (error != nil)
+        {
+          xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
+        }
+
+      NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
+      id file = nil;
+      while((file = [en nextObject]) != nil)
+	{
+          NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
+	  NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
+	  xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
+	  [fileManager copyItemAtPath: srcFile
+			       toPath: destFile
+				error: &error];
+          if (error != nil)
+            {
+              xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+            }
+	}
+    }
+  else if([_productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
     {
       NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
       NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
@@ -475,8 +526,7 @@
               xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
             }
 	}
-    }
-    
+    }    
 
   xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",_name] cString]);
 
