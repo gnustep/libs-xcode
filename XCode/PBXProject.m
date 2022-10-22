@@ -50,23 +50,19 @@
 
 - (NSArray *) prerequisiteTargets
 {
-  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [dependencies count]];
-  NSEnumerator *en = [dependencies objectEnumerator];
+  NSMutableArray *result = [NSMutableArray arrayWithCapacity: [_dependencies count]];
+  NSEnumerator *en = [_dependencies objectEnumerator];
   PBXTargetDependency *t = nil;
   
   while ((t = [en nextObject]) != nil)
     {
       id tg = [t target];
+
       if (tg != nil)
         {
           [result addObject: tg];
           xcputs([[NSString stringWithFormat: @"\t* %@ - Added to dependencies", tg] cString]);
-        } /*
-      else if ([tg isKindOfClass: [PBXTargetDependency class]])
-        {
-          NSLog(@"++++++++++++++++++++ %@",tg);
-          
-          } */
+        }
     }
 
   return result;
@@ -321,9 +317,8 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *output = nil;  
-  NSString *cmd = nil;
-
-  cmd = @"gnustep-config --debug-flags";
+  // NSString *cmd = nil;
+  // cmd = @"gnustep-config --debug-flags";
     
   // Context...
   output = @"`gnustep-config --debug-flags`"; //[NSString stringForCommand: cmd];
@@ -413,7 +408,19 @@
 
       [context contextDictionaryForName: [target name]];
       [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+		  forKey: @"MAIN_GROUP"];
+      [context setObject: _container
+		  forKey: @"CONTAINER"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
+      [context addEntriesFromDictionary: _ctx];
+      
       result = [target clean];
       [context popCurrentContext];
     }
@@ -435,7 +442,19 @@
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
       [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+		  forKey: @"MAIN_GROUP"];
+      [context setObject: _container
+		  forKey: @"CONTAINER"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
+      [context addEntriesFromDictionary: _ctx];
+      
       result = [target install];
       [context popCurrentContext];
     }

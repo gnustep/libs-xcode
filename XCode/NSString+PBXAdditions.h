@@ -41,5 +41,6 @@
 + (NSString *) stringForEnvironmentVariable: (char *)envvar;
 + (NSString *) stringForEnvironmentVariable: (NSString *)v
                                defaultValue: (NSString *)d;
+- (NSString *)stringByTrimmingTrailingCharactersInSet: (NSCharacterSet *)characterSet;
 
 @end

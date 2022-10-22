@@ -404,13 +404,50 @@
   return (result == 0);
 }
 
-- (BOOL) buildStaticLib
+- (NSString *) _execName
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *name = [context objectForKey: @"EXECUTABLE_NAME"];
+
+  if( name == nil )
+    {
+      name = [context objectForKey: @"PRODUCT_NAME"];
+      if ( name == nil )
+	{
+	  name = [context objectForKey: @"TARGET_NAME"];
+	}
+    }
+
+  return name;
+}
+
+- (NSString *) _productOutputDir
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+
+  if( outputDir == nil )
+    {
+      outputDir = [@"./build" stringByAppendingPathComponent: [self _execName]];
+      outputDir = [outputDir stringByAppendingPathComponent: @"Products"];
+    }
+
+  return outputDir;
+}
+
+- (BOOL) buildStaticLib
+{
   xcputs("=== Executing Frameworks / Archiving Build Phase (Static Library)");
+
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *config = [context config];
+  NSString *ctarget = [config objectForKey: @"target"];
+  NSString *libext = [ctarget isEqualToString: @"msvc"] ? @"lib" : @"a";
+  NSString *libpfx = [ctarget isEqualToString: @"msvc"] ? @"" : @"lib";
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [[NSString stringWithCString: getenv("EXECUTABLE_NAME")] stringByReplacingPathExtensionWith: @"a"];
+  NSString *outputDir = [self _productOutputDir];
+  NSString *executableName = [[NSString stringWithFormat: @"%@%@", libpfx,[self _execName]]
+			       stringByReplacingPathExtensionWith: libext];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,

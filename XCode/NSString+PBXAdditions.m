@@ -252,7 +252,7 @@ static NSString *_cachedRootPath = nil;
             {
               if(string[i] == '\n')
                 {
-                  string[i] = ' ';
+                  string[i] = '\0';
                 }
             }
 
@@ -262,6 +262,8 @@ static NSString *_cachedRootPath = nil;
       
       fclose(fp);
     }
+
+  output = [output stringByTrimmingTrailingCharactersInSet: [NSCharacterSet whitespaceCharacterSet]];
   
   return output;
 }
@@ -286,6 +288,15 @@ static NSString *_cachedRootPath = nil;
     }
 
   return r;
+}
+
+- (NSString *)stringByTrimmingTrailingCharactersInSet:(NSCharacterSet *)characterSet {
+    NSRange rangeOfLastWantedCharacter = [self rangeOfCharacterFromSet:[characterSet invertedSet]
+                                                               options:NSBackwardsSearch];
+    if (rangeOfLastWantedCharacter.location == NSNotFound) {
+        return @"";
+    }
+    return [self substringToIndex:rangeOfLastWantedCharacter.location+1]; // non-inclusive
 }
 
 @end

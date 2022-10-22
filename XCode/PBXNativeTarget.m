@@ -279,13 +279,13 @@
   
   if ([skippedTarget containsObject: [self name]])
     {
-      xcputs([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, name, RESET] cString]);
+      xcputs([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, _name, RESET] cString]);
       return YES;
     }
   
-  xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, name, RESET] cString]);
-  [buildConfigurationList applyDefaultConfiguration];
-  [context setObject: buildConfigurationList
+  xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, _name, RESET] cString]);
+  [_buildConfigurationList applyDefaultConfiguration];
+  [context setObject: _buildConfigurationList
               forKey: @"buildConfig"];
   [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];
@@ -296,7 +296,7 @@
     }
   xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
   id dependency = nil;
-  en = [dependencies objectEnumerator];
+  en = [_dependencies objectEnumerator];
   while((dependency = [en nextObject]) != nil && result)
     {
       result = [dependency build];
@@ -307,7 +307,7 @@
 
   [self _productWrapper];
   id phase = nil;
-  en = [buildPhases objectEnumerator];
+  en = [_buildPhases objectEnumerator];
   while((phase = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
@@ -322,14 +322,14 @@
       RELEASE(p);
     }
   xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
-  xcputs([[NSString stringWithFormat: @"=== Completed Executing Target %@", name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Executing Target %@", _name] cString]);
 
   return result;
 }
 
 - (BOOL) clean
 {
-  xcputs([[NSString stringWithFormat: @"=== Cleaning Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Cleaning Target %@",_name] cString]);
   NSString *buildDir = @"./build";
   buildDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *command = [NSString stringWithFormat: @"rm -rf \"%@\"",buildDir];
@@ -347,13 +347,13 @@
 	}
     }
   
-  xcputs([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Cleaning Target %@",_name] cString]);
   return (result == 0);
 }
 
 - (BOOL) install
 {
-  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",_name] cString]);
   NSString *buildDir = @"./build";
   NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
@@ -362,11 +362,12 @@
   NSString *execName = [fileName stringByDeletingPathExtension];
   NSFileManager *fileManager = [NSFileManager defaultManager];
   NSError *error = nil;
+  NSString *cwd = [fileManager currentDirectoryPath];
 
+  NSLog(@"******* CWD = %@", cwd);
   if([_productType isEqualToString: TOOL_TYPE])
     {
-      NSArray *apps = NSSearchPathForDirectoriesInDomains(GSToolsDirectory, NSLocalDomainMask, YES);
-      NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_TOOLS"];
       NSString *installDest = [installDir stringByAppendingPathComponent: fileName];
       //NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
       [fileManager copyItemAtPath: fullPath
@@ -375,8 +376,7 @@
     }
   else if([_productType isEqualToString: APPLICATION_TYPE])
     {
-      NSArray *apps = NSSearchPathForDirectoriesInDomains(NSAllApplicationsDirectory, NSLocalDomainMask, YES);
-      NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_APPS"];
       NSString *installDest = [installDir stringByAppendingPathComponent: fileName]; 
       [fileManager copyItemAtPath: fullPath
 			   toPath: installDest
@@ -384,8 +384,9 @@
     }
   else if([_productType isEqualToString: FRAMEWORK_TYPE])
     {
-      NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
-      NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY"];      
+      // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
+      NSString *libraryPath = installDir; // ([paths firstObject] != nil ? [paths firstObject] : @""); 
       NSString *frameworkPath = [libraryPath stringByAppendingPathComponent: @"Frameworks"];
       NSString *installDest = frameworkPath;
       NSString *productDir = [installDest stringByAppendingPathComponent: [_productReference path]];
@@ -428,6 +429,56 @@
 	}
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
+    {
+      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARIES"];            
+      // NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
+      NSString *libraryPath = installDir; //  ([paths firstObject] != nil ? [paths firstObject] : @""); 
+      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
+      NSString *headersDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_HEADERS"]; //[libraryPath stringByAppendingPathComponent: @"Headers"];
+      NSString *derivedSrcDir = @"derived_src";
+      NSString *derivedSrcHeaderDir = derivedSrcDir;
+      NSString *destPath = [librariesDir stringByAppendingPathComponent: [_productReference path]];
+
+      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
+      [fileManager copyItemAtPath: fullPath
+			   toPath: destPath
+			    error: &error];
+      if (error != nil)
+        {
+          xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+        }
+
+      NSString *libName = [fullPath lastPathComponent];
+      NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
+      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
+      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
+      NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
+      [fileManager createDirectoryAtPath: libHeadersPath
+             withIntermediateDirectories: NO
+                              attributes: nil
+                                   error: &error];
+      if (error != nil)
+        {
+          xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
+        }
+
+      NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
+      id file = nil;
+      while((file = [en nextObject]) != nil)
+	{
+          NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
+	  NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
+	  xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
+	  [fileManager copyItemAtPath: srcFile
+			       toPath: destFile
+				error: &error];
+          if (error != nil)
+            {
+              xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+            }
+	}
+    }
+  else if([_productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
     {
       NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
       NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
@@ -475,10 +526,9 @@
               xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
             }
 	}
-    }
-    
+    }    
 
-  xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",_name] cString]);
 
   return YES;
 }
@@ -561,7 +611,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   id o = nil;
 
-  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", name] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", _name] cString]);
   [[self buildConfigurationList] applyDefaultConfiguration];
   [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];

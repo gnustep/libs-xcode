@@ -32,11 +32,11 @@
 
 - (void) dealloc
 {
-  RELEASE(dependencies);
-  RELEASE(buildConfigurationList);
-  RELEASE(productName);
-  RELEASE(buildPhases);
-  RELEASE(name);
+  RELEASE(_dependencies);
+  RELEASE(_buildConfigurationList);
+  RELEASE(_productName);
+  RELEASE(_buildPhases);
+  RELEASE(_name);
   RELEASE(_project);
 
   [super dealloc];
@@ -50,54 +50,54 @@
 
 - (NSMutableArray *) dependencies // getter
 {
-  return dependencies;
+  return _dependencies;
 }
 
 - (void) setDependencies: (NSMutableArray *)object; // setter
 {
-  ASSIGN(dependencies,object);
+  ASSIGN(_dependencies,object);
 }
 
 - (XCConfigurationList *) buildConfigurationList // getter
 {
-  return buildConfigurationList;
+  return _buildConfigurationList;
 }
 
 - (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
 {
-  ASSIGN(buildConfigurationList,object);
+  ASSIGN(_buildConfigurationList,object);
 }
 
 - (NSString *) productName // getter
 {
-  return productName;
+  return _productName;
 }
 
 - (void) setProductName: (NSString *)object; // setter
 {
   NSString *newName = [object stringByEliminatingSpecialCharacters];
-  ASSIGN(productName,newName);
+  ASSIGN(_productName,newName);
 }
 
 - (NSString *) name // getter
 {
-  return name;
+  return _name;
 }
 
 - (void) setName: (NSString *)object; // setter
 {
   NSString *newName = [object stringByEliminatingSpecialCharacters];
-  ASSIGN(name, newName);
+  ASSIGN(_name, newName);
 }
 
 - (NSMutableArray *) buildPhases // getter
 {
-  return buildPhases;
+  return _buildPhases;
 }
 
 - (void) setBuildPhases: (NSMutableArray *)object; // setter
 {
-  ASSIGN(buildPhases,object);
+  ASSIGN(_buildPhases,object);
 }
 
 - (BOOL) build

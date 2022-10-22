@@ -449,6 +449,8 @@ extern char **environ;
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+    NSDictionary *config = [context config];
+  NSString *ctarget = [config objectForKey: @"target"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
@@ -573,8 +575,14 @@ extern char **environ;
       objCflags = [objCflags stringByReplacingOccurrencesOfString: @"-std=gnu11" withString: @""];
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
-      NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
+      NSString *configString = [context objectForKey: @"CONFIG_STRING"];
       NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ %@ -o %@";
+
+      if ([ctarget isEqualToString: @"msvc"])
+	{
+	  buildTemplate = @"%@ 2> %@ -c %@ %@ -D_CRT_SECURE_NO_WARNINGS %@ %@ %@ %@ -o %@";
+	}
+      
       NSString *compilePath = bp;
       NSString *subdirHeaderSearchPaths = [self _headerStringForPath: compilePath];
       NSString *parentHeaderSearchPaths = [self _headerStringForPath: [[compilePath pathComponents] firstObject]];
