@@ -87,7 +87,7 @@
 
   BOOL f = NO;
   NSString *classesCommand = [NSString stringWithFormat: @"%@ '%@' '%@'", scriptPath, files, executableName];  
-  NSLog(@"classesCommand = %@\n", classesCommand); // [context currentContext]);
+  // NSLog(@"classesCommand = %@\n", classesCommand); // [context currentContext]);
   f = xcsystem(classesCommand) == 0;
 
   if( f )
@@ -385,7 +385,7 @@
 			  linkString];
     }
   
-  NSLog(@"Link command = %@", command);
+  // NSLog(@"Link command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
   if([modified isEqualToString: @"YES"])
@@ -645,7 +645,7 @@
 				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
 
 
-  NSLog(@"Link command = %@", command);
+  // NSLog(@"Link command = %@", command);
   if([modified isEqualToString: @"YES"])
     {      
       xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      

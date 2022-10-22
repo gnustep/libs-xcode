@@ -368,7 +368,7 @@
       NSArray *apps = NSSearchPathForDirectoriesInDomains(GSToolsDirectory, NSLocalDomainMask, YES);
       NSString *installDir = ([apps firstObject] != nil ? [apps firstObject] : @""); 
       NSString *installDest = [installDir stringByAppendingPathComponent: fileName];
-      NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
+      //NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
       [fileManager copyItemAtPath: fullPath
 			   toPath: installDest
 			    error: &error];
