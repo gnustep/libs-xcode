@@ -409,8 +409,8 @@
       [context contextDictionaryForName: [target name]];
       [context setObject: _mainGroup 
 		  forKey: @"MAIN_GROUP"];
-      [context setObject: _container
-		  forKey: @"CONTAINER"];
+      //      [context setObject: _container
+      //		  forKey: @"CONTAINER"];
       [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
       [context setObject: @"./"
@@ -443,8 +443,8 @@
       [context contextDictionaryForName: [target name]];
       [context setObject: _mainGroup 
 		  forKey: @"MAIN_GROUP"];
-      [context setObject: _container
-		  forKey: @"CONTAINER"];
+      //      [context setObject: _container
+      //		  forKey: @"CONTAINER"];
       [context setObject: @"./"
 		  forKey: @"PROJECT_ROOT"];
       [context setObject: @"./"

@@ -212,13 +212,29 @@ static NSString *_cachedRootPath = nil;
 {
   NSString *result = nil;
   NSString *cmd = self;
-  
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *dict = [ctx config];
+  NSString *setupScript = [dict objectForKey: @"setupScript"];
 #ifdef _WIN32
   NSString *rootPath = [self findRootPath];
 
-  result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
+  if (setupScript != nil)
+    {
+      result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@ > /dev/null  && %@\"", rootPath, setupScript, cmd];
+    }
+  else
+    {      
+      result = [NSString stringWithFormat: @"%@/usr/bin/bash -c \"%@\"", rootPath, cmd];
+    }
 #else
-  result = [cmd copy];
+  if (setupScript != nil)
+    {
+      result = [NSString stringWithFormat: @"%@ > /dev/null && %@", setupScript, cmd];
+    }
+  else
+    {      
+      result = [cmd copy];
+    }
 #endif
 
   NSDebugLog(@"%@", result);
@@ -290,7 +306,8 @@ static NSString *_cachedRootPath = nil;
   return r;
 }
 
-- (NSString *)stringByTrimmingTrailingCharactersInSet:(NSCharacterSet *)characterSet {
+- (NSString *)stringByTrimmingTrailingCharactersInSet:(NSCharacterSet *)characterSet
+{
     NSRange rangeOfLastWantedCharacter = [self rangeOfCharacterFromSet:[characterSet invertedSet]
                                                                options:NSBackwardsSearch];
     if (rangeOfLastWantedCharacter.location == NSNotFound) {

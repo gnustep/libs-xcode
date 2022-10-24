@@ -351,186 +351,275 @@
   return (result == 0);
 }
 
-- (BOOL) install
+- (BOOL) installTool
 {
-  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",_name] cString]);
   NSString *buildDir = @"./build";
   NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
   NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
   NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];
   NSString *fileName = [fullPath lastPathComponent];
-  NSString *execName = [fileName stringByDeletingPathExtension];
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSError *error = nil;
+
+  NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_TOOLS"];
+  NSString *installDest = [installDir stringByAppendingPathComponent: fileName];
+
+  NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
+  return [fileManager copyItemAtPath: fullPath
+			      toPath: installDest
+			       error: &error];
+}
+
+- (BOOL) installApp
+{
+  NSString *buildDir = @"./build";
+  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
+  NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"]; 
+  NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];
+  NSString *fileName = [fullPath lastPathComponent];
+  // NSString *execName = [fileName stringByDeletingPathExtension];
   NSFileManager *fileManager = [NSFileManager defaultManager];
   NSError *error = nil;
   NSString *cwd = [fileManager currentDirectoryPath];
 
   NSLog(@"******* CWD = %@", cwd);
-  if([_productType isEqualToString: TOOL_TYPE])
+  NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_APPS"];
+  NSString *installDest = [installDir stringByAppendingPathComponent: fileName]; 
+  return [fileManager copyItemAtPath: fullPath
+			      toPath: installDest
+			       error: &error];
+}
+
+- (BOOL) installFramework
+{
+  NSString *buildDir = @"./build";
+  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];
+  NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY"];      
+  NSString *libraryPath = installDir; // ([paths firstObject] != nil ? [paths firstObject] : @""); 
+  NSString *frameworkPath = [libraryPath stringByAppendingPathComponent: @"Frameworks"];
+  NSString *installDest = frameworkPath;
+  NSString *productDir = [installDest stringByAppendingPathComponent: [_productReference path]];
+  NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
+  NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
+  NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [_productReference path]]
+                                       stringByAppendingPathComponent:@"Versions"]
+                                      stringByAppendingPathComponent:@"Current"];
+  NSString *headersLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent:
+				   [_productReference path]] stringByAppendingPathComponent:@"Versions"]
+                                   stringByAppendingPathComponent:@"Current"];
+  NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"];  
+  NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];  
+  NSError *error = nil;
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSString *fileName = [fullPath lastPathComponent];  
+  NSString *execName = [fileName stringByDeletingPathExtension];
+  
+  // Copy
+  [fileManager removeItemAtPath: productDir error: NULL];
+  [fileManager copyItemAtPath: fullPath
+		       toPath: productDir
+			error: &error];
+  
+  // Create links...
+  [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: execName]
+			  error: NULL];
+  
+  BOOL flag = [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
+					pathContent: [headersLinkDir stringByAppendingPathComponent: @"Headers"]];
+  if(!flag)
     {
-      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_TOOLS"];
-      NSString *installDest = [installDir stringByAppendingPathComponent: fileName];
-      NSLog(@"installDest = %@, fullPath = %@", installDest, fullPath);
+      xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
+    }
+  
+  [fileManager removeItemAtPath: [librariesDir stringByAppendingPathComponent: 
+						   [NSString stringWithFormat: @"lib%@.so",execName]]
+			  error:NULL];
+  flag = [fileManager createSymbolicLinkAtPath: [librariesDir stringByAppendingPathComponent: 
+								  [NSString stringWithFormat: @"lib%@.so",execName]]
+				   pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
+								       [NSString stringWithFormat: @"lib%@.so",execName]]];
+  if(!flag)
+    {
+      xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
+    }
+
+  return flag;
+}
+
+
+- (BOOL) installLibrary
+{
+  NSString *buildDir = @"./build";
+  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];  
+  NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARIES"];            
+  NSString *libraryPath = installDir; //  ([paths firstObject] != nil ? [paths firstObject] : @""); 
+  NSString *headersDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_HEADERS"]; //[libraryPath stringByAppendingPathComponent: @"Headers"];
+  NSString *derivedSrcDir = @"derived_src";
+  NSString *derivedSrcHeaderDir = derivedSrcDir;
+  NSString *libName = [[_productReference path] lastPathComponent];
+  NSString *destPath = [libraryPath stringByAppendingPathComponent: libName];
+  NSError  *error = nil;
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"];
+  NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: libName];
+
+  NSString *cwd = [fileManager currentDirectoryPath];
+
+  NSLog(@"******* CWD = %@", cwd);
+  BOOL f = NO;
+  f = [fileManager fileExistsAtPath: fullPath];
+  if (f == YES)
+    {
+      xcputs([[NSString stringWithFormat: @"\tLibrary exists %@...", fullPath] cString]);
+    }
+  
+  f = [fileManager fileExistsAtPath: destPath];
+  if (f == YES)
+    {
+      xcputs([[NSString stringWithFormat: @"\tLibrary already exists at path %@...", destPath] cString]);
+    }
+  else
+    {
+      xcputs([[NSString stringWithFormat: @"\tCopy static library %@ -> %@", fullPath, destPath] cString]);
       [fileManager copyItemAtPath: fullPath
-			   toPath: installDest
+			   toPath: destPath
 			    error: &error];
+      if (error != nil)
+	{
+	  xcputs([[NSString stringWithFormat: @"Error while copying library: %@", error] cString]);
+	  //return NO;
+	}
+    }
+  
+  // NSString *libName = [fullPath lastPathComponent];
+  NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
+  libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
+  libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
+  NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
+
+  NSLog(@"headers path = %@", libHeadersPath);
+  [fileManager createDirectoryAtPath: libHeadersPath
+	 withIntermediateDirectories: YES
+			  attributes: nil
+			       error: &error];
+  if (error != nil)
+    {
+      xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : %@", libHeadersPath, error] cString]);
+      return NO;
+    }
+  
+  NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
+  id file = nil;
+  while((file = [en nextObject]) != nil)
+    {
+      NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
+      NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
+      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
+      [fileManager copyItemAtPath: srcFile
+			   toPath: destFile
+			    error: &error];
+      if (error != nil)
+	{
+	  xcputs([[NSString stringWithFormat: @"Error while copying header: %@", error] cString]);
+	  return NO;
+	}
+    }
+
+  return YES;
+}
+
+- (BOOL) installDynamicLibrary
+{
+  NSString *buildDir = @"./build";
+  NSString *outputDir = [buildDir stringByAppendingPathComponent: [self name]];  
+  NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARIES"];            
+  NSString *libraryPath = installDir;
+  NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
+  NSString *headersDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_HEADERS"]; //[libraryPath stringByAppendingPathComponent: @"Headers"];
+  NSString *derivedSrcDir = @"derived_src";
+  NSString *derivedSrcHeaderDir = derivedSrcDir;
+  NSString *destPath = [librariesDir stringByAppendingPathComponent: [_productReference path]];
+  NSError  *error = nil;
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSString *uninstalledProductsDir = [outputDir stringByAppendingPathComponent: @"Products"];
+  NSString *fullPath = [uninstalledProductsDir stringByAppendingPathComponent: [_productReference path]];
+  
+  xcputs([[NSString stringWithFormat: @"\tCopy dynamic library %@ -> %@",fullPath,destPath] cString]);
+  [fileManager copyItemAtPath: fullPath
+		       toPath: destPath
+			error: &error];
+  if (error != nil)
+    {
+      xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+      return NO;
+    }
+  
+  NSString *libName = [fullPath lastPathComponent];
+  NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
+  libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
+  libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
+  NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
+
+  [fileManager createDirectoryAtPath: libHeadersPath
+	 withIntermediateDirectories: YES
+			  attributes: nil
+			       error: &error];
+  if (error != nil)
+    {
+      xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
+      return NO;
+    }
+  
+  NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
+  id file = nil;
+  while((file = [en nextObject]) != nil)
+    {
+      NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
+      NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
+      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
+      [fileManager copyItemAtPath: srcFile
+			   toPath: destFile
+			    error: &error];
+      if (error != nil)
+	{
+	  xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
+	  return NO;
+	}
+    }
+
+  return YES;
+}
+
+- (BOOL) install
+{
+  BOOL f = NO;
+  
+  xcputs([[NSString stringWithFormat: @"=== Installing Target %@",_name] cString]);
+  
+   if([_productType isEqualToString: TOOL_TYPE])
+    {
+      f = [self installTool];
     }
   else if([_productType isEqualToString: APPLICATION_TYPE])
     {
-      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_APPS"];
-      NSString *installDest = [installDir stringByAppendingPathComponent: fileName]; 
-      [fileManager copyItemAtPath: fullPath
-			   toPath: installDest
-			    error: &error];
+      f = [self installApp];
     }
   else if([_productType isEqualToString: FRAMEWORK_TYPE])
     {
-      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARY"];      
-      // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
-      NSString *libraryPath = installDir; // ([paths firstObject] != nil ? [paths firstObject] : @""); 
-      NSString *frameworkPath = [libraryPath stringByAppendingPathComponent: @"Frameworks"];
-      NSString *installDest = frameworkPath;
-      NSString *productDir = [installDest stringByAppendingPathComponent: [_productReference path]];
-      NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
-      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
-      NSString *frameworksLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent: [_productReference path]]
-                                       stringByAppendingPathComponent:@"Versions"]
-                                      stringByAppendingPathComponent:@"Current"];
-      NSString *headersLinkDir = [[[@"../Frameworks" stringByAppendingPathComponent:
-                                       [_productReference path]] stringByAppendingPathComponent:@"Versions"]
-                                   stringByAppendingPathComponent:@"Current"];
-
-      // Copy
-      [fileManager removeItemAtPath: productDir error:NULL];
-      [fileManager copyItemAtPath: fullPath
-			   toPath: productDir
-			    error: &error];
-
-      // Create links...
-      [fileManager removeItemAtPath: [headersDir stringByAppendingPathComponent: execName]
-			      error:NULL];
-      
-      BOOL flag = [fileManager createSymbolicLinkAtPath: [headersDir stringByAppendingPathComponent: execName]
-					    pathContent: [headersLinkDir stringByAppendingPathComponent: @"Headers"]];
-      if(!flag)
-	{
-	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
-	}
-
-      [fileManager removeItemAtPath: [librariesDir stringByAppendingPathComponent: 
-								 [NSString stringWithFormat: @"lib%@.so",execName]]
-			      error:NULL];
-      flag = [fileManager createSymbolicLinkAtPath: [librariesDir stringByAppendingPathComponent: 
-								 [NSString stringWithFormat: @"lib%@.so",execName]]
-				       pathContent: [frameworksLinkDir stringByAppendingPathComponent: 
-								    [NSString stringWithFormat: @"lib%@.so",execName]]];
-      if(!flag)
-	{
-	  xcputs([[NSString stringWithFormat: @"Error creating symbolic link..."] cString]);
-	}
+      f = [self installFramework];
     }
   else if([_productType isEqualToString: LIBRARY_TYPE])
     {
-      NSString *installDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_LIBRARIES"];            
-      // NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
-      NSString *libraryPath = installDir; //  ([paths firstObject] != nil ? [paths firstObject] : @""); 
-      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
-      NSString *headersDir = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_HEADERS"]; //[libraryPath stringByAppendingPathComponent: @"Headers"];
-      NSString *derivedSrcDir = @"derived_src";
-      NSString *derivedSrcHeaderDir = derivedSrcDir;
-      NSString *destPath = [librariesDir stringByAppendingPathComponent: [_productReference path]];
-
-      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
-      [fileManager copyItemAtPath: fullPath
-			   toPath: destPath
-			    error: &error];
-      if (error != nil)
-        {
-          xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
-        }
-
-      NSString *libName = [fullPath lastPathComponent];
-      NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
-      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
-      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
-      NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
-      [fileManager createDirectoryAtPath: libHeadersPath
-             withIntermediateDirectories: NO
-                              attributes: nil
-                                   error: &error];
-      if (error != nil)
-        {
-          xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
-        }
-
-      NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
-      id file = nil;
-      while((file = [en nextObject]) != nil)
-	{
-          NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
-	  NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
-	  xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
-	  [fileManager copyItemAtPath: srcFile
-			       toPath: destFile
-				error: &error];
-          if (error != nil)
-            {
-              xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
-            }
-	}
+      f = [self installLibrary];
     }
   else if([_productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
     {
-      NSArray  *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES);
-      NSString *libraryPath = ([paths firstObject] != nil ? [paths firstObject] : @""); 
-      NSString *librariesDir = [libraryPath stringByAppendingPathComponent: @"Libraries"];
-      NSString *headersDir = [libraryPath stringByAppendingPathComponent: @"Headers"];
-      NSString *derivedSrcDir = @"derived_src";
-      NSString *derivedSrcHeaderDir = derivedSrcDir;
-      NSString *destPath = [librariesDir stringByAppendingPathComponent: [_productReference path]];
-
-      xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",fullPath,destPath] cString]);
-      [fileManager copyItemAtPath: fullPath
-			   toPath: destPath
-			    error: &error];
-      if (error != nil)
-        {
-          xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
-        }
-
-      NSString *libName = [fullPath lastPathComponent];
-      NSString *libHeaderDir = [libName stringByReplacingOccurrencesOfString: @"lib" withString: @""];
-      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".a" withString: @""];
-      libHeaderDir = [libHeaderDir stringByReplacingOccurrencesOfString: @".so" withString: @""];
-      NSString *libHeadersPath = [headersDir stringByAppendingPathComponent: libHeaderDir];
-      [fileManager createDirectoryAtPath: libHeadersPath
-             withIntermediateDirectories: NO
-                              attributes: nil
-                                   error: &error];
-      if (error != nil)
-        {
-          xcputs([[NSString stringWithFormat: @"Error while creating directory %@ : (%@)",libHeadersPath, error] cString]);
-        }
-
-      NSEnumerator *en = [fileManager enumeratorAtPath: derivedSrcHeaderDir];
-      id file = nil;
-      while((file = [en nextObject]) != nil)
-	{
-          NSString *srcFile  = [libHeaderDir stringByAppendingPathComponent: file];
-	  NSString *destFile = [libHeadersPath stringByAppendingPathComponent: file];
-	  xcputs([[NSString stringWithFormat: @"\tCopy %@ -> %@",srcFile,destFile] cString]);
-	  [fileManager copyItemAtPath: srcFile
-			       toPath: destFile
-				error: &error];
-          if (error != nil)
-            {
-              xcputs([[NSString stringWithFormat: @"Error while copying: (%@)", error] cString]);
-            }
-	}
+      f = [self installDynamicLibrary];
     }    
 
   xcputs([[NSString stringWithFormat: @"=== Completed Installing Target %@",_name] cString]);
 
-  return YES;
+  return f;
 }
 
 - (GSXCGenerator *) _loadGeneratorBundleFromDirectory: (NSString *)dir
