@@ -22,8 +22,7 @@
    Boston, MA 02110 USA.
 */
 
-#import <Foundation/NSDictionary.h>
-#import <Foundation/NSRegularExpression.h>
+#import <Foundation/Foundation.h>
 
 #import "PBXCommon.h"
 #import "PBXShellScriptBuildPhase.h"

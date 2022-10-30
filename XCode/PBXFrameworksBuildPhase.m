@@ -437,27 +437,26 @@
 
 - (BOOL) buildStaticLib
 {
-  xcputs("=== Executing Frameworks / Archiving Build Phase (Static Library)");
-
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSDictionary *config = [context config];
-  NSString *ctarget = [config objectForKey: @"target"];
-  NSString *libext = [ctarget isEqualToString: @"msvc"] ? @"lib" : @"a";
-  NSString *libpfx = [ctarget isEqualToString: @"msvc"] ? @"" : @"lib";
+  // NSDictionary *config = [context config];
+  // NSString *ctarget = [config objectForKey: @"target"];
+  // NSString *libext = [ctarget isEqualToString: @"msvc"] ? @"lib" : @"a";
+  // NSString *libpfx = [ctarget isEqualToString: @"msvc"] ? @"" : @"lib";
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [self _productOutputDir];
   NSString *executableName = [[[_target productReference] path] lastPathComponent];
-// [[NSString stringWithFormat: @"%@%@", libpfx,[self _execName]]
-//			       stringByReplacingPathExtensionWith: libext];
+  // [[NSString stringWithFormat: @"%@%@", libpfx,[self _execName]]
+  //			       stringByReplacingPathExtensionWith: libext];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,
 				outputPath,
 				outputFiles,
 				outputPath];
-
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
+
+  xcputs("=== Executing Frameworks / Archiving Build Phase (Static Library)");  
   if([modified isEqualToString: @"YES"])
     {
       xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
