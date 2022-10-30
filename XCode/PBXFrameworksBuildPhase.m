@@ -109,7 +109,7 @@
 					 [objPath stringByEscapingSpecialCharacters]];
       NSString *of = [self processOutputFilesString];
       NSString *outputFiles = (of == nil)?@"":of;
-      NSLog(@"\t%@ %@",buildCommand, outputFiles);
+      //NSLog(@"\t%@ %@",buildCommand, outputFiles);
       BOOL success = xcsystem(buildCommand) == 0;
       if (success)
 	{
@@ -446,8 +446,9 @@
   NSString *libpfx = [ctarget isEqualToString: @"msvc"] ? @"" : @"lib";
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [self _productOutputDir];
-  NSString *executableName = [[NSString stringWithFormat: @"%@%@", libpfx,[self _execName]]
-			       stringByReplacingPathExtensionWith: libext];
+  NSString *executableName = [[[_target productReference] path] lastPathComponent];
+// [[NSString stringWithFormat: @"%@%@", libpfx,[self _execName]]
+//			       stringByReplacingPathExtensionWith: libext];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
   NSString *command = [NSString stringWithFormat: commandTemplate,

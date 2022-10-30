@@ -449,8 +449,9 @@ extern char **environ;
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
-    NSDictionary *config = [context config];
+  NSDictionary *config = [context config];
   NSString *ctarget = [config objectForKey: @"target"];
+  NSString *additionalCFlags = [config objectForKey: @"additionalCFlags"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
@@ -463,6 +464,11 @@ extern char **environ;
   NSDictionary *plistFile = [context config];
   NSArray *skippedSource = [plistFile objectForKey:
                                         @"skippedSource"];
+
+  if (additionalCFlags == nil)
+    {
+      additionalCFlags = @"";
+    }
   
   if ([skippedSource containsObject: bp])
     {
@@ -576,11 +582,11 @@ extern char **environ;
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
       NSString *configString = [context objectForKey: @"CONFIG_STRING"];
-      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ %@ -o %@";
+      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ %@ %@ -o %@";
 
       if ([ctarget isEqualToString: @"msvc"])
 	{
-	  buildTemplate = @"%@ 2> %@ -c %@ %@ -D_CRT_SECURE_NO_WARNINGS %@ %@ %@ %@ -o %@";
+	  buildTemplate = @"%@ 2> %@ -c %@ %@ %@ -D_CRT_SECURE_NO_WARNINGS %@ %@ %@ %@ -o %@";
 	}
       
       NSString *compilePath = bp;
@@ -592,6 +598,7 @@ extern char **environ;
                                          [errorOutPath stringByAddingQuotationMarks],
 					 [compilePath stringByAddingQuotationMarks],
 					 objCflags,
+					 additionalCFlags,
 					 configString,
                                          parentHeaderSearchPaths,
 					 headerSearchPaths,
