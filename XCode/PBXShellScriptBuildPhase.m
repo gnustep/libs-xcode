@@ -23,6 +23,7 @@
 */
 
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSRegularExpression.h>
 
 #import "PBXCommon.h"
 #import "PBXShellScriptBuildPhase.h"
@@ -180,6 +181,7 @@ extern char **environ;
 
 - (NSString *) preprocessScript
 {
+#if GS_USE_ICU      
   NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile: @"buildtool.plist"];
   NSDictionary *searchReplace = [plistFile objectForKey: @"searchReplace"];
   NSString *script = nil;
@@ -232,6 +234,10 @@ extern char **environ;
   result = [result stringByAppendingString: @"\n# Done with Xcode script\nexit $?\n"];
 
   return result;
+#else
+  NSLog(@"searchAndReplace is not available since GS was compiled without ICU support.  ICU is needed for regular expressions.");
+  return nil;
+#endif  
 }
 
 - (BOOL) build

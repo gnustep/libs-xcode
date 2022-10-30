@@ -36,6 +36,8 @@
 
 - (PBXAbstractTarget *) target;
 
+- (void) setTarget: (PBXAbstractTarget *)target;
+
 - (BOOL) generate;
 
 @end
