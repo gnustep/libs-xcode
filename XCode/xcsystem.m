@@ -33,6 +33,42 @@
 #import <unistd.h>
 #endif
 
+NSString *contextString()
+{
+  NSString *result = @"\n# Context variables\n\n";
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *dict = [ctx currentContext];
+  NSArray *keys = [dict allKeys];
+  NSEnumerator *en = [keys objectEnumerator];
+  NSString *k = nil;
+
+  while ((k = [en nextObject]) != nil)
+    {
+      if (![k isEqualToString: @"OUTPUT_FILES"]) // exclude some vars
+	{
+	  id v = [dict objectForKey: k];
+	  if ([v isKindOfClass: [NSString class]])
+	    {
+	      if ([v containsString: @"%"] == NO)
+		{
+		  if ([v containsString: @"\""] ) // val is already quoted
+		    {
+		      result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=%@\n", k, v]];
+		    }
+		  else
+		    {
+		      result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=\"%@\"\n", k, v]];
+		    }
+		}          
+	    }
+	}
+    }
+
+  result = [result stringByAppendingString: @"# Done with context setup...\n\n"];
+  
+  return result;
+}
+
 NSInteger xcsystem(NSString *cmd)
 {
   GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
@@ -60,9 +96,10 @@ NSInteger xcsystem(NSString *cmd)
 	@"exit $?\n";
       NSString *body = @"";
       NSString *script = nil;
-      
+      NSString *c = [cmd stringByReplacingOccurrencesOfString: @"$(SRCROOT)" withString: @"."];
       body = [body stringByAppendingString: [NSString stringWithFormat: @". %@ > /dev/null\n", setupScript]];
-      body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", cmd]];
+      body = [body stringByAppendingString: contextString()];
+      body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", c]];
 
       script = [NSString stringWithFormat: scriptFormat, body];
 
