@@ -100,13 +100,19 @@
 
 - (BOOL) build
 {
-  NSDebugLog(@"Abstract build... %@, %@",self, _files);
+  NSDebugLog(@"Abstract build... %@, %@", self, _files);
   return YES;
 }
 
 - (BOOL) generate
 {
-  NSLog(@"Abstract generate... %@, %@",self,_files);
+  NSLog(@"Abstract generate... %@, %@", self, _files);
+  return YES;
+}
+
+- (BOOL) link
+{
+  NSLog(@"Abstract link... %@, %@", self, _files);
   return YES;
 }
 

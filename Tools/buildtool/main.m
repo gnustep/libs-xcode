@@ -123,7 +123,8 @@ int main(int argc, const char *argv[])
       if ([argument isEqualToString: @"build"] ||
           [argument isEqualToString: @"install"] ||
           [argument isEqualToString: @"clean"] ||
-          [argument isEqualToString: @"generate"])
+          [argument isEqualToString: @"generate"] ||
+	  [argument isEqualToString: @"link"])
         {
           ASSIGN(function, argument);
           [args removeObjectAtIndex: 1];
@@ -180,7 +181,7 @@ int main(int argc, const char *argv[])
 	    }
 	  else
 	    {
-	      puts([[NSString stringWithFormat: @"Unknown build operation \"%@",display] cString]);
+	      puts([[NSString stringWithFormat: @"Unknown build operation \"%@\" for %@", display, container] cString]);
 	    }
 	}
       else

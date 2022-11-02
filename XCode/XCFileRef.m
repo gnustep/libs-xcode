@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "XCFileRef.h"
+*/
+
+#import "XCFileRef.h"
 #import "PBXCoder.h"
 #import "PBXContainer.h"
 #import "NSString+PBXAdditions.h"
@@ -111,6 +113,11 @@
 }
 
 - (BOOL) install
+{
+  return [self performLegacyOperation: _cmd];
+}
+
+- (BOOL) link
 {
   return [self performLegacyOperation: _cmd];
 }

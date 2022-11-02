@@ -386,9 +386,9 @@
     }
   
   // NSLog(@"Link command = %@", command);
-  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  // NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
-  if([modified isEqualToString: @"YES"])
+  if(YES) // [modified isEqualToString: @"YES"])
     {
       xcputs([[NSString stringWithFormat: @"\t* Linking \"%@\"",outputPath] cString]);
       result = xcsystem(command);
@@ -845,4 +845,14 @@
   
   return YES;
 }
+
+- (BOOL) link
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
+  [context setObject: @"YES" forKey: @"MODIFIED_FLAG"];
+  
+  return [self build];
+}
+
 @end

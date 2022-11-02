@@ -144,4 +144,28 @@
   return YES;
 }
 
+- (BOOL) link
+{
+  NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
+  XCFileRef *ref = nil;
+  NSString *display = [[self filename]
+                        stringByDeletingLastPathComponent];
+  
+  printf("+++ Building projects workspace.. %s\n", [display cString]);
+  while ((ref = [en nextObject]) != nil)
+    {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+      BOOL s = [ref link];
+      if (s == NO)
+        {
+          printf("+++ Workspace build FAILED %s\n", [display cString]);
+          return NO;
+        }
+      RELEASE(p);
+    }
+  printf("+++ Workspace build completed... %s\n", [display cString]);
+  
+  return YES;
+}
+
 @end

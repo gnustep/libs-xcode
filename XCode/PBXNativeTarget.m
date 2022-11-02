@@ -749,6 +749,66 @@
   return [self invokeGeneratorBundle];
 }
 
+- (BOOL) link
+{
+  BOOL result = YES;
+  NSEnumerator *en = nil;
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile:
+                                            @"buildtool.plist"];
+  NSArray *skippedTarget = [plistFile objectForKey:
+                                        @"skippedTarget"];
+  
+  if ([skippedTarget containsObject: [self name]])
+    {
+      xcputs([[NSString stringWithFormat: @"=== Skipping Target %s%@%s", YELLOW, _name, RESET] cString]);
+      return YES;
+    }
+  
+  xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, _name, RESET] cString]);
+  [_buildConfigurationList applyDefaultConfiguration];
+  [context setObject: _buildConfigurationList
+              forKey: @"buildConfig"];
+  [context setObject: _productType
+	      forKey: @"PRODUCT_TYPE"];
+  if(_productSettingsXML != nil)
+    {
+      [context setObject: _productSettingsXML 
+                  forKey: @"PRODUCT_SETTINGS_XML"];
+    }
+  xcputs([[NSString stringWithFormat: @"=== Checking Dependencies"] cString]);  
+  id dependency = nil;
+  en = [_dependencies objectEnumerator];
+  while((dependency = [en nextObject]) != nil && result)
+    {
+      result = [dependency build];
+    }
+  xcputs([[NSString stringWithFormat: @"=== Done."] cString]);
+
+  xcputs([[NSString stringWithFormat: @"=== Executing build phases..."] cString]);
+
+  [self _productWrapper];
+  id phase = nil;
+  en = [_buildPhases objectEnumerator];
+  while((phase = [en nextObject]) != nil && result)
+    {
+      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+
+      [phase setTarget: self];
+      result = [phase link];
+      if(NO == result)
+	{
+	  xcputs([[NSString stringWithFormat: @"*** Failed build phase: %@",phase] cString]);
+	}
+
+      RELEASE(p);
+    }
+  xcputs([[NSString stringWithFormat: @"=== Done..."] cString]);
+  xcputs([[NSString stringWithFormat: @"=== Completed Executing Target %@", _name] cString]);
+
+  return result;
+}
+
 - (NSString *) description
 {
   return [NSString stringWithFormat: @"%@-%@", [super description], [self name]];

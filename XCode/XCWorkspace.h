@@ -51,4 +51,6 @@
 
 - (BOOL) install;
 
+- (BOOL) link;
+
 @end

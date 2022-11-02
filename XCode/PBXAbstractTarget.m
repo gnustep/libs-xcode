@@ -135,4 +135,9 @@
   return YES;
 }
 
+- (BOOL) link
+{
+  return YES;
+}
+
 @end

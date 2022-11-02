@@ -60,5 +60,6 @@
 // build
 - (BOOL) build;
 - (BOOL) generate;
+- (BOOL) link;
 
 @end

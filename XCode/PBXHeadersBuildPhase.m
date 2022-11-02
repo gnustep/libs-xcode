@@ -125,4 +125,10 @@
 
   return result;
 }
+
+- (BOOL) link
+{
+  return YES;
+}
+
 @end

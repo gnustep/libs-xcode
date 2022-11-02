@@ -517,4 +517,62 @@
   return result;
 }
 
+- (BOOL) link
+{
+  NSString *fn = [[[self container] filename]
+                   stringByDeletingLastPathComponent];
+
+  xcprintf("=== Linking Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
+  [_buildConfigurationList applyDefaultConfiguration];
+  [self _sourceRootFromMainGroup];
+  // [self plan];
+
+  // NSLog(@"arrangedTargets = %@", _arrangedTargets);
+  
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSEnumerator *en = [_targets objectEnumerator];
+  id target = nil;
+  BOOL result = YES;
+  
+  while((target = [en nextObject]) != nil && result)
+    {
+      [target setProject: self];
+      [context contextDictionaryForName: [target name]];
+      [self buildString];
+
+      if(YES == [fileManager fileExistsAtPath: [target name]])
+	{
+	  [context setObject: @"YES"
+		      forKey: @"TARGET_IN_SUBDIR"];
+	}
+
+      [context setObject: _mainGroup 
+		  forKey: @"MAIN_GROUP"]; 
+      [context setObject: _container
+		  forKey: @"CONTAINER"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_ROOT"];
+      [context setObject: @"./"
+		  forKey: @"PROJECT_DIR"];
+      [context setObject: @"./"
+		  forKey: @"SRCROOT"];
+      [context setObject: @"./"
+		  forKey: @"SOURCE_ROOT"];
+      [context addEntriesFromDictionary: _ctx];
+      
+      result = [target link];
+      [context popCurrentContext];
+
+      if (result == NO)
+        {
+          break;
+        }
+    }
+
+  xcprintf("=== Done Linking Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
+
+  return result;
+}
+
 @end

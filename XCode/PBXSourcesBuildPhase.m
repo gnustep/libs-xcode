@@ -105,4 +105,50 @@
   return result;
 }
 
+- (BOOL) link
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  NSString *outputFiles = (of == nil) ? @"" : of;
+  PBXBuildFile *file = nil;
+  BOOL result = YES;
+  NSString *buildDir = @"./build";
+  NSEnumerator *en = [_files objectEnumerator];
+  NSFileManager *mgr = [NSFileManager defaultManager];
+
+  buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
+
+  xcputs("=== Executing Sources Build Phase (LINK)");
+  while((file = [en nextObject]) != nil && result)
+    {
+      PBXFileReference *fr = [file fileRef];
+      NSString *fileName = [[fr path] lastPathComponent];
+      NSString *outputPath = [buildDir stringByAppendingPathComponent: 
+				    [fileName stringByAppendingString: @".o"]];
+
+      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
+		      stringByAppendingString: @" "];
+      
+      // NSLog(@"name = %@", [fr path]);
+      xcprintf("\tCollecting %s%s%s%s ... ", BOLD, MAGENTA, [outputPath cString], RESET);
+
+      if ([mgr fileExistsAtPath: outputPath] == YES)
+	{
+	  xcprintf("%s%ssuccess%s\n", BOLD, GREEN, RESET);
+	}
+      else
+	{
+	  xcprintf("%s%sfailed%s\n", BOLD, RED, RESET);
+	  result = NO;
+	  break;
+	}
+    }
+
+  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+  // NSLog(@"Output files %@", outputFiles);
+  xcputs("=== Sources Build Phase Completed (LINK)");
+
+  return result;
+}
+
 @end

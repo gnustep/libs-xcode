@@ -58,5 +58,6 @@
 - (BOOL) clean;
 - (BOOL) install;
 - (BOOL) generate;
+- (BOOL) link;
 
 @end

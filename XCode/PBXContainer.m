@@ -164,4 +164,11 @@
   return [rootObject generate];
 }
 
+- (BOOL) link
+{
+  // Likely need to collect .o artifacts...
+  [rootObject setContainer: self];
+  return [rootObject link];
+}
+
 @end
