@@ -136,9 +136,17 @@
   NSMutableArray *ignored = [[propList objectForKey: @"Ignored"] mutableCopy];
   NSMutableDictionary *mapped = [[propList objectForKey: @"Mapped"] mutableCopy];
   NSDictionary *configDict = [context configForTargetName: [[self target] name]];
+  NSString *result = nil;
+  NSString *fw = [framework copy];
 
-  NSDebugLog(@"config = %@", configDict);
-  NSDebugLog(@"************** target = %@", [[self target] name]);
+  if ([fw hasPrefix: @"lib"])
+    {
+      fw = [fw stringByReplacingCharactersInRange: NSMakeRange(0,3)
+				       withString: @""];
+    }
+  
+  NSDebugLog(@"\t* config = %@", configDict);
+  NSDebugLog(@"\t* target = %@", [[self target] name]);
   
   if ([configDict objectForKey: @"mapped"] != nil)
     {
@@ -150,31 +158,29 @@
       [ignored addObjectsFromArray: [configDict objectForKey: @"ignored"]];
     }
   
-  NSString *result = nil;
-  
   NSDebugLog(@"path = %@", path);
-  if ([ignored containsObject: framework])
+  NSDebugLog(@"%@", fw);
+
+  if ([ignored containsObject: fw])
     {
-      xcprintf("\t- Ignored: %s\n",[framework cString]);
+      xcprintf("\t- Ignored: %s\n",[fw cString]);
       return @"";
     }
-
-  result = [mapped objectForKey: framework];
+  else
+    {
+      NSDebugLog(@"%@ not found in %@", fw, ignored);
+    }
+  
+  result = [mapped objectForKey: fw];
   if (result == nil)
     {
-      if ([framework hasPrefix: @"lib"])
-        {
-          framework = [framework stringByReplacingCharactersInRange: NSMakeRange(0,3)
-                                                         withString: @""];
-        }
-
-      result =  [NSString stringWithFormat: @"-l%@ ", framework];
-      xcprintf("\t* Linking: %s\n",[result cString]);
+      result =  [NSString stringWithFormat: @"-l%@ ", fw];
+      xcprintf("\t* Linking: %s\n", [result cString]);
     }
   else
     {
       result = [result stringByAppendingString: @" "];
-      xcprintf("\t+ Remapped: %s -> %s\n",[framework cString], [result cString]);
+      xcprintf("\t+ Remapped: %s -> %s\n", [fw cString], [result cString]);
     }
   
   return result;
