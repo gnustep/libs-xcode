@@ -311,7 +311,7 @@ extern char **environ;
 
   if ((r = [remappedSource objectForKey: result]) != nil)
     {
-      xcputs([[NSString stringWithFormat: @"\n\t%@ remapped to -> %@", result, r] cString]);
+      xcputs([[NSString stringWithFormat: @"\t+ Remapped %s%s%@%s to -> %s%s%@%s", BOLD, YELLOW, result, RESET, BOLD, GREEN, r, RESET] cString]);
       result = r;
     }
   
