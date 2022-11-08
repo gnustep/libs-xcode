@@ -476,8 +476,8 @@ extern char **environ;
       return YES;
     }
 
-  CGFloat perc = _currentFile / _totalFiles;
-  xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld) - ( %3.2f )... ",
+  CGFloat perc = 100.0 * ((CGFloat)_currentFile / (CGFloat)_totalFiles);
+  xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld) - ( %3.2f%% )... ",
 			   BOLD, MAGENTA, bp, RESET, (long)_currentFile, (long)_totalFiles, perc] cString]);
 
   if(modified == nil)
