@@ -475,9 +475,10 @@ extern char **environ;
       xcprintf("skipping file.\n");
       return YES;
     }
-  
-  xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld)... ",
-			   BOLD, MAGENTA, bp, RESET, (long)_currentFile, (long)_totalFiles] cString]);
+
+  CGFloat perc = _currentFile / _totalFiles;
+  xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld) - (%3.2f%)... ",
+			   BOLD, MAGENTA, bp, RESET, (long)_currentFile, (long)_totalFiles, perc] cString]);
 
   if(modified == nil)
     {

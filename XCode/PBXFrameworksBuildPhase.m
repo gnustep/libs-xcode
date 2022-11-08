@@ -314,6 +314,7 @@
   
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
+      outputPath = [outputPath stringByAppendingPathExtension: @"exe"];
       command = [NSString stringWithFormat: 
 			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
 			  compiler, 
@@ -374,6 +375,7 @@
   NSString *command = nil;
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
+      outputPath = [outputPath stringByAppendingPathExtension: @"exe"];
       command = [NSString stringWithFormat: 
 			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
 			  compiler,
