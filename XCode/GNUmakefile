@@ -28,6 +28,7 @@ XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
 # Header files
 #
 XCode_HEADER_FILES = \
+GSXCBuildDatabase.h \
 GSXCBuildContext.h \
 GSXCCommon.h \
 NSArray+Additions.h \
@@ -73,6 +74,7 @@ GSXCGenerator.h \
 # Class files
 #
 XCode_OBJC_FILES = \
+GSXCBuildDatabase.m \
 GSXCBuildContext.m \
 NSArray+Additions.m \
 NSString+PBXAdditions.m \
