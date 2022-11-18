@@ -27,9 +27,10 @@
 
 #import <Foundation/NSObject.h>
 
-@class NSMutableDictionary, NSMutableArray;
+@class NSMutableDictionary, NSMutableArray, PBXAbstractTarget;
+@class NSDate, PBXBuildFile, PBXFileReference;
 
-@interface GSXCRecord : NSObject
+@interface GSXCRecord : NSObject <NSCopying>
 {
   NSMutableDictionary *_dictionary;
 }
@@ -39,7 +40,7 @@
 - (instancetype) initWithContentsOfFile: (NSString *)path;
 - (instancetype) initWithDictionary: (NSDictionary *)dict;
 
-- (NSDictionary *) dictionaryRepresentation;
+- (NSDictionary *) dictionary;
 
 @end
 
@@ -48,7 +49,13 @@
   NSString *_fileName;
   NSDate *_dateModified;
   NSDate *_dateBuilt;
+  PBXBuildFile *_buildFile;
+  PBXFileReference *_fileReference;
 }
+
+- (instancetype) initWithDictonary: (NSDictionary *)dict;
+- (instancetype) initWithFile: (PBXBuildFile *)f path: (NSString *)path;
++ (instancetype) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path;
 
 - (void) setFileName: (NSString *)fn;
 - (NSString *) fileName;
@@ -59,14 +66,25 @@
 - (void) setDateBuilt: (NSDate *)d;
 - (NSDate *) dateBuilt;
 
+- (PBXFileReference *) fileReference;
+
 @end
 
 @interface GSXCBuildDatabase : NSObject
 {
   NSMutableArray *_records;
+  PBXAbstractTarget *_target;
 }
 
++ (instancetype) buildDatabaseWithTarget: (PBXAbstractTarget *)target;
+- (instancetype) initWithTarget: (PBXAbstractTarget *)target;
+
+- (void) setTarget: (PBXAbstractTarget *)t;
+- (PBXAbstractTarget *) target;
+
 - (void) addRecord: (GSXCRecord *)record;
+
+- (NSArray *) files;
 
 @end
 
