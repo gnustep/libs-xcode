@@ -338,11 +338,22 @@
   [self _sourceRootFromMainGroup];
   [self plan];
 
-  NSLog(@"arrangedTargets = %@", _arrangedTargets);
+  // Show list of targets...
+  NSEnumerator *ten = [_arrangedTargets objectEnumerator];
+  id t = nil;
+  NSUInteger c = 0;
+  
+  while ((t = [ten nextObject]) != nil)
+    {
+      c++;
+      xcprintf("\t* target #%ld: %s%s%s%s\n", c, BOLD, GREEN, [[t name] cString], RESET);
+    }
+  
+  NSDebugLog(@"arrangedTargets = %@", _arrangedTargets);
   
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSEnumerator *en = [_targets objectEnumerator];
+  NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
   BOOL result = YES;
   

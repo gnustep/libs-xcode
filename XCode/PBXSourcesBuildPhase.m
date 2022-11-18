@@ -50,12 +50,21 @@
 
 - (BOOL) build
 {
+  GSXCBuildDatabase *db = [_target database];
+  NSArray *files = _files;
   id file = nil;
   BOOL result = YES;
   NSUInteger i = 1;
   NSMutableArray *ops = [NSMutableArray array];
-  NSEnumerator *en = [_files objectEnumerator];
-                         
+  NSEnumerator *en = nil;
+
+  // if the database is present use it's list of files...
+  if (db != nil)
+    {
+      files = [db files];
+    }
+  
+  en = [files objectEnumerator];                         
   xcputs("=== Executing Sources Build Phase");
   while((file = [en nextObject]) != nil && result)
     {
@@ -63,7 +72,7 @@
       GSXCBuildOperation *op = [GSXCBuildOperation operationWithFile: file];
       
       [file setTarget: _target];
-      [file setTotalFiles: [_files count]];
+      [file setTotalFiles: [files count]];
       [file setCurrentFile: i];
       [ops addObject: op];
 

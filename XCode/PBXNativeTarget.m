@@ -276,6 +276,12 @@
                                             @"buildtool.plist"];
   NSArray *skippedTarget = [plistFile objectForKey:
                                         @"skippedTarget"];
+
+  // call super to set up common data structures...
+  if(![super build])
+    {
+      return NO;
+    }
   
   if ([skippedTarget containsObject: [self name]])
     {

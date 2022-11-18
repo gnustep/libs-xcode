@@ -27,6 +27,7 @@
 #import "PBXAbstractTarget.h"
 #import "NSString+PBXAdditions.h"
 #import "PBXProject.h"
+#import "GSXCBuildDatabase.h"
 
 @implementation PBXAbstractTarget
 
@@ -43,6 +44,11 @@
 }
 
 // Methods....
+- (PBXProject *) project
+{
+  return _project;
+}
+
 - (void) setProject: (PBXProject *)project
 {
   ASSIGN(_project, project); 
@@ -100,21 +106,22 @@
   ASSIGN(_buildPhases,object);
 }
 
+- (void) setDatabase: (GSXCBuildDatabase *)db
+{
+  ASSIGN(_database, db);
+}
+
+- (GSXCBuildDatabase *) database
+{
+  return _database;
+}
+
 - (BOOL) build
 {
-  NSDictionary *plistFile = [NSDictionary dictionaryWithContentsOfFile:
-                                            @"buildtool.plist"];
-  NSArray *skippedTarget = [plistFile objectForKey:
-                                        @"skippedTarget"];
+  GSXCBuildDatabase *db = [GSXCBuildDatabase buildDatabaseWithTarget: self];
   
-  if ([skippedTarget containsObject: [self name]])
-    {
-      xcputs([[NSString stringWithFormat: @"Skipping %@",self] cString]);
-    }
-  else
-    {
-      xcputs([[NSString stringWithFormat: @"Building %@",self] cString]);
-    }
+  [self setDatabase: db];
+  
   return YES;
 }
 
