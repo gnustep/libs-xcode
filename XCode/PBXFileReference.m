@@ -628,6 +628,11 @@ extern char **environ;
 		  [context setObject: @"YES"
 			      forKey: @"MODIFIED_FLAG"];
 		}
+	      
+	      if (result == 0)
+		{
+		  xcprintf("%srebuilt%s\n", GREEN, RESET);
+		}
 	    }
 	  else
 	    {

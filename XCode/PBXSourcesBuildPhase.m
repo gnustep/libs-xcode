@@ -95,6 +95,11 @@
   
   xcputs("=== Sources Build Phase Completed");
 
+  if (db != nil)
+    {
+      [self link]; // generate the rest of the output file entries
+    }
+  
   return result;
 }
 
@@ -116,8 +121,9 @@
 
 - (BOOL) link
 {
+  GSXCBuildDatabase *db = [_target database];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  NSString *of = (db != nil) ? nil : [context objectForKey: @"OUTPUT_FILES"];
   NSString *outputFiles = (of == nil) ? @"" : of;
   PBXBuildFile *file = nil;
   BOOL result = YES;
