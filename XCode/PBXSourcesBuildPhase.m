@@ -29,6 +29,7 @@
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
 #import "GSXCBuildOperation.h"
+#import "GSXCBuildDatabase.h"
 
 @implementation PBXSourcesBuildPhase
 
