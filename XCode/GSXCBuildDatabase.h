@@ -86,6 +86,8 @@
 
 - (NSArray *) files;
 
+- (BOOL) isEmpty;
+
 @end
 
 #endif // GSXCBuildDatabase_H_INCLUDE

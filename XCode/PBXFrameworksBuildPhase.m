@@ -363,8 +363,8 @@
 
   if (outputFiles == nil)
     {
-      xcputs("\n+++++ Error during compilation, no object files... +++++\n");
-      return NO;
+      xcputs("\n++++ No object files found. Nothing to link  ++++\n");
+      return YES;
     }
 
   linkString = [NSString stringWithFormat: [linkString stringByAppendingString: @" `%@ --objc-flags --objc-libs " \

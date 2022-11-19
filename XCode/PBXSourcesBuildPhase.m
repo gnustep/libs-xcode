@@ -62,9 +62,15 @@
   // if the database is present use it's list of files...
   if (db != nil)
     {
+      if ([db isEmpty])
+	{
+	  xcputs("\n++++ No files modified, nothing to build. ++++\n");
+	  return YES;
+	}
+      
       files = [db files];
     }
-  
+    
   en = [files objectEnumerator];                         
   xcputs("=== Executing Sources Build Phase");
   while((file = [en nextObject]) != nil && result)

@@ -350,4 +350,9 @@
   return array;
 }
 
+- (BOOL) isEmpty
+{
+  return ([_records count] == 0);
+}
+
 @end
