@@ -316,4 +316,20 @@ static NSString *_cachedRootPath = nil;
     return [self substringToIndex:rangeOfLastWantedCharacter.location+1]; // non-inclusive
 }
 
+- (NSString *) stringByResolvingPath
+{
+  NSString *expandedPath = [[self stringByExpandingTildeInPath] stringByStandardizingPath];
+  const char *cpath = [expandedPath cStringUsingEncoding: NSUTF8StringEncoding];
+  char *resolved = NULL;
+  char *returnValue = realpath(cpath, resolved);
+
+  if (returnValue == NULL && resolved != NULL)
+    {
+      NSLog(@"Error with path %s", resolved);
+      return nil;
+    }
+
+  return [NSString stringWithCString: returnValue encoding: NSUTF8StringEncoding];
+}
+
 @end

@@ -37,8 +37,10 @@
 {
   if ((self = [super init]) != nil)
     {
+      NSUInteger cpus = [[NSProcessInfo processInfo] processorCount];
+      
       _queue = [[NSOperationQueue alloc] init];
-      [_queue setMaxConcurrentOperationCount: 1];
+      [_queue setMaxConcurrentOperationCount: cpus];
     }
   return self;
 }
