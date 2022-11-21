@@ -36,8 +36,14 @@
 #import "XCBuildConfiguration.h"
 
 extern char **environ;
+static NSLock *lock = nil;
 
 @implementation PBXFileReference
+
++ (void) initialize
+{
+  lock = [[NSLock alloc] init];
+}
 
 - (void) dealloc
 {
@@ -448,12 +454,12 @@ extern char **environ;
            andFileType: (NSString *)ft
 {  
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *of = [context objectForKey: @"OUTPUT_FILES"];
+  // NSString *of = [context objectForKey: @"OUTPUT_FILES"];
   NSDictionary *config = [context config];
   NSString *ctarget = [config objectForKey: @"target"];
   NSString *additionalCFlags = [config objectForKey: @"additionalCFlags"];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
-  NSString *outputFiles = (of == nil)?@"":of;
+  // NSString *outputFiles = (of == nil)?@"":of;
   int result = 0;
   NSError *error = nil;
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -464,6 +470,9 @@ extern char **environ;
   NSDictionary *plistFile = [context config];
   NSArray *skippedSource = [plistFile objectForKey:
                                         @"skippedSource"];
+  NSString *buildType = [config objectForKey: @"buildType"];
+
+
 
   if (additionalCFlags == nil)
     {
@@ -476,10 +485,15 @@ extern char **environ;
       return YES;
     }
 
-  CGFloat perc = 100.0 * ((CGFloat)_currentFile / (CGFloat)_totalFiles);
-  xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld) - ( %3.2f%% )... ",
-			   BOLD, MAGENTA, bp, RESET, (long)_currentFile, (long)_totalFiles, perc] cString]);
+  // Show the build percentage during linear build...
+  if ([buildType isEqualToString: @"linear"] || buildType == nil)
+    {
+      CGFloat perc = 100.0 * ((CGFloat)_currentFile / (CGFloat)_totalFiles);
 
+      xcprintf("%s",[[NSString stringWithFormat: @"\t* Building %s%s%@%s (%ld / %ld) - ( %3.2f%% )... ",
+			       BOLD, MAGENTA, bp, RESET, (long)_currentFile, (long)_totalFiles, perc] cString]);
+    }
+  
   if(modified == nil)
     {
       modified = @"NO";
@@ -555,11 +569,15 @@ extern char **environ;
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: additionalHeaderDirs];
 	  headerSearchPaths = [headerSearchPaths stringByAppendingString: localHeaderPaths];
 	}
-      
+
+      [lock lock];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
-      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
-		      stringByAppendingString: @" "];
+      //outputFiles = [outputFiles copy];
+      //outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
+      //	      stringByAppendingString: @" "];
+      [lock unlock];
+
       NSString *objCflags = @"";
       if([ft isEqualToString: @"sourcecode.c.objc"])
 	{
@@ -616,8 +634,8 @@ extern char **environ;
                                                              withString: @"."];
 
       NSDebugLog(@"%@", buildCommand);
-      
-      if(outputPathDate != nil)
+
+      if (outputPathDate != nil)
 	{
 	  if([buildPathDate compare: outputPathDate] == NSOrderedDescending)
 	    {	  
@@ -631,12 +649,18 @@ extern char **environ;
 	      
 	      if (result == 0)
 		{
-		  xcprintf("%srebuilt%s\n", GREEN, RESET);
+		  if ([buildType isEqualToString: @"linear"] ||  buildType == nil)
+		    {
+		      xcprintf("%srebuilt%s\n", GREEN, RESET);
+		    }
 		}
 	    }
 	  else
 	    {
-              xcprintf("%sexists%s\n", YELLOW, RESET);
+	      if ([buildType isEqualToString: @"linear"] ||  buildType == nil)
+		{
+		  xcprintf("%sexists%s\n", YELLOW, RESET);
+		}
 	    }
 	}
       else
@@ -651,21 +675,27 @@ extern char **environ;
 
           if (result == 0)
             {
-              xcprintf("%ssuccess%s\n", GREEN, RESET);
-            }
+	      if ([buildType isEqualToString: @"linear"] ||  buildType == nil)
+		{
+		  xcprintf("%ssuccess%s\n", GREEN, RESET);
+		}
+	    }
         }
 
       // If the result is not successful, show the error...
       if (result != 0)
         {
-          xcprintf("%serror%s\n\n", RED, RESET);
-
+	  if ([buildType isEqualToString: @"linear"] ||  buildType == nil)
+	    {
+	      xcprintf("%serror%s\n\n", RED, RESET);
+	    }
+	  
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           [NSException raise: NSGenericException
                       format: @"\n\n%sMessage:%s %@\n", RED, RESET, errorString];
         }
 
-      [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+      // [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
     }
   else if ([ft isEqualToString: @"sourcecode.lex"] || [_explicitFileType isEqualToString: @"sourcecode.lex"])
     {

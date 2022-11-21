@@ -31,5 +31,6 @@
 @interface PBXSourcesBuildPhase : PBXAbstractBuildPhase
 {
   NSOperationQueue *_queue;
+  NSUInteger _cpus;
 }
 @end

@@ -37,10 +37,9 @@
 {
   if ((self = [super init]) != nil)
     {
-      NSUInteger cpus = [[NSProcessInfo processInfo] processorCount];
-      
+      _cpus = [[NSProcessInfo processInfo] processorCount];      
       _queue = [[NSOperationQueue alloc] init];
-      [_queue setMaxConcurrentOperationCount: cpus];
+      [_queue setMaxConcurrentOperationCount: _cpus];
     }
   return self;
 }
@@ -53,6 +52,8 @@
 
 - (BOOL) build
 {
+  GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
+  NSDictionary *config = [ctx config];
   GSXCBuildDatabase *db = [_target database];
   NSArray *files = _files;
   id file = nil;
@@ -60,7 +61,18 @@
   NSUInteger i = 1;
   NSMutableArray *ops = [NSMutableArray array];
   NSEnumerator *en = nil;
-
+  NSString *buildType = [config objectForKey: @"buildType"];
+  
+  NSDebugLog(@"config = %@", config);
+  if ([buildType isEqualToString: @"linear"] == YES || buildType == nil) // linear is the default
+    {
+      [_queue setMaxConcurrentOperationCount: 1];
+    }
+  else if ([buildType isEqualToString: @"parallel"] == YES)
+    {
+      xcprintf("\t* Parallel build using %ld CPUs...\n", _cpus);
+    }
+  
   // if the database is present use it's list of files...
   if (db != nil)
     {
@@ -104,7 +116,7 @@
   
   xcputs("=== Sources Build Phase Completed");
 
-  if (db != nil)
+  // if (db != nil)
     {
       [self link]; // generate the rest of the output file entries
     }
