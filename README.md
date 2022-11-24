@@ -19,10 +19,11 @@ more information.
 ==============
 
 To use this library you need to build it and install it and then compile
-the front-end which is in tools-buildtool.  Simply go into a directory
-which contains an Xcode project and type buildtool and it should build
-the project.  If it doesn't then submit a bug.  Currently GNUstep can
-only build projects for macOS.
+the front-end which is in the Tools directory and is called buildtool.  
+Simply go into a directory which contains an Xcode project and type buildtool 
+and it should build the project.  If it doesn't then submit a bug.  
+Currently GNUstep can only build projects for macOS.  Once support for UIKit and
+other frameworks are available, those will be added.
 
 1.2.1 Plans for the future
 ==========================
@@ -36,6 +37,11 @@ only build projects for macOS.
   which target should be built.
   * Add support for translated to .pcproj files.
   
+1.2.2 Documentation
+===================
+I am working on a manual as well as gsdocs for the code so that the library is
+properly documented.
+
 1.3 How can you help?
 =====================
 
@@ -45,7 +51,6 @@ only build projects for macOS.
      Please log bug reports on the GNUstep project page
      `https://github.com/gnustep/libs-xcode/issues` or send bug reports
      to <bug-gnustep@gnu.org>.
-
 
      Happy hacking!
 
