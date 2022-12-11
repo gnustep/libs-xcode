@@ -70,6 +70,19 @@
     }
   else if ([buildType isEqualToString: @"parallel"] == YES)
     {
+      NSString *mct = [config objectForKey: @"maxConcurrentOperationCount"];
+
+      if (mct != nil)
+	{
+	  NSUInteger t = [mct intValue];
+
+	  if (t > 0)
+	    {
+	      _cpus = t;
+	      [_queue setMaxConcurrentOperationCount: _cpus];
+	    }
+	}
+      
       xcprintf("\t* Parallel build using %ld CPUs...\n", _cpus);
     }
   
@@ -166,15 +179,15 @@
 		      stringByAppendingString: @" "];
       
       // NSLog(@"name = %@", [fr path]);
-      xcprintf("\tCollecting %s%s%s%s ... ", BOLD, MAGENTA, [outputPath cString], RESET);
+      xcprintf("\t+ Collecting %s%s%s%s ... ", BOLD, MAGENTA, [outputPath cString], RESET);
 
       if ([mgr fileExistsAtPath: outputPath] == YES)
 	{
-	  xcprintf("%s%ssuccess%s\n", BOLD, GREEN, RESET);
+	  xcprintf("%s%sfound%s\n", BOLD, GREEN, RESET);
 	}
       else
 	{
-	  xcprintf("%s%sfailed%s\n", BOLD, RED, RESET);
+	  xcprintf("%s%smissing%s\n", BOLD, RED, RESET);
 	  result = NO;
 	  break;
 	}

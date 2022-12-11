@@ -97,13 +97,15 @@ NSInteger xcsystem(NSString *cmd)
       NSString *body = @"";
       NSString *script = nil;
       NSString *c = [cmd stringByReplacingOccurrencesOfString: @"$(SRCROOT)" withString: @"."];
+      NSUUID *uuid = [NSUUID UUID];
+      
       body = [body stringByAppendingString: [NSString stringWithFormat: @". %@ > /dev/null\n", setupScript]];
       body = [body stringByAppendingString: contextString()];
       body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", c]];
 
       script = [NSString stringWithFormat: scriptFormat, body];
 
-      NSString *filename = [NSString stringWithFormat: @"bt_%lu.sh", [script hash]];
+      NSString *filename = [NSString stringWithFormat: @"bt_%@.sh", [uuid UUIDString]]; // [script hash]];
       NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
       BOOL f = [script writeToFile: scriptCmd
 			atomically: YES
