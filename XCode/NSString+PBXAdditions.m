@@ -318,6 +318,7 @@ static NSString *_cachedRootPath = nil;
 
 - (NSString *) stringByResolvingPath
 {
+#ifndef __MINGW32__
   NSString *expandedPath = [[self stringByExpandingTildeInPath] stringByStandardizingPath];
   const char *cpath = [expandedPath cStringUsingEncoding: NSUTF8StringEncoding];
   char *resolved = NULL;
@@ -330,6 +331,9 @@ static NSString *_cachedRootPath = nil;
     }
 
   return [NSString stringWithCString: returnValue encoding: NSUTF8StringEncoding];
+#else
+  return self;
+#endif
 }
 
 @end
