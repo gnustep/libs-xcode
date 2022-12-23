@@ -532,6 +532,7 @@ static NSLock *lock = nil;
                                       removeDuplicatesAndImplodeWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  removeDuplicatesAndImplodeWithSeparator: @" "];
+      NSString *usePCHFlag = [bs objectForKey: @"GCC_PRECOMPILE_PREFIX_HEADER"];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
       
       buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
@@ -601,13 +602,21 @@ static NSLock *lock = nil;
       headerSearchPaths = [headerSearchPaths stringByReplacingEnvironmentVariablesWithValues];
       
       NSString *configString = [context objectForKey: @"CONFIG_STRING"];
-      NSString *buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ %@ %@ -o %@";
-
+      NSString *buildTemplate = nil;
+      
+      buildTemplate = @"%@ 2> %@ -c %@ %@ %@ %@ %@ %@ %@ -o %@";
       if ([ctarget isEqualToString: @"msvc"])
 	{
 	  buildTemplate = @"%@ 2> %@ -c %@ %@ %@ -D_CRT_SECURE_NO_WARNINGS %@ %@ %@ %@ -o %@";
 	}
       
+      if ([usePCHFlag isEqualToString: @"YES"])
+	{
+	  NSString *pchFile = [bs objectForKey: @"GCC_PREFIX_HEADER"];
+	  
+	  buildTemplate = [buildTemplate stringByAppendingString: [NSString stringWithFormat: @" -include %@", pchFile]];
+	}
+
       NSString *compilePath = bp;
       NSString *subdirHeaderSearchPaths = [self _headerStringForPath: compilePath];
       NSString *parentHeaderSearchPaths = [self _headerStringForPath: [[compilePath pathComponents] firstObject]];
