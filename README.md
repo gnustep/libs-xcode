@@ -40,7 +40,8 @@ other frameworks are available, those will be added.
 1.2.2 Documentation
 ===================
 I am working on a manual as well as gsdocs for the code so that the library is
-properly documented.
+properly documented.  There is a manual for buildtool.plist settings and other 
+information in the Documentation directory of this project.
 
 1.3 How can you help?
 =====================
