@@ -26,7 +26,7 @@
 
 // Local includes
 #import "PBXCoder.h"
-#import "PBXAbstractBuildPhase.h"
+#import "PBXBuildPhase.h"
 
-@interface PBXResourcesBuildPhase : PBXAbstractBuildPhase
+@interface PBXResourcesBuildPhase : PBXBuildPhase
 @end

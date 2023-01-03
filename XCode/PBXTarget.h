@@ -32,7 +32,7 @@
 
 @class PBXProject, GSXCBuildDatabase;
 
-@interface PBXAbstractTarget : NSObject
+@interface PBXTarget : NSObject
 {
   NSMutableArray *_dependencies;
   XCConfigurationList *_buildConfigurationList;

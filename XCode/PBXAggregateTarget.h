@@ -27,7 +27,7 @@
 // Local includes
 #import "PBXCoder.h"
 #import "XCConfigurationList.h"
-#import "PBXAbstractTarget.h"
+#import "PBXTarget.h"
 
-@interface PBXAggregateTarget : PBXAbstractTarget
+@interface PBXAggregateTarget : PBXTarget
 @end

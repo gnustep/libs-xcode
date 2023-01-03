@@ -28,7 +28,7 @@
 #import "PBXCoder.h"
 #import "PBXNativeTarget.h"
 
-@interface PBXAbstractBuildPhase : NSObject
+@interface PBXBuildPhase : NSObject
 {
   NSMutableArray *_files;
   NSString *_buildActionMask;

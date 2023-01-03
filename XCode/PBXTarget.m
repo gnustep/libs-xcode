@@ -24,12 +24,12 @@
 
 #import <stdlib.h>
 #import "PBXCommon.h"
-#import "PBXAbstractTarget.h"
+#import "PBXTarget.h"
 #import "NSString+PBXAdditions.h"
 #import "PBXProject.h"
 #import "GSXCBuildDatabase.h"
 
-@implementation PBXAbstractTarget
+@implementation PBXTarget
 
 - (void) dealloc
 {

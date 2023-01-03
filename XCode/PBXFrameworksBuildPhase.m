@@ -29,7 +29,7 @@
 #import "GSXCBuildContext.h"
 #import "NSArray+Additions.h"
 #import "NSString+PBXAdditions.h"
-#import "PBXAbstractTarget.h"
+#import "PBXTarget.h"
 
 #import "GSXCCommon.h"
 

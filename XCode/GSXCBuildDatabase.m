@@ -229,7 +229,7 @@
 
 @implementation GSXCBuildDatabase : NSObject
 
-+ (instancetype) buildDatabaseWithTarget: (PBXAbstractTarget *)target
++ (instancetype) buildDatabaseWithTarget: (PBXTarget *)target
 {
   return AUTORELEASE( [[self alloc] initWithTarget: target] );
 }
@@ -239,7 +239,7 @@
   GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSEnumerator *en = [[_target buildPhases] objectEnumerator];
-  PBXAbstractBuildPhase *p = nil;
+  PBXBuildPhase *p = nil;
   NSString *buildDir = [ctx objectForKey: @"TARGET_BUILD_DIR"];
 
   if (buildDir == nil)
@@ -297,7 +297,7 @@
   return self;
 }
 
-- (instancetype) initWithTarget: (PBXAbstractTarget *)target
+- (instancetype) initWithTarget: (PBXTarget *)target
 {
   self = [super init];
   if (self != nil)
@@ -320,12 +320,12 @@
   [super dealloc];
 }
 
-- (void) setTarget: (PBXAbstractTarget *)target
+- (void) setTarget: (PBXTarget *)target
 {
   _target = target;
 }
 
-- (PBXAbstractTarget *) target
+- (PBXTarget *) target
 {
   return _target;
 }

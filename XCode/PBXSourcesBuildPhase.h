@@ -24,11 +24,11 @@
 
 // Local includes
 #import "PBXCoder.h"
-#import "PBXAbstractBuildPhase.h"
+#import "PBXBuildPhase.h"
 
 @class NSOperationQueue;
 
-@interface PBXSourcesBuildPhase : PBXAbstractBuildPhase
+@interface PBXSourcesBuildPhase : PBXBuildPhase
 {
   NSOperationQueue *_queue;
   NSUInteger _cpus;

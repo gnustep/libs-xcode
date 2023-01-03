@@ -28,9 +28,9 @@
 #import "PBXCoder.h"
 #import "XCConfigurationList.h"
 #import "PBXFileReference.h"
-#import "PBXAbstractTarget.h"
+#import "PBXTarget.h"
 
-@interface PBXNativeTarget : PBXAbstractTarget
+@interface PBXNativeTarget : PBXTarget
 {
   PBXFileReference *_productReference;
   NSString *_productInstallPath;

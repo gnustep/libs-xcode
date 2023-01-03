@@ -23,9 +23,9 @@
 */
 
 #import "PBXCommon.h"
-#import "PBXAbstractBuildPhase.h"
+#import "PBXBuildPhase.h"
 
-@implementation PBXAbstractBuildPhase
+@implementation PBXBuildPhase
 
 - (void) dealloc
 {

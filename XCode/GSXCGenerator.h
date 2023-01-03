@@ -25,18 +25,18 @@
 #import <Foundation/NSObject.h>
 #import "GSXCCommon.h"
 
-@class PBXAbstractTarget;
+@class PBXTarget;
 
 @interface GSXCGenerator : NSObject
 {
-  PBXAbstractTarget *_target;
+  PBXTarget *_target;
 }
 
-- (instancetype) initWithTarget: (PBXAbstractTarget *)target;
+- (instancetype) initWithTarget: (PBXTarget *)target;
 
-- (PBXAbstractTarget *) target;
+- (PBXTarget *) target;
 
-- (void) setTarget: (PBXAbstractTarget *)target;
+- (void) setTarget: (PBXTarget *)target;
 
 - (BOOL) generate;
 

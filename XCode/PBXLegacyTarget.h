@@ -22,12 +22,12 @@
    Boston, MA 02110 USA.
 */
 
-#import "PBXAbstractTarget.h"
+#import "PBXTarget.h"
 
 @class NSString;
 @class NSMutableArray;
 
-@interface PBXLegacyTarget : PBXAbstractTarget
+@interface PBXLegacyTarget : PBXTarget
 {
   NSString *_buildArgumentsString;
   NSString *_buildToolPath;

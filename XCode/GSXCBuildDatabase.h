@@ -27,7 +27,7 @@
 
 #import <Foundation/NSObject.h>
 
-@class NSMutableDictionary, NSMutableArray, PBXAbstractTarget;
+@class NSMutableDictionary, NSMutableArray, PBXTarget;
 @class NSDate, PBXBuildFile, PBXFileReference;
 
 @interface GSXCRecord : NSObject <NSCopying>
@@ -73,14 +73,14 @@
 @interface GSXCBuildDatabase : NSObject
 {
   NSMutableArray *_records;
-  PBXAbstractTarget *_target;
+  PBXTarget *_target;
 }
 
-+ (instancetype) buildDatabaseWithTarget: (PBXAbstractTarget *)target;
-- (instancetype) initWithTarget: (PBXAbstractTarget *)target;
++ (instancetype) buildDatabaseWithTarget: (PBXTarget *)target;
+- (instancetype) initWithTarget: (PBXTarget *)target;
 
-- (void) setTarget: (PBXAbstractTarget *)t;
-- (PBXAbstractTarget *) target;
+- (void) setTarget: (PBXTarget *)t;
+- (PBXTarget *) target;
 
 - (void) addRecord: (GSXCRecord *)record;
 

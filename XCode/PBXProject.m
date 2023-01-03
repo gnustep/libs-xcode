@@ -29,7 +29,7 @@
 #import "GSXCBuildContext.h"
 #import "NSString+PBXAdditions.h"
 
-#import "PBXAbstractTarget.h"
+#import "PBXTarget.h"
 #import "PBXTargetDependency.h"
 
 #ifndef _MSC_VER
@@ -40,13 +40,13 @@
 #import "setenv.h"
 #endif
 
-@interface PBXAbstractTarget (Private)
+@interface PBXTarget (Private)
 
 - (NSArray *) prerequisiteTargets;
 
 @end
 
-@implementation PBXAbstractTarget (Private)
+@implementation PBXTarget (Private)
 
 - (NSArray *) prerequisiteTargets
 {
@@ -73,7 +73,7 @@
 @interface PBXProject (Private)
 
 - (void) recurseTargetDependencies: (NSArray *)targets
-                         forTarget: (PBXAbstractTarget *)target
+                         forTarget: (PBXTarget *)target
                             result: (NSMutableArray *)result;
 
 - (NSMutableArray *) arrangedTargets;
@@ -83,7 +83,7 @@
 @implementation PBXProject (Private)
 
 - (void) recurseTargetDependencies: (NSArray *)targets
-                         forTarget: (PBXAbstractTarget *)target
+                         forTarget: (PBXTarget *)target
                             result: (NSMutableArray *)result
 {
   if ([targets count] == 0 && target != nil)
@@ -105,7 +105,7 @@
   else
     {
       NSEnumerator *en = [targets objectEnumerator];
-      PBXAbstractTarget *t = nil;
+      PBXTarget *t = nil;
       
       while ((t = [en nextObject]) != nil)
         {

@@ -24,9 +24,9 @@
 
 // Local includes
 #import "PBXCoder.h"
-#import "PBXAbstractBuildPhase.h"
+#import "PBXBuildPhase.h"
 
-@interface PBXCopyFilesBuildPhase : PBXAbstractBuildPhase
+@interface PBXCopyFilesBuildPhase : PBXBuildPhase
 {
   NSString *dstPath;
   NSString *dstSubfolderSpec;

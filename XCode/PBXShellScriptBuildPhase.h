@@ -26,9 +26,9 @@
 
 // Local includes
 #import "PBXCoder.h"
-#import "PBXAbstractBuildPhase.h"
+#import "PBXBuildPhase.h"
 
-@interface PBXShellScriptBuildPhase : PBXAbstractBuildPhase
+@interface PBXShellScriptBuildPhase : PBXBuildPhase
 {
   NSString *_shellPath;
   NSString *_shellScript;
