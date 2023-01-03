@@ -33,8 +33,8 @@ GSXCBuildContext.h \
 GSXCCommon.h \
 NSArray+Additions.h \
 NSString+PBXAdditions.h \
-PBXAbstractBuildPhase.h \
-PBXAbstractTarget.h \
+PBXBuildPhase.h \
+PBXTarget.h \
 PBXApplicationTarget.h \
 PBXAggregateTarget.h \
 PBXBuildFile.h \
@@ -78,8 +78,8 @@ GSXCBuildDatabase.m \
 GSXCBuildContext.m \
 NSArray+Additions.m \
 NSString+PBXAdditions.m \
-PBXAbstractBuildPhase.m \
-PBXAbstractTarget.m \
+PBXBuildPhase.m \
+PBXTarget.m \
 PBXApplicationTarget.m \
 PBXAggregateTarget.m \
 PBXBuildFile.m \
