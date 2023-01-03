@@ -346,7 +346,7 @@
   while ((t = [ten nextObject]) != nil)
     {
       c++;
-      xcprintf("\t* target #%ld: %s%s%s%s\n", c, BOLD, GREEN, [[t name] cString], RESET);
+      xcprintf("\t* Target #%ld: %s%s%s%s\n", c, BOLD, GREEN, [[t name] cString], RESET);
     }
   
   NSDebugLog(@"arrangedTargets = %@", _arrangedTargets);
