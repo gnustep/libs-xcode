@@ -15,11 +15,11 @@ ADDITIONAL_CFLAGS +=
 ADDITIONAL_LDFLAGS +=  
 
 # Additional include directories the compiler should search
-ADDITIONAL_INCLUDE_DIRS += -I../../
+ADDITIONAL_INCLUDE_DIRS += 
 
 # Additional library directories the linker should search
-ADDITIONAL_LIB_DIRS += -L../../XCode/XCode.framework
+ADDITIONAL_LIB_DIRS += 
 
-# Additional TOOL libraries to link
-ADDITIONAL_TOOL_LIBS += -lXCode 
+# Additional GUI libraries to link
+ADDITIONAL_GUI_LIBS += 
 
