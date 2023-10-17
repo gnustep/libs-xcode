@@ -1,3 +1,28 @@
+/* main.m
+ *
+ * Copyright (C) 2023 Free Software Foundation, Inc.
+ *
+ * Author:	Gregory John Casamento <greg.casamento@gmail.com>
+ * Date:	2023
+ *
+ * This file is part of GNUstep.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111
+ * USA.
+ */
+
 /*
    Project: buildtool
 
@@ -8,205 +33,24 @@
 
 #import <Foundation/Foundation.h>
 
-#import <XCode/PBXCoder.h>
-#import <XCode/PBXContainer.h>
-#import <XCode/NSString+PBXAdditions.h>
-#import <XCode/XCWorkspaceParser.h>
-#import <XCode/XCWorkspace.h>
-
 #import "ToolDelegate.h"
-
-NSString *
-findProjectFilename(NSArray *projectDirEntries)
-{
-  NSEnumerator *e = [projectDirEntries objectEnumerator];
-  NSString     *fileName;
-
-  while ((fileName = [e nextObject]))
-    {
-      NSRange range = [fileName rangeOfString:@"._"];
-      if ([[fileName pathExtension] isEqual: @"xcodeproj"] && range.location == NSNotFound)
-	{
-	  return [fileName stringByAppendingPathComponent: @"project.pbxproj"];
-	}
-    }
-
-  return nil;
-}
-
-NSString *
-findWorkspaceFilename(NSArray *projectDirEntries)
-{
-  NSEnumerator *e = [projectDirEntries objectEnumerator];
-  NSString     *fileName;
-
-  while ((fileName = [e nextObject]))
-    {
-      NSRange range = [fileName rangeOfString:@"._"];
-      if ([[fileName pathExtension] isEqual: @"xcworkspace"] && range.location == NSNotFound)
-	{
-	  return [fileName stringByAppendingPathComponent: @"contents.xcworkspacedata"];
-	}
-    }
-
-  return nil;
-}
-
-NSString *
-resolveProjectName(BOOL *isProject)
-{
-  NSString      *fileName = nil;
-  NSFileManager *fileManager = [NSFileManager defaultManager];
-  NSString      *projectDir = [fileManager currentDirectoryPath];
-  NSArray       *projectDirEntries = [fileManager directoryContentsAtPath: projectDir];
-
-  fileName = findWorkspaceFilename(projectDirEntries);
-  if (fileName != nil)
-    {
-      *isProject = NO;
-    }
-  else
-    {
-      *isProject = YES;
-      fileName = findProjectFilename(projectDirEntries);
-    }
-
-  return fileName;
-}
 
 int main(int argc, const char *argv[])
 {
-  NSAutoreleasePool          *pool = [[NSAutoreleasePool alloc] init];
-  NSString                   *fileName = nil;
-  NSString                   *function = nil; 
-  PBXCoder                   *coder = nil;
-  PBXContainer               *container = nil;
-  BOOL                        isProject = NO;
-  NSString                   *argument = @"build";
-  NSProcessInfo              *pi = [NSProcessInfo processInfo];
-  NSMutableArray             *args = [NSMutableArray arrayWithArray: [pi arguments]];
-  NSString                   *parameter = nil;
+  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  extern char **environ;
   
-  setlocale(LC_ALL, "en_US.utf8");
+  // Do our stuff...
+  ToolDelegate *delegate = AUTORELEASE([[ToolDelegate alloc] init]);
 
-  // Get filename
-  if ([args count] > 1)
-    {
-      NSString *ext = [argument pathExtension];
-      
-      argument = [args objectAtIndex: 1]; // consume argument...
-      if ([ext isEqualToString: @"xcworkspace"])
-        {
-          ASSIGN(fileName, argument);
-          [args removeObjectAtIndex: 1];
-          isProject = NO;
-        } 
-      else if ([ext isEqualToString: @"xcodeproj"])
-        {
-          ASSIGN(fileName, argument);
-          [args removeObjectAtIndex: 1];                   
-          isProject = YES;
-        }
+  // Initialize process...
+  [NSProcessInfo initializeWithArguments: (char **)argv
+				   count: argc
+			     environment: environ];
 
-      if (fileName != nil)
-        {
-          fileName = [fileName stringByAppendingPathComponent: 
-                                 @"project.pbxproj"];
-        }
-      else
-        {
-          fileName = resolveProjectName(&isProject);
-        }
-    }
-
-  if ([args count] > 1)
-    {
-      argument = [args objectAtIndex: 1];
-
-      if ([argument isEqualToString: @"build"] ||
-          [argument isEqualToString: @"install"] ||
-          [argument isEqualToString: @"clean"] ||
-          [argument isEqualToString: @"generate"] ||
-	  [argument isEqualToString: @"link"])
-        {
-          ASSIGN(function, argument);
-          [args removeObjectAtIndex: 1];
-        }
-    }
-
-  if ([args count] > 1)
-    {
-      ASSIGN(parameter, [args objectAtIndex: 1]);
-      [args removeObjectAtIndex: 1];
-    }
-  
-  if ([function isEqualToString: @""] || function == nil)
-    {
-      function = @"build"; // default action...
-    }
-
-  // If the paramter is empty then make default to Makefile...
-  if ([function isEqualToString: @"generate"] && parameter == nil)
-    {
-      parameter = @"Makefile";
-    }
-
-  NS_DURING
-    {
-      NSString *display = [function stringByCapitalizingFirstCharacter];
-      SEL operation = NSSelectorFromString(function);
-
-      if (fileName == nil)
-        {
-          fileName = resolveProjectName(&isProject);
-        }
-      
-      if (isProject)
-	{
-	  // Unarchive...
-	  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
-	  container = [coder unarchive];
-          [container setParameter: parameter];
-	  
-	  // Build...
-	  if ([container respondsToSelector: operation])
-	    {        
-	      // build...
-	      puts([[NSString stringWithFormat: @"\033[1;32m**\033[0m Start operation %@", display] cString]); 
-	      if ([container performSelector: operation])
-		{
-		  puts([[NSString stringWithFormat: @"\033[1;32m**\033[0m %@ Succeeded", display] cString]);
-		}
-	      else
-		{
-		  puts([[NSString stringWithFormat: @"\033[1;31m**\033[0m %@ Failed", display] cString]);
-		}
-	    }
-	  else
-	    {
-	      puts([[NSString stringWithFormat: @"Unknown build operation \"%@\" for %@", display, container] cString]);
-	    }
-	}
-      else
-	{
-	  XCWorkspaceParser *p = [XCWorkspaceParser parseWorkspaceFile: fileName];
-	  XCWorkspace *w = [p workspace];
-	  
-	  if ([w respondsToSelector: operation])
-	    {
-	      [w performSelector: operation];
-	    }
-	}
-    }
-  NS_HANDLER
-    {
-      NSLog(@"%@", localException);
-    }
-  NS_ENDHANDLER;
-  
-  // The end...
-  [pool release];
+  // Process the arguments...
+  [delegate process];
+  RELEASE(pool);
 
   return 0;
 }
-
