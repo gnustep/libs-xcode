@@ -33,7 +33,13 @@
 
 @implementation PBXCoder
 
-- (id) initWithContentsOfFile: (NSString *)name
+// Methods for unarchiving a pbxproj file...
++ (instancetype) unarchiveWithProjectFile: (NSString *)name
+{
+  return AUTORELEASE([[self alloc] initWithProjectFile: name]);
+}
+
+- (instancetype) initWithContentsOfFile: (NSString *)name
 {
   if((self = [super init]) != nil)
     {
@@ -58,7 +64,7 @@
   return self;
 }
 
-- (id) initWithProjectFile: (NSString *)name
+- (instancetype) initWithProjectFile: (NSString *)name
 {
   NSString *newName = [name stringByAppendingPathComponent: @"project.pbxproj"];
   return [self initWithContentsOfFile: newName];
@@ -71,7 +77,8 @@
   RELEASE(_dictionary);
   RELEASE(_objects);
   RELEASE(_parents);
-
+  DESTROY(_rootObject);
+  
   [super dealloc];
 }
 
@@ -211,5 +218,21 @@
 - (NSString *) projectRoot
 {
   return _projectRoot;
+}
+
+// Archiving methods...
++ (instancetype) archiveWithRootObject: (id)root
+{
+  return AUTORELEASE([[self alloc] initWithRootObject: root]);
+}
+
+- (instancetype) initWithRootObject: (id)root
+{
+  self = [super init];
+  if (self != nil)
+    {
+      ASSIGN(_rootObject, root);
+    }
+  return self;
 }
 @end

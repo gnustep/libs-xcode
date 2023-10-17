@@ -7,11 +7,14 @@
 */
 
 #import <Foundation/Foundation.h>
+
 #import <XCode/PBXCoder.h>
 #import <XCode/PBXContainer.h>
 #import <XCode/NSString+PBXAdditions.h>
 #import <XCode/XCWorkspaceParser.h>
 #import <XCode/XCWorkspace.h>
+
+#import "ToolDelegate.h"
 
 NSString *
 findProjectFilename(NSArray *projectDirEntries)

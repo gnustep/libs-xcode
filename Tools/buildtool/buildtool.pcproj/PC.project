@@ -8,6 +8,8 @@
 	dist
     );
     "CLASS_FILES" = (
+	"ArgPair.m",
+	"ToolDelegate.m"
     );
     COMPILEROPTIONS = "";
     CPPOPTIONS = "";
@@ -17,6 +19,8 @@
     FRAMEWORKS = (
     );
     "HEADER_FILES" = (
+	"ArgPair.h",
+	"ToolDelegate.h"
     );
     IMAGES = (
     );

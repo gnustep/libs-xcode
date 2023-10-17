@@ -26,17 +26,24 @@
 
 @interface PBXCoder : NSObject
 {
+  // Unarchiving...
   NSString *_fileName;
   NSString *_projectRoot;
   NSMutableDictionary *_dictionary;
   NSMutableDictionary *_objects;
   NSMutableDictionary *_objectCache;
   NSMutableDictionary *_parents;
+
+  // Archiving...
+  id _rootObject;
 }
 
-- (id) initWithProjectFile: (NSString *)name;
+// Unarchiving...
++ (instancetype) unarchiveWithProjectFile: (NSString *)name;
 
-- (id) initWithContentsOfFile: (NSString *)name;
+- (instancetype) initWithProjectFile: (NSString *)name;
+
+- (instancetype) initWithContentsOfFile: (NSString *)name;
 
 - (id) unarchive;
 
@@ -51,4 +58,8 @@
 
 - (NSString *) projectRoot;
 
+// Archiving...
++ (instancetype) archiveWithRootObject: (id)obj;
+
+- (instancetype) initWithRootObject: (id)obj;
 @end

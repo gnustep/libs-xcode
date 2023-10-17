@@ -23,41 +23,22 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # Tool
 #
 VERSION = 0.1
-PACKAGE_NAME = buildtool
-TOOL_NAME = buildtool
-buildtool_TOOL_ICON = 
+PACKAGE_NAME = pc2xc
+TOOL_NAME = pc2xc
+pc2xc_TOOL_ICON = 
 
-
-#
-# Libraries
-#
-buildtool_LIBRARIES_DEPEND_UPON += -lXCode 
 
 #
 # Resource files
 #
-buildtool_RESOURCE_FILES = \
+pc2xc_RESOURCE_FILES = \
 Resources/Version \
 
 
 #
-# Header files
-#
-buildtool_HEADER_FILES = \
-ArgPair.h \
-ToolDelegate.h
-
-#
-# Objective-C Class files
-#
-buildtool_OBJC_FILES = \
-ArgPair.m \
-ToolDelegate.m
-
-#
 # Other sources
 #
-buildtool_OBJC_FILES += \
+pc2xc_OBJC_FILES += \
 main.m 
 
 #

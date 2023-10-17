@@ -20,6 +20,7 @@ PACKAGE_NAME = XCode_Tools
 SUBPROJECTS = \
 	buildtool \
 	pcpg \
+	pc2xc \
 
 #
 # Makefiles
