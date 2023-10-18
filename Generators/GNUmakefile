@@ -13,7 +13,9 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # Generator bundles
 SUBPROJECTS = \
 	Makefile \
-	CMake
+	CMake \
+	ProjectCenter \
+	ProjectBuilder \
 
 #
 # Makefiles
