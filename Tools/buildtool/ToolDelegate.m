@@ -89,11 +89,6 @@ NSString *resolveProjectName(BOOL *isProject)
   return fileName;
 }
 
-void XCPuts(NSString *string)
-{
-  puts([string UTF8String]);
-}
-
 // AppDelegate...
 @implementation ToolDelegate
 

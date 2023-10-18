@@ -36,8 +36,6 @@ NSString *findWorkspaceFilename(NSArray *projectDirEntries);
 
 NSString *resolveProjectName(BOOL *isProject);
 
-void XCPuts(NSString *string);
-
 @interface ToolDelegate : XCAbstractDelegate
 
 // Handling arguments
