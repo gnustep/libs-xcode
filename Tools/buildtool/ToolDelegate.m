@@ -89,7 +89,7 @@ NSString *resolveProjectName(BOOL *isProject)
   return fileName;
 }
 
-// AppDelegate...
+// ToolDelegate...
 @implementation ToolDelegate
 
 - (NSDictionary *) parseArguments
@@ -215,112 +215,115 @@ NSString *resolveProjectName(BOOL *isProject)
       fileName = resolveProjectName(&isProject);
     }
 
+  // If write is defined, then don't build because we are transforming data...
   opt = [args objectForKey: @"--write"];
   if (opt != nil)
     {
       outputFile = [opt value];
     }
-  
-  NSString *function = nil;
-  
-  // Get the current function...
-  opt = [args objectForKey: @"build"];
-  if (opt != nil)
+  else // NOW build...
     {
-      function = @"build";
-    }
-  
-  opt = [args objectForKey: @"install"];
-  if (opt != nil)
-    {
-      function = @"install";
-    }
-  
-  opt = [args objectForKey: @"clean"];
-  if (opt != nil)
-    {
-      function = @"clean";
-    }
-  
-  opt = [args objectForKey: @"generate"];
-  if (opt != nil)
-    {
-      function = @"generate";
-    }
-  
-  opt = [args objectForKey: @"link"];
-  if (opt != nil)
-    {
-      function = @"link";
-    }
-  
-  // if no function is specified, build is the default...
-  if (function == nil)
-    {
-      function = @"build";
-    }
-  
-  // Execute..
-  if (function != nil)
-    {
-      PBXCoder *coder = nil;
-      PBXContainer *container = nil;	  
+      NSString *function = nil;
       
-      NS_DURING
+      // Get the current function...
+      opt = [args objectForKey: @"build"];
+      if (opt != nil)
 	{
-	  NSString *display = [function stringByCapitalizingFirstCharacter];
-	  SEL operation = NSSelectorFromString(function);
+	  function = @"build";
+	}
+      
+      opt = [args objectForKey: @"install"];
+      if (opt != nil)
+	{
+	  function = @"install";
+	}
+      
+      opt = [args objectForKey: @"clean"];
+      if (opt != nil)
+	{
+	  function = @"clean";
+	}
+      
+      opt = [args objectForKey: @"generate"];
+      if (opt != nil)
+	{
+	  function = @"generate";
+	}
+      
+      opt = [args objectForKey: @"link"];
+      if (opt != nil)
+	{
+	  function = @"link";
+	}
+      
+      // if no function is specified, build is the default...
+      if (function == nil)
+	{
+	  function = @"build";
+	}
+      
+      // Execute..
+      if (function != nil)
+	{
+	  PBXCoder *coder = nil;
+	  PBXContainer *container = nil;	  
 	  
-	  if (fileName == nil)
+	  NS_DURING
 	    {
-	      fileName = resolveProjectName(&isProject);
-	    }
-	  
-	  if (isProject)
-	    {
-	      // Unarchive...
-	      coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
-	      container = [coder unarchive];
-	      [container setParameter: parameter];
-
-	      [coder setDelegate: self];
+	      NSString *display = [function stringByCapitalizingFirstCharacter];
+	      SEL operation = NSSelectorFromString(function);
 	      
-	      // Build...
-	      if ([container respondsToSelector: operation])
-		{        
-		  // build...
-		  [self postMessage: @"\033[1;32m**\033[0m Start operation %@", display]; 
-		  if ([container performSelector: operation])
-		    {
-		      [self postMessage: @"\033[1;32m**\033[0m %@ Succeeded", display];
+	      if (fileName == nil)
+		{
+		  fileName = resolveProjectName(&isProject);
+		}
+	      
+	      if (isProject)
+		{
+		  // Unarchive...
+		  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
+		  container = [coder unarchive];
+		  [container setParameter: parameter];
+		  
+		  [coder setDelegate: self];
+		  
+		  // Build...
+		  if ([container respondsToSelector: operation])
+		    {        
+		      // build...
+		      [self postMessage: @"\033[1;32m**\033[0m Start operation %@", display]; 
+		      if ([container performSelector: operation])
+			{
+			  [self postMessage: @"\033[1;32m**\033[0m %@ Succeeded", display];
+			}
+		      else
+			{
+			  [self postMessage: @"\033[1;31m**\033[0m %@ Failed", display];
+			}
 		    }
 		  else
 		    {
-		      [self postMessage: @"\033[1;31m**\033[0m %@ Failed", display];
+		      [self postMessage: @"Unknown build operation \"%@\" for %@", display, container];
 		    }
 		}
 	      else
 		{
-		  [self postMessage: @"Unknown build operation \"%@\" for %@", display, container];
+		  XCWorkspaceParser *p = [XCWorkspaceParser parseWorkspaceFile: fileName];
+		  XCWorkspace *w = [p workspace];
+		  
+		  if ([w respondsToSelector: operation])
+		    {
+		      [w performSelector: operation];
+		    }
 		}
 	    }
-	  else
+	  NS_HANDLER
 	    {
-	      XCWorkspaceParser *p = [XCWorkspaceParser parseWorkspaceFile: fileName];
-	      XCWorkspace *w = [p workspace];
-	      
-	      if ([w respondsToSelector: operation])
-		{
-		  [w performSelector: operation];
-		}
+	      NSLog(@"%@", localException);
 	    }
+	  NS_ENDHANDLER;
 	}
-      NS_HANDLER
-	{
-	  NSLog(@"%@", localException);
-	}
-      NS_ENDHANDLER;
-    }      
+    }
 }
 
 @end
