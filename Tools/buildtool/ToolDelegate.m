@@ -1,4 +1,4 @@
-/* AppDelegate.m
+/* ToolDelegate.m
  *
  * Copyright (C) 2023 Free Software Foundation, Inc.
  *
