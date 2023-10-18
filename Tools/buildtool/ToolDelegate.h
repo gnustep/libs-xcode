@@ -29,8 +29,21 @@
 @class NSMutableArray;
 @class NSSet;
 
+NSString *findProjectFilename(NSArray *projectDirEntries);
+
+NSString *findWorkspaceFilename(NSArray *projectDirEntries);
+
+NSString *resolveProjectName(BOOL *isProject);
+
+void XCPuts(NSString *string);
+
 @interface ToolDelegate : NSObject
 
+// Delegate methods...
+- (void) postMessage: (NSString *)format, ...;
+
+// Handling arguments
+- (NSDictionary *) parseArguments;
 - (void) process;
 
 @end

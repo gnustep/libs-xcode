@@ -89,8 +89,25 @@ NSString *resolveProjectName(BOOL *isProject)
   return fileName;
 }
 
+void XCPuts(NSString *string)
+{
+  puts([string UTF8String]);
+}
+
 // AppDelegate...
 @implementation ToolDelegate
+
+- (void) postMessage: (NSString *)format, ...
+{
+  va_list args;
+  va_start(args, format);
+
+  NSString *formattedString = [[NSString alloc] initWithFormat: format arguments: args];
+  AUTORELEASE(formattedString);
+  va_end(args);
+  
+  XCPuts(formattedString);
+}
 
 - (NSDictionary *) parseArguments
 {
@@ -287,19 +304,19 @@ NSString *resolveProjectName(BOOL *isProject)
 	      if ([container respondsToSelector: operation])
 		{        
 		  // build...
-		  puts([[NSString stringWithFormat: @"\033[1;32m**\033[0m Start operation %@", display] cString]); 
+		  [self postMessage: @"\033[1;32m**\033[0m Start operation %@", display]; 
 		  if ([container performSelector: operation])
 		    {
-		      puts([[NSString stringWithFormat: @"\033[1;32m**\033[0m %@ Succeeded", display] cString]);
+		      [self postMessage: @"\033[1;32m**\033[0m %@ Succeeded", display];
 		    }
 		  else
 		    {
-		      puts([[NSString stringWithFormat: @"\033[1;31m**\033[0m %@ Failed", display] cString]);
+		      [self postMessage: @"\033[1;31m**\033[0m %@ Failed", display];
 		    }
 		}
 	      else
 		{
-		  puts([[NSString stringWithFormat: @"Unknown build operation \"%@\" for %@", display, container] cString]);
+		  [self postMessage: @"Unknown build operation \"%@\" for %@", display, container];
 		}
 	    }
 	  else
