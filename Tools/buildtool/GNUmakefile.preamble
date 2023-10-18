@@ -15,7 +15,7 @@ ADDITIONAL_CFLAGS +=
 ADDITIONAL_LDFLAGS +=  
 
 # Additional include directories the compiler should search
-ADDITIONAL_INCLUDE_DIRS += 
+ADDITIONAL_INCLUDE_DIRS += -I../../
 
 # Additional library directories the linker should search
 ADDITIONAL_LIB_DIRS += -L../../XCode/XCode.framework -L/usr/GNUstep/System/Library/Libraries 

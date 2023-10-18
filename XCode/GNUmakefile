@@ -59,6 +59,7 @@ PBXShellScriptBuildPhase.h \
 PBXSourcesBuildPhase.h \
 PBXTargetDependency.h \
 PBXVariantGroup.h \
+XCAbstractDelegate.h \
 XCBuildConfiguration.h \
 XCConfigurationList.h \
 XCVersionGroup.h \
@@ -104,6 +105,7 @@ PBXShellScriptBuildPhase.m \
 PBXSourcesBuildPhase.m \
 PBXTargetDependency.m \
 PBXVariantGroup.m \
+XCAbstractDelegate.m \
 XCBuildConfiguration.m \
 XCConfigurationList.m \
 XCVersionGroup.m \

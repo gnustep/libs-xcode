@@ -97,18 +97,6 @@ void XCPuts(NSString *string)
 // AppDelegate...
 @implementation ToolDelegate
 
-- (void) postMessage: (NSString *)format, ...
-{
-  va_list args;
-  va_start(args, format);
-
-  NSString *formattedString = [[NSString alloc] initWithFormat: format arguments: args];
-  AUTORELEASE(formattedString);
-  va_end(args);
-  
-  XCPuts(formattedString);
-}
-
 - (NSDictionary *) parseArguments
 {
   NSMutableDictionary *result = [NSMutableDictionary dictionary];
@@ -299,6 +287,8 @@ void XCPuts(NSString *string)
 	      coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
 	      container = [coder unarchive];
 	      [container setParameter: parameter];
+
+	      [coder setDelegate: self];
 	      
 	      // Build...
 	      if ([container respondsToSelector: operation])

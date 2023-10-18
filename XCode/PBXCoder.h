@@ -24,6 +24,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class XCAbstractDelegate;
+
 @interface PBXCoder : NSObject
 {
   // Unarchiving...
@@ -34,6 +36,8 @@
   NSMutableDictionary *_objectCache;
   NSMutableDictionary *_parents;
 
+  XCAbstractDelegate *_delegate;
+  
   // Archiving...
   id _rootObject;
 }
@@ -55,8 +59,11 @@
 
 - (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
                                toObject: (id)object;
-
 - (NSString *) projectRoot;
+
+// Delegate
+- (XCAbstractDelegate *) delegate;
+- (void) setDelegate: (XCAbstractDelegate *)delegate;
 
 // Archiving...
 + (instancetype) archiveWithRootObject: (id)obj;

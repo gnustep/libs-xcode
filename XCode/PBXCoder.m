@@ -33,6 +33,17 @@
 
 @implementation PBXCoder
 
+// Delegate...
+- (XCAbstractDelegate *) delegate
+{
+  return _delegate;
+}
+
+- (void) setDelegate: (XCAbstractDelegate *)delegate
+{
+  _delegate = delegate; // weak since we don't retain the delegate...
+}
+
 // Methods for unarchiving a pbxproj file...
 + (instancetype) unarchiveWithProjectFile: (NSString *)name
 {

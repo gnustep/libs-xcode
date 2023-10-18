@@ -1,4 +1,4 @@
-/* ToolDelegate.m
+/* XCAbstractDelegate.h
  *
  * Copyright (C) 2023 Free Software Foundation, Inc.
  *
@@ -23,25 +23,24 @@
  * USA.
  */
 
-#import <Foundation/NSObject.h>
-#import <XCode/XCAbstractDelegate.h>
+#import <Foundation/NSString.h>
 
-@class NSDictionary;
-@class NSMutableArray;
-@class NSSet;
+#import "XCAbstractDelegate.h"
+#import "xcsystem.h"
 
-NSString *findProjectFilename(NSArray *projectDirEntries);
+@implementation XCAbstractDelegate
 
-NSString *findWorkspaceFilename(NSArray *projectDirEntries);
+- (void) postMessage: (NSString *)format, ...
+{
+  va_list args;
+  va_start(args, format);
 
-NSString *resolveProjectName(BOOL *isProject);
-
-void XCPuts(NSString *string);
-
-@interface ToolDelegate : XCAbstractDelegate
-
-// Handling arguments
-- (NSDictionary *) parseArguments;
-- (void) process;
+  NSString *formattedString = [[NSString alloc] initWithFormat: format arguments: args];
+  AUTORELEASE(formattedString);
+  va_end(args);
+  
+  xcput_string(formattedString);
+}
 
 @end
+
