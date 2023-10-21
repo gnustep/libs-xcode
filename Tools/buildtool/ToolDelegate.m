@@ -97,8 +97,6 @@ NSString *resolveProjectName(BOOL *isProject)
   NSMutableDictionary *result = [NSMutableDictionary dictionary];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSMutableArray *args = [NSMutableArray arrayWithArray: [pi arguments]];
-  // BOOL filenameIsLastObject = NO;
-  // NSString *file = nil;  
   NSEnumerator *en = [args objectEnumerator];
   id obj = nil;
   BOOL parse_val = NO;
@@ -117,10 +115,28 @@ NSString *resolveProjectName(BOOL *isProject)
 	{
 	  pair = AUTORELEASE([[ArgPair alloc] init]);
 
-	  if ([obj isEqualToString: @"--read"])
+	  if ([obj isEqualToString: @"-project"])
 	    {
 	      [pair setArgument: obj];
 	      parse_val = YES;	      
+	    }
+
+	  if ([obj isEqualToString: @"-target"])
+	    {
+	      [pair setArgument: obj];
+	      parse_val = YES;	      
+	    }
+
+	  if ([obj isEqualToString: @"-write"])
+	    {
+	      [pair setArgument: obj];
+	      parse_val = YES;	      
+	    }
+
+	  if ([obj isEqualToString: @"-license"])
+	    {
+	      [pair setArgument: obj];
+	      parse_val = NO;	      
 	    }
 
 	  if ([obj isEqualToString: @"build"])
@@ -179,7 +195,7 @@ NSString *resolveProjectName(BOOL *isProject)
   // Get the file to write out to...
   NSString *outputFile = nil;
   
-  opt = [args objectForKey: @"--read"];
+  opt = [args objectForKey: @"-project"];
   if (opt != nil)
     {
       file = [opt value];
@@ -216,7 +232,7 @@ NSString *resolveProjectName(BOOL *isProject)
     }
 
   // If write is defined, then don't build because we are transforming data...
-  opt = [args objectForKey: @"--write"];
+  opt = [args objectForKey: @"-write"];
   if (opt != nil)
     {
       outputFile = [opt value];
@@ -265,9 +281,6 @@ NSString *resolveProjectName(BOOL *isProject)
       // Execute..
       if (function != nil)
 	{
-	  PBXCoder *coder = nil;
-	  PBXContainer *container = nil;	  
-	  
 	  NS_DURING
 	    {
 	      NSString *display = [function stringByCapitalizingFirstCharacter];
@@ -280,6 +293,9 @@ NSString *resolveProjectName(BOOL *isProject)
 	      
 	      if (isProject)
 		{
+		  PBXCoder *coder = nil;
+		  PBXContainer *container = nil;	  
+	  
 		  // Unarchive...
 		  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
 		  container = [coder unarchive];
