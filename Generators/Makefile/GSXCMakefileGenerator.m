@@ -10,6 +10,20 @@
 
 @implementation GSXCMakefileGenerator
 
+- (NSString *) projectTypeForString: (NSString *)type
+{
+  if ([type isEqualToString: @"APPLICATION"])
+    {
+      return @"APP";
+    }
+  return type;
+}
+
+- (id) objectForString: (NSString *)o
+{
+  return o != nil ? o : @"";
+}
+
 - (BOOL) generate
 {
   BOOL result = YES;
@@ -46,26 +60,29 @@
   makefileString = [makefileString stringByAppendingString: @"#\n\n"];
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n\n"];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_NAME= %@\n\n", [projectType uppercaseString], appName]];
+                                [NSString stringWithFormat: @"%@_NAME= %@\n\n", [self projectTypeForString: [projectType uppercaseString]], appName]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_OBJC_FILES = %@\n\n", appName, objCFilesString]];
+                                [NSString stringWithFormat: @"%@_OBJC_FILES = %@\n\n", appName, [self objectForString: objCFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_C_FILES = %@\n\n", appName, cFilesString]];
+                                [NSString stringWithFormat: @"%@_C_FILES = %@\n\n", appName, [self objectForString: cFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_CPP_FILES = %@\n\n", appName, cppFilesString]];
+                                [NSString stringWithFormat: @"%@_CPP_FILES = %@\n\n", appName, [self objectForString: cppFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_OBJCPP_FILES = %@\n\n", appName, objCPPFilesString]];
+                                [NSString stringWithFormat: @"%@_OBJCPP_FILES = %@\n\n", appName, [self objectForString: objCPPFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_HEADER_FILES = %@\n\n", appName, headerFilesString]];
+                                [NSString stringWithFormat: @"%@_HEADER_FILES = %@\n\n", appName, [self objectForString: headerFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, resourceFilesString]];
+                                [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, [self objectForString: resourceFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"ADDITIONAL_INCLUDE_DIRS += %@\n\n", additionalIncludes]];
+                                [NSString stringWithFormat: @"ADDITIONAL_INCLUDE_DIRS += %@\n\n", [self objectForString: additionalIncludes]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"ADDITIONAL_OBJC_LIBS += %@\n\n", additionalOCflags]];
+                                [NSString stringWithFormat: @"ADDITIONAL_OBJC_LIBS += %@\n\n", [self objectForString: additionalOCflags]]];
+  
+  makefileString = [makefileString stringByAppendingString: @"-include GNUmakefile.preamble\n"];
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n"];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"include $(GNUSTEP_MAKEFILES)/%@.make\n\n", projectType]];
+                                [NSString stringWithFormat: @"include $(GNUSTEP_MAKEFILES)/%@.make\n", projectType]];
+  makefileString = [makefileString stringByAppendingString: @"-include GNUmakefile.postamble\n\n"];
   makefileString = [makefileString stringByAppendingString: @"#\n"];
   makefileString = [makefileString stringByAppendingString: @"# end - generated makefile\n"];
   makefileString = [makefileString stringByAppendingString: @"#\n"];

@@ -231,13 +231,14 @@ NSString *resolveProjectName(BOOL *isProject)
       fileName = resolveProjectName(&isProject);
     }
 
-  // If write is defined, then don't build because we are transforming data...
+  // If any of these other options is defined, then don't build because we are transforming data...
   opt = [args objectForKey: @"-write"];
   if (opt != nil)
     {
       outputFile = [opt value];
     }
-  else // NOW build...
+
+  if (opt == nil)
     {
       NSString *function = nil;
       
