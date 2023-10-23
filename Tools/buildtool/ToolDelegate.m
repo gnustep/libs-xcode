@@ -187,7 +187,7 @@ NSString *resolveProjectName(BOOL *isProject)
   NSDictionary *args = [self parseArguments];
   ArgPair *opt = nil;
   BOOL isProject = NO;
-  NSString *parameter = @"Makefile";
+  NSString *parameter = @"cmake";
   
   NSDebugLog(@"args = %@", args);
   NSDebugLog(@"file = %@", file);
@@ -236,6 +236,7 @@ NSString *resolveProjectName(BOOL *isProject)
   if (opt != nil)
     {
       outputFile = [opt value];
+      parameter = outputFile;
     }
 
   if (opt == nil)
@@ -296,11 +297,13 @@ NSString *resolveProjectName(BOOL *isProject)
 		{
 		  PBXCoder *coder = nil;
 		  PBXContainer *container = nil;	  
-	  
+
 		  // Unarchive...
 		  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
 		  container = [coder unarchive];
 		  [container setParameter: parameter];
+		  
+		  NSLog(@"======= PARAMETER: %@", parameter);
 		  
 		  [coder setDelegate: self];
 		  
