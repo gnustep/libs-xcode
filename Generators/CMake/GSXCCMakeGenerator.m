@@ -38,8 +38,7 @@
   output = [output stringByAppendingString: [NSString stringWithFormat: @"set(CMAKE_CXX_COMPILER \"%@\")\n", cxxcompiler]]; // So should this one...
   output = [output stringByAppendingString: project];
   output = [output stringByAppendingString: @"set(BUILD_FOLDER_NAME \"build\")\n"];
-  output = [output stringByAppendingString: @"set(CMAKE_SOURCE_DIR \".\")\n"];
-  output = [output stringByAppendingString: @"## end header\n\n"];
+  output = [output stringByAppendingString: @"set(CMAKE_SOURCE_DIR \".\")\n\n"];
 
   return output;
 }
@@ -72,8 +71,7 @@
 
   if ([array count] > 0)
     {
-      output = [output stringByAppendingString: @")\n"];
-      output = [output stringByAppendingString: @"# End sources\n\n"];
+      output = [output stringByAppendingString: @")\n\n"];
     }
   
   return output;
@@ -98,8 +96,7 @@
 
   if ([array count] > 0)
     {
-      output = [output stringByAppendingString: @")\n"];
-      output = [output stringByAppendingString: @"# End headers\n\n"];
+      output = [output stringByAppendingString: @")\n\n"];
     }
   
   return output;
@@ -144,8 +141,7 @@
 
   if ([array count] > 0)
     {
-      output = [output stringByAppendingString: @")\n"];
-      output = [output stringByAppendingString: @"# End resources\n\n"];
+      output = [output stringByAppendingString: @")\n\n"];
     }
   
   return output;
@@ -172,7 +168,54 @@
   return output;
 }
 
-- (NSString *) cmakePostamble: (NSString *)appName
+- (NSString *) cmakeIncludeDirsName: (NSString *)appName
+		     includeDirList: (NSArray *)includeArray
+{
+  NSString *output = [NSString stringWithFormat: @"# Include directories\ntarget_include_directories(%@ PRIVATE\n", appName];
+  NSEnumerator *en = [includeArray objectEnumerator];
+  NSString *includeDir = nil;
+
+  while ((includeDir = [en nextObject]) != nil)
+    {
+      output = [output stringByAppendingString: [NSString stringWithFormat: @"  %@\n", includeDir]];
+    }
+
+  // Add canonical directories...
+  NSString *localIncludes = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_LOCAL_HEADERS"];
+  output = [output stringByAppendingString: [NSString stringWithFormat: @"  %@\n", localIncludes]];
+  
+  NSString *systemIncludes = [NSString stringForCommand: @"gnustep-config --variable=GNUSTEP_SYSTEM_HEADERS"];
+  output = [output stringByAppendingString: [NSString stringWithFormat: @"  %@\n", systemIncludes]];
+
+  // Close declaration...
+  output = [output stringByAppendingString: @")\n\n"];
+  
+  return output;
+}
+
+- (NSString *) cmakeTargetCompileOptions: (NSString *)appName
+{
+  NSString *output = [NSString stringWithFormat: @"# Compile options\ntarget_compile_options(%@ PRIVATE ", appName];
+  NSString *command = [NSString stringForCommand: @"gnustep-config --objc-flags"];
+
+  output = [output stringByAppendingString: command];
+  output = [output stringByAppendingString: @")\n\n"];
+  
+  return output;
+}
+
+- (NSString *) cmakeTargetLinkOptions: (NSString *)appName
+{
+  NSString *output = [NSString stringWithFormat: @"# Link options\ntarget_link_options(%@ PRIVATE ", appName];
+  NSString *command = [NSString stringForCommand: @"gnustep-config --gui-libs"];
+
+  output = [output stringByAppendingString: command];
+  output = [output stringByAppendingString: @")\n\n"];
+  
+  return output;
+}
+
+- (NSString *) cmakeDeclareTarget: (NSString *)appName
 {
   NSString *output = @"";
 
@@ -220,6 +263,10 @@
   outputString = [outputString stringByAppendingString:
                                 [self cmakeSourceFiles: [context objectForKey: @"OBJCPP_FILES"]]];
   
+  // Declare target
+  outputString = [outputString stringByAppendingString:
+			      [self cmakeDeclareTarget: appName]];
+
   // Headers
   outputString = [outputString stringByAppendingString:
 				[self cmakeHeaderFiles: [context objectForKey: @"HEADERS"]]];
@@ -227,18 +274,28 @@
   outputString = [outputString stringByAppendingString:
 			       [self cmakeLibraryFiles: [context objectForKey: @"ADDITIONAL_OBJC_LIBS"]
 					   projectType: projectType]];
+  // Include dirs
+  outputString = [outputString stringByAppendingString:
+			    [self cmakeIncludeDirsName: appName
+					includeDirList: nil]];
+  
   // Resources
   outputString = [outputString stringByAppendingString:
 			      [self cmakeResourceFiles: [context objectForKey: @"RESOURCES"]]];
+
+  // Compile options...
+  outputString = [outputString stringByAppendingString:
+		       [self cmakeTargetCompileOptions: appName]];
+
+  // Link options...
+  outputString = [outputString stringByAppendingString:
+			  [self cmakeTargetLinkOptions: appName]];
   
   // Handle project type... this builds the directory structure needed for a given type.
   outputString = [outputString stringByAppendingString:
 				[self cmakeProjectType: projectType
 						  name: appName]];
   
-  // Postamble
-  outputString = [outputString stringByAppendingString:
-				  [self cmakePostamble: appName]];
   
   NSDebugLog(@"output = %@", outputString);
   [outputString writeToFile: outputName atomically: YES];
