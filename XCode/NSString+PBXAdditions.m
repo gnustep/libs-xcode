@@ -306,7 +306,7 @@ static NSString *_cachedRootPath = nil;
   return r;
 }
 
-- (NSString *)stringByTrimmingTrailingCharactersInSet:(NSCharacterSet *)characterSet
+- (NSString *) stringByTrimmingTrailingCharactersInSet:(NSCharacterSet *)characterSet
 {
     NSRange rangeOfLastWantedCharacter = [self rangeOfCharacterFromSet:[characterSet invertedSet]
                                                                options:NSBackwardsSearch];
@@ -334,6 +334,15 @@ static NSString *_cachedRootPath = nil;
 #else
   return self;
 #endif
+}
+
+- (NSString *) lowercaseFirstCharacter
+{
+  // Lowercase the first letter of the class to make the element name
+  NSString *first = [[self substringToIndex: 1] lowercaseString];
+  NSString *rest = [self substringFromIndex: 1];
+  NSString *result = [NSString stringWithFormat: @"%@%@", first, rest];
+  return result;
 }
 
 @end

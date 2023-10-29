@@ -28,7 +28,7 @@
 
 @interface PBXCoder : NSObject
 {
-  // Unarchiving...
+  // Objects...
   NSString *_fileName;
   NSString *_projectRoot;
   NSMutableDictionary *_dictionary;
