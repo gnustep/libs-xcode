@@ -3,17 +3,17 @@
 include $(GNUSTEP_MAKEFILES)/common.make
 
 ADDITIONAL_INCLUDE_DIRS += -I../..
-BUNDLE_NAME = Makefile
+BUNDLE_NAME = makefile
 BUNDLE_EXTENSION = .generator
-Makefile_PRINCIPAL_CLASS = GSXCMakefileGenerator
+makefile_PRINCIPAL_CLASS = GSXCMakefileGenerator
 
-Makefile_HAS_RESOURCE_BUNDLE = yes
+makefile_HAS_RESOURCE_BUNDLE = yes
 
-Makefile_OBJC_FILES = GSXCMakefileGenerator.m 
+makefile_OBJC_FILES = GSXCMakefileGenerator.m 
 
-Makefile_RESOURCE_FILES =
+makefile_RESOURCE_FILES =
 
-Makefile_STANDARD_INSTALL = yes
+makefile_STANDARD_INSTALL = yes
 
 -include GNUmakefile.preamble
 -include GNUmakefile.local

@@ -160,7 +160,7 @@ NSString *resolveProjectName(BOOL *isProject)
 	  if ([obj isEqualToString: @"generate"])
 	    {
 	      [pair setArgument: obj];
-	      parse_val = NO;
+	      parse_val = YES;
 	    }
 
 	  if ([obj isEqualToString: @"link"])
@@ -177,6 +177,12 @@ NSString *resolveProjectName(BOOL *isProject)
 	}
     }
 
+  if (parse_val == YES)
+    {
+      [self postMessage: @"# Parameter is mandatory, non specified."];
+      return nil; // exit if no parameter...
+    }
+
   return result;
 }
 
@@ -187,13 +193,18 @@ NSString *resolveProjectName(BOOL *isProject)
   NSDictionary *args = [self parseArguments];
   ArgPair *opt = nil;
   BOOL isProject = NO;
-  NSString *parameter = @"cmake";
+  NSString *parameter = nil; //  @"cmake";
   
   NSDebugLog(@"args = %@", args);
   NSDebugLog(@"file = %@", file);
   
   // Get the file to write out to...
   NSString *outputFile = nil;
+
+  if (args == nil)
+    {
+      return;
+    }
   
   opt = [args objectForKey: @"-project"];
   if (opt != nil)
@@ -236,7 +247,6 @@ NSString *resolveProjectName(BOOL *isProject)
   if (opt != nil)
     {
       outputFile = [opt value];
-      parameter = outputFile;
     }
 
   if (opt == nil)
@@ -266,6 +276,7 @@ NSString *resolveProjectName(BOOL *isProject)
       if (opt != nil)
 	{
 	  function = @"generate";
+	  ASSIGN(parameter, [opt value]);
 	}
       
       opt = [args objectForKey: @"link"];
@@ -303,7 +314,6 @@ NSString *resolveProjectName(BOOL *isProject)
 		  container = [coder unarchive];
 		  [container setParameter: parameter];
 		  
-		  NSLog(@"======= PARAMETER: %@", parameter);
 		  
 		  [coder setDelegate: self];
 		  
