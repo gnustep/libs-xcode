@@ -436,7 +436,7 @@
   [resources addObject: outputPlist];
   
   [context setObject: resources forKey: @"RESOURCES"];
-  xcputs("=== Resources Build Phase Completed");
+  xcputs("=== Resources Build Phase Completed (generate)");
 
   return result;
 }
