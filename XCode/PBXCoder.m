@@ -232,6 +232,21 @@
   return _projectRoot;
 }
 
+- (NSString *) fileName
+{
+  return _fileName;
+}
+
+- (NSDictionary *) dictionary
+{
+  return _dictionary;
+}
+
+- (NSDictionary *) objects
+{
+  return _objects;
+}
+
 // Archiving methods...
 + (instancetype) archiveWithRootObject: (id)root
 {

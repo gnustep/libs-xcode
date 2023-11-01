@@ -13,8 +13,11 @@
 
 #import <AppKit/AppKit.h>
 
+@class YCodeWindowController;
+
 @interface AppController : NSObject
 {
+  YCodeWindowController *windowController;
 }
 
 + (void)  initialize;

@@ -43,7 +43,8 @@ AppController.h \
 YCodeDocumentController.h \
 YCTreeView.h \
 YCEditorView.h \
-YCInspectorView.h
+YCInspectorView.h \
+YCodeWindowController.h
 
 #
 # Objective-C Class files
@@ -53,7 +54,8 @@ AppController.m \
 YCodeDocumentController.m \
 YCTreeView.m \
 YCEditorView.m \
-YCInspectorView.m
+YCInspectorView.m \
+YCodeWindowController.m
 
 #
 # Other sources

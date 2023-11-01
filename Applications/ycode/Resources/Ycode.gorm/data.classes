@@ -42,6 +42,9 @@
 	Actions = (
 	);
 	Outlets = (
+	    inspectorView,
+	    projectView,
+	    editorView
 	);
 	Super = NSObject;
     };
