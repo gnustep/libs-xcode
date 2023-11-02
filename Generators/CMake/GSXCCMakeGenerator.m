@@ -187,14 +187,24 @@
     }
   else if ([projType isEqualToString: @"bundle"])
     {
-    }
-  else if ([projType isEqualToString: @"library"])
-    {
+      NSString *bundleName = @"bundle"; // this should be set by a variable/setting.
+      output = [output stringByAppendingString:
+			 [NSString stringWithFormat: @"set_target_properties(%@ PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"%@.%@\")\n",
+				   projName, projName, bundleName]];
+      output = [output stringByAppendingString:
+			 [NSString stringWithFormat: @"file(COPY ${GLOBAL_RESOURCES} DESTINATION \"%@.%@/Resources\")\n",
+				   projName, bundleName]];
     }
   else if ([projType isEqualToString: @"framework"])
     {
+      output = [output stringByAppendingString:
+			 [NSString stringWithFormat: @"set_target_properties(%@ PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"%@.framework\")\n",
+				   projName, projName]];
+      output = [output stringByAppendingString:
+			 [NSString stringWithFormat: @"file(COPY ${GLOBAL_RESOURCES} DESTINATION \"%@.framework/Resources\")\n",
+				   projName]];
     }
-  else // if ([projType isEqualToString: @"tool"])
+  else // if ([projType isEqualToString: @"tool"]) // ([projType isEqualToString: @"library"])
     {
       output = [output stringByAppendingString:
 			 [NSString stringWithFormat: @"set_target_properties(%@ PROPERTIES RUNTIME_OUTPUT_DIRECTORY .)\n",
