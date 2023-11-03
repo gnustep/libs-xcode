@@ -764,6 +764,7 @@ static NSLock *lock = nil;
   NSMutableArray *objcFiles = [self _arrayForKey: @"OBJC_FILES"];
   NSMutableArray *cFiles = [self _arrayForKey: @"C_FILES"];
   NSMutableArray *cppFiles = [self _arrayForKey: @"CPP_FILES"];
+  NSMutableArray *hFiles = [self _arrayForKey: @"HEADERS"];
   NSMutableArray *objcppFiles = [self _arrayForKey: @"OBJCPP_FILES"];
   NSMutableArray *addlIncDirs = [self _arrayForKey: @"ADDITIONAL_INCLUDE_DIRS"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
@@ -866,26 +867,31 @@ static NSLock *lock = nil;
   
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
 
-  if([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
+  if ([_lastKnownFileType isEqualToString: @"sourcecode.c.objc"])
     {
       [objcFiles addObject: compilePath];
     }
 
-  if([_lastKnownFileType isEqualToString: @"sourcecode.c.c"])
+  if ([_lastKnownFileType isEqualToString: @"sourcecode.c.c"])
     {
       [cFiles addObject: compilePath];
     }
   
-  if([_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"])
+  if ([_lastKnownFileType isEqualToString: @"sourcecode.cpp.cpp"])
     {
       [cppFiles addObject: compilePath];
     }
 
-  if([_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
+  if ([_lastKnownFileType isEqualToString: @"sourcecode.cpp.objcpp"])
     {
       [objcppFiles addObject: compilePath];
     }
 
+  if ([_lastKnownFileType isEqualToString: @"sourcexode.c.h"])
+    {
+      
+    }
+  
   NSString *includePath = [compilePath stringByDeletingLastPathComponent];
   NSDebugLog(@"%@", includePath);
   if (includePath != nil && [includePath isEqualToString: @""] == NO)
