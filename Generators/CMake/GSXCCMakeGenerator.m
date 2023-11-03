@@ -112,6 +112,17 @@
   if ([array count] > 0)
     {
       output = [output stringByAppendingString: @")\n\n"];
+
+      if ([_projectType isEqualToString: @"library"])
+	{
+	}
+      else if ([_projectType isEqualToString: @"framework"])
+	{
+	  output = [output stringByAppendingString:
+			     [NSString stringWithFormat: @"file(COPY ${HEADERS} DESTINATION \"%@.framework/Headers/%@\")\n",
+				       _projectName, _projectName]];
+	}
+      
       output = [output stringByAppendingString: @"if (EXISTS CMake/headers.cmake)\n  include(CMake/headers.cmake)\nendif()\n\n"];
     }
   
