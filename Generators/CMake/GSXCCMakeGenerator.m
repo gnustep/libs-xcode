@@ -87,7 +87,7 @@
 {
   NSString *output = @"";
   NSEnumerator *en = [array objectEnumerator];
-  NSString *file = nil;
+  id file = nil;
   
   if ([array count] > 0)
     {
@@ -97,9 +97,16 @@
   
   while((file = [en nextObject]) != nil)
     {
-      output = [output stringByAppendingString: [NSString stringWithFormat: @"  ${CMAKE_SOURCE_DIR}/%@\n", file]];
+      if ([file isKindOfClass: [PBXBuildFile class]])
+	{
+	  output = [output stringByAppendingString: [NSString stringWithFormat: @"  ${CMAKE_SOURCE_DIR}/%@\n", [file buildPath]]];
+	}
+      else if ([file isKindOfClass: [NSString class]])
+	{
+	  output = [output stringByAppendingString: [NSString stringWithFormat: @"  ${CMAKE_SOURCE_DIR}/%@\n", file]];	  
+	}
     }
-
+  
   if ([array count] > 0)
     {
       output = [output stringByAppendingString: @")\n\n"];
@@ -369,11 +376,11 @@
 
   // Sometimes the build will generate all of the target makefiles in one place,
   // depending on the version of Xcode the project was created with.
-  //if([[NSFileManager defaultManager] fileExistsAtPath: @"CMakeLists.txt"])
-  //{
+  if([[NSFileManager defaultManager] fileExistsAtPath: @"CMakeLists.txt"])
+    {
       // if it collides with the existing name, add the target name...
-  //  outputName = [outputName stringByAppendingString: [NSString stringWithFormat: @"_%@.txt", projName]];
-  //}
+      outputName = [outputName stringByAppendingString: [NSString stringWithFormat: @"_%@.txt", projName]];
+    }
 
   // Initial setup...
   outputString = [self cmakePreamble: projName];
