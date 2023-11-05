@@ -119,8 +119,8 @@
       else if ([_projectType isEqualToString: @"framework"])
 	{
 	  output = [output stringByAppendingString:
-			     [NSString stringWithFormat: @"file(COPY ${HEADERS} DESTINATION \"%@.framework/Headers/%@\")\n",
-				       _projectName, _projectName]];
+			     [NSString stringWithFormat: @"file(COPY ${HEADERS} DESTINATION \"%@.framework/Headers\")\n",
+				       _projectName]];
 	}
       
       output = [output stringByAppendingString: @"if (EXISTS CMake/headers.cmake)\n  include(CMake/headers.cmake)\nendif()\n\n"];
@@ -365,6 +365,11 @@
 
 - (void) createInfoPlist
 {
+  if ([_projectType isEqualToString: @"tool"])
+    {
+      return;
+    }
+  
   NSString *inputFileName = [NSString stringWithFormat: @"%@Info.plist", _projectName];
   [self processInfoPlistInput: inputFileName output: @"Info-gnustep.plist"];
 }
