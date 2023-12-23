@@ -25,7 +25,9 @@
 #import "XCFileRef.h"
 #import "PBXCoder.h"
 #import "PBXContainer.h"
+#import "PBXProject.h"
 #import "NSString+PBXAdditions.h"
+#import "GSXCBuildContext.h"
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSDebug.h>
@@ -44,9 +46,18 @@
   if (self)
     {
       [self setLocation: nil];
+      [self setWorkspaceLink: nil];
     }
 
   return self;
+}
+
+- (void) dealloc
+{
+  RELEASE(_location);
+  RELEASE(_workspaceLink);
+
+  [super dealloc];
 }
 
 - (NSString *) location
@@ -57,6 +68,64 @@
 - (void) setLocation: (NSString *)loc
 {
   ASSIGN(_location, loc);
+}
+
+- (NSString *) workspaceLink
+{
+  return _workspaceLink;
+}
+
+- (void) setWorkspaceLink: (NSString *)link
+{
+  ASSIGN(_workspaceLink, link);
+}
+
+- (NSString *) workspaceIncludes
+{
+  return _workspaceIncludes;
+}
+
+- (void) setWorkspaceIncludes: (NSString *)inc
+{
+  ASSIGN(_workspaceIncludes, inc);
+}
+
+- (NSArray *) targets
+{
+  NSString *loc = [[self location] stringByReplacingOccurrencesOfString: @"group:" withString: @""];
+  NSString *p = [loc stringByDeletingLastPathComponent];
+  NSArray *result = nil;
+
+  if (p != nil)
+    {
+      PBXCoder *coder = nil;
+      NSFileManager *mgr = [NSFileManager defaultManager];
+      NSString *cwd = [mgr currentDirectoryPath];
+
+      // If the project is in a subdir, go to the subdir...
+      if ([[p pathExtension] isEqualToString: @"xcodeproj"] == NO)
+        {
+          NSString *nwd = [cwd stringByAppendingPathComponent: p];
+          [mgr changeCurrentDirectoryPath: nwd];
+        }
+
+      coder = [[PBXCoder alloc] initWithProjectFile: [loc lastPathComponent]];
+      if (coder != nil)
+        {
+	  PBXContainer *pc = [coder unarchive];
+	  PBXProject *prj = [pc rootObject];
+
+	  result = [[prj targets] copy];
+	}
+
+      // Go back to the original working dir...
+      if ([[p pathExtension] isEqualToString: @"xcodeproj"] == NO)
+        {
+          [mgr changeCurrentDirectoryPath: cwd];
+        }      
+    }
+
+  return result;
 }
 
 - (BOOL) performLegacyOperation: (SEL)sel
@@ -82,10 +151,11 @@
         }
 
       coder = [[PBXCoder alloc] initWithProjectFile: [loc lastPathComponent]];
-
       if (coder != nil)
         {
           PBXContainer *pc = [coder unarchive];
+	  [pc setWorkspaceLink: _workspaceLink];
+	  [pc setWorkspaceIncludes: _workspaceIncludes];
           [pc performSelector: sel];
         }
       

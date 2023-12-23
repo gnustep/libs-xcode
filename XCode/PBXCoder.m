@@ -25,6 +25,7 @@
 #import "PBXCoder.h"
 #import "PBXContainer.h"
 #import "PBXCommon.h"
+#import "NSString+PBXAdditions.h"
 #import "GSXCBuildContext.h"
 
 #ifdef _WIN32

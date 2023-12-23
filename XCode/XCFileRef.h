@@ -29,12 +29,19 @@
 @interface XCFileRef : NSObject
 {
   NSString *_location;
+  NSString *_workspaceLink;
+  NSString *_workspaceIncludes;
 }
 
 + (instancetype) fileRef;
 
+- (NSString *) workspaceIncludes;
+- (void) setWorkspaceIncludes: (NSString *)wsInc;
+- (NSString *) workspaceLink;
+- (void) setWorkspaceLink: (NSString *)wsLink;
 - (NSString *) location;
 - (void) setLocation: (NSString *)loc;
+- (NSArray *) targets;
 
 - (BOOL) build;
 - (BOOL) clean;

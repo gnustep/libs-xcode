@@ -532,6 +532,7 @@ static NSLock *lock = nil;
                                       removeDuplicatesAndImplodeWithSeparator: @" -I"];
       NSString *warningCflags = [[context objectForKey: @"WARNING_CFLAGS"] 
 				  removeDuplicatesAndImplodeWithSeparator: @" "];
+      NSString *wsIncDirs = [context objectForKey: @"WORKSPACE_INCLUDE_LINE"];
       NSString *usePCHFlag = [bs objectForKey: @"GCC_PRECOMPILE_PREFIX_HEADER"];
       NSString *localHeaderPaths = [localHeaderPathsArray implodeArrayWithSeparator:@" -I"];
       
@@ -553,6 +554,13 @@ static NSLock *lock = nil;
 	  warningCflags = @"";
 	}
 
+      // if the workspace has added include dirs
+      if (wsIncDirs != nil)
+	{
+	  headerSearchPaths = [headerSearchPaths stringByAppendingString: wsIncDirs];
+	  NSDebugLog(@"\n\n\nheaders = %@\n\n\n", headerSearchPaths);
+	}
+      
       // If we have derived sources, then get the header directory and add it to the search path....
       if(derivedSrcHeaderDir != nil)
 	{

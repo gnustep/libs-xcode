@@ -35,8 +35,14 @@
 
   NSString *_filename;
   NSString *_parameter;
+  NSString *_workspaceLink;
+  NSString *_workspaceIncludes;
 }
 
+- (void) setWorkspaceIncludes: (NSString *)i;
+- (NSString *) workspaceIncludes;
+- (void) setWorkspaceLink: (NSString *)w;
+- (NSString *) workspaceLink;
 - (void) setParameter: (NSString *)p;
 - (NSString *) parameter;
 - (void) setArchiveVersion: (NSString *)version;

@@ -37,7 +37,29 @@
   RELEASE(objects);
   RELEASE(_filename);
   RELEASE(_parameter);
+  RELEASE(_workspaceLink);
+  RELEASE(_workspaceIncludes);
   [super dealloc];
+}
+
+- (void) setWorkspaceIncludes: (NSString *)i
+{
+  ASSIGN(_workspaceIncludes, i);
+}
+
+- (NSString *) workspaceIncludes
+{
+  return _workspaceIncludes;
+}
+
+- (void) setWorkspaceLink: (NSString *)w
+{
+  ASSIGN(_workspaceLink, w);
+}
+
+- (NSString *) workspaceLink
+{
+  return _workspaceLink;
 }
 
 - (void) setParameter: (NSString *)p
@@ -117,6 +139,7 @@
   NSArray *array = [objects allValues];
   NSEnumerator *en = [array objectEnumerator];
   id obj = nil;
+  NSMutableDictionary *context = [NSMutableDictionary dictionary]; 
 
   while((obj = [en nextObject]) != nil)
     {
@@ -137,7 +160,21 @@
 	}
     }
 
-  [rootObject setContext: [NSDictionary dictionaryWithObject:includeDirs forKey:@"INCLUDE_DIRS"]];
+  // Add to the dictionary...
+  [context setObject: includeDirs forKey:@"INCLUDE_DIRS"];
+
+  // Add workspace info to the context...
+  if (_workspaceLink != nil)
+    {
+      [context setObject: _workspaceLink forKey: @"WORKSPACE_LINK_LINE"];
+    }
+  
+  if (_workspaceIncludes != nil)
+    {
+      [context setObject: _workspaceIncludes forKey: @"WORKSPACE_INCLUDE_LINE"];
+    }
+  
+  [rootObject setContext: context];
 }
 
 - (BOOL) build

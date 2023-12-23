@@ -247,6 +247,7 @@ NSString *resolveProjectName(BOOL *isProject)
   if (opt != nil)
     {
       outputFile = [opt value];
+      NSLog(@"outputFile = %@", outputFile);
     }
 
   if (opt == nil)

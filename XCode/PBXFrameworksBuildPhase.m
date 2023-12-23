@@ -206,7 +206,15 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSDictionary *configDict = [context configForTargetName: [[self target] name]];
   NSArray *linkerPaths = [configDict objectForKey: @"linkerPaths"];
+  NSString *wsLink = [context objectForKey: @"WORKSPACE_LINK_LINE"];
 
+  // If the workspace link string exists, add it...
+  if (wsLink != nil)
+    {
+      linkString = [linkString stringByAppendingString: wsLink];
+      NSDebugLog(@"linkString = %@", linkString);
+    }
+  
   en = [linkerPaths objectEnumerator];
   while((lpath = [en nextObject]) != nil)
     {

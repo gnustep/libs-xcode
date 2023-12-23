@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -24,12 +24,14 @@
 
 #import "XCWorkspace.h"
 #import "XCFileRef.h"
+#import "PBXNativeTarget.h"
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
 #import <Foundation/NSEnumerator.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSXMLDocument.h>
+#import <Foundation/NSFileManager.h>
 
 @implementation XCWorkspace
 
@@ -81,17 +83,78 @@
   ASSIGN(_filename, filename);
 }
 
+- (NSString *) _collectWorkspaceLinkDirs
+{
+  NSString *result = @"";
+  NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
+  XCFileRef *ref = nil;
+  
+  while ((ref = [en nextObject]) != nil)
+    {
+      NSString *loc = [ref location];
+      NSString *projRoot = [loc stringByDeletingLastPathComponent];
+      NSString *buildDir = [projRoot stringByAppendingPathComponent: @"build"];
+
+      NSArray *targets = [ref targets];
+      NSEnumerator *ten = [targets objectEnumerator];
+      PBXNativeTarget *t = nil;
+      
+      while ((t = [ten nextObject]) != nil)
+	{
+	  NSString *name = [t productName];
+	  NSString *targetDir = [[buildDir stringByAppendingPathComponent: name]
+				  stringByReplacingOccurrencesOfString: @"group:" withString: @""];
+	  NSString *prodDir = [targetDir stringByAppendingPathComponent: @"Products"];
+	  result = [result stringByAppendingFormat: @" -L./%@ ", prodDir];
+	}
+    }
+
+  return result;
+}
+
+- (NSString *) _collectWorkspaceIncludeDirs
+{
+  NSString *result = @"";
+  NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
+  XCFileRef *ref = nil;
+  
+  while ((ref = [en nextObject]) != nil)
+    {
+      NSString *loc = [ref location];
+      NSString *projRoot = [loc stringByDeletingLastPathComponent];
+
+      NSArray *targets = [ref targets];
+      NSEnumerator *ten = [targets objectEnumerator];
+      PBXNativeTarget *t = nil;
+      
+      while ((t = [ten nextObject]) != nil)
+	{
+	  NSString *name = [t productName];
+	  NSString *targetDir = [projRoot stringByReplacingOccurrencesOfString: @"group:" withString: @""];
+	  result = [result stringByAppendingFormat: @" -I./%@ ", targetDir];
+	}
+    }
+
+  return result;
+}
+
 - (BOOL) build
 {
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
   NSString *display = [[self filename]
                         stringByDeletingLastPathComponent];
-  
+  NSString *workspaceLinkDirs = [self _collectWorkspaceLinkDirs];
+  NSString *workspaceIncDirs = [self _collectWorkspaceIncludeDirs];
+
+  NSDebugLog(@"\n\n\nWorkspace Include Dirs = %@\n\n\n", workspaceIncDirs);
   printf("+++ Building projects workspace.. %s\n", [display cString]);
   while ((ref = [en nextObject]) != nil)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
+
+      [ref setWorkspaceIncludes: workspaceIncDirs];
+      [ref setWorkspaceLink: workspaceLinkDirs];
       BOOL s = [ref build];
       if (s == NO)
         {
