@@ -207,11 +207,19 @@
   NSDictionary *configDict = [context configForTargetName: [[self target] name]];
   NSArray *linkerPaths = [configDict objectForKey: @"linkerPaths"];
   NSString *wsLink = [context objectForKey: @"WORKSPACE_LINK_LINE"];
-
+  NSString *wsLibs = [context objectForKey: @"WORKSPACE_LIBS_LINE"];
+  
   // If the workspace link string exists, add it...
   if (wsLink != nil)
     {
       linkString = [linkString stringByAppendingString: wsLink];
+      NSDebugLog(@"linkString = %@", linkString);
+    }
+  
+  if (wsLibs != nil)
+    {
+      linkString = [linkString stringByAppendingString: wsLibs];
+      xcprintf("\t* Linking from Workspace: %s\n", [wsLibs cString]);
       NSDebugLog(@"linkString = %@", linkString);
     }
   

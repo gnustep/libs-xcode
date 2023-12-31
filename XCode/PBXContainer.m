@@ -29,6 +29,27 @@
 
 @implementation PBXContainer
 
+- (instancetype) init
+{
+  self = [super init];
+
+  if (self != nil)
+    {
+      archiveVersion = nil;
+      classes = nil;
+      objectVersion = nil;
+      objects = nil;
+      rootObject = nil;
+      _filename = nil;
+      _parameter = nil;
+      _workspaceLink = nil;
+      _workspaceLibs = nil;
+      _workspaceIncludes = nil;
+    }
+
+  return self;
+}
+
 - (void) dealloc
 {
   RELEASE(archiveVersion);
@@ -38,6 +59,7 @@
   RELEASE(_filename);
   RELEASE(_parameter);
   RELEASE(_workspaceLink);
+  RELEASE(_workspaceLibs);
   RELEASE(_workspaceIncludes);
   [super dealloc];
 }
@@ -50,6 +72,16 @@
 - (NSString *) workspaceIncludes
 {
   return _workspaceIncludes;
+}
+
+- (void) setWorkspaceLibs: (NSString *)l
+{
+  ASSIGN(_workspaceLibs, l);
+}
+
+- (NSString *) workspaceLibs
+{
+  return _workspaceLibs;
 }
 
 - (void) setWorkspaceLink: (NSString *)w
@@ -167,6 +199,12 @@
   if (_workspaceLink != nil)
     {
       [context setObject: _workspaceLink forKey: @"WORKSPACE_LINK_LINE"];
+    }
+
+  NSDebugLog(@"\n\n\nlibs = %@\n\n\n", _workspaceLibs);  
+  if (_workspaceLibs != nil)
+    {
+      [context setObject: _workspaceLibs forKey: @"WORKSPACE_LIBS_LINE"];
     }
   
   if (_workspaceIncludes != nil)

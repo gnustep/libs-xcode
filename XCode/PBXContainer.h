@@ -36,23 +36,34 @@
   NSString *_filename;
   NSString *_parameter;
   NSString *_workspaceLink;
+  NSString *_workspaceLibs;
   NSString *_workspaceIncludes;
 }
 
 - (void) setWorkspaceIncludes: (NSString *)i;
 - (NSString *) workspaceIncludes;
+
+- (void) setWorkspaceLibs: (NSString *)l;
+- (NSString *) workspaceLibs;
+
 - (void) setWorkspaceLink: (NSString *)w;
 - (NSString *) workspaceLink;
+
 - (void) setParameter: (NSString *)p;
 - (NSString *) parameter;
+
 - (void) setArchiveVersion: (NSString *)version;
 - (NSString *) archiveVersion;
+
 - (void) setClasses: (NSMutableDictionary *)dict;
 - (NSMutableDictionary *) classes;
+
 - (void) setObjectVersion: (NSString *)version;
 - (NSString *) objectVersion;
+
 - (void) setObjects: (NSMutableDictionary *)dict;
 - (NSMutableDictionary *) objects;
+
 - (void) setRootObject: (id)object;
 - (id) rootObject;
 

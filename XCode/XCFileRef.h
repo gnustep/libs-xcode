@@ -31,6 +31,7 @@
   NSString *_location;
   NSString *_workspaceLink;
   NSString *_workspaceIncludes;
+  NSString *_workspaceLibs;
 }
 
 + (instancetype) fileRef;
@@ -39,6 +40,8 @@
 - (void) setWorkspaceIncludes: (NSString *)wsInc;
 - (NSString *) workspaceLink;
 - (void) setWorkspaceLink: (NSString *)wsLink;
+- (NSString *) workspaceLibs;
+- (void) setWorkspaceLibs: (NSString *)wsLibs;
 - (NSString *) location;
 - (void) setLocation: (NSString *)loc;
 - (NSArray *) targets;

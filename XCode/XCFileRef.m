@@ -80,6 +80,16 @@
   ASSIGN(_workspaceLink, link);
 }
 
+- (NSString *) workspaceLibs
+{
+  return _workspaceLibs;
+}
+
+- (void) setWorkspaceLibs: (NSString *)libs
+{
+  ASSIGN(_workspaceLibs, libs);
+}
+
 - (NSString *) workspaceIncludes
 {
   return _workspaceIncludes;
@@ -156,6 +166,7 @@
           PBXContainer *pc = [coder unarchive];
 	  [pc setWorkspaceLink: _workspaceLink];
 	  [pc setWorkspaceIncludes: _workspaceIncludes];
+	  [pc setWorkspaceLibs: _workspaceLibs];
           [pc performSelector: sel];
         }
       

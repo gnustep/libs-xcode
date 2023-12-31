@@ -25,6 +25,7 @@
 #import "XCWorkspace.h"
 #import "XCFileRef.h"
 #import "PBXNativeTarget.h"
+#import "GSXCCommon.h"
 
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
@@ -112,6 +113,36 @@
   return result;
 }
 
+- (NSString *) _collectWorkspaceLinkLibs
+{
+  NSString *result = @"";
+  NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
+  XCFileRef *ref = nil;
+  
+  while ((ref = [en nextObject]) != nil)
+    {
+      NSArray *targets = [ref targets];
+      NSEnumerator *ten = [targets objectEnumerator];
+      PBXNativeTarget *t = nil;
+      
+      while ((t = [ten nextObject]) != nil)
+	{
+	  NSString *type = [t productType];
+
+	  if ([type isEqualToString: LIBRARY_TYPE]
+	      || [type isEqualToString: DYNAMIC_LIBRARY_TYPE]
+	      || [type isEqualToString: FRAMEWORK_TYPE])
+	    {	     
+	      NSString *name = [t productName];
+	      NSString *libName = [name stringByReplacingOccurrencesOfString: @"group:" withString: @""];
+	      result = [result stringByAppendingFormat: @" -l%@ ", libName];
+	    }
+	}
+    }
+
+  return result;
+}
+
 - (NSString *) _collectWorkspaceIncludeDirs
 {
   NSString *result = @"";
@@ -129,7 +160,6 @@
       
       while ((t = [ten nextObject]) != nil)
 	{
-	  NSString *name = [t productName];
 	  NSString *targetDir = [projRoot stringByReplacingOccurrencesOfString: @"group:" withString: @""];
 	  result = [result stringByAppendingFormat: @" -I./%@ ", targetDir];
 	}
@@ -140,31 +170,35 @@
 
 - (BOOL) build
 {
+  NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init]; // start pool for workspace
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
   NSString *display = [[self filename]
                         stringByDeletingLastPathComponent];
   NSString *workspaceLinkDirs = [self _collectWorkspaceLinkDirs];
   NSString *workspaceIncDirs = [self _collectWorkspaceIncludeDirs];
-
+  NSString *workspaceLinkLibs = [self _collectWorkspaceLinkLibs];
+  
   NSDebugLog(@"\n\n\nWorkspace Include Dirs = %@\n\n\n", workspaceIncDirs);
+  NSDebugLog(@"\n\n\nWorkspace Link Libs = %@\n\n\n", workspaceLinkLibs);
   printf("+++ Building projects workspace.. %s\n", [display cString]);
+
   while ((ref = [en nextObject]) != nil)
     {
-      NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
-
       [ref setWorkspaceIncludes: workspaceIncDirs];
       [ref setWorkspaceLink: workspaceLinkDirs];
+      [ref setWorkspaceLibs: workspaceLinkLibs];
       BOOL s = [ref build];
       if (s == NO)
         {
           printf("+++ Workspace build FAILED %s\n", [display cString]);
           return NO;
         }
-      RELEASE(p);
-    }
+      }
   printf("+++ Workspace build completed... %s\n", [display cString]);
-  
+
+  RELEASE(p);
+
   return YES;
 }
 
