@@ -379,7 +379,7 @@
 
   if (outputFiles == nil)
     {
-      xcputs("\n++++ No object files found. Nothing to link  ++++\n");
+      xcputs("\t++++ No object files found. Nothing to link  ++++\n");
       return YES;
     }
 

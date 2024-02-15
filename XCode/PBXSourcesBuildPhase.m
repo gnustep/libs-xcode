@@ -91,7 +91,7 @@
     {
       if ([db isEmpty])
 	{
-	  xcputs("\n++++ No files modified, nothing to build. ++++\n");
+	  xcputs("\t++++ No files modified, nothing to build. ++++\n");
 	  return YES;
 	}
       
