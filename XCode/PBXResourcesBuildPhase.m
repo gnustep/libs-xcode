@@ -120,6 +120,10 @@
       NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
       NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
+
+      // Copy the item, remove it first to make sure there is no issue.
+      [mgr removeItemAtPath: destPath
+		      error: NULL];
       
       [mgr copyItemAtPath: imagePath
                    toPath: destPath
@@ -261,6 +265,11 @@
 
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
               xcputs([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);
+
+	      // Copy the item, remove it first to make sure there is no issue.	      
+	      [mgr removeItemAtPath: destPath
+			      error: NULL];
+	      
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
@@ -289,6 +298,11 @@
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
       xcputs([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);      
+
+      // Copy the item, remove it first to make sure there is no issue.
+      [mgr removeItemAtPath: destPath
+		      error: NULL];
+      
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
