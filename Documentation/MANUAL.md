@@ -14,12 +14,11 @@ An example property list is here:
     setupScript = "/home/gregc/Scripts/setup_env.sh";
     buildType = "parallel";
     TargetName = {
-             additional = (
-			   "-lgdi32",
-			);   
-			copylibs = YES;
-			ignored = ( "VideoToolbox", "CoreMedia"
-		);
+	additional = (
+		   "-lgdi32",
+	);
+	copylibs = YES;
+	ignored = ( "VideoToolbox", "CoreMedia" );
     }; 
         
     headerPaths = (
