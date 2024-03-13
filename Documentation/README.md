@@ -16,7 +16,7 @@ An example property list is here:
 
     buildType = "parallel";
 
-    # This target name maps to the above...
+    "# Comment" = "This target name maps to the above...";
     msvc = {
 		additional = (
 			   "-lgdi32",
@@ -25,29 +25,21 @@ An example property list is here:
 		ignored = ( "VideoToolbox", "CoreMedia" );
     }; 
         
-    headerPaths = (
-		"/home/gregc/headers"
-    );
+    headerPaths = (	"/home/gregc/headers" );
 
-    remappedSource = {
-		"ASourceFile.m" = "AlternateSourceFile.m";
-    };
+    remappedSource = { "ASourceFile.m" = "AlternateSourceFile.m"; };
 
     skippedTarget = ( "ASkippedTargetName" );
 
-	mapped = {
-	       "curl" = "-llibcurl";
-    };
+	mapped = { "curl" = "-llibcurl"; };
 
     ignored = ( "ssh2" );
 
-    substitutions = { "-lSomeLibrary" = "-lSubtituteLib", "-lAnotherLib" = "" };
+    substitutions = { "-lSomeLibrary" = "-lSubtituteLib"; "-lAnotherLib" = ""; };
 
     additional = ( "-lAdditionalLib" );
 
-    linkerPaths = (
-	    "/c/src/vcpkg/installed/x64-windows/lib",
-    );
+    linkerPaths = ( "/c/src/vcpkg/installed/x64-windows/lib" );
 
     additionalCFlags = "-DSOME_DEFINE";
 }
