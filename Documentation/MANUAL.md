@@ -11,8 +11,11 @@ An example property list is here:
 ```
 {
     target = "msvc";
+
     setupScript = "/home/gregc/Scripts/setup_env.sh";
+
     buildType = "parallel";
+
     TargetName = {
 		additional = (
 			   "-lgdi32",
