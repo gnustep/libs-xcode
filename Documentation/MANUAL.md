@@ -16,7 +16,8 @@ An example property list is here:
 
     buildType = "parallel";
 
-    TargetName = {
+    # This target name maps to the above...
+    msvc = {
 		additional = (
 			   "-lgdi32",
 		);
