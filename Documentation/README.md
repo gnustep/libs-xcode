@@ -11,15 +11,18 @@ An example property list is here:
 ```
 {
     target = "msvc";
+
     setupScript = "/home/gregc/Scripts/setup_env.sh";
+
     buildType = "parallel";
-    TargetName = {
-                additional = (
+
+    # This target name maps to the above...
+    msvc = {
+		additional = (
 			   "-lgdi32",
-			);   
-			copylibs = YES;
-			ignored = ( "VideoToolbox", "CoreMedia"
 		);
+		copylibs = YES;
+		ignored = ( "VideoToolbox", "CoreMedia" );
     }; 
         
     headerPaths = (
