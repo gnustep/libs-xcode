@@ -38,10 +38,15 @@ An example property list is here:
 
     ignored = ( "ssh2" );
 
-    linkerPaths = (
-	    "/c/src/vcpkg/installed/x64-windows/lib",	);
+    substitutions = { "-lSomeLibrary" = "-lSubtituteLib", "-lAnotherLib" = "" };
 
-	additionalCFlags = "-DSOME_DEFINE";
+    additional = ( "-lAdditionalLib" );
+
+    linkerPaths = (
+	    "/c/src/vcpkg/installed/x64-windows/lib",
+    );
+
+    additionalCFlags = "-DSOME_DEFINE";
 }
 ```
 
@@ -70,6 +75,10 @@ The property list contains the following elements, many of which are fairely sel
 * ```linkerPaths``` = An array of additional paths to check when linking.  This adds -L directives to the compiler invocation.
 
 * ```additionalCFlags``` = A string that contains any additional C flags that need to be added.
+
+* ```substitutions``` = An dictionary containing mappings of a library to a given library on your architecture.  Mapping a library to "" is equivalent to adding it to the ```ignored``` array.
+
+* ```additional``` = An array containing more libraries to be added
 
 ### Planned for the future:
 
