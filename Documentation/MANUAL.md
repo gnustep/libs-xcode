@@ -76,7 +76,7 @@ The property list contains the following elements, many of which are fairely sel
 
 * ```additionalCFlags``` = A string that contains any additional C flags that need to be added.
 
-* ```substitutions`` = An dictionary containing mappings of a library to a given library on your architecture.  Mapping a library to "" is equivalent to adding it to the ```ignored``` array.
+* ```substitutions``` = An dictionary containing mappings of a library to a given library on your architecture.  Mapping a library to "" is equivalent to adding it to the ```ignored``` array.
 
 * ```additional``` = An array containing more libraries to be added
 
