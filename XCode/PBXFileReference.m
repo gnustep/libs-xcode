@@ -709,7 +709,7 @@ static NSLock *lock = nil;
 	  
           NSString *errorString = [NSString stringWithContentsOfFile: errorOutPath];
           [NSException raise: NSGenericException
-                      format: @"\n\n%sMessage:%s %@\n", RED, RESET, errorString];
+                      format: @"\n%sCommand:%s %@\n%sMessage:%s %@\n", YELLOW, RESET, buildCommand, RED, RESET, errorString];
         }
 
       // [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
