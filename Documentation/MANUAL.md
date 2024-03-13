@@ -14,7 +14,7 @@ An example property list is here:
     setupScript = "/home/gregc/Scripts/setup_env.sh";
     buildType = "parallel";
     TargetName = {
-                        additional = (
+        additional = (
 			   "-lgdi32",
 			);   
 			copylibs = YES;
