@@ -38,7 +38,7 @@ An example property list is here:
 
     ignored = ( "ssh2" );
 
-    substitutions = { "-lSomeLibrary", "-lSubtituteLib", "-lAnotherLib", "" };
+    substitutions = { "-lSomeLibrary" = "-lSubtituteLib", "-lAnotherLib" = "" };
 
     additional = ( "-lAdditionalLib" );
 
