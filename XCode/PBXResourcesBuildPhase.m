@@ -273,7 +273,7 @@
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
-              if (copyResult == NO)
+              if (copyResult == NO || error != NULL)
                 {
 		  xcputs([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
 		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
