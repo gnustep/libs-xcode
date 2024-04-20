@@ -621,8 +621,10 @@ static NSLock *lock = nil;
       if ([usePCHFlag isEqualToString: @"YES"])
 	{
 	  NSString *pchFile = [bs objectForKey: @"GCC_PREFIX_HEADER"];
-	  
-	  buildTemplate = [buildTemplate stringByAppendingString: [NSString stringWithFormat: @" -include %@", pchFile]];
+	  if (![pchFile isEqualToString: @""] && pchFile != nil)
+	    {
+	      buildTemplate = [buildTemplate stringByAppendingString: [NSString stringWithFormat: @" -include %@", pchFile]];
+	    }
 	}
 
       NSString *compilePath = bp;
