@@ -34,7 +34,6 @@
 {
   PBXFileReference *_productReference;
   NSString *_productInstallPath;
-  NSString *_productType;
   NSMutableArray *_buildRules;
   NSString *_comments;
   NSString *_productSettingsXML;
@@ -46,8 +45,6 @@
 - (void) setProductReference: (PBXFileReference *)object; // setter
 - (NSString *) productInstallPath; // getter
 - (void) setProductInstallPath: (NSString *)object; // setter
-- (NSString *) productType; // getter
-- (void) setProductType: (NSString *)object; // setter
 - (NSMutableArray *) buildRules; // getter
 - (void) setBuildRules: (NSMutableArray *)object; // setter
 - (NSString *) productSettingsXML; // getter

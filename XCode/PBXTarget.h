@@ -39,6 +39,7 @@
   NSString *_productName;
   NSMutableArray *_buildPhases;
   NSString *_name;
+  NSString *_productType;
 
   PBXProject *_project;
   GSXCBuildDatabase *_database;
@@ -65,6 +66,9 @@
 
 - (GSXCBuildDatabase *) database;
 - (void) setDatabase: (GSXCBuildDatabase *)db;
+
+- (NSString *) productType; // getter
+- (void) setProductType: (NSString *)object; // setter
 
 // build
 - (BOOL) build;

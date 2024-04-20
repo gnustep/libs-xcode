@@ -39,7 +39,8 @@
   RELEASE(_buildPhases);
   RELEASE(_name);
   RELEASE(_project);
-
+  RELEASE(_productType);
+  
   [super dealloc];
 }
 
@@ -114,6 +115,16 @@
 - (GSXCBuildDatabase *) database
 {
   return _database;
+}
+
+- (NSString *) productType // getter
+{
+  return _productType;
+}
+
+- (void) setProductType: (NSString *)object; // setter
+{
+  ASSIGN(_productType,object);
 }
 
 - (BOOL) build

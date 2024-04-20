@@ -44,7 +44,6 @@
 {
   RELEASE(_productReference);
   RELEASE(_productInstallPath);
-  RELEASE(_productType);
   RELEASE(_buildRules);
   RELEASE(_comments);
   RELEASE(_productSettingsXML);
@@ -71,16 +70,6 @@
 - (void) setProductInstallPath: (NSString *)object; // setter
 {
   ASSIGN(_productInstallPath,object);
-}
-
-- (NSString *) productType // getter
-{
-  return _productType;
-}
-
-- (void) setProductType: (NSString *)object; // setter
-{
-  ASSIGN(_productType,object);
 }
 
 - (NSMutableArray *) buildRules // getter
