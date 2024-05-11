@@ -122,8 +122,8 @@
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
 
       // Copy the item, remove it first to make sure there is no issue.
-      [mgr removeItemAtPath: destPath
-		      error: NULL];
+      //[mgr removeItemAtPath: destPath
+      //	      error: NULL];
       
       [mgr copyItemAtPath: imagePath
                    toPath: destPath
@@ -264,16 +264,16 @@
                                                              withString: @""];
 
               NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              xcputs([[NSString stringWithFormat: @"\t* Copy child resource %s%@%s --> %s%@%s", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);
+              xcputs([[NSString stringWithFormat: @"\t* Copy child resource \"%s%@%s\" --> \"%s%@%s\"", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);
 
 	      // Copy the item, remove it first to make sure there is no issue.	      
-	      [mgr removeItemAtPath: destPath
-			      error: NULL];
+	      //[mgr removeItemAtPath: destPath
+	      //	      error: NULL];
 	      
               copyResult = [mgr copyItemAtPath: filePath
                                         toPath: destPath
                                          error: &error];
-              if (copyResult == NO || error != NULL)
+              if (error != nil)
                 {
 		  xcputs([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
 		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
@@ -297,19 +297,25 @@
       NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      xcputs([[NSString stringWithFormat: @"\t* Copy resource %s%@%s --> %s%@%s", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);      
+      xcputs([[NSString stringWithFormat: @"\t* Copy resource \"%s%@%s\" --> \"%s%@%s\"", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);      
 
       // Copy the item, remove it first to make sure there is no issue.
-      [mgr removeItemAtPath: destPath
-		      error: NULL];
+      // [mgr removeItemAtPath: destPath
+      //	      error: NULL];
       
       copyResult = [mgr copyItemAtPath: filePath
                                 toPath: destPath
                                  error: &error];
-      if(!copyResult)
+      if(error != nil)
 	{
-	  NSDebugLog(@"\tCopy Error: %@ copying %@ -> %@",[error localizedDescription],
-                     filePath, destPath);
+	  xcputs([[NSString stringWithFormat: @"\t%sCopy Error:%s %@ copying %@ -> %@", RED, RESET, [error localizedDescription],
+			    filePath, destPath] cString]);
+	}
+      
+      copyResult = [mgr fileExistsAtPath: destPath];
+      if (!copyResult)
+	{
+	  NSLog(@"File not copied: %@ -> %@", filePath, destPath);
 	}
     }
 
