@@ -340,49 +340,6 @@
   [self processInfoPlistInput: infoPlist
 		       output: outputPlist];
 
-  /*
-  NSString *baseLproj = [resourcesDir
-			  stringByAppendingPathComponent: @"Base.lproj"];
-  NSArray *farr = [mgr directoryContentsAtPath: baseLproj];
-  NSDebugLog(@"files in dir %@", farr);
-
-  NSEnumerator *fen = [farr objectEnumerator];
-  NSString *f = nil;
-
-  while ((f = [fen nextObject]) != nil)
-    {
-      NSString *src = [baseLproj stringByAppendingPathComponent: f];
-      NSString *dst = [resourcesDir stringByAppendingPathComponent: f];
-      NSError *ferror = nil;
-      [mgr moveItemAtPath: src
-		   toPath: dst
-		    error: &ferror];
-      if (ferror != nil)
-	{
-	  NSLog(@"** Error while copying resource: %@", ferror);
-	}
-    }
-  */
-
-  /*
-  if (den !=nil)
-    {
-      NSString *fn = nil;
-
-      while ((fn = [den nextObject]) != nil)
-	{
-	  [mgr moveItemAtPath: baseLproj
-		       toPath: engLproj
-			error: NULL];
-	  if (error != nil)
-	    {
-	      NSLog(@"** Error while copying resource: %@", error);
-	    }
-	}
-    }
-  */
-
-
   xcputs("=== Resources Build Phase Completed");
   fflush(stdout);
 
