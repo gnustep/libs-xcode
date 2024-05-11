@@ -178,6 +178,35 @@
   return YES;
 }
 
+- (BOOL) copyResourceFrom: (NSString *)srcPath to: (NSString *)dstPath
+{
+  BOOL result = NO;
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  NSError *error = nil;
+  
+  NSDebugLog(@"\t* Copy child %@  -> %@",srcPath,dstPath);
+  
+  // Copy the item
+  result = [mgr copyItemAtPath: srcPath
+			toPath: dstPath
+			 error: &error];
+  if (error != nil)
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Updating resource \"%s%@%s\" --> \"%s%@%s\"", CYAN, srcPath, RESET, GREEN, dstPath, RESET] cString]);
+      [mgr removeItemAtPath: dstPath
+		      error: NULL];
+      
+      result = [mgr copyItemAtPath: srcPath
+			    toPath: dstPath
+			     error: &error];
+    }
+  else
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Copy resource \"%s%@%s\" --> \"%s%@%s\"", CYAN, srcPath, RESET, GREEN, dstPath, RESET] cString]);
+    }
+  return result;
+}
+
 - (BOOL) build
 {
   xcputs("=== Executing Resources Build Phase");
@@ -263,20 +292,10 @@
               destPath = [destPath stringByReplacingOccurrencesOfString: @"en.lproj/"
                                                              withString: @""];
 
-              NSDebugLog(@"\t* Copy child %@  -> %@",filePath,destPath);
-              xcputs([[NSString stringWithFormat: @"\t* Copy child resource \"%s%@%s\" --> \"%s%@%s\"", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);
-
-	      // Copy the item, remove it first to make sure there is no issue.	      
-	      //[mgr removeItemAtPath: destPath
-	      //	      error: NULL];
-	      
-              copyResult = [mgr copyItemAtPath: filePath
-                                        toPath: destPath
-                                         error: &error];
-              if (error != nil)
+	      copyResult = [self copyResourceFrom: filePath to: destPath];
+              if (copyResult == NO)
                 {
-		  xcputs([[NSString stringWithFormat: @"\t** Could not copy file %s%s%@%s", BOLD, RED, filePath, RESET] cString]);
-		  NSDebugLog(@"\tERROR: %@, %@ -> %@", error, filePath, destPath);
+                  NSLog(@"\tFILE COPY ERROR:  %@", destPath);
                 }
             }
           continue;
@@ -294,25 +313,10 @@
 
       NSString *fileName = [filePath lastPathComponent];
       NSString *destPath = [resourcesDir stringByAppendingPathComponent: fileName];
-      NSError *error = nil;
       BOOL copyResult = NO; 
       NSDebugLog(@"\tXXXX Copy %@ -> %@",filePath,destPath);
-      xcputs([[NSString stringWithFormat: @"\t* Copy resource \"%s%@%s\" --> \"%s%@%s\"", CYAN, filePath, RESET, GREEN, destPath, RESET] cString]);      
 
-      // Copy the item, remove it first to make sure there is no issue.
-      // [mgr removeItemAtPath: destPath
-      //	      error: NULL];
-      
-      copyResult = [mgr copyItemAtPath: filePath
-                                toPath: destPath
-                                 error: &error];
-      if(error != nil)
-	{
-	  xcputs([[NSString stringWithFormat: @"\t%sCopy Error:%s %@ copying %@ -> %@", RED, RESET, [error localizedDescription],
-			    filePath, destPath] cString]);
-	}
-      
-      copyResult = [mgr fileExistsAtPath: destPath];
+      copyResult = [self copyResourceFrom: filePath to: destPath];
       if (!copyResult)
 	{
 	  NSLog(@"File not copied: %@ -> %@", filePath, destPath);
