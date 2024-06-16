@@ -1,0 +1,81 @@
+.\"buildtool(1) man page
+.\"put together by Gregory Casamento <greg.casamento@gmail.com>
+.\"Copyright (C) 2005 Free Software Foundation, Inc.
+.\"
+.\"Process this file with
+.\"groff -man -Tascii buildtool.1
+.\"
+.TH BUILDTOOL 1 "June 2024" GNUstep "GNUstep System Manual"
+.SH NAME
+buildtool \- build macOS projects that use xcode
+.SH SYNOPSIS
+.B buildtool
+.RB [clean | generate
+.RB [makefile|cmake|projectbuilder|projectcenter]
+.RB | build]
+.RB [filename]
+.P
+.SH DESCRIPTION
+The 
+.B buildtool
+command allows you to build a project that was originally created with Xcode on macOS.
+.PP
+You can specify the project name if you need to (for example, if there are several .xcodeproj
+files in one directory) if you don't it will use the first one it finds and build with that.
+.I filenames
+The filename for the .xcodeproj is assumed to be in the current working directory.
+.PP
+By default, 
+.B buildtool
+will open
+.I filename
+in the current working directory or, if no filename is specified, will build using the
+first one it finds.
+.PP
+.SH OPTIONS
+.IP "build"
+build the .xcodeproj file in the current directory
+.I filename
+if optionally specified
+.IP "clean"
+clean the current project directory
+.IP "generate"
+generate one of the following... cmake, makefile, projectbuilder, projectcenter types of files.
+if none is specified it will assume you are trying to generate a makefile.
+.PP
+.SH EXAMPLES
+Build the project in the current working directory
+.PP
+.I buildtool
+.PP
+.I buildtool build
+.PP
+.I buildtool build
+.B filename.xcodeproj
+.PP
+To clean the project directory
+.PP
+.I buildtool clean
+.PP
+To generate a gnumakefile, cmake, etc...
+.PP
+.I buildtool generate
+.PP
+You can optionally use any of the types mentioned above after the generate option.
+.SH BUGS
+.B buildtool
+can currently open most project types.  If you find any that it can't handle or get any
+build errors that are specific to buildtool, then please submit bugs to the tracker on
+github for libs-xcode.
+.P
+.SH HISTORY
+.B buildtool
+was written in September of 2012 and is regularly updated.
+.P
+This manual page was first written in June 2023
+.P
+.SH AUTHORS
+.B buildtool 
+was written by Gregory Casamento <greg.casamento@gmail.com>.
+.P
+This man page was written by Gregory Casamento <greg.casamento@gmail.com>
