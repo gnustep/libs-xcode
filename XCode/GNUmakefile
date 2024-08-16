@@ -70,6 +70,7 @@ PBXLegacyTarget.h \
 GSXCBuildOperation.h \
 GSXCBuildDelegate.h \
 GSXCGenerator.h \
+NSObject+KeyExtraction.h \
 
 #
 # Class files
@@ -116,6 +117,7 @@ PBXLegacyTarget.m \
 GSXCBuildOperation.m \
 GSXCGenerator.m \
 xcsystem.m \
+NSObject+KeyExtraction.m \
 
 #
 # Makefiles
