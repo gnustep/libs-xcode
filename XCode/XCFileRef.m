@@ -124,6 +124,8 @@
         {
 	  PBXContainer *pc = [coder unarchive];
 	  PBXProject *prj = [pc rootObject];
+	  PBXCoder *newCoder = [[PBXCoder alloc] initWithRootObject: pc];
+	  NSLog(@"*** Archive = %@", [newCoder archive]);
 
 	  result = [[prj targets] copy];
 	}
@@ -164,6 +166,9 @@
       if (coder != nil)
         {
           PBXContainer *pc = [coder unarchive];
+	  PBXCoder *newCoder = [[PBXCoder alloc] initWithRootObject: pc];
+	  NSLog(@"*** Archive = %@", [newCoder archive]);
+
 	  [pc setWorkspaceLink: _workspaceLink];
 	  [pc setWorkspaceIncludes: _workspaceIncludes];
 	  [pc setWorkspaceLibs: _workspaceLibs];

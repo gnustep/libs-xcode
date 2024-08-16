@@ -97,7 +97,11 @@
 
 - (id) unarchive
 {
-  return [self unarchiveFromDictionary: _dictionary];
+  id r = [self unarchiveFromDictionary: _dictionary];
+  NSLog(@"r = %@", r);
+  PBXCoder *newCoder = [[PBXCoder alloc] initWithRootObject: [r rootObject]];
+  NSLog(@"*** Archive = %@", [newCoder archive]);
+  return r;
 }
 
 - (id) unarchiveFromDictionary: (NSDictionary *)dict

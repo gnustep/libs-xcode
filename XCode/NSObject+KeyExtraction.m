@@ -34,7 +34,7 @@
 		  [arrayValues addObject: [self recursiveKeysAndValuesForObject: item]];
 		}
 	      
-	      keysAndValues[key] = arrayValues;
+	      [keysAndValues setObject: arrayValues forKey: key];
 	    }
 	  else if ([value isKindOfClass:[NSDictionary class]])
 	    {
@@ -45,16 +45,18 @@
 	      while ((dictKey = [en nextObject]) != nil)
 		{
 		  id dictValue = [value objectForKey: dictKey];
-		  dictValues[dictKey] = [self recursiveKeysAndValuesForObject:dictValue];
+		  [dictValues setObject: [self recursiveKeysAndValuesForObject: dictValue]
+				 forKey: dictKey];
 		}
-	      keysAndValues[key] = dictValues;
+	      
+	      [keysAndValues setObject: dictValues forKey: key];
 	    }
 	  else if ([value isKindOfClass: [NSObject class]]
 		   && ![value isKindOfClass: [NSString class]]
 		   && ![value isKindOfClass:[NSNumber class]])
 	    {
-	      [keysAndValues setObject: [self recursiveKeysAndValuesForObject:value]
-	       forKey: key];
+	      [keysAndValues setObject: [self recursiveKeysAndValuesForObject: value]
+	                        forKey: key];
 	    }
 	  else
 	    {

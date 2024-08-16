@@ -70,6 +70,9 @@
 
 - (instancetype) initWithRootObject: (id)obj;
 
+- (id) archive;
+
+- (id) archiveWithRootObject: (id)rootObject;
 
 
 @end
