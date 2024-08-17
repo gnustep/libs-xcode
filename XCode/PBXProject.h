@@ -79,6 +79,7 @@
 - (PBXContainer *) container;
 - (void) setContainer: (PBXContainer *)container;
 - (void) setContext: (NSDictionary *)ctx;
+- (NSDictionary *) context;
 - (void) setFilename: (NSString *)fn;
 - (NSString *) filename;
 

@@ -282,6 +282,11 @@
   ASSIGN(_ctx,context);
 }
 
+- (NSDictionary *) context
+{
+  return _ctx;
+}
+
 - (void) setFilename: (NSString *)fn
 {
   ASSIGN(_filename, fn);

@@ -774,7 +774,7 @@ static NSLock *lock = nil;
   NSMutableArray *objcFiles = [self _arrayForKey: @"OBJC_FILES"];
   NSMutableArray *cFiles = [self _arrayForKey: @"C_FILES"];
   NSMutableArray *cppFiles = [self _arrayForKey: @"CPP_FILES"];
-  NSMutableArray *hFiles = [self _arrayForKey: @"HEADERS"];
+  // NSMutableArray *hFiles = [self _arrayForKey: @"HEADERS"];
   NSMutableArray *objcppFiles = [self _arrayForKey: @"OBJCPP_FILES"];
   NSMutableArray *addlIncDirs = [self _arrayForKey: @"ADDITIONAL_INCLUDE_DIRS"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
@@ -799,7 +799,7 @@ static NSLock *lock = nil;
                             [self buildPath]];
 
 
-  NSArray *localHeaderPathsArray = [self _allSubdirsAtPath:@"."];
+  NSArray *localHeaderPathsArray = [self _allSubdirsAtPath: @"."];
   NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
   buildDir = [buildDir stringByAppendingPathComponent: [self productName]];
   NSString *additionalHeaderDirs = [context objectForKey:@"INCLUDE_DIRS"];
@@ -812,11 +812,13 @@ static NSLock *lock = nil;
 
   NSDebugLog(@"localHeaderPathsArray = %@, %@", localHeaderPathsArray, localHeaderPaths);
   NSDebugLog(@"Build path = %@, %@", [self buildPath], [[self buildPath] stringByDeletingFirstPathComponent]);
+
   // blank these out if they are not used...
   if(headerSearchPaths == nil)
     {
       headerSearchPaths = @"";
     }
+  
   if(localHeaderPaths == nil)
     {
       localHeaderPaths = @"";

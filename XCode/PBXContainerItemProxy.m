@@ -100,9 +100,6 @@
       BOOL result = [container build];
       [mgr changeCurrentDirectoryPath: dir];
 
-      PBXCoder *newCoder = [[PBXCoder alloc] initWithRootObject: container];
-      NSLog(@"*** Archive = %@", [newCoder archive]);
-
       return result;
     }
   else

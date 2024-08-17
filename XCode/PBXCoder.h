@@ -63,6 +63,7 @@
 
 // Delegate
 - (XCAbstractDelegate *) delegate;
+
 - (void) setDelegate: (XCAbstractDelegate *)delegate;
 
 // Archiving...
@@ -73,6 +74,5 @@
 - (id) archive;
 
 - (id) archiveWithRootObject: (id)rootObject;
-
 
 @end
