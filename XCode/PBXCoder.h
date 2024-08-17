@@ -73,6 +73,4 @@
 
 - (id) archive;
 
-- (id) archiveWithRootObject: (id)rootObject;
-
 @end

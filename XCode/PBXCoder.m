@@ -250,9 +250,10 @@
 }
 
 // Archiving methods...
-+ (instancetype) archiveWithRootObject: (id)root
++ (id) archiveWithRootObject: (id)root
 {
-  return AUTORELEASE([[self alloc] initWithRootObject: root]);
+  PBXCoder *coder = [[self alloc] initWithRootObject: root];
+  return [coder archive];
 }
 
 - (instancetype) initWithRootObject: (id)root
@@ -267,68 +268,7 @@
 
 - (id) archive
 {
-  return [self archiveWithRootObject: _rootObject];
-}
-
-- (id) archiveWithRootObject: (id)rootObject
-{
   return [_rootObject allKeysAndValues];
 }
-
-- (NSArray *) _propertiesFromMethods: (NSArray *)methods
-			   forObject: (id)obj
-{
-  NSEnumerator *en = [methods objectEnumerator];
-  NSString *name = nil;
-  NSMutableArray *result = [NSMutableArray array];
-
-  while ((name = [en nextObject]) != nil)
-    {
-      if ([name isEqualToString: @"set"] == NO) // this is the [NSFont set] method... skip...
-	{
-	  NSString *substring = [name substringToIndex: 3];
-	  if ([substring isEqualToString: @"set"])
-	    {
-	      NSString *os = [[name substringFromIndex: 3]
-			       stringByReplacingOccurrencesOfString: @":"
-							 withString: @""];
-	      NSString *s = [os lowercaseFirstCharacter];
-	      NSString *iss = [NSString stringWithFormat: @"is%@", os];
-
-	      if ([methods containsObject: s])
-		{
-		  SEL sel = NSSelectorFromString(s);
-		  if (sel != NULL)
-		    {
-		      NSDebugLog(@"selector = %@",s);
-		      // NSMethodSignature *sig = [obj methodSignatureForSelector: sel];
-
-		      // NSLog(@"methodSignatureForSelector %@ -> %s", s, [sig methodReturnType]);
-		      if ([obj respondsToSelector: sel]) // if it has a normal getting, fine...
-			{
-			  [result addObject: s];
-			}
-		    }
-		}
-	      else if ([methods containsObject: iss])
-		{
-		  NSDebugLog(@"***** retrying with getter name: %@", iss);
-		  SEL sel = NSSelectorFromString(iss);
-		  if (sel != nil)
-		    {
-		      if ([obj respondsToSelector: sel])
-			{
-			  NSDebugLog(@"Added... %@", iss);
-			  [result addObject: iss];
-			}
-		    }
-		}
-	    }
-	}
-    }
-
-  return result;
-}
-
 
 @end

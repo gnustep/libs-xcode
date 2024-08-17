@@ -129,8 +129,8 @@
 		    }
 		  else
 		    {
-		      [keysAndValues setObject: [NSNull null]
-					forKey: key];
+		      // [keysAndValues setObject: [NSNull null]
+		      //      forKey: key];
 		    }
 		}
 	    }
