@@ -73,7 +73,7 @@
   return _showEnvVarsInLog;
 }
 
-- (void) setEnvVarsInLog: (BOOL)flag
+- (void) setShowEnvVarsInLog: (BOOL)flag
 {
   _showEnvVarsInLog = flag;
 }

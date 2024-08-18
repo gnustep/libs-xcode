@@ -33,6 +33,8 @@
 #import "setenv.h"
 #endif
 
+#define DEBUG 1
+
 @implementation PBXCoder
 
 // Delegate...
@@ -97,7 +99,12 @@
 
 - (id) unarchive
 {
-  return [self unarchiveFromDictionary: _dictionary];
+  id r = [self unarchiveFromDictionary: _dictionary];
+  //#ifdef DEBUG
+  PBXCoder *newCoder = [[PBXCoder alloc] initWithRootObject: r];
+  NSLog(@"%@", [[NSString stringWithFormat: @"%@", [newCoder archive]] propertyList]);
+  // #endif  
+  return r;
 }
 
 - (id) unarchiveFromDictionary: (NSDictionary *)dict
