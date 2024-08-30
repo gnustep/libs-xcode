@@ -172,7 +172,7 @@ NSString *resolveProjectName(BOOL *isProject)
 	  if ([obj isEqualToString: @"save"])
 	    {
 	      [pair setArgument: obj];
-	      parse_val = NO;
+	      parse_val = YES;
 	    }
 
 	  // If there is no parameter for the argument, set it anyway...
@@ -296,6 +296,7 @@ NSString *resolveProjectName(BOOL *isProject)
       if (opt != nil)
 	{
 	  function = @"save";
+	  ASSIGN(parameter, [opt value]);
 	}
       
       // if no function is specified, build is the default...

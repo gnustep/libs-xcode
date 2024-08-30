@@ -250,27 +250,45 @@
 {
   NSString *fn = [[self filename]
                    stringByDeletingLastPathComponent];
-  NSString *of = @"output.plist";
-  
+  NSString *of = @"project.pbxproj";
+  NSString *dn = _parameter;
+  NSFileManager *fm = [NSFileManager defaultManager];
+  NSError *error = nil;
+  BOOL created = [fm createDirectoryAtPath: dn
+		     withIntermediateDirectories: YES
+				attributes: NULL
+				     error: &error];
+
   xcprintf("=== Saving Project %s%s%s%s -> %s%s%s\n",
 	   BOLD, YELLOW, [fn cString], RESET, GREEN,
-	   [of cString], RESET);
-  
-  PBXCoder *coder = [[PBXCoder alloc] initWithRootObject: self];
-  NSDictionary *dictionary = [coder archive];
-  BOOL result = [dictionary writeToFile: of atomically: YES];
-  if (result)
+	   [dn cString], RESET);
+
+  if (created && !error)
     {
-      xcprintf("=== Done Saving Project %s%s%s%s\n",
-	       BOLD, GREEN, [of cString], RESET);
+      PBXCoder *coder = [[PBXCoder alloc] initWithRootObject: self];
+      NSDictionary *dictionary = [coder archive];
+      NSString *path = [dn stringByAppendingPathComponent: of];
+      BOOL result = [dictionary writeToFile: path atomically: YES];
+
+      if (result)
+	{
+	  xcprintf("=== Done Saving Project %s%s%s%s\n",
+		   BOLD, GREEN, [dn cString], RESET);
+	}
+      else
+	{
+	  xcprintf("=== Error Saving Project %s%s%s%s\n",
+		   BOLD, GREEN, [dn cString], RESET);
+	}
+      
+      return result;
     }
   else
     {
-      xcprintf("=== Error Saving Project %s%s%s%s\n",
-	       BOLD, GREEN, [of cString], RESET);
+      xcprintf("=== Error creating directory %s", dn);
     }
   
-  return result;
+  return NO;
 }
 
 @end
