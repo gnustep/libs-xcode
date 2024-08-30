@@ -76,5 +76,6 @@
 - (BOOL) install;
 - (BOOL) generate;
 - (BOOL) link;
+- (BOOL) save;
 
 @end

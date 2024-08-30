@@ -50,4 +50,5 @@
 - (BOOL) build;
 - (BOOL) generate;
 - (BOOL) clean;
+- (BOOL) save;
 @end

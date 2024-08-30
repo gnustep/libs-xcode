@@ -246,4 +246,31 @@
   return [rootObject link];
 }
 
+- (BOOL) save
+{
+  NSString *fn = [[self filename]
+                   stringByDeletingLastPathComponent];
+  NSString *of = @"output.plist";
+  
+  xcprintf("=== Saving Project %s%s%s%s -> %s%s%s\n",
+	   BOLD, YELLOW, [fn cString], RESET, GREEN,
+	   [of cString], RESET);
+  
+  PBXCoder *coder = [[PBXCoder alloc] initWithRootObject: self];
+  NSDictionary *dictionary = [coder archive];
+  BOOL result = [dictionary writeToFile: of atomically: YES];
+  if (result)
+    {
+      xcprintf("=== Done Saving Project %s%s%s%s\n",
+	       BOLD, GREEN, [of cString], RESET);
+    }
+  else
+    {
+      xcprintf("=== Error Saving Project %s%s%s%s\n",
+	       BOLD, GREEN, [of cString], RESET);
+    }
+  
+  return result;
+}
+
 @end

@@ -591,4 +591,9 @@
   return result;
 }
 
+- (BOOL) save
+{
+  return YES;
+}
+
 @end
