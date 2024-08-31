@@ -21,7 +21,7 @@ ADDITIONAL_INCLUDE_DIRS +=
 ADDITIONAL_LIB_DIRS += 
 
 # Additional libraries to link
-ADDITIONAL_GUI_LIBS += -lbsd
+ADDITIONAL_GUI_LIBS +=
 
 ifeq ($(GNUSTEP_TARGET_OS),mingw32)
 XCode_OBJC_FILES += setenv.m

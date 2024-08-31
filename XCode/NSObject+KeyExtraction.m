@@ -32,6 +32,7 @@
 // Function to generate a 24-character GUID (uppercase, alphanumeric, no dashes)
 NSString *generateGUID()
 {
+  /*
   NSString *characters = @"ABCDEF0123456789";
   NSMutableString *guid = [NSMutableString stringWithCapacity:24];
   
@@ -41,8 +42,9 @@ NSString *generateGUID()
       unichar c = [characters characterAtIndex:index];
       [guid appendFormat:@"%C", c];
     }
-  
-  return guid;
+  */
+  return [[NSUUID UUID] UUIDString];
+  // return guid;
 }
 
 
