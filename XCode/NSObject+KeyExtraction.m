@@ -45,6 +45,42 @@ NSString *generateGUID()
   return guid;
 }
 
+
+id moveContainerProperties(NSDictionary *input)
+{
+  NSMutableDictionary *result =
+    [NSMutableDictionary dictionaryWithDictionary: input];
+  NSDictionary *objects = [result objectForKey: @"objects"];
+  NSEnumerator *en = [objects keyEnumerator];
+  id key = nil;
+  id keyToRemove = nil;
+  
+  while ((key = [en nextObject]) != nil)
+    {
+      id d = [objects objectForKey: key];
+      
+      if ([d isKindOfClass: [NSDictionary class]])
+	{
+	  NSString *cn = [d objectForKey: @"isa"];
+
+	  if ([cn isEqualToString: @"PBXContainer"])
+	    {
+	      // [result addEntriesFromDictionary: d];
+	      // [result removeObjectForKey: @"isa"];
+	      // keyToRemove = key;
+	      NSLog(@"obj = %@", d);
+	    }
+	}
+    }
+
+  if (keyToRemove != nil)
+    {
+      [result removeObjectForKey: keyToRemove];
+    }
+  
+  return result;
+}
+
 // Recursive function to flatten the property list
 id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString **rootObjectGUID)
 {
@@ -274,7 +310,11 @@ NSDictionary *flattenPlist(id propertyList)
 
 - (NSDictionary *) allKeysAndValues
 {
-  return flattenPlist([self recursiveKeysAndValuesForObject: self]);
+  id r = flattenPlist([self recursiveKeysAndValuesForObject: self]);
+  NSMutableDictionary *d = [NSMutableDictionary dictionaryWithDictionary: r];
+  id result = moveContainerProperties(d);
+
+  return result;
 }
 
 @end
