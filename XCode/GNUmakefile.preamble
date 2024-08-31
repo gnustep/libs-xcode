@@ -21,7 +21,7 @@ ADDITIONAL_INCLUDE_DIRS +=
 ADDITIONAL_LIB_DIRS += 
 
 # Additional TOOL libraries to link
-ADDITIONAL_TOOL_LIBS += 
+ADDITIONAL_TOOL_LIBS += -lbsd
 
 ifeq ($(GNUSTEP_TARGET_OS),mingw32)
 XCode_OBJC_FILES += setenv.m
@@ -30,5 +30,4 @@ XCode_OBJC_FILES += setenv.m
 else ifeq ($(GNUSTEP_TARGET_OS),windows)
 XCode_OBJC_FILES += setenv.m
 endif
-
 
