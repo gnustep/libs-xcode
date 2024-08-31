@@ -64,7 +64,8 @@
 + (NSArray *) skippedKeys
 {
   return [NSArray arrayWithObjects: @"context", @"buildConfigurationList", @"buildConfigurations",
-		  @"array", @"valueforKey", @"objectatIndexedSubscript", nil];
+		  @"array", @"valueforKey", @"objectatIndexedSubscript", @"totalFiles",
+		  @"filename", @"currentFile", nil];
 }
 
 - (NSArray *) keysForObject: (id)object
@@ -154,6 +155,8 @@
 		{
 		  if (value)
 		    {
+		      [keysAndValues setObject: NSStringFromClass([object class])
+					forKey: @"isa"];
 		      [keysAndValues setObject: value
 					forKey: key];
 		    }
