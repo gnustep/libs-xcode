@@ -21,4 +21,5 @@ ADDITIONAL_INCLUDE_DIRS += -I../../
 ADDITIONAL_LIB_DIRS += -L../../XCode/XCode.framework -L/usr/GNUstep/System/Library/Libraries 
 
 # Additional TOOL libraries to link
-ADDITIONAL_TOOL_LIBS += -lXCode -lbsd
+ADDITIONAL_TOOL_LIBS += -lXCode
+
