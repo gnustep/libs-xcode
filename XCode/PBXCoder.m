@@ -270,7 +270,8 @@
 
 - (id) archive
 {
-  return [_rootObject allKeysAndValues];
+  NSDictionary *plist = [_rootObject allKeysAndValues]; // referentialArchive];
+  return plist; //  [self _createReferenceBasedArchive: plist];
 }
 
 @end

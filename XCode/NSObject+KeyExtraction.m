@@ -188,4 +188,18 @@
   return [self recursiveKeysAndValuesForObject: self];
 }
 
+- (NSDictionary *) _recursivelyCreateReferentialArchive: (id)obj
+{
+}
+
+- (NSDictionary *) referentialArchive: (NSDictionary *)dict
+{
+  return dict;
+}
+
+- (NSDictionary *) referentialArchive
+{
+  return [self referentialArchive: [self allKeysAndValues]];
+}
+
 @end

@@ -29,6 +29,7 @@
 + (NSArray *) skippedKeys;
 - (NSArray *) keysForObject: (id)object;
 - (NSDictionary *) recursiveKeysAndValuesForObject: (id)object;
+- (NSDictionary *) referentialArchive;
 - (NSDictionary *) allKeysAndValues;
 
 @end

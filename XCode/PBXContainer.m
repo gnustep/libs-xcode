@@ -263,6 +263,10 @@
 	   BOLD, YELLOW, [fn cString], RESET, GREEN,
 	   [dn cString], RESET);
 
+  // Clear the cached objects dictionary;
+  [self setObjects: [NSMutableDictionary dictionary]];
+
+  // Save the project...
   if (created && !error)
     {
       PBXCoder *coder = [[PBXCoder alloc] initWithRootObject: self];
