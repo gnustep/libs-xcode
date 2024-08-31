@@ -20,8 +20,8 @@ ADDITIONAL_INCLUDE_DIRS +=
 # Additional library directories the linker should search
 ADDITIONAL_LIB_DIRS += 
 
-# Additional TOOL libraries to link
-ADDITIONAL_TOOL_LIBS += -lbsd
+# Additional libraries to link
+ADDITIONAL_GUI_LIBS += -lbsd
 
 ifeq ($(GNUSTEP_TARGET_OS),mingw32)
 XCode_OBJC_FILES += setenv.m
