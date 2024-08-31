@@ -39,8 +39,9 @@
   unsigned int methodCount = 0;
   Method *methods = class_copyMethodList([object class], &methodCount);
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: methodCount];
-    
-  for (unsigned int i = 0; i < methodCount; i++)
+  NSUInteger i = 0;
+
+  for (i = 0; i < methodCount; i++)
     {
       Method method = methods[i];
       const char *selName = sel_getName(method_getName(method));
