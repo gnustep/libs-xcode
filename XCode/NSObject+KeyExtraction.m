@@ -112,9 +112,13 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
 	  
 	  // Add the dictionary to the objects array with its GUID
 	  NSMutableDictionary *flattenedDict = [NSMutableDictionary dictionary];
-	  for (id key in dict)
+	  NSEnumerator *en = [dict keyEnumerator];
+	  id key = nil;
+	  
+	  while ((key = [en nextObject]) != nil)
 	    {
-	      flattenedDict[key] = flattenPropertyList([dict objectForKey:key], objects, rootObjectGUID);
+	      [flattenedDict setObject: flattenPropertyList([dict objectForKey:key], objects, rootObjectGUID)
+				forKey: key];
 	    }
 	  [objects setObject:flattenedDict forKey:guid];
 	  
@@ -125,9 +129,13 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
 	{
 	  // Recursively process each value in the dictionary
 	  NSMutableDictionary *processedDict = [NSMutableDictionary dictionary];
-	  for (id key in dict)
+	  NSEnumerator *en = [dict keyEnumerator];
+	  id key = nil;
+
+	  while ((key = [en nextObject]) != nil)
 	    {
-	      processedDict[key] = flattenPropertyList([dict objectForKey:key], objects, rootObjectGUID);
+	      [processedDict setObject: flattenPropertyList([dict objectForKey:key], objects, rootObjectGUID)
+				forKey: key];
 	    }
 	  return processedDict;
 	}
@@ -136,7 +144,10 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
     {
       // Recursively process each item in the array
       NSMutableArray *processedArray = [NSMutableArray array];
-      for (id item in propertyList)
+      NSEnumerator *en = [propertyList objectEnumerator];
+      id item = nil;
+      
+      while((item = [en nextObject]) != nil)
 	{
 	  [processedArray addObject:flattenPropertyList(item, objects, rootObjectGUID)];
 	}
