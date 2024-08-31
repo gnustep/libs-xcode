@@ -200,7 +200,7 @@ NSDictionary *flattenPlist(id propertyList)
 {
   return [NSArray arrayWithObjects: @"context", @"buildConfigurationList", @"buildConfigurations",
 		  @"array", @"valueforKey", @"objectatIndexedSubscript", @"totalFiles",
-		  @"filename", @"currentFile", @"parameter", nil];
+		  @"filename", @"currentFile", @"parameter", @"showEnvVarsInLog", nil];
 }
 
 - (NSArray *) keysForObject: (id)object
