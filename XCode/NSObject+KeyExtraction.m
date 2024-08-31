@@ -50,11 +50,14 @@ id moveContainerProperties(NSDictionary *input)
 {
   NSMutableDictionary *result =
     [NSMutableDictionary dictionaryWithDictionary: input];
-  NSDictionary *objects = [result objectForKey: @"objects"];
+  NSMutableDictionary *objects =
+    [NSMutableDictionary dictionaryWithDictionary:
+			     [result objectForKey: @"objects"]];
   NSEnumerator *en = [objects keyEnumerator];
   id key = nil;
-  id keyToRemove = nil;
-  
+  id keyToChange = nil;
+
+  // NSLog(@"result = %@", result);
   while ((key = [en nextObject]) != nil)
     {
       id d = [objects objectForKey: key];
@@ -65,17 +68,24 @@ id moveContainerProperties(NSDictionary *input)
 
 	  if ([cn isEqualToString: @"PBXContainer"])
 	    {
-	      // [result addEntriesFromDictionary: d];
-	      // [result removeObjectForKey: @"isa"];
-	      // keyToRemove = key;
-	      NSLog(@"obj = %@", d);
+	      keyToChange = key;
+	      break;
 	    }
 	}
     }
 
-  if (keyToRemove != nil)
+  // Update objects...
+  if (keyToChange != nil)
     {
-      [result removeObjectForKey: keyToRemove];
+      NSMutableDictionary *containerDict = [objects objectForKey: keyToChange];
+
+      [containerDict removeObjectForKey: @"rootObject"];
+      [containerDict removeObjectForKey: @"isa"];
+      [containerDict removeObjectForKey: @"objects"];
+      
+      [objects removeObjectForKey: keyToChange];
+      [result addEntriesFromDictionary: containerDict];
+      [result setObject: objects forKey: @"objects"];
     }
   
   return result;
@@ -190,7 +200,7 @@ NSDictionary *flattenPlist(id propertyList)
 {
   return [NSArray arrayWithObjects: @"context", @"buildConfigurationList", @"buildConfigurations",
 		  @"array", @"valueforKey", @"objectatIndexedSubscript", @"totalFiles",
-		  @"filename", @"currentFile", nil];
+		  @"filename", @"currentFile", @"parameter", nil];
 }
 
 - (NSArray *) keysForObject: (id)object
