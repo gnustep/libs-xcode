@@ -32,22 +32,10 @@
 // Function to generate a 24-character GUID (uppercase, alphanumeric, no dashes)
 NSString *generateGUID()
 {
-  /*
-  NSString *characters = @"ABCDEF0123456789";
-  NSMutableString *guid = [NSMutableString stringWithCapacity:24];
-  
-  for (int i = 0; i < 24; i++)
-    {
-      NSUInteger index = arc4random_uniform((uint32_t)[characters length]);
-      unichar c = [characters characterAtIndex:index];
-      [guid appendFormat:@"%C", c];
-    }
-  */
   return [[NSUUID UUID] UUIDString];
-  // return guid;
 }
 
-
+// Move PBXContainer information to the top level dictionary...
 id moveContainerProperties(NSDictionary *input)
 {
   NSMutableDictionary *result =
@@ -167,12 +155,19 @@ NSDictionary *flattenPlist(id propertyList)
 {
   NSMutableDictionary *objects = [NSMutableDictionary dictionary];
   NSString *rootObjectGUID = nil;
+  NSMutableDictionary *results = [NSMutableDictionary dictionary];
   
   // Flatten the property list and find the rootObjectGUID
   flattenPropertyList(propertyList, objects, &rootObjectGUID);
+
+  // Put the results together...
+  [results setObject: rootObjectGUID
+	      forKey: @"rootObject"];
+  [results setObject: objects
+	      forKey: @"objects"];
   
   // Return the final structure
-  return @{@"rootObject": rootObjectGUID, @"objects": objects};
+  return results;
 }
 
 @implementation NSObject (KeyExtraction)
