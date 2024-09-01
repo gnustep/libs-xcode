@@ -3,19 +3,19 @@
 
    Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
-   
+
    This file is part of the GNUstep XCode Library
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 2 of the License, or (at your option) any later version.
-   
+
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
-   
+
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
@@ -62,19 +62,19 @@
 
       ASSIGN(_fileName, name);
       ASSIGN(_projectRoot,
-             [[_fileName stringByDeletingLastPathComponent]
-               stringByDeletingLastPathComponent]);
+	     [[_fileName stringByDeletingLastPathComponent]
+	       stringByDeletingLastPathComponent]);
       ASSIGN(_dictionary,
-             [NSMutableDictionary dictionaryWithContentsOfFile: _fileName]);
+	     [NSMutableDictionary dictionaryWithContentsOfFile: _fileName]);
       ASSIGN(_objects, [_dictionary objectForKey: @"objects"]);
-      
+
       _parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
       [[GSXCBuildContext sharedBuildContext]
-        setObject: _objects forKey: @"objects"];
+	setObject: _objects forKey: @"objects"];
 
-      setenv("PROJECT_DIR","./",1);      
-      setenv("PROJECT_ROOT","./",1);      
-      setenv("SRCROOT","./",1);      
+      setenv("PROJECT_DIR","./",1);
+      setenv("PROJECT_ROOT","./",1);
+      setenv("SRCROOT","./",1);
     }
   return self;
 }
@@ -93,7 +93,7 @@
   RELEASE(_objects);
   RELEASE(_parents);
   DESTROY(_rootObject);
-  
+
   [super dealloc];
 }
 
@@ -108,7 +108,7 @@
   NSString *isaValue = [dict objectForKey: @"isa"];
   NSString *className = (isaValue == nil) ? @"PBXContainer" : isaValue;
   Class classInstance = NSClassFromString(className);
-  
+
   if(classInstance == nil)
     {
       xcputs([[NSString stringWithFormat: @"Unknown class: %@",className] cString]);
@@ -190,22 +190,22 @@
 		{
 		  value = [self resolveArrayMembers: value];
 		}
-	      
+
 	      // search the global dictionary...
 	      if([key isEqualToString: @"containerPortal"] == NO &&
-                 [key isEqualToString: @"remoteGlobalIDString"] == NO)
+		 [key isEqualToString: @"remoteGlobalIDString"] == NO)
 		{
-		  id newValue = [self unarchiveObjectForKey: value];  
+		  id newValue = [self unarchiveObjectForKey: value];
 		  if(newValue != nil)
 		    {
 		      value = newValue;
 		    }
 		}
-              else
-                {
-                  value = [_objectCache objectForKey: key];
-                }
-              
+	      else
+		{
+		  value = [_objectCache objectForKey: key];
+		}
+
 	      if(value != nil)
 		{
 		  id currentValue = [object valueForKey: key];
@@ -219,10 +219,10 @@
 	  NS_HANDLER
 	    {
 	      xcputs([[NSString stringWithFormat: @"%@, key = %@, value = %@, object = %@",
-                              [localException reason], 
-                              key, 
-                              value, 
-                              object] cString]);
+			      [localException reason],
+			      key,
+			      value,
+			      object] cString]);
 	    }
 	  NS_ENDHANDLER;
 	}
@@ -270,8 +270,7 @@
 
 - (id) archive
 {
-  NSDictionary *plist = [_rootObject allKeysAndValues]; // referentialArchive];
-  return plist; //  [self _createReferenceBasedArchive: plist];
+  return [_rootObject allKeysAndValues];
 }
 
 @end
