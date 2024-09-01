@@ -265,7 +265,8 @@
 
   // Clear the cached objects dictionary;
   [self setObjects: [NSMutableDictionary dictionary]];
-
+  [_rootObject save]; // Setup to save...
+  
   // Save the project...
   if (created && !error)
     {

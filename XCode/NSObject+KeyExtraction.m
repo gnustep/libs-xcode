@@ -206,7 +206,7 @@ NSDictionary *flattenPlist(id propertyList)
 
 + (NSArray *) skippedKeys
 {
-  return [NSArray arrayWithObjects: @"context", @"buildConfigurationList", @"buildConfigurations",
+  return [NSArray arrayWithObjects: @"context", // @"buildConfigurationList", @"buildConfigurations",
 		  @"array", @"valueforKey", @"objectatIndexedSubscript", @"totalFiles",
 		  @"filename", @"currentFile", @"parameter", @"showEnvVarsInLog", nil];
 }
