@@ -600,7 +600,8 @@
   NSMutableArray *configs = [NSMutableArray arrayWithObject: config];
 
   [config setName: @"Debug"];
-  [config setBuildSettings: [NSMutableDictionary dictionary]];
+  [config setBuildSettings: [NSMutableDictionary dictionaryWithObject: @"macosx"
+							       forKey: @"SDKROOT"]];
   [xcl setDefaultConfigurationName: @"Debug"];
   [xcl setBuildConfigurations: configs];
 

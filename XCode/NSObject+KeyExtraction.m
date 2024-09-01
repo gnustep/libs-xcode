@@ -269,7 +269,8 @@ NSDictionary *flattenPlist(id propertyList)
 		  [keysAndValues setObject: arrayValues
 				    forKey: key];
 		}
-	      else if ([value isKindOfClass: [NSDictionary class]])
+	      else if ([value isKindOfClass: [NSDictionary class]] // add a dictionary representing a class...
+		       && [value objectForKey: @"isa"] != nil)
 		{
 		  NSMutableDictionary *dictValues = [NSMutableDictionary dictionary];
 		  NSEnumerator *en = [value keyEnumerator];
@@ -283,6 +284,12 @@ NSDictionary *flattenPlist(id propertyList)
 		    }
 
 		  [keysAndValues setObject: dictValues
+				    forKey: key];
+		}
+	      else if ([value isKindOfClass: [NSDictionary class]] // add a simple dictionary...
+		       && [value objectForKey: @"isa"] == nil)
+		{
+		  [keysAndValues setObject: value
 				    forKey: key];
 		}
 	      else if ([value isKindOfClass: [NSObject class]]
