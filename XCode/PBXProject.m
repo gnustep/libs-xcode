@@ -31,6 +31,8 @@
 
 #import "PBXTarget.h"
 #import "PBXTargetDependency.h"
+#import "XCBuildConfiguration.h"
+#import "XCConfigurationList.h"
 
 #ifndef _MSC_VER
 #import <unistd.h>
@@ -591,17 +593,32 @@
   return result;
 }
 
+- (XCConfigurationList *) _defaultConfigList
+{
+  XCConfigurationList *xcl = AUTORELEASE([[XCConfigurationList alloc] init]);
+  XCBuildConfiguration *config = AUTORELEASE([[XCBuildConfiguration alloc] init]);
+  NSMutableArray *configs = [NSMutableArray arrayWithObject: config];
+
+  [config setName: @"Debug"];
+  [config setBuildSettings: [NSMutableDictionary dictionary]];
+  [xcl setDefaultConfigurationName: @"Debug"];
+  [xcl setBuildConfigurations: configs];
+
+  return xcl;
+}
+
 - (BOOL) save
 {
   NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
 
   // Set up the configuration list...
-  [self setBuildConfigurationList: nil];
-  
+  [self setBuildConfigurationList: [self _defaultConfigList]];
+
+  id targetConfig = [self _defaultConfigList];
   while((target = [en nextObject]) != nil)
     {
-      [target setBuildConfigurationList: nil]; // set up config list.
+      [target setBuildConfigurationList: targetConfig]; // set up config list.
     }
 
   return YES;
