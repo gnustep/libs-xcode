@@ -310,13 +310,6 @@ NSDictionary *flattenPlist(id propertyList)
 		      [keysAndValues setObject: value
 					forKey: key];
 		    }
-		  /*
-		  else
-		    {
-		      [keysAndValues setObject: [NSNull null]
-					forKey: key];
-		    }
-		  */
 		}
 	    }
 	  NS_HANDLER
