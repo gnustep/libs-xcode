@@ -77,6 +77,8 @@ id moveContainerProperties(NSDictionary *input)
       [result addEntriesFromDictionary: containerDict];
       [result setObject: objects forKey: @"objects"];
     }
+
+  // NSLog(@"result = %@", result); 
   
   return result;
 }
@@ -329,9 +331,7 @@ NSDictionary *flattenPlist(id propertyList)
 {
   id r = flattenPlist([self recursiveKeysAndValuesForObject: self]);
   NSMutableDictionary *d = [NSMutableDictionary dictionaryWithDictionary: r];
-  id result = moveContainerProperties(d);
-
-  return result;
+  return moveContainerProperties(d);
 }
 
 @end
