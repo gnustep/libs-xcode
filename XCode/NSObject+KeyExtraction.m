@@ -314,9 +314,8 @@ NSDictionary *flattenPlist(id propertyList)
 	    }
 	  NS_HANDLER
 	    {
-	      NSLog(@"Exception while retrieving value for key '%@' on class %@", key,
-		    NSStringFromClass([object class])); // , localException);
-	      // [missingKeys addObject: key];
+	      NSLog(@"Exception %@ while retrieving value for key '%@' on class %@", localException, key,
+		    NSStringFromClass([object class]));
 	    }
 	  NS_ENDHANDLER;
 	}
