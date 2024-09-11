@@ -15,7 +15,8 @@
     INSTALLDIR = "$(HOME)/GNUstep/Tools";
     LANGUAGE = English;
     LIBRARIES = (
-	"gnustep-base"
+	"gnustep-base",
+	XCode
     );
     LINKEROPTIONS = "";
     "LOCALIZED_RESOURCES" = (

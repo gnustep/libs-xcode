@@ -7,15 +7,21 @@
 */
 
 #import <Foundation/Foundation.h>
+#import <XCode/PBXCoder.h>
 
-int
-main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
   id pool = [[NSAutoreleasePool alloc] init];
 
-  // Your code here...
+  if (argc > 1)
+    {
+      NSString *input = [NSString stringWithUTF8String: argv[1]];
+      NSString *output = [NSString stringWithUTF8String: argv[2]];
+      NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: input];
 
-  // The end...
+      NSLog(@"proj = %@", proj);
+    }
+			    
   [pool release];
 
   return 0;
