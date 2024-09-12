@@ -67,6 +67,7 @@ int main(int argc, const char *argv[])
       if (container == nil)
 	{
 	  NSLog(@"Unable to parse project file %@", input);
+	  return 255;
 	}
       else
 	{
