@@ -7,8 +7,10 @@
 */
 
 #import <Foundation/Foundation.h>
+
 #import <XCode/PBXCoder.h>
 #import <XCode/PBXContainer.h>
+#import <XCode/PBXProject.h>
 
 PBXContainer *convertPBProject(NSDictionary *proj)
 {
@@ -22,6 +24,12 @@ PBXContainer *convertPCProject(NSDictionary *proj)
   NSLog(@"proj = %@", proj);
 
   return nil;
+}
+
+BOOL buildXCodeProj(PBXContainer *container, NSString *output)
+{
+  
+  return YES;
 }
 
 int main(int argc, const char *argv[])
@@ -62,6 +70,11 @@ int main(int argc, const char *argv[])
 	}
       else
 	{
+	  BOOL result = buildXCodeProj(container, output);
+	  if (result == NO)
+	    {
+	      return 255;
+	    }
 	}
     }
   else
