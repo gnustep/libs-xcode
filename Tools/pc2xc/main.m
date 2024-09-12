@@ -11,6 +11,9 @@
 #import <XCode/PBXCoder.h>
 #import <XCode/PBXContainer.h>
 #import <XCode/PBXProject.h>
+#import <XCode/GSXCColors.h>
+
+#import <XCode/xcsystem.h>
 
 PBXContainer *convertPBProject(NSDictionary *proj)
 {
@@ -26,8 +29,46 @@ PBXContainer *convertPCProject(NSDictionary *proj)
   return nil;
 }
 
-BOOL buildXCodeProj(PBXContainer *container, NSString *output)
+BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 {
+  NSError *error = nil;
+  NSString *fn = [[dn stringByAppendingPathExtension: @"xcodeproj"]
+			 stringByAppendingPathComponent: @"project.pbxproj"];
+  NSFileManager *fm = [NSFileManager defaultManager];
+  BOOL created = [fm createDirectoryAtPath: fn
+		     withIntermediateDirectories: YES
+				attributes: NULL
+				     error: &error];
+  BOOL result = NO;
+  
+  if (created)
+    {
+      xcprintf("=== Saving Project %s%s%s%s -> %s%s%s\n",
+	       BOLD, YELLOW, [fn cString], RESET, GREEN,
+	       [dn cString], RESET);
+
+      [container save]; // Setup to save...
+  
+      // Save the project...
+      if (created && !error)
+	{
+	  id dictionary = [PBXCoder archiveWithRootObject: container];
+	  BOOL result = [dictionary writeToFile: fn atomically: YES];
+
+	  if (result)
+	    {
+	      xcprintf("=== Done Saving Project %s%s%s%s\n",
+		       BOLD, GREEN, [dn cString], RESET);
+	    }
+	  else
+	    {
+	      xcprintf("=== Error Saving Project %s%s%s%s\n",
+		       BOLD, GREEN, [dn cString], RESET);
+	    }
+	}
+
+      return result;
+    }
   
   return YES;
 }
@@ -46,8 +87,8 @@ int main(int argc, const char *argv[])
 	{
 	  NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: input];
 
-	  printf("== Parsing an old style NeXT project: %s -> %s\n",
-		 [input UTF8String], [output UTF8String]);
+	  xcprintf("== Parsing an old style NeXT project: %s -> %s\n",
+		   [input UTF8String], [output UTF8String]);
 	  container = convertPBProject(proj);
 	}
       else if ([[input pathExtension] isEqualToString: @"pcproj"])
@@ -61,12 +102,12 @@ int main(int argc, const char *argv[])
 	}
       else
 	{
-	  NSLog(@"Unknown project type");
+	  xcprintf("== Unknown project type");
 	}
 
       if (container == nil)
 	{
-	  NSLog(@"Unable to parse project file %@", input);
+	  xcprintf("== Unable to parse project file %@", input);
 	  return 255;
 	}
       else
@@ -80,7 +121,7 @@ int main(int argc, const char *argv[])
     }
   else
     {
-      NSLog(@"Not enough arguments");
+      xcprintf("== Not enough arguments");
     }
 			    
   [pool release];

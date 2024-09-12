@@ -35,10 +35,10 @@
 
   if (self != nil)
     {
-      _archiveVersion = nil;
-      _classes = nil;
-      _objectVersion = nil;
-      _objects = nil;
+      _archiveVersion = @"1";
+      _classes = [[NSMutableDictionary alloc] init];
+      _objectVersion = @"56";
+      _objects = [[NSMutableDictionary alloc] init];
       _rootObject = nil;
       _filename = nil;
       _parameter = nil;
@@ -61,6 +61,7 @@
   RELEASE(_workspaceLink);
   RELEASE(_workspaceLibs);
   RELEASE(_workspaceIncludes);
+  
   [super dealloc];
 }
 
@@ -264,7 +265,6 @@
 	   [dn cString], RESET);
 
   // Clear the cached objects dictionary;
-  [self setObjects: [NSMutableDictionary dictionary]];
   [_rootObject save]; // Setup to save...
   
   // Save the project...
