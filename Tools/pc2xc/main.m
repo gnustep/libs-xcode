@@ -8,6 +8,21 @@
 
 #import <Foundation/Foundation.h>
 #import <XCode/PBXCoder.h>
+#import <XCode/PBXContainer.h>
+
+PBXContainer *convertPBProject(NSDictionary *proj)
+{
+  NSLog(@"proj = %@", proj);
+
+  return nil;
+}
+
+PBXContainer *convertPCProject(NSDictionary *proj)
+{
+  NSLog(@"proj = %@", proj);
+
+  return nil;
+}
 
 int main(int argc, const char *argv[])
 {
@@ -17,9 +32,41 @@ int main(int argc, const char *argv[])
     {
       NSString *input = [NSString stringWithUTF8String: argv[1]];
       NSString *output = [NSString stringWithUTF8String: argv[2]];
-      NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: input];
+      PBXContainer *container = nil;
+      
+      if ([[input lastPathComponent] isEqualToString: @"PB.project"])
+	{
+	  NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: input];
 
-      NSLog(@"proj = %@", proj);
+	  printf("== Parsing an old style NeXT project: %s -> %s\n",
+		 [input UTF8String], [output UTF8String]);
+	  container = convertPBProject(proj);
+	}
+      else if ([[input pathExtension] isEqualToString: @"pcproj"])
+	{
+	  NSString *path = [input stringByAppendingPathComponent: @"PC.project"];
+	  NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: path];	  
+
+	  printf("== Parsing a ProjectCenter project: %s -> %s\n",
+		 [input UTF8String], [output UTF8String]);
+	  container = convertPCProject(proj);
+	}
+      else
+	{
+	  NSLog(@"Unknown project type");
+	}
+
+      if (container == nil)
+	{
+	  NSLog(@"Unable to parse project file %@", input);
+	}
+      else
+	{
+	}
+    }
+  else
+    {
+      NSLog(@"Not enough arguments");
     }
 			    
   [pool release];
