@@ -15,18 +15,41 @@
 
 #import <XCode/xcsystem.h>
 
+PBXContainer *buildContainer(NSString *projectName,
+			     NSArray *files,
+			     NSArray *headers,
+			     NSArray *resources,
+			     NSArray *other,
+			     NSArray *frameworks)
+{
+  NSLog(@"files = %@", files);
+  return nil;
+}
+
+
 PBXContainer *convertPBProject(NSDictionary *proj)
 {
-  NSLog(@"proj = %@", proj);
-
-  return nil;
+  NSString *projectName = [proj objectForKey: @"PROJECTNAME"];
+  NSDictionary *filesTable = [proj objectForKey: @"FILESTABLE"];
+  NSArray *files = [filesTable objectForKey: @"CLASSES"];
+  NSArray *headers = [filesTable objectForKey: @"H_FILES"];
+  NSArray *resources = [filesTable objectForKey: @"INTERFACES"];
+  NSArray *other = [filesTable objectForKey: @"OTHER_LINKED"];
+  NSArray *frameworks = [filesTable objectForKey: @"FRAMEWORKS"];
+  
+  return buildContainer(projectName, files, headers, resources, other, frameworks);
 }
 
 PBXContainer *convertPCProject(NSDictionary *proj)
 {
-  NSLog(@"proj = %@", proj);
-
-  return nil;
+  NSString *projectName = [proj objectForKey: @"PROJECT_NAME"];
+  NSArray *files = [proj objectForKey: @"CLASS_FILES"];
+  NSArray *headers = [proj objectForKey: @"HEADER_FILES"];
+  NSArray *resources = [proj objectForKey: @"LOCALIZED_RESOURCES"];
+  NSArray *other = [proj objectForKey: @"OTHER_SOURCES"];
+  NSArray *frameworks = [proj objectForKey: @"LIBRARIES"];
+  
+  return buildContainer(projectName, files, headers, resources, other, frameworks);
 }
 
 BOOL buildXCodeProj(PBXContainer *container, NSString *dn)

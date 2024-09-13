@@ -71,6 +71,7 @@ GSXCBuildOperation.h \
 GSXCBuildDelegate.h \
 GSXCGenerator.h \
 NSObject+KeyExtraction.h \
+XCode.h \
 
 #
 # Class files

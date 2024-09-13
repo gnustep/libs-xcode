@@ -27,6 +27,16 @@
 
 @implementation PBXGroup
 
+- (instancetype) init
+{
+  self = [super init];
+  if (self != nil)
+    {
+      [self setSourceTree: @"<group>"]; // default value
+    }
+  return self;
+}
+
 - (void) dealloc
 {
   RELEASE(sourceTree);
