@@ -28,7 +28,7 @@
 #define __XCode_h_GNUSTEP_INCLUDE
 
 #import <XCode/GSXCBuildContext.h>
-#import <XCode/GSXCBuildDatabase.h
+#import <XCode/GSXCBuildDatabase.h>
 #import <XCode/GSXCBuildDelegate.h>
 #import <XCode/GSXCBuildOperation.h>
 #import <XCode/GSXCColors.h>

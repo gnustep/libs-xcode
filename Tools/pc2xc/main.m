@@ -8,11 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <XCode/PBXCoder.h>
-#import <XCode/PBXContainer.h>
-#import <XCode/PBXProject.h>
-#import <XCode/GSXCColors.h>
-
+#import <XCode/XCode.h>
 #import <XCode/xcsystem.h>
 
 PBXContainer *buildContainer(NSString *projectName,
@@ -23,8 +19,9 @@ PBXContainer *buildContainer(NSString *projectName,
 			     NSArray *other,
 			     NSArray *frameworks)
 {
+  PBXContainer *container = [[PBXContainer alloc] init];
   NSLog(@"files = %@", files);
-  return nil;
+  return container;
 }
 
 
