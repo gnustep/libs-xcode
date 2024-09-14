@@ -49,7 +49,7 @@
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
 
 - (BOOL) showEnvVarsInLog; // setter
-- (void) setEnvVarsInLog: (BOOL)flag;
+- (void) setShowEnvVarsInLog: (BOOL)flag;
 
 - (void) setTarget: (PBXNativeTarget *)t;
 - (PBXNativeTarget *) target;

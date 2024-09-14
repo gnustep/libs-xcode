@@ -27,11 +27,11 @@
 
 @interface PBXContainer : NSObject
 {
-  NSString *archiveVersion;
-  NSMutableDictionary *classes;
-  NSString *objectVersion;
-  NSMutableDictionary *objects;
-  id rootObject;
+  NSString *_archiveVersion;
+  NSMutableDictionary *_classes;
+  NSString *_objectVersion;
+  NSMutableDictionary *_objects;
+  id _rootObject;
 
   NSString *_filename;
   NSString *_parameter;
@@ -76,5 +76,6 @@
 - (BOOL) install;
 - (BOOL) generate;
 - (BOOL) link;
+- (BOOL) save;
 
 @end

@@ -91,4 +91,5 @@
 - (BOOL) clean;
 - (BOOL) install;
 - (BOOL) generate;
+- (BOOL) save;
 @end

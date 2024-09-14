@@ -110,6 +110,11 @@
   return NO;
 }
 
+- (BOOL) save
+{
+  return YES;  
+}
+
 - (BOOL) generate
 {
   return YES;

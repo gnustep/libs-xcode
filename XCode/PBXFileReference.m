@@ -176,6 +176,16 @@ static NSLock *lock = nil;
   _target = t;
 }
 
+- (NSString *) includeInIndex
+{
+  return _includeInIndex;
+}
+
+- (void) setIncludeInIndex: (NSString *)includeInIndex
+{
+  ASSIGN(_includeInIndex, includeInIndex);
+}
+
 - (NSString *) _resolvePathFor: (id)object 
                      withGroup: (PBXGroup *)group
                          found: (BOOL *)found

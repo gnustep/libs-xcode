@@ -169,6 +169,12 @@ NSString *resolveProjectName(BOOL *isProject)
 	      parse_val = NO;
 	    }
 
+	  if ([obj isEqualToString: @"save"])
+	    {
+	      [pair setArgument: obj];
+	      parse_val = YES;
+	    }
+
 	  // If there is no parameter for the argument, set it anyway...
 	  if (parse_val == NO)
 	    {
@@ -195,8 +201,8 @@ NSString *resolveProjectName(BOOL *isProject)
   BOOL isProject = NO;
   NSString *parameter = nil; //  @"cmake";
   
-  NSDebugLog(@"args = %@", args);
-  NSDebugLog(@"file = %@", file);
+  // NSLog(@"args = %@", args);
+  // NSLog(@"file = %@", file);
   
   // Get the file to write out to...
   NSString *outputFile = nil;
@@ -286,6 +292,13 @@ NSString *resolveProjectName(BOOL *isProject)
 	  function = @"link";
 	}
       
+      opt = [args objectForKey: @"save"];
+      if (opt != nil)
+	{
+	  function = @"save";
+	  ASSIGN(parameter, [opt value]);
+	}
+      
       // if no function is specified, build is the default...
       if (function == nil)
 	{
@@ -314,8 +327,7 @@ NSString *resolveProjectName(BOOL *isProject)
 		  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
 		  container = [coder unarchive];
 		  [container setParameter: parameter];
-		  
-		  
+		  		  
 		  [coder setDelegate: self];
 		  
 		  // Build...

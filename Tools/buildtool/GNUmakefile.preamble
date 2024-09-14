@@ -18,7 +18,8 @@ ADDITIONAL_LDFLAGS +=
 ADDITIONAL_INCLUDE_DIRS += -I../../
 
 # Additional library directories the linker should search
-ADDITIONAL_LIB_DIRS += -L../../XCode/XCode.framework -L/usr/GNUstep/System/Library/Libraries 
+ADDITIONAL_LIB_DIRS += -L/usr/GNUstep/System/Library/Libraries -L../../XCode/XCode.framework
 
 # Additional TOOL libraries to link
 ADDITIONAL_TOOL_LIBS += -lXCode 
+

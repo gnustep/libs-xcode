@@ -3,19 +3,19 @@
 
    Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
-   
+
    This file is part of the GNUstep XCode Library
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 2 of the License, or (at your option) any later version.
-   
+
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
-   
+
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
@@ -31,6 +31,8 @@
 
 #import "PBXTarget.h"
 #import "PBXTargetDependency.h"
+#import "XCBuildConfiguration.h"
+#import "XCConfigurationList.h"
 
 #ifndef _MSC_VER
 #import <unistd.h>
@@ -53,16 +55,16 @@
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: [_dependencies count]];
   NSEnumerator *en = [_dependencies objectEnumerator];
   PBXTargetDependency *t = nil;
-  
+
   while ((t = [en nextObject]) != nil)
     {
       id tg = [t target];
 
       if (tg != nil)
-        {
-          [result addObject: tg];
-          xcputs([[NSString stringWithFormat: @"\t* %@ - Added to dependencies", tg] cString]);
-        }
+	{
+	  [result addObject: tg];
+	  xcputs([[NSString stringWithFormat: @"\t* %@ - Added to dependencies", tg] cString]);
+	}
     }
 
   return result;
@@ -73,8 +75,8 @@
 @interface PBXProject (Private)
 
 - (void) recurseTargetDependencies: (NSArray *)targets
-                         forTarget: (PBXTarget *)target
-                            result: (NSMutableArray *)result;
+			 forTarget: (PBXTarget *)target
+			    result: (NSMutableArray *)result;
 
 - (NSMutableArray *) arrangedTargets;
 
@@ -83,38 +85,38 @@
 @implementation PBXProject (Private)
 
 - (void) recurseTargetDependencies: (NSArray *)targets
-                         forTarget: (PBXTarget *)target
-                            result: (NSMutableArray *)result
+			 forTarget: (PBXTarget *)target
+			    result: (NSMutableArray *)result
 {
   if ([targets count] == 0 && target != nil)
     {
       if ([result containsObject: target] == NO)
-        {
-          [result insertObject: target
-                       atIndex: 0];
-        }
+	{
+	  [result insertObject: target
+		       atIndex: 0];
+	}
     }
   if ([targets count] == 1 && target == nil)
     {
       if ([result containsObject: target] == NO)
-        {
-          [result insertObject: [targets firstObject]
-                       atIndex: 0];
-        }
+	{
+	  [result insertObject: [targets firstObject]
+		       atIndex: 0];
+	}
     }
   else
     {
       NSEnumerator *en = [targets objectEnumerator];
       PBXTarget *t = nil;
-      
-      while ((t = [en nextObject]) != nil)
-        {
-          NSArray *da = [t prerequisiteTargets];
 
-          [self recurseTargetDependencies: da
-                                forTarget: t
-                                   result: result];
-        }
+      while ((t = [en nextObject]) != nil)
+	{
+	  NSArray *da = [t prerequisiteTargets];
+
+	  [self recurseTargetDependencies: da
+				forTarget: t
+				   result: result];
+	}
     }
 }
 
@@ -122,8 +124,8 @@
 {
   _arrangedTargets = [NSMutableArray arrayWithCapacity: 100];
   [self recurseTargetDependencies: [self targets]
-                        forTarget: nil
-                           result: _arrangedTargets];
+			forTarget: nil
+			   result: _arrangedTargets];
 
   NSEnumerator *en = [[self targets] objectEnumerator];
   id o = nil;
@@ -131,13 +133,13 @@
   while ((o = [en nextObject]) != nil)
     {
       if ([_arrangedTargets containsObject: o] == NO)
-        {
-          [_arrangedTargets addObject: o];
-        }
+	{
+	  [_arrangedTargets addObject: o];
+	}
     }
-  
+
   NSDebugLog(@"arrangedTarget = %ld, targets = %ld", [_arrangedTargets count], [[self targets] count]);
-  
+
   return _arrangedTargets;
 }
 
@@ -152,7 +154,7 @@
   if (self != nil)
     {
     }
-  
+
   return self;
 }
 
@@ -291,7 +293,7 @@
 {
   ASSIGN(_filename, fn);
 }
-  
+
 - (NSString *) filename
 {
   return _filename;
@@ -307,7 +309,7 @@
 - (void) _sourceRootFromMainGroup
 {
   NSString *sourceRoot = @"./"; // [[sourceGroup path] firstPathComponent];
-  
+
   // get first group, which is the source group.
   if(sourceRoot == nil || [sourceRoot isEqualToString: @""])
     {
@@ -321,10 +323,10 @@
 - (NSString *) buildString
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *output = nil;  
+  NSString *output = nil;
   // NSString *cmd = nil;
   // cmd = @"gnustep-config --debug-flags";
-    
+
   // Context...
   output = @"`gnustep-config --debug-flags`"; //[NSString stringForCommand: cmd];
   [context setObject: output
@@ -336,7 +338,7 @@
 - (BOOL) build
 {
   NSString *fn = [[[self container] filename]
-                   stringByDeletingLastPathComponent];
+		   stringByDeletingLastPathComponent];
 
   xcprintf("=== Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
   [_buildConfigurationList applyDefaultConfiguration];
@@ -347,21 +349,21 @@
   NSEnumerator *ten = [_arrangedTargets objectEnumerator];
   id t = nil;
   NSUInteger c = 0;
-  
+
   while ((t = [ten nextObject]) != nil)
     {
       c++;
       xcprintf("\t* Target #%ld: %s%s%s%s\n", c, BOLD, GREEN, [[t name] cString], RESET);
     }
-  
+
   NSDebugLog(@"arrangedTargets = %@", _arrangedTargets);
-  
+
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
   BOOL result = YES;
-  
+
   while((target = [en nextObject]) != nil && result)
     {
       [target setProject: self];
@@ -374,8 +376,8 @@
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
 
-      [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+      [context setObject: _mainGroup
+		  forKey: @"MAIN_GROUP"];
       [context setObject: _container
 		  forKey: @"CONTAINER"];
       [context setObject: @"./"
@@ -387,14 +389,14 @@
       [context setObject: @"./"
 		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
-      
+
       result = [target build];
       [context popCurrentContext];
 
       if (result == NO)
-        {
-          break;
-        }
+	{
+	  break;
+	}
     }
 
   xcprintf("=== Done Building Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
@@ -412,7 +414,7 @@
   NSEnumerator *en = [_targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
-  
+
   while((target = [en nextObject]) != nil && result)
     {
       [target setProject: self];
@@ -423,7 +425,7 @@
 	}
 
       [context contextDictionaryForName: [target name]];
-      [context setObject: _mainGroup 
+      [context setObject: _mainGroup
 		  forKey: @"MAIN_GROUP"];
       //      [context setObject: _container
       //		  forKey: @"CONTAINER"];
@@ -436,12 +438,12 @@
       [context setObject: @"./"
 		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
-      
+
       result = [target clean];
       [context popCurrentContext];
     }
   xcputs("=== Completed Cleaning Project");
-  return result;  
+  return result;
 }
 
 - (BOOL) install
@@ -457,7 +459,7 @@
     {
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
-      [context setObject: _mainGroup 
+      [context setObject: _mainGroup
 		  forKey: @"MAIN_GROUP"];
       //      [context setObject: _container
       //		  forKey: @"CONTAINER"];
@@ -470,30 +472,30 @@
       [context setObject: @"./"
 		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
-      
+
       result = [target install];
       [context popCurrentContext];
     }
   xcputs("=== Completed Installing Project");
-  return result;  
+  return result;
 }
 
 - (BOOL) generate
 {
   NSString *fn = [[[self container] filename]
-                   stringByDeletingLastPathComponent];
+		   stringByDeletingLastPathComponent];
 
   xcprintf("=== Generating %@ for Project %s%s%s%s\n", [_container parameter], BOLD, GREEN, [fn cString], RESET);
   [_buildConfigurationList applyDefaultConfiguration];
   [self _sourceRootFromMainGroup];
   [self plan];
-  
+
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [_arrangedTargets objectEnumerator];
   id target = nil;
   BOOL result = YES;
-  
+
   while((target = [en nextObject]) != nil && result)
     {
       [target setProject: self];
@@ -506,8 +508,8 @@
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
 
-      [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+      [context setObject: _mainGroup
+		  forKey: @"MAIN_GROUP"];
       [context setObject: _container
 		  forKey: @"CONTAINER"];
       [context setObject: @"./"
@@ -519,16 +521,16 @@
       [context setObject: @"./"
 		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
-      
+
       result = [target generate];
       [context popCurrentContext];
 
       if (result == NO)
-        {
-          break;
-        }
+	{
+	  break;
+	}
     }
-  
+
   xcputs("=== Completed Generating Project");
   return result;
 }
@@ -536,7 +538,7 @@
 - (BOOL) link
 {
   NSString *fn = [[[self container] filename]
-                   stringByDeletingLastPathComponent];
+		   stringByDeletingLastPathComponent];
 
   xcprintf("=== Linking Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
   [_buildConfigurationList applyDefaultConfiguration];
@@ -544,13 +546,13 @@
   // [self plan];
 
   // NSLog(@"arrangedTargets = %@", _arrangedTargets);
-  
+
   NSFileManager *fileManager = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [_targets objectEnumerator];
   id target = nil;
   BOOL result = YES;
-  
+
   while((target = [en nextObject]) != nil && result)
     {
       [target setProject: self];
@@ -563,8 +565,8 @@
 		      forKey: @"TARGET_IN_SUBDIR"];
 	}
 
-      [context setObject: _mainGroup 
-		  forKey: @"MAIN_GROUP"]; 
+      [context setObject: _mainGroup
+		  forKey: @"MAIN_GROUP"];
       [context setObject: _container
 		  forKey: @"CONTAINER"];
       [context setObject: @"./"
@@ -576,19 +578,51 @@
       [context setObject: @"./"
 		  forKey: @"SOURCE_ROOT"];
       [context addEntriesFromDictionary: _ctx];
-      
+
       result = [target link];
       [context popCurrentContext];
 
       if (result == NO)
-        {
-          break;
-        }
+	{
+	  break;
+	}
     }
 
   xcprintf("=== Done Linking Project %s%s%s%s\n", BOLD, GREEN, [fn cString], RESET);
 
   return result;
+}
+
+- (XCConfigurationList *) _defaultConfigList
+{
+  XCConfigurationList *xcl = AUTORELEASE([[XCConfigurationList alloc] init]);
+  XCBuildConfiguration *config = AUTORELEASE([[XCBuildConfiguration alloc] init]);
+  NSMutableArray *configs = [NSMutableArray arrayWithObject: config];
+
+  [config setName: @"Debug"];
+  [config setBuildSettings: [NSMutableDictionary dictionaryWithObject: @"macosx"
+							       forKey: @"SDKROOT"]];
+  [xcl setDefaultConfigurationName: @"Debug"];
+  [xcl setBuildConfigurations: configs];
+
+  return xcl;
+}
+
+- (BOOL) save
+{
+  NSEnumerator *en = [_arrangedTargets objectEnumerator];
+  id target = nil;
+
+  // Set up the configuration list...
+  [self setBuildConfigurationList: [self _defaultConfigList]];
+
+  id targetConfig = [self _defaultConfigList];
+  while((target = [en nextObject]) != nil)
+    {
+      [target setBuildConfigurationList: targetConfig]; // set up config list.
+    }
+
+  return YES;
 }
 
 @end
