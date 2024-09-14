@@ -29,6 +29,45 @@
 #import "NSObject+KeyExtraction.h"
 #import "NSString+PBXAdditions.h"
 
+//
+// Check dictionary to see if it's equvalent...
+//
+@interface NSDictionary (Private)
+- (BOOL) isEqualDictionary: (NSDictionary *)dict;
+@end
+
+@implementation NSDictionary (Private)
+- (BOOL) isEqualDictionary: (NSDictionary *)dict
+{
+  NSEnumerator *en = [self keyEnumerator];
+  id k = nil;
+  BOOL result = YES;
+
+  while ((k = [en nextObject]) != nil)
+    {
+      id v1 = [self objectForKey: k];
+      id v2 = [dict objectForKey: k];
+
+      if ([v1 isKindOfClass: [NSDictionary class]]
+	  && [v2 isKindOfClass: [NSDictionary class]])
+	{
+	  if ([v1 isEqualToDictionary: v2] == NO)
+	    {
+	      result = NO;
+	      break;
+	    }
+	}
+      else if ([v1 isEqual: v2] == NO)
+	{
+	  result = NO;
+	  break;
+	}
+    }
+
+  return result;
+}
+@end
+
 // Function to generate a 24-character GUID (uppercase, alphanumeric, no dashes)
 NSString *generateGUID()
 {
@@ -83,6 +122,26 @@ id moveContainerProperties(NSDictionary *input)
   return result;
 }
 
+NSString *guidInCachedObjects(NSDictionary *objects, NSDictionary *dict)
+{
+  NSString *guid = nil;
+  NSEnumerator *en = [objects keyEnumerator];
+  NSString *g = nil;
+  
+  while ((g = [en nextObject]) != nil)
+    {
+      NSDictionary *d = [objects objectForKey: g];
+
+      if ([dict isEqualToDictionary: d])
+	{
+	  guid = g;
+	  break;
+	}
+    }
+
+  return guid;
+}
+
 // Recursive function to flatten the property list
 id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString **rootObjectGUID)
 {
@@ -112,7 +171,16 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
 	      [flattenedDict setObject: flattenPropertyList([dict objectForKey:key], objects, rootObjectGUID)
 				forKey: key];
 	    }
-	  [objects setObject:flattenedDict forKey:guid];
+
+	  NSString *existingGuid = guidInCachedObjects(objects, flattenedDict);
+	  if (existingGuid != nil)
+	    {
+	      guid = existingGuid;
+	    }
+	  else
+	    {
+	      [objects setObject:flattenedDict forKey:guid];
+	    }
 	  
 	  // Return the GUID to replace the dictionary
 	  return guid;
