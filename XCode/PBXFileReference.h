@@ -74,7 +74,8 @@
 - (void) setLineEnding: (NSString *)object;
 - (void) setTarget: (PBXNativeTarget *)t;
 - (void) setWrapsLines: (NSString *)o;
-
+- (NSString *) includeInIndex;
+- (void) setIncludeInIndex: (NSString *)includeInIndex;
 - (NSString *) productName;
 
 // Build methods...
