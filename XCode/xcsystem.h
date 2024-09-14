@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
 
    This file is part of the GNUstep XCode Library

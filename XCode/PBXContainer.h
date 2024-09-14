@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2018, 2019, 2020, 2021 Free Software Foundation, Inc.
 
-   Written by: Gregory John Casament <greg.casamento@gmail.com>
+   Written by: Gregory John Casamento <greg.casamento@gmail.com>
    Date: 2022
    
    This file is part of the GNUstep XCode Library
@@ -21,6 +21,9 @@
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
 */
+
+#ifndef __PBXContainer_h_GNUSTEP_INCLUDE
+#define __PBXContainer_h_GNUSTEP_INCLUDE
 
 #import <Foundation/Foundation.h>
 #import "PBXCoder.h"
@@ -79,3 +82,5 @@
 - (BOOL) save;
 
 @end
+
+#endif
