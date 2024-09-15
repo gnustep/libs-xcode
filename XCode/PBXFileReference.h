@@ -22,6 +22,9 @@
    Boston, MA 02110 USA.
 */
 
+#ifndef __PBXFileReference_h_GNUSTEP_INCLUDE
+#define __PBXFileReference_h_GNUSTEP_INCLUDE
+
 #import <Foundation/Foundation.h>
 
 // Local includes
@@ -51,6 +54,10 @@
   NSUInteger _totalFiles;
   NSUInteger _currentFile;
 }
+
++ (NSString *) fileTypeFromPath: (NSString *)path;
++ (NSString *) extForFileType: (NSString *)type;
+- (instancetype) initWithPath: (NSString *)path;
 
 - (void) setTotalFiles: (NSUInteger)t;
 - (void) setCurrentFile: (NSUInteger)n;
@@ -84,3 +91,5 @@
 - (BOOL) generate;
 
 @end
+
+#endif

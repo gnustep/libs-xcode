@@ -27,6 +27,24 @@
 
 @implementation PBXBuildPhase
 
+- (instancetype) initWithFiles: (NSMutableArray *)files
+	       buildActionMask: (NSString *)buildActionMask
+	  runOnlyForDeployment: (NSString *)runOnlyForDeployment
+			target: (PBXNativeTarget *)target
+			  name: (NSString *)name
+{
+  self = [super init];
+  if (self != nil)
+    {
+      [self setFiles: files];
+      [self setBuildActionMask: buildActionMask];
+      [self setRunOnlyForDeploymentPostprocessing: runOnlyForDeployment];
+      [self setTarget: target];
+      [self setName: name];
+    }
+  return self;
+}
+
 - (void) dealloc
 {
   RELEASE(_files);

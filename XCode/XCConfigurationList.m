@@ -20,11 +20,28 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "XCConfigurationList.h"
 #import "XCBuildConfiguration.h"
 
 @implementation XCConfigurationList
+
+- (instancetype) initWithConfigurations: (NSMutableArray *)configs
+{
+  self = [super init];
+  if (self != nil)
+    {
+      [self setBuildConfigurations: configs];
+    }
+  return self;
+}
+
+- (instancetype) init
+{
+  return [self initWithConfigurations: [NSMutableArray array]];
+}
 
 // Methods....
 - (NSString *) defaultConfigurationIsVisible // getter
@@ -83,12 +100,6 @@
 - (void) applyDefaultConfiguration
 {
   [[self defaultConfiguration] apply];
-}
-
-- (instancetype) init
-{
-  self = [super init];
-  return self;
 }
 
 - (NSString *) description

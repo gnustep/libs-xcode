@@ -11,6 +11,93 @@
 #import <XCode/XCode.h>
 #import <XCode/xcsystem.h>
 
+NSMutableArray *buildFileReferences(NSArray *allFiles,
+				    NSString *ext)
+{
+  NSMutableArray *result = [NSMutableArray array];
+  NSEnumerator *en = [allFiles objectEnumerator];
+  NSString *filename = nil;
+
+  while ((filename = [en nextObject]) != nil)
+    {
+      if (ext != nil)
+	{
+	  filename = [filename stringByAppendingPathExtension: ext];
+	}
+      
+      PBXFileReference *fileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: filename]);
+      [result addObject: fileRef];      
+    }
+
+  return result;
+}
+
+NSString *typeForProjectType(NSString *projectType)
+{
+  NSString *result = @"";
+
+  if ([projectType isEqualToString: @"Application"])
+    {
+      result = @"com.apple.product-type.application";
+    }
+  else if ([projectType isEqualToString: @"Tool"])
+    {
+      result = @"com.apple.product-type.tool";
+    }
+  else if ([projectType isEqualToString: @"Library"])
+    {
+      result = @"com.apple.product-type.library";
+    }
+  else if ([projectType isEqualToString: @"Framework"])
+    {
+      result = @"com.apple.product-type.framework";
+    }
+
+  return result;
+}
+
+PBXGroup *productReferenceGroup(NSString *projectName,
+				NSString *projectType)
+{
+  PBXGroup *group = AUTORELEASE([[PBXGroup alloc] init]);
+  NSString *type = typeForProjectType(projectType);
+  NSString *ext = [PBXFileReference extForFileType: type];
+  NSString *path = [projectName stringByAppendingPathExtension: ext];
+  PBXFileReference *productFileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: path]);
+  NSMutableArray *children = [NSMutableArray arrayWithObject: productFileRef];
+  
+  [group setChildren: children];
+  [group setName: @"Products"];
+  
+  return group;
+}
+
+PBXGroup *mainGroupBuild(NSArray *files, PBXGroup *productReferenceGroup)
+{
+  PBXGroup *mainGroup = AUTORELEASE([[PBXGroup alloc] init]);
+  NSMutableArray *buildGroupFiles = buildFileReferences(files, nil);
+  PBXGroup *buildFileGroup = AUTORELEASE([[PBXGroup alloc] init]);
+  [buildFileGroup setChildren: buildGroupFiles];
+  
+  NSMutableArray *mainGroupChildren = [NSMutableArray arrayWithObjects: buildFileGroup,
+						      productReferenceGroup, nil];
+  [mainGroup setChildren: mainGroupChildren];
+
+  return mainGroup;
+}
+
+NSMutableArray *buildTargets(NSString *projectName,
+			     NSString *projectType,
+			     NSArray *files,
+			     NSArray *headers,
+			     NSArray *resources,
+			     NSArray *frameworks)
+{
+  NSMutableArray *result = [NSMutableArray array];
+  return result;
+}
+
+
 PBXContainer *buildContainer(NSString *projectName,
 			     NSString *projectType,
 			     NSArray *files,
@@ -19,8 +106,29 @@ PBXContainer *buildContainer(NSString *projectName,
 			     NSArray *other,
 			     NSArray *frameworks)
 {
-  PBXContainer *container = [[PBXContainer alloc] init];
+  NSMutableArray *allFiles = [NSMutableArray arrayWithArray: files];
+  PBXProject *project = AUTORELEASE([[PBXProject alloc] init]);
+  PBXContainer *container = AUTORELEASE([[PBXContainer alloc] initWithRootObject: project]);
+  XCBuildConfiguration *buildConfigDebug = AUTORELEASE([[XCBuildConfiguration alloc] init]);
+  XCBuildConfiguration *buildConfigRelease = AUTORELEASE([[XCBuildConfiguration alloc] initWithName: @"Release"]);
+  NSMutableArray *configArray = [NSMutableArray arrayWithObjects: buildConfigDebug, buildConfigRelease, nil];
+  XCConfigurationList *configList = AUTORELEASE([[XCConfigurationList alloc] initWithConfigurations: configArray]);
+  [allFiles addObject: other];
+
+  // Set up groups...
+  PBXGroup *productRefGroup = productReferenceGroup(projectName, projectType); // AUTORELEASE([[PBXGroup alloc] init]);
+  PBXGroup *mainGroup = mainGroupBuild(allFiles, productRefGroup); // AUTORELEASE([[PBXGroup alloc] init]);
+  NSMutableArray *targets = buildTargets(projectName, projectType, allFiles, headers, resources, frameworks);
+  
+  [project setMainGroup: mainGroup];
+  [project setProductRefGroup: productRefGroup];
+  [project setBuildConfigurationList: configList];
+  [project setContainer: container];
+  [project setTargets: targets];
+  
   NSLog(@"files = %@", files);
+  NSLog(@"container = %@", container);
+  
   return container;
 }
 

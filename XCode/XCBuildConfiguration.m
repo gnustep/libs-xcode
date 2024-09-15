@@ -34,6 +34,35 @@
 
 @implementation XCBuildConfiguration
 
+- (instancetype) initWithName: (NSString *)theName
+		buildSettings: (NSMutableDictionary *)settings
+{
+  self = [super init];
+  if (self != nil)
+    {
+      [self setBuildSettings: settings];	      
+      [self setName: theName];
+    }
+  return self;    
+}
+
+- (instancetype) initWithName: (NSString *)theName
+{
+  NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithObject: @"macosx"
+								     forKey: @"SDKROOT"];
+  return [self initWithName: theName
+	      buildSettings: settings];
+}
+
+- (instancetype) init
+{
+  NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithObject: @"macosx"
+								     forKey: @"SDKROOT"];
+  return [self initWithName: @"Debug"
+	      buildSettings: settings];
+
+}
+
 - (NSString *) description
 {
   return [NSString stringWithFormat: @"%@ -- buildSettings = %@, name = %@", [super description], buildSettings, name];

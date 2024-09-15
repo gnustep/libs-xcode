@@ -43,6 +43,8 @@
   NSString *_workspaceIncludes;
 }
 
+- (instancetype) initWithRootObject: (id)object;
+
 - (void) setWorkspaceIncludes: (NSString *)i;
 - (NSString *) workspaceIncludes;
 

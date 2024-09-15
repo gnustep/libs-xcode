@@ -22,6 +22,9 @@
    Boston, MA 02110 USA.
 */
 
+#ifndef __PBXBuildPhase_h_GNUSTEP_INCLUDE
+#define __PBXBuildPhase_h_GNUSTEP_INCLUDE
+
 #import <Foundation/Foundation.h>
 
 // Local includes
@@ -37,6 +40,12 @@
   PBXNativeTarget *_target;
   NSString *_name;
 }
+
+- (instancetype) initWithFiles: (NSMutableArray *)files
+	       buildActionMask: (NSString *)buildActionMask
+	  runOnlyForDeployment: (NSString *)runOnlyForDeployment
+			target: (PBXNativeTarget *)target
+                          name: (NSString *)name;
 
 // Methods....
 - (NSMutableArray *) files; // getter
@@ -63,3 +72,5 @@
 - (BOOL) link;
 
 @end
+
+#endif

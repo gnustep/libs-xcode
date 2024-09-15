@@ -50,6 +50,16 @@
   return self;
 }
 
+- (instancetype) initWithRootObject: (id)object
+{
+  self = [self init];
+  if (self != nil)
+    {
+      [self setRootObject: object];
+    }
+  return self;
+}
+
 - (void) dealloc
 {
   RELEASE(_archiveVersion);

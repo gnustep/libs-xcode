@@ -22,6 +22,9 @@
    Boston, MA 02110 USA.
 */
 
+#ifndef __PBXProject_h_GNUSTEP_INCLUDE
+#define __PBXProject_h_GNUSTEP_INCLUDE
+
 #import <Foundation/Foundation.h>
 
 // Local includes
@@ -56,30 +59,43 @@
 // Methods....
 - (NSString *) developmentRegion; // getter
 - (void) setDevelopmentRegion: (NSString *)object; // setter
+
 - (NSMutableArray *) knownRegions; // getter
 - (void) setKnownRegions: (NSMutableArray *)object; // setter
+
 - (NSString *) compatibilityVersion; // getter
 - (void) setCompatibilityVersion: (NSString *)object; // setter
+
 - (NSMutableArray *) projectReferences; // getter
 - (void) setProjectReferences: (NSMutableArray *)object; // setter
+
 - (NSMutableArray *) targets; // getter
 - (void) setTargets: (NSMutableArray *)object; // setter
+
 - (NSString *) projectDirPath; // getter
 - (void) setProjectDirPath: (NSString *)object; // setter
+
 - (NSString *) projectRoot; // getter
 - (void) setProjectRoot: (NSString *)object; // setter
+
 - (XCConfigurationList *) buildConfigurationList; // getter
 - (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
+
 - (PBXGroup *) mainGroup; // getter
 - (void) setMainGroup: (PBXGroup *)object; // setter
+
 - (NSString *) hasScannedForEncodings; // getter
 - (void) setHasScannedForEncodings: (NSString *)object; // setter
+
 - (PBXGroup *) productRefGroup; // getter
 - (void) setProductRefGroup: (PBXGroup *)object; // setter
+
 - (PBXContainer *) container;
 - (void) setContainer: (PBXContainer *)container;
+
 - (void) setContext: (NSDictionary *)ctx;
 - (NSDictionary *) context;
+
 - (void) setFilename: (NSString *)fn;
 - (NSString *) filename;
 
@@ -93,3 +109,5 @@
 - (BOOL) generate;
 - (BOOL) save;
 @end
+
+#endif
