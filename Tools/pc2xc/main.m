@@ -118,10 +118,10 @@ NSMutableArray *buildTargets(NSString *projectName,
   buildPhase(files, sourcePhase);
 
   PBXResourcesBuildPhase *resourcePhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
-  buildPhase(files, resourcePhase);
+  buildPhase(resources, resourcePhase);
 
   PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
-  buildPhase(files, frameworksPhase);  
+  buildPhase(frameworks, frameworksPhase);  
 
   NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, frameworksPhase, nil];
   [target setBuildPhases: phases];

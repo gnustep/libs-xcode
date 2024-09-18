@@ -141,7 +141,8 @@ static NSLock *lock = nil;
 	{
       	  [self setLastKnownFileType: fileType];
 	}
-      
+
+      ASSIGN(_path, path);
       [self setSourceTree: @"<group>"];
     }
   return self;
