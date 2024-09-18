@@ -86,14 +86,47 @@ PBXGroup *mainGroupBuild(NSArray *files, PBXGroup *productReferenceGroup)
   return mainGroup;
 }
 
+void buildPhase(NSArray *items, PBXBuildPhase *phase)
+{
+  NSMutableArray *sources = [NSMutableArray arrayWithCapacity: [items count]]; 
+  NSEnumerator *en = [items objectEnumerator];
+  NSString *item = nil;
+  
+  while ((item = [en nextObject]) != nil)
+    {
+      PBXFileReference *fileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: item]);
+      PBXBuildFile *buildFile = AUTORELEASE([[PBXBuildFile alloc] init]);
+      [buildFile setFileRef: fileRef];
+      [sources addObject: buildFile];
+    }
+
+  [phase setFiles: sources];
+}
+
 NSMutableArray *buildTargets(NSString *projectName,
 			     NSString *projectType,
 			     NSArray *files,
 			     NSArray *headers,
 			     NSArray *resources,
-			     NSArray *frameworks)
+			     NSArray *frameworks,
+			     PBXGroup *prodRefGroup)
 {
   NSMutableArray *result = [NSMutableArray array];
+  PBXNativeTarget *target = AUTORELEASE([[PBXNativeTarget alloc] init]);
+
+  PBXSourcesBuildPhase *sourcePhase = AUTORELEASE([[PBXSourcesBuildPhase alloc] init]);
+  buildPhase(files, sourcePhase);
+
+  PBXResourcesBuildPhase *resourcePhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
+  buildPhase(files, resourcePhase);
+
+  PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
+  buildPhase(files, frameworksPhase);  
+
+  NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, frameworksPhase, nil];
+  [target setBuildPhases: phases];
+  [result addObject: target];
+  
   return result;
 }
 
@@ -113,21 +146,18 @@ PBXContainer *buildContainer(NSString *projectName,
   XCBuildConfiguration *buildConfigRelease = AUTORELEASE([[XCBuildConfiguration alloc] initWithName: @"Release"]);
   NSMutableArray *configArray = [NSMutableArray arrayWithObjects: buildConfigDebug, buildConfigRelease, nil];
   XCConfigurationList *configList = AUTORELEASE([[XCConfigurationList alloc] initWithConfigurations: configArray]);
-  [allFiles addObject: other];
+  [allFiles addObjectsFromArray: other];
 
   // Set up groups...
   PBXGroup *productRefGroup = productReferenceGroup(projectName, projectType); // AUTORELEASE([[PBXGroup alloc] init]);
   PBXGroup *mainGroup = mainGroupBuild(allFiles, productRefGroup); // AUTORELEASE([[PBXGroup alloc] init]);
-  NSMutableArray *targets = buildTargets(projectName, projectType, allFiles, headers, resources, frameworks);
+  NSMutableArray *targets = buildTargets(projectName, projectType, allFiles, headers, resources, frameworks, productRefGroup);
   
   [project setMainGroup: mainGroup];
   [project setProductRefGroup: productRefGroup];
   [project setBuildConfigurationList: configList];
-  [project setContainer: container];
+  // [project setContainer: container];
   [project setTargets: targets];
-  
-  NSLog(@"files = %@", files);
-  NSLog(@"container = %@", container);
   
   return container;
 }
@@ -163,10 +193,10 @@ PBXContainer *convertPCProject(NSDictionary *proj)
 BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 {
   NSError *error = nil;
-  NSString *fn = [[dn stringByAppendingPathExtension: @"xcodeproj"]
-			 stringByAppendingPathComponent: @"project.pbxproj"];
+  NSString *directoryName = [dn stringByAppendingPathExtension: @"xcodeproj"];
+  NSString *fn = [directoryName stringByAppendingPathComponent: @"project.pbxproj"];
   NSFileManager *fm = [NSFileManager defaultManager];
-  BOOL created = [fm createDirectoryAtPath: fn
+  BOOL created = [fm createDirectoryAtPath: directoryName
 		     withIntermediateDirectories: YES
 				attributes: NULL
 				     error: &error];
@@ -178,7 +208,7 @@ BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 	       BOLD, YELLOW, [fn cString], RESET, GREEN,
 	       [dn cString], RESET);
 
-      [container save]; // Setup to save...
+      // [container save]; // Setup to save...
   
       // Save the project...
       if (created && !error)
