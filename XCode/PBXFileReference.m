@@ -79,7 +79,15 @@ static NSLock *lock = nil;
     }
   else if ([ext isEqualToString: @"app"])
     {
-      result = @"wrapper.application";
+      result = @"file.xib";
+    }
+  else if ([ext isEqualToString: @"nib"])
+    {
+      result = @"file.nib";
+    }
+  else if ([ext isEqualToString: @"gorm"])
+    {
+      result = @"file.gorm"; // GS specific
     }
 	   
   return result;
@@ -116,6 +124,18 @@ static NSLock *lock = nil;
   else if ([type isEqualToString: @"wrapper.application"])
     {
       result = @"app";
+    }
+  if ([type isEqualToString: @"file.xib"])
+    {
+      result = @"xib";
+    }
+  if ([type isEqualToString: @"file.nib"])
+    {
+      result = @"nib";
+    }
+  if ([type isEqualToString: @"file.gorm"])
+    {
+      result = @"gorm"; // GS specific
     }
 	   
   return result;
