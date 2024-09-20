@@ -156,11 +156,11 @@
       // Set up defaults...
       [self setCompatibilityVersion: @"Xcode 14.0"];
       [self setDevelopmentRegion: @"en"];
-      [self setKnownRegions: [NSMutableArray arrayWithObjects: @"en", @"Base", nil]];
+      // [self setKnownRegions: [NSMutableArray arrayWithObjects: @"en", @"Base", nil]];
       [self setProjectDirPath: @""];
       [self setProjectRoot: @""];
       [self setHasScannedForEncodings: @"0"];
-      [self setTargets: [NSMutableArray array]];
+      // [self setTargets: [NSMutableArray array]];
     }
 
   return self;
