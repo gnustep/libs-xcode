@@ -184,8 +184,11 @@ PBXContainer *convertPBProject(NSDictionary *proj)
   NSArray *resources = [filesTable objectForKey: @"INTERFACES"];
   NSArray *other = [filesTable objectForKey: @"OTHER_LINKED"];
   NSArray *frameworks = [filesTable objectForKey: @"FRAMEWORKS"];
-  
-  return buildContainer(projectName, projectType, files, headers, resources, other, frameworks);
+  NSArray *images = [filesTable objectForKey: @"IMAGES"];
+  NSMutableArray *allResources = [NSMutableArray arrayWithArray: resources];
+
+  [allResources addObjectsFromArray: images];
+  return buildContainer(projectName, projectType, files, headers, allResources, other, frameworks);
 }
 
 PBXContainer *convertPCProject(NSDictionary *proj)
@@ -197,8 +200,12 @@ PBXContainer *convertPCProject(NSDictionary *proj)
   NSArray *resources = [proj objectForKey: @"LOCALIZED_RESOURCES"];
   NSArray *other = [proj objectForKey: @"OTHER_SOURCES"];
   NSArray *frameworks = [proj objectForKey: @"LIBRARIES"];
+  NSArray *images = [proj objectForKey: @"IMAGES"];
+  NSMutableArray *allResources = [NSMutableArray arrayWithArray: resources];
+
+  [allResources addObjectsFromArray: images];
   
-  return buildContainer(projectName, projectType, files, headers, resources, other, frameworks);
+  return buildContainer(projectName, projectType, files, headers, allResources, other, frameworks);
 }
 
 BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
