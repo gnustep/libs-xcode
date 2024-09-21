@@ -62,7 +62,8 @@ PBXGroup *productReferenceGroup(NSString *projectName,
   PBXGroup *group = AUTORELEASE([[PBXGroup alloc] init]);
   NSString *type = typeForProjectType(projectType);
   NSString *ext = [PBXFileReference extForFileType: type];
-  NSString *path = [projectName stringByAppendingPathExtension: ext];
+  NSString *path = (ext == nil || [ext isEqualToString: @""]) ? projectName :
+    [projectName stringByAppendingPathExtension: ext];
   PBXFileReference *productFileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: path]);
   NSMutableArray *children = [NSMutableArray arrayWithObject: productFileRef];
   
@@ -120,10 +121,10 @@ NSMutableArray *buildTargets(NSString *projectName,
   PBXResourcesBuildPhase *resourcePhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
   buildPhase(resources, resourcePhase);
 
-  PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXFrameworksBuildPhase alloc] init]);
-  buildPhase(frameworks, frameworksPhase);  
+  // PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXFrameworksBuildPhase alloc] init]);
+  // buildPhase(frameworks, frameworksPhase);  
 
-  NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, frameworksPhase, nil];
+  NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, nil]; // frameworksPhase, nil];
   [target setBuildPhases: phases];
   [result addObject: target];
   
@@ -146,7 +147,10 @@ PBXContainer *buildContainer(NSString *projectName,
   XCBuildConfiguration *buildConfigRelease = AUTORELEASE([[XCBuildConfiguration alloc] initWithName: @"Release"]);
   NSMutableArray *configArray = [NSMutableArray arrayWithObjects: buildConfigDebug, buildConfigRelease, nil];
   XCConfigurationList *configList = AUTORELEASE([[XCConfigurationList alloc] initWithConfigurations: configArray]);
+
+  // Add all files to the main group...
   [allFiles addObjectsFromArray: other];
+  [allFiles addObjectsFromArray: resources];
 
   // Set up groups...
   PBXGroup *productRefGroup = productReferenceGroup(projectName, projectType); // AUTORELEASE([[PBXGroup alloc] init]);
