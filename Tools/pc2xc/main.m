@@ -124,8 +124,14 @@ NSMutableArray *buildTargets(NSString *projectName,
   // PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXFrameworksBuildPhase alloc] init]);
   // buildPhase(frameworks, frameworksPhase);  
 
+  PBXFileReference *productRef = [[prodRefGroup children] objectAtIndex: 0];
   NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, nil]; // frameworksPhase, nil];
+
   [target setBuildPhases: phases];
+  [target setName: projectName];
+  [target setProductName: [productRef path]];
+  [target setProductType: projectType];
+  
   [result addObject: target];
   
   return result;
@@ -147,7 +153,8 @@ PBXContainer *buildContainer(NSString *projectName,
   XCBuildConfiguration *buildConfigRelease = AUTORELEASE([[XCBuildConfiguration alloc] initWithName: @"Release"]);
   NSMutableArray *configArray = [NSMutableArray arrayWithObjects: buildConfigDebug, buildConfigRelease, nil];
   XCConfigurationList *configList = AUTORELEASE([[XCConfigurationList alloc] initWithConfigurations: configArray]);
-
+  NSString *type = typeForProjectType(projectType);
+  
   // Add all files to the main group...
   [allFiles addObjectsFromArray: other];
   [allFiles addObjectsFromArray: resources];
@@ -155,7 +162,7 @@ PBXContainer *buildContainer(NSString *projectName,
   // Set up groups...
   PBXGroup *productRefGroup = productReferenceGroup(projectName, projectType); // AUTORELEASE([[PBXGroup alloc] init]);
   PBXGroup *mainGroup = mainGroupBuild(allFiles, productRefGroup); // AUTORELEASE([[PBXGroup alloc] init]);
-  NSMutableArray *targets = buildTargets(projectName, projectType, allFiles, headers, resources, frameworks, productRefGroup);
+  NSMutableArray *targets = buildTargets(projectName, type, allFiles, headers, resources, frameworks, productRefGroup);
   
   [project setMainGroup: mainGroup];
   [project setProductRefGroup: productRefGroup];
