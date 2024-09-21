@@ -188,6 +188,7 @@ PBXContainer *convertPBProject(NSDictionary *proj)
   NSMutableArray *allResources = [NSMutableArray arrayWithArray: resources];
 
   [allResources addObjectsFromArray: images];
+  
   return buildContainer(projectName, projectType, files, headers, allResources, other, frameworks);
 }
 
