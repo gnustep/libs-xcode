@@ -120,7 +120,7 @@ NSMutableArray *buildTargets(NSString *projectName,
   PBXResourcesBuildPhase *resourcePhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
   buildPhase(resources, resourcePhase);
 
-  PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXResourcesBuildPhase alloc] init]);
+  PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXFrameworksBuildPhase alloc] init]);
   buildPhase(frameworks, frameworksPhase);  
 
   NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, frameworksPhase, nil];
@@ -214,8 +214,8 @@ BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
       if (created && !error)
 	{
 	  id dictionary = [PBXCoder archiveWithRootObject: container];
-	  BOOL result = [dictionary writeToFile: fn atomically: YES];
-
+	  
+	  result = [dictionary writeToFile: fn atomically: YES];
 	  if (result)
 	    {
 	      xcprintf("=== Done Saving Project %s%s%s%s\n",
@@ -227,11 +227,9 @@ BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 		       BOLD, GREEN, [dn cString], RESET);
 	    }
 	}
-
-      return result;
     }
   
-  return YES;
+  return result;
 }
 
 int main(int argc, const char *argv[])

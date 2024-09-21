@@ -373,10 +373,10 @@ NSDictionary *flattenPlist(id propertyList)
 		}
 	      else
 		{
+		  [keysAndValues setObject: NSStringFromClass([object class])
+				    forKey: @"isa"];
 		  if (value)
 		    {
-		      [keysAndValues setObject: NSStringFromClass([object class])
-					forKey: @"isa"];
 		      [keysAndValues setObject: value
 					forKey: key];
 		    }
