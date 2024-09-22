@@ -209,6 +209,11 @@ PBXContainer *convertPCProject(NSDictionary *proj)
   return buildContainer(projectName, projectType, files, headers, allResources, other, frameworks);
 }
 
+PBXContainer *convertGNUmakfile(NSString *inputString)
+{
+  return nil;
+}
+
 BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 {
   NSError *error = nil;
@@ -260,11 +265,11 @@ int main(int argc, const char *argv[])
       NSString *input = [NSString stringWithUTF8String: argv[1]];
       NSString *output = [NSString stringWithUTF8String: argv[2]];
       PBXContainer *container = nil;
+      NSDictionary *proj = nil;
       
       if ([[input lastPathComponent] isEqualToString: @"PB.project"])
 	{
-	  NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: input];
-
+	  proj = [NSDictionary dictionaryWithContentsOfFile: input];
 	  xcprintf("== Parsing an old style NeXT project: %s -> %s\n",
 		   [input UTF8String], [output UTF8String]);
 	  container = convertPBProject(proj);
@@ -272,11 +277,19 @@ int main(int argc, const char *argv[])
       else if ([[input pathExtension] isEqualToString: @"pcproj"])
 	{
 	  NSString *path = [input stringByAppendingPathComponent: @"PC.project"];
-	  NSDictionary *proj = [NSDictionary dictionaryWithContentsOfFile: path];	  
 
-	  printf("== Parsing a ProjectCenter project: %s -> %s\n",
+	  proj = [NSDictionary dictionaryWithContentsOfFile: path];	  
+	  xcprintf("== Parsing a ProjectCenter project: %s -> %s\n",
 		 [input UTF8String], [output UTF8String]);
 	  container = convertPCProject(proj);
+	}
+      else if ([input isEqualToString: @"GNUmakefile"])
+	{
+	  NSString *fileData = [NSString stringWithContentsOfFile: input];
+	  xcprintf("== Parsing a ProjectCenter project: %s -> %s\n",
+		   [input UTF8String], [output UTF8String]);
+
+	  container = convertGNUmakfile(fileData);
 	}
       else
 	{
