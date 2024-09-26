@@ -86,11 +86,11 @@ id moveContainerProperties(NSDictionary *input)
   id key = nil;
   id keyToChange = nil;
 
-  // NSLog(@"result = %@", result);
+  // Find the specific key/guid to change...
   while ((key = [en nextObject]) != nil)
     {
       id d = [objects objectForKey: key];
-      
+
       if ([d isKindOfClass: [NSDictionary class]])
 	{
 	  NSString *cn = [d objectForKey: @"isa"];
@@ -111,14 +111,12 @@ id moveContainerProperties(NSDictionary *input)
       [containerDict removeObjectForKey: @"rootObject"];
       [containerDict removeObjectForKey: @"isa"];
       [containerDict removeObjectForKey: @"objects"];
-      
+
       [objects removeObjectForKey: keyToChange];
       [result addEntriesFromDictionary: containerDict];
       [result setObject: objects forKey: @"objects"];
     }
 
-  // NSLog(@"result = %@", result); 
-  
   return result;
 }
 
@@ -127,7 +125,7 @@ NSString *guidInCachedObjects(NSDictionary *objects, NSDictionary *dict)
   NSString *guid = nil;
   NSEnumerator *en = [objects keyEnumerator];
   NSString *g = nil;
-  
+
   while ((g = [en nextObject]) != nil)
     {
       NSDictionary *d = [objects objectForKey: g];
@@ -148,24 +146,24 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
   if ([propertyList isKindOfClass:[NSDictionary class]])
     {
       NSDictionary *dict = (NSDictionary *)propertyList;
-      
+
       // Check if the dictionary has an "isa" element
       if ([dict objectForKey:@"isa"])
 	{
 	  // Generate a GUID for this dictionary
 	  NSString *guid = generateGUID();
-	  
+
 	  // If the "isa" is "PBXProject", set the rootObjectGUID
 	  if ([[dict objectForKey:@"isa"] isEqualToString:@"PBXProject"])
 	    {
 	      *rootObjectGUID = guid;
 	    }
-	  
+
 	  // Add the dictionary to the objects array with its GUID
 	  NSMutableDictionary *flattenedDict = [NSMutableDictionary dictionary];
 	  NSEnumerator *en = [dict keyEnumerator];
 	  id key = nil;
-	  
+
 	  while ((key = [en nextObject]) != nil)
 	    {
 	      [flattenedDict setObject: flattenPropertyList([dict objectForKey:key], objects, rootObjectGUID)
@@ -181,7 +179,7 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
 	    {
 	      [objects setObject:flattenedDict forKey:guid];
 	    }
-	  
+
 	  // Return the GUID to replace the dictionary
 	  return guid;
 	}
@@ -206,7 +204,7 @@ id flattenPropertyList(id propertyList, NSMutableDictionary *objects, NSString *
       NSMutableArray *processedArray = [NSMutableArray array];
       NSEnumerator *en = [propertyList objectEnumerator];
       id item = nil;
-      
+
       while((item = [en nextObject]) != nil)
 	{
 	  [processedArray addObject:flattenPropertyList(item, objects, rootObjectGUID)];
@@ -226,7 +224,7 @@ NSDictionary *flattenPlist(id propertyList)
   NSMutableDictionary *objects = [NSMutableDictionary dictionary];
   NSString *rootObjectGUID = nil;
   NSMutableDictionary *results = [NSMutableDictionary dictionary];
-  
+
   // Flatten the property list and find the rootObjectGUID
   flattenPropertyList(propertyList, objects, &rootObjectGUID);
 
@@ -235,7 +233,7 @@ NSDictionary *flattenPlist(id propertyList)
 	      forKey: @"rootObject"];
   [results setObject: objects
 	      forKey: @"objects"];
-  
+
   // Return the final structure
   return results;
 }
@@ -249,19 +247,19 @@ NSDictionary *flattenPlist(id propertyList)
     {
       return;
     }
-  
+
   unsigned int methodCount = 0;
   Method *methods = class_copyMethodList(cls, &methodCount);
   unsigned int i = 0;
-  
+
   for (i = 0; i < methodCount; i++)
     {
       Method method = methods[i];
       [methodsArray addObject:NSStringFromSelector(method_getName(method))];
     }
-  
+
   free(methods);  // Don't forget to free the list
-  
+
   // Recursively call this method for the superclass
   [self getAllMethodsForClass:class_getSuperclass(cls) intoArray:methodsArray];
 }
@@ -287,7 +285,7 @@ NSDictionary *flattenPlist(id propertyList)
   NSEnumerator *en = [methods objectEnumerator];
   NSString *selectorName = nil;
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: [methods count]];
-  
+
   while ((selectorName = [en nextObject]) != nil)
     {
       if ([selectorName hasPrefix: @"set"] && [selectorName isEqualToString: @"settings"] == NO)
@@ -391,7 +389,6 @@ NSDictionary *flattenPlist(id propertyList)
 	}
     }
 
-  // NSLog(@"missingKeys are %@", missingKeys);
   return keysAndValues;
 }
 

@@ -24,9 +24,9 @@ NSMutableArray *buildFileReferences(NSArray *allFiles,
 	{
 	  filename = [filename stringByAppendingPathExtension: ext];
 	}
-      
+
       PBXFileReference *fileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: filename]);
-      [result addObject: fileRef];      
+      [result addObject: fileRef];
     }
 
   return result;
@@ -66,10 +66,10 @@ PBXGroup *productReferenceGroup(NSString *projectName,
     [projectName stringByAppendingPathExtension: ext];
   PBXFileReference *productFileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: path]);
   NSMutableArray *children = [NSMutableArray arrayWithObject: productFileRef];
-  
+
   [group setChildren: children];
   [group setName: @"Products"];
-  
+
   return group;
 }
 
@@ -79,7 +79,7 @@ PBXGroup *mainGroupBuild(NSArray *files, PBXGroup *productReferenceGroup)
   NSMutableArray *buildGroupFiles = buildFileReferences(files, nil);
   PBXGroup *buildFileGroup = AUTORELEASE([[PBXGroup alloc] init]);
   [buildFileGroup setChildren: buildGroupFiles];
-  
+
   NSMutableArray *mainGroupChildren = [NSMutableArray arrayWithObjects: buildFileGroup,
 						      productReferenceGroup, nil];
   [mainGroup setChildren: mainGroupChildren];
@@ -89,10 +89,10 @@ PBXGroup *mainGroupBuild(NSArray *files, PBXGroup *productReferenceGroup)
 
 void buildPhase(NSArray *items, PBXBuildPhase *phase)
 {
-  NSMutableArray *sources = [NSMutableArray arrayWithCapacity: [items count]]; 
+  NSMutableArray *sources = [NSMutableArray arrayWithCapacity: [items count]];
   NSEnumerator *en = [items objectEnumerator];
   NSString *item = nil;
-  
+
   while ((item = [en nextObject]) != nil)
     {
       PBXFileReference *fileRef = AUTORELEASE([[PBXFileReference alloc] initWithPath: item]);
@@ -122,7 +122,7 @@ NSMutableArray *buildTargets(NSString *projectName,
   buildPhase(resources, resourcePhase);
 
   // PBXFrameworksBuildPhase *frameworksPhase = AUTORELEASE([[PBXFrameworksBuildPhase alloc] init]);
-  // buildPhase(frameworks, frameworksPhase);  
+  // buildPhase(frameworks, frameworksPhase);
 
   PBXFileReference *productRef = [[prodRefGroup children] objectAtIndex: 0];
   NSMutableArray *phases = [NSMutableArray arrayWithObjects: sourcePhase, resourcePhase, nil]; // frameworksPhase, nil];
@@ -131,9 +131,9 @@ NSMutableArray *buildTargets(NSString *projectName,
   [target setName: projectName];
   [target setProductName: [productRef path]];
   [target setProductType: projectType];
-  
+
   [result addObject: target];
-  
+
   return result;
 }
 
@@ -154,7 +154,7 @@ PBXContainer *buildContainer(NSString *projectName,
   NSMutableArray *configArray = [NSMutableArray arrayWithObjects: buildConfigDebug, buildConfigRelease, nil];
   XCConfigurationList *configList = AUTORELEASE([[XCConfigurationList alloc] initWithConfigurations: configArray]);
   NSString *type = typeForProjectType(projectType);
-  
+
   // Add all files to the main group...
   [allFiles addObjectsFromArray: other];
   [allFiles addObjectsFromArray: resources];
@@ -163,13 +163,13 @@ PBXContainer *buildContainer(NSString *projectName,
   PBXGroup *productRefGroup = productReferenceGroup(projectName, projectType); // AUTORELEASE([[PBXGroup alloc] init]);
   PBXGroup *mainGroup = mainGroupBuild(allFiles, productRefGroup); // AUTORELEASE([[PBXGroup alloc] init]);
   NSMutableArray *targets = buildTargets(projectName, type, allFiles, headers, resources, frameworks, productRefGroup);
-  
+
   [project setMainGroup: mainGroup];
   [project setProductRefGroup: productRefGroup];
   [project setBuildConfigurationList: configList];
   // [project setContainer: container];
   [project setTargets: targets];
-  
+
   return container;
 }
 
@@ -188,7 +188,7 @@ PBXContainer *convertPBProject(NSDictionary *proj)
   NSMutableArray *allResources = [NSMutableArray arrayWithArray: resources];
 
   [allResources addObjectsFromArray: images];
-  
+
   return buildContainer(projectName, projectType, files, headers, allResources, other, frameworks);
 }
 
@@ -205,13 +205,13 @@ PBXContainer *convertPCProject(NSDictionary *proj)
   NSMutableArray *allResources = [NSMutableArray arrayWithArray: resources];
 
   [allResources addObjectsFromArray: images];
-  
+
   return buildContainer(projectName, projectType, files, headers, allResources, other, frameworks);
 }
 
 PBXContainer *convertGNUmakfile(NSString *inputString)
 {
-  
+
   return nil;
 }
 
@@ -226,7 +226,7 @@ BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 				attributes: NULL
 				     error: &error];
   BOOL result = NO;
-  
+
   if (created)
     {
       xcprintf("=== Saving Project %s%s%s%s -> %s%s%s\n",
@@ -234,12 +234,12 @@ BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 	       [dn cString], RESET);
 
       // [container save]; // Setup to save...
-  
+
       // Save the project...
       if (created && !error)
 	{
 	  id dictionary = [PBXCoder archiveWithRootObject: container];
-	  
+
 	  result = [dictionary writeToFile: fn atomically: YES];
 	  if (result)
 	    {
@@ -253,7 +253,7 @@ BOOL buildXCodeProj(PBXContainer *container, NSString *dn)
 	    }
 	}
     }
-  
+
   return result;
 }
 
@@ -267,7 +267,7 @@ int main(int argc, const char *argv[])
       NSString *output = [NSString stringWithUTF8String: argv[2]];
       PBXContainer *container = nil;
       NSDictionary *proj = nil;
-      
+
       if ([[input lastPathComponent] isEqualToString: @"PB.project"])
 	{
 	  proj = [NSDictionary dictionaryWithContentsOfFile: input];
@@ -279,7 +279,7 @@ int main(int argc, const char *argv[])
 	{
 	  NSString *path = [input stringByAppendingPathComponent: @"PC.project"];
 
-	  proj = [NSDictionary dictionaryWithContentsOfFile: path];	  
+	  proj = [NSDictionary dictionaryWithContentsOfFile: path];
 	  xcprintf("== Parsing a ProjectCenter project: %s -> %s\n",
 		 [input UTF8String], [output UTF8String]);
 	  container = convertPCProject(proj);
@@ -315,9 +315,8 @@ int main(int argc, const char *argv[])
     {
       xcprintf("== Not enough arguments");
     }
-			    
+
   [pool release];
 
   return 0;
 }
-
