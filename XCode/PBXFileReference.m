@@ -468,7 +468,7 @@ static NSLock *lock = nil;
   NSDictionary *plistFile = [context config];
   NSArray *headerPaths = [plistFile objectForKey: @"headerPaths"];
 
-  XCBuildConfiguration *config = [[list buildConfigurations] objectAtIndex: 0];
+  XCBuildConfiguration *config = [[list buildConfigurations] count] > 0 ? [[list buildConfigurations] objectAtIndex: 0] : nil;
   NSDictionary *buildSettings = [config buildSettings];
   NSMutableArray *headers = [buildSettings objectForKey: @"HEADER_SEARCH_PATHS"];
 
