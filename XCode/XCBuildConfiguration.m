@@ -54,6 +54,7 @@
 	      buildSettings: settings];
 }
 
+/*
 - (instancetype) init
 {
   NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithObject: @"macosx"
@@ -62,6 +63,7 @@
 	      buildSettings: settings];
 
 }
+*/
 
 - (NSString *) description
 {
