@@ -38,10 +38,12 @@
   return self;
 }
 
+/*
 - (instancetype) init
 {
   return [self initWithConfigurations: [NSMutableArray array]];
 }
+*/
 
 // Methods....
 - (NSString *) defaultConfigurationIsVisible // getter
