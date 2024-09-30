@@ -54,16 +54,15 @@
 	      buildSettings: settings];
 }
 
-/*
 - (instancetype) init
 {
-  NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithObject: @"macosx"
-								     forKey: @"SDKROOT"];
-  return [self initWithName: @"Debug"
-	      buildSettings: settings];
-
+  self = [super init];
+  if (self != nil)
+    {
+      // nothing now...
+    }
+  return self;
 }
-*/
 
 - (NSString *) description
 {
