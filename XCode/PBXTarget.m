@@ -40,11 +40,33 @@
   RELEASE(_name);
   RELEASE(_project);
   RELEASE(_productType);
+  RELEASE(_fileSystemSynchronizedGroups);
+  RELEASE(_packageProductDepedencies);
   
   [super dealloc];
 }
 
 // Methods....
+- (NSMutableArray *) fileSystemSynchronizedGroups
+{
+  return _fileSystemSynchronizedGroups;
+}
+
+- (void) setFileSystemSynchronizedGroups: (NSMutableArray *)object
+{
+  ASSIGN(_fileSystemSynchronizedGroups, object);
+}
+
+- (NSMutableArray *) packageProductDepedencies
+{
+  return _packageProductDepedencies;
+}
+
+- (void) setPackageProductDepedencies: (NSMutableArray *)object
+{
+  ASSIGN(_packageProductDepedencies, object);
+}
+
 - (PBXProject *) project
 {
   return _project;

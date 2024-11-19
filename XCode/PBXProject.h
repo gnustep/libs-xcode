@@ -54,9 +54,17 @@
 
   NSString *_filename;
   NSMutableArray *_arrangedTargets;
+  BOOL _minimizedProjectReferenceProxies;
+  NSString *_preferredProjectObjectVersion;
 }
 
 // Methods....
+- (BOOL) minimizedProjectReferenceProxies; // getter
+- (void) setMinimizedProjectReferenceProxies: (BOOL)flag; // setter
+
+- (NSString *) preferredProjectObjectVersion; // getter
+- (void) setPreferredProjectObjectVersion: (NSString *)object; // setter
+
 - (NSString *) developmentRegion; // getter
 - (void) setDevelopmentRegion: (NSString *)object; // setter
 

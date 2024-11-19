@@ -166,13 +166,33 @@
   return self;
 }
 
-// Methods....
+// Methods...
+- (BOOL) minimizedProjectReferenceProxies // getter
+{
+  return _minimizedProjectReferenceProxies;
+}
+
+- (void) setMinimizedProjectReferenceProxies: (BOOL)flag // setter
+{
+  _minimizedProjectReferenceProxies = flag;
+}
+
+- (NSString *) preferredProjectObjectVersion // getter
+{
+  return _preferredProjectObjectVersion;
+}
+
+- (void) setPreferredProjectObjectVersion: (NSString *)object // setter
+{
+  ASSIGN(_preferredProjectObjectVersion, object);
+}
+
 - (NSString *) developmentRegion // getter
 {
   return _developmentRegion;
 }
 
-- (void) setDevelopmentRegion: (NSString *)object; // setter
+- (void) setDevelopmentRegion: (NSString *)object // setter
 {
   ASSIGN(_developmentRegion,object);
 }
@@ -182,7 +202,7 @@
   return _knownRegions;
 }
 
-- (void) setKnownRegions: (NSMutableArray *)object; // setter
+- (void) setKnownRegions: (NSMutableArray *)object // setter
 {
   ASSIGN(_knownRegions,object);
 }
@@ -192,7 +212,7 @@
   return _compatibilityVersion;
 }
 
-- (void) setCompatibilityVersion: (NSString *)object; // setter
+- (void) setCompatibilityVersion: (NSString *)object // setter
 {
   ASSIGN(_compatibilityVersion,object);
 }
@@ -202,7 +222,7 @@
   return _projectReferences;
 }
 
-- (void) setProjectReferences: (NSMutableArray *)object; // setter
+- (void) setProjectReferences: (NSMutableArray *)object // setter
 {
   ASSIGN(_projectReferences,object);
 }
@@ -212,7 +232,7 @@
   return _targets;
 }
 
-- (void) setTargets: (NSMutableArray *)object; // setter
+- (void) setTargets: (NSMutableArray *)object // setter
 {
   ASSIGN(_targets,object);
 }
@@ -222,7 +242,7 @@
   return _projectDirPath;
 }
 
-- (void) setProjectDirPath: (NSString *)object; // setter
+- (void) setProjectDirPath: (NSString *)object // setter
 {
   ASSIGN(_projectDirPath,object);
 }
@@ -232,7 +252,7 @@
   return _projectRoot;
 }
 
-- (void) setProjectRoot: (NSString *)object; // setter
+- (void) setProjectRoot: (NSString *)object // setter
 {
   ASSIGN(_projectRoot,object);
 }
@@ -242,7 +262,7 @@
   return _buildConfigurationList;
 }
 
-- (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
+- (void) setBuildConfigurationList: (XCConfigurationList *)object // setter
 {
   ASSIGN(_buildConfigurationList,object);
 }
@@ -252,7 +272,7 @@
   return _mainGroup;
 }
 
-- (void) setMainGroup: (PBXGroup *)object; // setter
+- (void) setMainGroup: (PBXGroup *)object // setter
 {
   ASSIGN(_mainGroup,object);
 }
@@ -262,7 +282,7 @@
   return _hasScannedForEncodings;
 }
 
-- (void) setHasScannedForEncodings: (NSString *)object; // setter
+- (void) setHasScannedForEncodings: (NSString *)object // setter
 {
   ASSIGN(_hasScannedForEncodings,object);
 }
@@ -272,7 +292,7 @@
   return _productRefGroup;
 }
 
-- (void) setProductRefGroup: (PBXGroup *)object; // setter
+- (void) setProductRefGroup: (PBXGroup *)object // setter
 {
   ASSIGN(_productRefGroup,object);
 }

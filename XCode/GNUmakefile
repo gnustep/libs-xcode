@@ -48,6 +48,7 @@ PBXCopyFilesBuildPhase.h \
 PBXFileReference.h \
 PBXFrameworksBuildPhase.h \
 PBXFrameworkTarget.h \
+PBXFileSystemSynchronizedRootGroup.h \
 PBXGroup.h \
 PBXHeadersBuildPhase.h \
 PBXNativeTarget.h \
@@ -94,6 +95,7 @@ PBXContainerItemProxy.m \
 PBXContainer.m \
 PBXCopyFilesBuildPhase.m \
 PBXFileReference.m \
+PBXFileSystemSynchronizedRootGroup.m \
 PBXFrameworksBuildPhase.m \
 PBXFrameworkTarget.m \
 PBXGroup.m \

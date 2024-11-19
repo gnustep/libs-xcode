@@ -40,12 +40,20 @@
   NSMutableArray *_buildPhases;
   NSString *_name;
   NSString *_productType;
-
+  NSMutableArray *_fileSystemSynchronizedGroups;
+  NSMutableArray *_packageProductDepedencies;
+  
   PBXProject *_project;
   GSXCBuildDatabase *_database;
 }
 
 // Methods....
+- (NSMutableArray *) fileSystemSynchronizedGroups;
+- (void) setFileSystemSynchronizedGroups: (NSMutableArray *)object;
+
+- (NSMutableArray *) packageProductDepedencies;
+- (void) setPackageProductDepedencies: (NSMutableArray *)object;
+
 - (NSMutableArray *) dependencies; // getter
 - (void) setDependencies: (NSMutableArray *)object; // setter
 

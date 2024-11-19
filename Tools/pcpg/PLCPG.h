@@ -3,7 +3,7 @@
 
    Copyright (C) 2011 Free Software Foundation
 
-   Author: Gregory John Casamento,,,
+   Author: Gregory John Casamento
 
    Created: 2011-08-16 14:15:42 -0400 by heron
 
