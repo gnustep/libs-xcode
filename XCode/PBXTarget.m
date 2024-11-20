@@ -57,12 +57,12 @@
   ASSIGN(_fileSystemSynchronizedGroups, object);
 }
 
-- (NSMutableArray *) packageProductDepedencies
+- (NSMutableArray *) packageProductDependencies
 {
   return _packageProductDepedencies;
 }
 
-- (void) setPackageProductDepedencies: (NSMutableArray *)object
+- (void) setPackageProductDependencies: (NSMutableArray *)object
 {
   ASSIGN(_packageProductDepedencies, object);
 }
@@ -147,6 +147,21 @@
 - (void) setProductType: (NSString *)object; // setter
 {
   ASSIGN(_productType,object);
+}
+
+- (NSArray *) synchronizedSources
+{
+  return nil;
+}
+
+- (NSArray *) synchronizedHeaders
+{
+  return nil;
+}
+
+- (NSArray *) synchronizeResources
+{
+  return nil;
 }
 
 - (BOOL) build

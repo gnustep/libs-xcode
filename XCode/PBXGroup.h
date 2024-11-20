@@ -30,12 +30,12 @@
 
 @interface PBXGroup : NSObject
 {
-  NSString *sourceTree;
-  NSMutableArray *children;
-  NSString *name;
-  NSString *tabWidth;
-  NSString *usesTabs;
-  NSString *path;
+  NSString *_sourceTree;
+  NSMutableArray *_children;
+  NSString *_name;
+  NSString *_tabWidth;
+  NSString *_usesTabs;
+  NSString *_path;
 }
 
 // Methods....

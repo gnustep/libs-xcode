@@ -51,8 +51,8 @@
 - (NSMutableArray *) fileSystemSynchronizedGroups;
 - (void) setFileSystemSynchronizedGroups: (NSMutableArray *)object;
 
-- (NSMutableArray *) packageProductDepedencies;
-- (void) setPackageProductDepedencies: (NSMutableArray *)object;
+- (NSMutableArray *) packageProductDependencies;
+- (void) setPackageProductDependencies: (NSMutableArray *)object;
 
 - (NSMutableArray *) dependencies; // getter
 - (void) setDependencies: (NSMutableArray *)object; // setter
@@ -77,6 +77,11 @@
 
 - (NSString *) productType; // getter
 - (void) setProductType: (NSString *)object; // setter
+
+// Utility methods...
+- (NSArray *) synchronizedSources;
+- (NSArray *) synchronizedHeaders;
+- (NSArray *) synchronizedResources;
 
 // build
 - (BOOL) build;
