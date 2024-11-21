@@ -89,6 +89,10 @@ static NSLock *lock = nil;
     {
       result = @"file.gorm"; // GS specific
     }
+  else if ([ext isEqualToString: @"entitlements"])
+    {
+      result = @"text.plist.entitlements";
+    }
 	   
   return result;
 }
@@ -125,19 +129,23 @@ static NSLock *lock = nil;
     {
       result = @"app";
     }
-  if ([type isEqualToString: @"file.xib"])
+  else if ([type isEqualToString: @"file.xib"])
     {
       result = @"xib";
     }
-  if ([type isEqualToString: @"file.nib"])
+  else if ([type isEqualToString: @"file.nib"])
     {
       result = @"nib";
     }
-  if ([type isEqualToString: @"file.gorm"])
+  else if ([type isEqualToString: @"file.gorm"])
     {
-      result = @"gorm"; // GS specific
+      result = @"gorm";
     }
-	   
+  else if ([type isEqualToString: @"text.plist.entitlements"])
+    {
+      result = @"entitlements";
+    }
+
   return result;
 }
 

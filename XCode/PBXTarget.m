@@ -151,17 +151,91 @@
 
 - (NSArray *) synchronizedSources
 {
-  return nil;
+  NSMutableArray *result = [NSMutableArray array];
+  NSEnumerator *gen = [_fileSystemSynchronizedGroups objectEnumerator];
+  PBXFileSystemSynchronizedRootGroup *group = nil;
+
+  while ((group = [gen nextObject]) != nil)
+    {
+      NSArray *children = [group children];
+      NSEnumerator *cen = [children objectEnumerator];
+      PBXBuildFile *buildFile = nil;
+
+      while ((buildFile = [cen nextObject]) != nil)
+	{
+	  PBXFileReference *fr = [buildFile fileRef];
+	  NSString *name = [fr path];
+
+	  // NSLog(@"path = %@", name);
+	  if ([[name pathExtension] isEqualToString: @"m"]
+	      || [[name pathExtension] isEqualToString: @"mm"]
+	      || [[name pathExtension] isEqualToString: @"M"]
+	      || [[name pathExtension] isEqualToString: @"c"]
+	      || [[name pathExtension] isEqualToString: @"cc"]
+	      || [[name pathExtension] isEqualToString: @"C"]
+	      || [[name pathExtension] isEqualToString: @"swift"])
+	    {
+	      [result addObject: buildFile];
+	    }
+	}
+    }
+  
+  return result;
 }
 
 - (NSArray *) synchronizedHeaders
 {
-  return nil;
+  NSMutableArray *result = [NSMutableArray array];
+  NSEnumerator *gen = [_fileSystemSynchronizedGroups objectEnumerator];
+  PBXFileSystemSynchronizedRootGroup *group = nil;
+
+  while ((group = [gen nextObject]) != nil)
+    {
+      NSArray *children = [group children];
+      NSEnumerator *cen = [children objectEnumerator];
+      PBXBuildFile *buildFile = nil;
+
+      while ((buildFile = [cen nextObject]) != nil)
+	{
+	  PBXFileReference *fr = [buildFile fileRef];
+	  NSString *name = [fr path];
+
+	  if ([[name pathExtension] isEqualToString: @"h"])
+	    {
+	      [result addObject: buildFile];
+	    }
+	}
+    }
+  
+  return result;  
 }
 
-- (NSArray *) synchronizeResources
+- (NSArray *) synchronizedResources
 {
-  return nil;
+  NSMutableArray *result = [NSMutableArray array];
+  NSEnumerator *gen = [_fileSystemSynchronizedGroups objectEnumerator];
+  PBXFileSystemSynchronizedRootGroup *group = nil;
+
+  while ((group = [gen nextObject]) != nil)
+    {
+      NSArray *children = [group children];
+      NSEnumerator *cen = [children objectEnumerator];
+      PBXBuildFile *buildFile = nil;
+
+      while ((buildFile = [cen nextObject]) != nil)
+	{
+	  PBXFileReference *fr = [buildFile fileRef];
+	  NSString *name = [fr path];
+
+	  if ([[name pathExtension] isEqualToString: @"xcassets"]
+	      || [[name pathExtension] isEqualToString: @"xib"])
+	    {
+	      [result addObject: buildFile];
+	    }
+	}
+    }
+  
+  return result;
 }
 
 - (BOOL) build

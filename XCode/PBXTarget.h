@@ -29,6 +29,8 @@
 #import "XCConfigurationList.h"
 #import "PBXFileReference.h"
 #import "GSXCBuildContext.h"
+#import "PBXBuildFile.h"
+#import "PBXFileSystemSynchronizedRootGroup.h"
 
 @class PBXProject, GSXCBuildDatabase;
 

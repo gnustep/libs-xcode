@@ -85,9 +85,13 @@
       
       xcprintf("\t* Parallel build using %ld CPUs...\n", _cpus);
     }
+
+  NSArray *synchronizedFiles = [_target synchronizedSources];
+  files = [files arrayByAddingObjectsFromArray: synchronizedFiles];
+  // NSLog(@"files = %@", files);
   
   // if the database is present use it's list of files...
-  if (db != nil)
+  if (db != nil && [synchronizedFiles count] == 0)
     {
       if ([db isEmpty])
 	{

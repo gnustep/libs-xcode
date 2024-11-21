@@ -26,51 +26,59 @@
 #import "PBXFileSystemSynchronizedRootGroup.h"
 #import "PBXFileReference.h"
 #import "PBXBuildFile.h"
+#import "NSString+PBXAdditions.h"
 
 @implementation PBXFileSystemSynchronizedRootGroup
 
 - (NSMutableArray *) synchronizedChildren
 {
   NSFileManager *fm = [NSFileManager defaultManager];
-  BOOL isDirectory;
+  NSDirectoryEnumerator *den = [fm enumeratorAtPath: _path];
   NSMutableArray *result = [NSMutableArray array];
+  NSString *filePath = nil;
+  NSMutableArray *fp = [NSMutableArray array];
   
-  if ([fm fileExistsAtPath: _path isDirectory: &isDirectory]
-      && isDirectory == YES)
+  while ((filePath = [den nextObject]) != nil)
     {
-      NSError *error = nil;
-      NSArray *files = [fm contentsOfDirectoryAtPath: _path error: &error];
-
-      if (error == nil)
+      BOOL isDir = NO;
+      NSString *fullPath = [_path stringByAppendingPathComponent: filePath];
+      
+      if ([fm fileExistsAtPath: fullPath isDirectory: &isDir] && isDir == NO)
 	{
-	  NSEnumerator *en = [files objectEnumerator];
-	  NSString *path = nil;
+	  PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
+	  PBXFileReference *fileRef = nil;
+	  NSString *fpc = [filePath firstPathComponent];
+	  NSString *path = filePath;
 
-	  while ((path = [en nextObject]) != nil)
+	  AUTORELEASE(buildFile);
+	  
+	  if ([[fpc pathExtension] isEqualToString: @"xcassets"])
 	    {
-	      PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
-	      PBXFileReference *fileRef = [[PBXFileReference alloc] initWithPath: path];
+	      path = fpc;
+	    }
 
-	      AUTORELEASE(buildFile);
-	      AUTORELEASE(fileRef);
+	  if ([fp containsObject: path] == NO)
+	    {
+	      fileRef = [[PBXFileReference alloc] initWithPath: path];
 	      
+	      // NSLog(@"fileRef = %@", fileRef);
+	      AUTORELEASE(fileRef);
 	      [buildFile setFileRef: fileRef];
 	      [result addObject: buildFile];
+	      [fp addObject: path];
 	    }
 	}
     }
+  
+  // NSLog(@"result = %@", result);
 
   return result;
 }
 
-- (instancetype) init
+- (void) setPath: (NSString *)path
 {
-  self = [super init];
-  if (self != nil)
-    {
-      [self setChildren: [self synchronizedChildren]];
-    }
-  return self;
+  [super setPath: path];
+  [self setChildren: [self synchronizedChildren]];
 }
 
 @end
