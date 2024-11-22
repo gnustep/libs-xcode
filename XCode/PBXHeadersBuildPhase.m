@@ -50,7 +50,10 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSError *error = nil;
 
-  NSEnumerator *en = [_files objectEnumerator];
+  NSArray *synchronizedFiles = [_target synchronizedHeaders];
+  NSArray *files = [_files arrayByAddingObjectsFromArray: synchronizedFiles];
+  
+  NSEnumerator *en = [files objectEnumerator];
   NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
   while((file = [en nextObject]) != nil && result)
     {

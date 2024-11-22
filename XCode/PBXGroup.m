@@ -90,4 +90,11 @@
   ASSIGN(_path, object);
 }
 
+- (NSString *) description
+{
+  NSString *description = [super description];
+  NSString *additional = [NSString stringWithFormat: @"<%@ - name = %@, path = %@>", description, _name, _path];
+  return additional;
+}
+
 @end

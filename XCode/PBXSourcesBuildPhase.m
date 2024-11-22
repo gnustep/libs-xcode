@@ -101,6 +101,10 @@
       
       files = [db files];
     }
+  else
+    {
+      xcputs("+++ Using synchronized group...");
+    }
     
   en = [files objectEnumerator];                         
   xcputs("=== Executing Sources Build Phase");
@@ -166,11 +170,15 @@
   PBXBuildFile *file = nil;
   BOOL result = YES;
   NSString *buildDir = @"./build";
-  NSEnumerator *en = [_files objectEnumerator];
+  NSEnumerator *en = nil; // [_files objectEnumerator];
   NSFileManager *mgr = [NSFileManager defaultManager];
 
   buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
 
+  NSArray *synchronizedFiles = [_target synchronizedSources];
+  NSArray *files = [_files arrayByAddingObjectsFromArray: synchronizedFiles];
+  en = [files objectEnumerator];
+  
   xcputs("=== Executing Sources Build Phase (LINK)");
   while((file = [en nextObject]) != nil && result)
     {

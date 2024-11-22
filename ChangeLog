@@ -1,3 +1,13 @@
+2024-11-22 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* XCode/PBXFileReference.m
+	* XCode/PBXGroup.m
+	* XCode/PBXHeadersBuildPhase.m
+	* XCode/PBXResourcesBuildPhase.m
+	* XCode/PBXSourcesBuildPhase.m
+	* XCode/PBXFileSystemSynchronizedRootGroup.[hm]: Add
+	support for file system synchronized groups.
+
 2022-04-12 Riccardo Mottola <rm@gnu.org>
 
 	* PBXFileReference.m (_headerStringForPath):

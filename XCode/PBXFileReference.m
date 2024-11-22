@@ -154,7 +154,7 @@ static NSLock *lock = nil;
   self = [super init];
   if (self != nil)
     {
-      NSString *fileType = [PBXFileReference fileTypeFromPath: path];
+      NSString *fileType = [PBXFileReference fileTypeFromPath: [path lastPathComponent]];
 
       if ([fileType isEqualToString: @"compiled.mach-o.executable"])
 	{
@@ -327,7 +327,7 @@ static NSLock *lock = nil;
   id file = nil;
   while((file = [en nextObject]) != nil && *found == NO)
     {
-      if(file == self) // have we found ourselves??
+      if([[file path] isEqualToString: [self path]]) // have we found ourselves??
 	{
 	  NSString *filePath = ([file path] == nil)?@"":[file path];
 	  result = filePath;
@@ -723,9 +723,6 @@ static NSLock *lock = nil;
       [lock lock];
       NSString *outputPath = [buildDir stringByAppendingPathComponent: 
 				    [fileName stringByAppendingString: @".o"]];
-      //outputFiles = [outputFiles copy];
-      //outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
-      //	      stringByAppendingString: @" "];
       [lock unlock];
 
       NSString *objCflags = @"";
