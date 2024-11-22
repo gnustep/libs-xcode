@@ -103,7 +103,7 @@
     }
   else
     {
-      xcputs("+++ Using synchronized group...");
+      xcputs([[NSString stringWithFormat: @"%s+++ Using synchronized group...%s", YELLOW, RESET] cString]);      
     }
     
   en = [files objectEnumerator];                         
