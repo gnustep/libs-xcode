@@ -92,9 +92,8 @@
 
 - (NSString *) description
 {
-  NSString *description = [super description];
-  NSString *additional = [NSString stringWithFormat: @"<%@ - name = %@, path = %@>", description, _name, _path];
-  return additional;
+  return [NSString stringWithFormat: @"<%@ - name = %@, path = %@>",
+		   [super description], _name, _path];
 }
 
 @end
