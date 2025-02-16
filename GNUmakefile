@@ -13,7 +13,7 @@ include $(GNUSTEP_MAKEFILES)/common.make
 #
 # Aggregate
 #
-VERSION = 0.3.0
+VERSION = 0.5.0
 PACKAGE_NAME = XCode
 
 # Generator bundles

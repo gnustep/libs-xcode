@@ -1,3 +1,8 @@
+2025-02-16 Gregory John Casamento <greg.casamento@gmail.com>
+
+	* GNUmakefile
+	* Version: Release 0.5.0
+
 2024-11-22 Gregory John Casamento <greg.casamento@gmail.com>
 
 	* XCode/PBXFileReference.m
