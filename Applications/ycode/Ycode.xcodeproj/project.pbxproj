@@ -1,0 +1,174 @@
+{
+    archiveVersion = 1;
+    classes = {
+    };
+    objectVersion = 56;
+    objects = {
+	"038B6245-2D80-F505-6DF1-1FB5AEAE0620" = {
+	    children = (
+		"2994E397-21FD-F606-46C8-BF292D2FC134",
+		"7476828C-DC5B-8808-65D6-9D0E3CF4653F"
+	    );
+	    isa = PBXGroup;
+	    sourceTree = "<group>";
+	};
+	"136A431D-9AB1-F606-7715-5BF1E6B7F2A0" = {
+	    isa = XCBuildConfiguration;
+	};
+	"1645F4CB-A38D-AE0E-5EE0-DCB5F492B181" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "YCodeDocumentController.m";
+	    sourceTree = "<group>";
+	};
+	"17317B72-A9DA-1303-44E6-85A7E8DF2004" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "Ycode_main.m";
+	    sourceTree = "<group>";
+	};
+	"1B7BA187-AAB9-AB0B-7551-5C74756CFF3E" = {
+	    fileRef = "17317B72-A9DA-1303-44E6-85A7E8DF2004";
+	    isa = PBXBuildFile;
+	};
+	"1C52F42D-B586-F606-71AE-065813D69D31" = {
+	    buildPhases = (
+		"3EFFAD06-3C2F-A000-447C-11BA1E695B29",
+		"A5517E5A-3371-9A0A-79AA-5D307EFF3750"
+	    );
+	    isa = PBXNativeTarget;
+	    name = Ycode;
+	    productName = Ycode;
+	    productType = "com.apple.product-type.application";
+	};
+	"2994E397-21FD-F606-46C8-BF292D2FC134" = {
+	    children = (
+		"2C5D2D0A-526B-EA0A-7DBF-044613160251",
+		"1645F4CB-A38D-AE0E-5EE0-DCB5F492B181",
+		"FAA2CA0E-57D6-9404-6BFF-F1FFAC43C605",
+		"F3AF5B1B-FC22-6000-4EFA-8EDE27D5BB94",
+		"E8210A2F-E86F-D808-7A09-3BC0EC711688",
+		"7F85CAFE-E235-D606-7DCE-693CEAE47518",
+		"17317B72-A9DA-1303-44E6-85A7E8DF2004"
+	    );
+	    isa = PBXGroup;
+	    sourceTree = "<group>";
+	};
+	"2C5D2D0A-526B-EA0A-7DBF-044613160251" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "AppController.m";
+	    sourceTree = "<group>";
+	};
+	"38118205-AC17-F000-48CB-7D0B67582EA2" = {
+	    fileRef = "1645F4CB-A38D-AE0E-5EE0-DCB5F492B181";
+	    isa = PBXBuildFile;
+	};
+	"392D7AF5-A4CF-9B0B-43FA-F1132EB42984" = {
+	    fileRef = "FAA2CA0E-57D6-9404-6BFF-F1FFAC43C605";
+	    isa = PBXBuildFile;
+	};
+	"3EFFAD06-3C2F-A000-447C-11BA1E695B29" = {
+	    files = (
+		"60D3A5A8-4695-CB0B-5738-AEC068B0253F",
+		"38118205-AC17-F000-48CB-7D0B67582EA2",
+		"392D7AF5-A4CF-9B0B-43FA-F1132EB42984",
+		"974AE994-B88F-6909-65A3-18BA47FDDF4D",
+		"F2AD6CFE-61C3-FB0B-423C-6BCCA121DF60",
+		"5517A2D7-2746-2D0D-6165-818C45EAB2C7",
+		"1B7BA187-AAB9-AB0B-7551-5C74756CFF3E"
+	    );
+	    isa = PBXSourcesBuildPhase;
+	};
+	"5517A2D7-2746-2D0D-6165-818C45EAB2C7" = {
+	    fileRef = "7F85CAFE-E235-D606-7DCE-693CEAE47518";
+	    isa = PBXBuildFile;
+	};
+	"60D3A5A8-4695-CB0B-5738-AEC068B0253F" = {
+	    fileRef = "2C5D2D0A-526B-EA0A-7DBF-044613160251";
+	    isa = PBXBuildFile;
+	};
+	"7476828C-DC5B-8808-65D6-9D0E3CF4653F" = {
+	    children = (
+		"8BC7C78C-A156-DC0C-637F-417A68C31983"
+	    );
+	    isa = PBXGroup;
+	    name = Products;
+	    sourceTree = "<group>";
+	};
+	"7F85CAFE-E235-D606-7DCE-693CEAE47518" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "YCodeWindowController.m";
+	    sourceTree = "<group>";
+	};
+	"8BC7C78C-A156-DC0C-637F-417A68C31983" = {
+	    includeInIndex = 0;
+	    isa = PBXFileReference;
+	    lastKnownFileType = "compiled.mach-o.executable";
+	    path = Ycode;
+	    sourceTree = "<group>";
+	};
+	"974AE994-B88F-6909-65A3-18BA47FDDF4D" = {
+	    fileRef = "F3AF5B1B-FC22-6000-4EFA-8EDE27D5BB94";
+	    isa = PBXBuildFile;
+	};
+	"A5517E5A-3371-9A0A-79AA-5D307EFF3750" = {
+	    files = (
+	    );
+	    isa = PBXResourcesBuildPhase;
+	};
+	"C7C7CF2B-4FFF-0B0B-6ECC-A438DA282C79" = {
+	    buildSettings = {
+		SDKROOT = macosx;
+	    };
+	    isa = XCBuildConfiguration;
+	    name = Release;
+	};
+	"CBEECFCC-C0F9-8B0B-7004-BE1403FD5E8C" = {
+	    buildConfigurationList = "FE9A2968-CA06-A505-6E99-192D77773614";
+	    compatibilityVersion = "Xcode 14.0";
+	    developmentRegion = en;
+	    hasScannedForEncodings = 0;
+	    isa = PBXProject;
+	    mainGroup = "038B6245-2D80-F505-6DF1-1FB5AEAE0620";
+	    minimizedProjectReferenceProxies = <*I0>;
+	    productRefGroup = "7476828C-DC5B-8808-65D6-9D0E3CF4653F";
+	    projectDirPath = "";
+	    projectRoot = "";
+	    targets = (
+		"1C52F42D-B586-F606-71AE-065813D69D31"
+	    );
+	};
+	"E8210A2F-E86F-D808-7A09-3BC0EC711688" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "YCInspectorView.m";
+	    sourceTree = "<group>";
+	};
+	"F2AD6CFE-61C3-FB0B-423C-6BCCA121DF60" = {
+	    fileRef = "E8210A2F-E86F-D808-7A09-3BC0EC711688";
+	    isa = PBXBuildFile;
+	};
+	"F3AF5B1B-FC22-6000-4EFA-8EDE27D5BB94" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "YCEditorView.m";
+	    sourceTree = "<group>";
+	};
+	"FAA2CA0E-57D6-9404-6BFF-F1FFAC43C605" = {
+	    isa = PBXFileReference;
+	    lastKnownFileType = "sourcecode.c.objc";
+	    path = "YCTreeView.m";
+	    sourceTree = "<group>";
+	};
+	"FE9A2968-CA06-A505-6E99-192D77773614" = {
+	    buildConfigurations = (
+		"136A431D-9AB1-F606-7715-5BF1E6B7F2A0",
+		"C7C7CF2B-4FFF-0B0B-6ECC-A438DA282C79"
+	    );
+	    isa = XCConfigurationList;
+	};
+    };
+    rootObject = "CBEECFCC-C0F9-8B0B-7004-BE1403FD5E8C";
+}
