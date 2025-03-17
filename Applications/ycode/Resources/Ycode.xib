@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="21507" targetRuntime="MacOSX.Cocoa" useAutolayout="YES" propertyAccessControl="none" customObjectInstantiationMethod="direct">
+  <dependencies>
+    <deployment identifier="macosx"/>
+    <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21507"/>
+    <capability name="documents saved in the Xcode 8 format" minToolsVersion="8"/>
+  </dependencies>
+  <objects>
+    <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+    <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
+      <connections>
+        <outlet property="delegate" destination="756-c6-c29" id="3F8-4C-DDE"/>
+      </connections>
+    </customObject>
+    <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+    <menu id="4EB-6A-91A" systemMenu="main" title="Main Menu">
+      <items>
+        <menuItem id="608-85-687">
+          <menu id="4d6-56-e75" menuChangedMessagesEnabled="YES" title="Main Menu" systemMenu="apple" key="submenu">
+            <items>
+              <menuItem id="656-d3-236" title="Info">
+                <connections>
+                  <action selector="submenuAction:" target="4d6-56-e75" id="726-6A-047"/>
+                </connections>
+                <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <menu id="283-13-429" menuChangedMessagesEnabled="YES" title="Info" key="submenu">
+                  <items>
+                    <menuItem id="283-13-229" title="Info Panel...">
+                      <connections>
+                        <action selector="orderFrontStandardInfoPanel:" target="-1" id="7BE-F0-E8C"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-43-729" title="Preferences...">
+                      <connections>
+                        <action selector="showPrefPanel:" target="756-c6-c29" id="0D1-AA-B09"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-43-829" title="Help...">
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                  </items>
+                </menu>
+              </menuItem>
+              <menuItem id="283-63-429" title="Document" enabled="YES">
+                <connections>
+                  <action selector="submenuAction:" target="4d6-56-e75" id="1FC-41-67E"/>
+                </connections>
+                <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <menu id="283-13-529" menuChangedMessagesEnabled="YES" title="Document" key="submenu">
+                  <items>
+                    <menuItem id="6d2-83-129" title="Open..." keyEquivalent="o" enabled="YES" command="YES" shift="YES" control="YES" option="YES">
+                      <connections>
+                        <action selector="openDocument:" target="-1" id="71D-57-212"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-93-329" title="Open Recent" enabled="YES">
+                      <connections>
+                        <action selector="submenuAction:" target="283-13-529" id="43A-F7-2C2"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <menu id="55B-36-1B1" menuChangedMessagesEnabled="YES" title="Open Recent" key="submenu">
+                        <items>
+                          <menuItem id="6d2-83-329" title="Clear List" enabled="YES">
+                            <connections>
+                              <action selector="clearRecentDocuments:" target="-1" id="694-77-AD7"/>
+                            </connections>
+                            <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                              <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                            </image>
+                            <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                              <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                            </image>
+                          </menuItem>
+                        </items>
+                      </menu>
+                    </menuItem>
+                    <menuItem id="283-33-629" title="New" keyEquivalent="n" enabled="YES" command="YES" shift="YES" control="YES" option="YES">
+                      <connections>
+                        <action selector="newDocument:" target="-1" id="3A5-25-D66"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-83-129" title="Save..." keyEquivalent="s" enabled="YES" command="YES" shift="YES" control="YES" option="YES">
+                      <connections>
+                        <action selector="saveDocument:" target="-1" id="0CD-22-BAC"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-83-229" title="Save As..." keyEquivalent="S" enabled="YES" command="YES" shift="YES" control="YES" option="YES">
+                      <connections>
+                        <action selector="saveDocumentAs:" target="-1" id="1EA-E7-A05"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="6d2-83-729" title="Save To..." enabled="YES">
+                      <connections>
+                        <action selector="saveDocumentTo:" target="-1" id="711-16-2C8"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="6d2-83-829" title="Save All" enabled="YES">
+                      <connections>
+                        <action selector="saveAllDocuments:" target="-1" id="435-61-32B"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-43-129" title="Revert To Saved" enabled="YES">
+                      <connections>
+                        <action selector="revertDocumentToSaved:" target="-1" id="151-B9-068"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-83-429" title="Close" enabled="YES">
+                      <connections>
+                        <action selector="close:" target="-1" id="273-5A-6BA"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                  </items>
+                </menu>
+              </menuItem>
+              <menuItem id="656-d3-133" title="Windows" enabled="YES">
+                <connections>
+                  <action selector="submenuAction:" target="4d6-56-e75" id="798-09-D51"/>
+                </connections>
+                <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <menu id="752-83-529" menuChangedMessagesEnabled="YES" title="Windows" key="submenu">
+                  <items>
+                    <menuItem id="746-56-d38" title="Arrange In Front">
+                      <connections>
+                        <action selector="arrangeInFront:" target="-1" id="4B8-8B-ABF"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-53-929" title="Miniaturize Window" keyEquivalent="m" command="YES" shift="YES" control="YES" option="YES">
+                      <connections>
+                        <action selector="performMiniaturize:" target="-1" id="5D2-08-873"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                    <menuItem id="283-93-929" title="Close Window" keyEquivalent="w" command="YES" shift="YES" control="YES" option="YES">
+                      <connections>
+                        <action selector="performClose:" target="-1" id="2F0-7B-638"/>
+                      </connections>
+                      <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                      <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                        <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                      </image>
+                    </menuItem>
+                  </items>
+                </menu>
+              </menuItem>
+              <menuItem id="283-23-729" title="Services" enabled="YES">
+                <connections>
+                  <action selector="submenuAction:" target="4d6-56-e75" id="420-51-BA4"/>
+                </connections>
+                <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <menu id="546-D7-CCC" menuChangedMessagesEnabled="YES" title="Services" key="submenu" systemMenu="services">
+                  <items/>
+                </menu>
+              </menuItem>
+              <menuItem id="497-46-56d" title="Hide" keyEquivalent="h" command="YES" shift="YES" control="YES" option="YES">
+                <connections>
+                  <action selector="hide:" target="-1" id="65C-C8-65C"/>
+                </connections>
+                <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+              </menuItem>
+              <menuItem id="283-83-829" title="Quit" keyEquivalent="q" command="YES" shift="YES" control="YES" option="YES">
+                <connections>
+                  <action selector="terminate:" target="-1" id="780-FC-B0E"/>
+                </connections>
+                <image key="mixedStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuMixed" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+                <image key="onStateImage" archiveByName="YES" matchesOnMultipleResolution="YES" name="GSMenuSelected" prefersColorMatch="YES">
+                  <color key="backgroundColor" whiteComponent="0.0" colorSpace="calibratedWhite"/>
+                </image>
+              </menuItem>
+            </items>
+          </menu>
+        </menuItem>
+      </items>
+    </menu>
+    <window id="772-83-029" opaque="YES" canHide="YES" acceptsMouseMovedEvents="YES" visible="YES" viewsNeedDisplay="YES" representedFilename="Window" title="Window" autodisplay="YES" miniwindowTitle="Window" contentView="4A2-18-30A">
+      <color key="backgroundColor" name="windowBackgroundColor" catalog="System" colorSpace="catalog"/>
+      <windowStyleMask titled="YES" closable="YES" miniaturizable="YES" resizable="YES" key="styleMask"/>
+      <rect key="contentRect" x="1.0" y="9.0" width="1538" height="923"/>
+      <rect key="screenRect" x="0.0" y="0.0" width="3840" height="2160"/>
+      <view id="4A2-18-30A" frameCenterRotation="0.0" boundsRotation="0.0" autoresizesSubviews="YES" frameRotation="0.0" key="contentView">
+        <autoresizingMask flexibleMinY="YES" key="autoresizeMask"/>
+        <subviews>
+          <splitView id="6E7-76-039" vertical="YES" frameCenterRotation="0.0" draggedBarWidth="8.0" boundsRotation="0.0" frameRotation="0.0">
+            <color key="dividerColor" name="controlShadowColor" catalog="System" colorSpace="catalog"/>
+            <subviews>
+              <box id="782-83-429" frameCenterRotation="0.0" title="Box" borderWidth="0.0" boundsRotation="0.0" titlePosition="noTitle" contentView="772-83-529" cornerRadius="0.0" frameRotation="0.0">
+                <view id="772-83-529" frameCenterRotation="0.0" boundsRotation="0.0" autoresizesSubviews="YES" frameRotation="0.0" key="contentView"/>
+              </box>
+              <box id="782-83-529" frameCenterRotation="0.0" title="Box" borderWidth="0.0" boundsRotation="0.0" titlePosition="noTitle" contentView="772-83-629" cornerRadius="0.0" frameRotation="0.0">
+                <view id="772-83-629" frameCenterRotation="0.0" boundsRotation="0.0" autoresizesSubviews="YES" frameRotation="0.0" key="contentView"/>
+              </box>
+              <box id="782-83-329" frameCenterRotation="0.0" title="Box" borderWidth="0.0" boundsRotation="0.0" titlePosition="noTitle" contentView="772-83-429" cornerRadius="0.0" frameRotation="0.0">
+                <view id="772-83-429" frameCenterRotation="0.0" boundsRotation="0.0" autoresizesSubviews="YES" frameRotation="0.0" key="contentView"/>
+              </box>
+            </subviews>
+            <holdingPriorities>
+              <real value="250"/>
+              <real value="250"/>
+              <real value="250"/>
+            </holdingPriorities>
+          </splitView>
+        </subviews>
+      </view>
+    </window>
+    <customObject id="756-c6-c29" customClass="AppController" className="AppController"/>
+    <customObject id="12D-70-F9A" customClass="YCodeDocumentController" className="YCodeDocumentController">
+      <connections>
+        <outlet property="projectView" destination="772-83-529" id="24A-11-F3B"/>
+        <outlet property="editorView" destination="772-83-629" id="771-F7-3F9"/>
+        <outlet property="inspectorView" destination="772-83-429" id="097-4C-F9D"/>
+      </connections>
+    </customObject>
+  </objects>
+</document>
