@@ -66,9 +66,9 @@
   makefileString = [makefileString stringByAppendingString:
                                 [NSString stringWithFormat: @"%@_C_FILES = %@\n\n", appName, [self objectForString: cFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_CPP_FILES = %@\n\n", appName, [self objectForString: cppFilesString]]];
+                                [NSString stringWithFormat: @"%@_CC_FILES = %@\n\n", appName, [self objectForString: cppFilesString]]];
   makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_OBJCPP_FILES = %@\n\n", appName, [self objectForString: objCPPFilesString]]];
+                                [NSString stringWithFormat: @"%@_OBJCC_FILES = %@\n\n", appName, [self objectForString: objCPPFilesString]]];
   makefileString = [makefileString stringByAppendingString:
                                 [NSString stringWithFormat: @"%@_HEADER_FILES = %@\n\n", appName, [self objectForString: headerFilesString]]];
   makefileString = [makefileString stringByAppendingString:
