@@ -371,7 +371,7 @@
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t* No Info.plist, generating... %@", outputPlist] cString]);
+      xcputs([[NSString stringWithFormat: @"\t* Generating info plist --> %s%@%s", GREEN, outputPlist, RESET] cString]);
       XCBuildConfiguration *config = [xcl configurationWithName: @"Debug"];
       NSMutableDictionary *ipl = [self configToInfoPlist: config];
       NSString *plString = [ipl description];
