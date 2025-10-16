@@ -47,6 +47,7 @@
 - (NSString *) defaultConfigurationName; // getter
 - (void) setDefaultConfigurationName: (NSString *)object; // setter
 - (XCBuildConfiguration *) defaultConfiguration;
+- (XCBuildConfiguration *) configurationWithName: (NSString *)name;
 
 - (void) applyDefaultConfiguration;
 @end

@@ -76,11 +76,9 @@
   ASSIGN(defaultConfigurationName,object);
 }
 
-- (XCBuildConfiguration *) defaultConfiguration
+- (XCBuildConfiguration *) configurationWithName: (NSString *)name
 {
   NSEnumerator *en = [buildConfigurations objectEnumerator];
-  NSString *defaultConfig = (defaultConfigurationName == nil)?
-    @"Release":defaultConfigurationName;
   XCBuildConfiguration *config = nil;
 
   NSDebugLog(@"Number of build configurations = %ld\n%@",
@@ -88,15 +86,21 @@
 
   while((config = [en nextObject]) != nil)
     {
-      if([[config name] 
-	   isEqualToString: 
-	     defaultConfig])
+      if([[config name] isEqualToString: name])
 	{
 	  break;
 	}
     }
 
   return config;
+
+}
+
+- (XCBuildConfiguration *) defaultConfiguration
+{
+  NSString *defaultConfig = (defaultConfigurationName == nil)?
+    @"Release":defaultConfigurationName;
+  return [self configurationWithName: defaultConfig];
 }
 
 - (void) applyDefaultConfiguration
