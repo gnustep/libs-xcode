@@ -8,3 +8,4 @@ derived_src
 *.backup
 *.backup/*
 build
+.DS_Store

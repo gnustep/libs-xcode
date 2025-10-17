@@ -1,65 +1,59 @@
 <?xml version="1.0"?>
 <!DOCTYPE gsdoc PUBLIC "-//GNUstep//DTD gsdoc 1.0.3//EN" "http://www.gnustep.org/gsdoc-1_0_3.xml">
-<gsdoc base="Gui">
+<gsdoc base="XCode">
   <head>
-    <title>Gui</title>
-    <copy>1996-2023 Free Software Foundation, Inc.</copy>
+    <title>XCode Library</title>
+    <copy>2018-2025 Free Software Foundation, Inc.</copy>
   </head>
   <body>
     <chapter>
-      <heading>Gui</heading>
+      <heading>XCode Library</heading>
       <p>
-          The GNUstep GUI library is a free software package implementing the
-          API of the OpenStep Application Kit (tm), or "AppKit", including
-          later additions.  This documentation package describes the core of
-          the Base library; for documentation on additional classes, see the
-          <uref url="../Additions/index.html">GuiAdditions</uref>
-          documentation package.
+        The GNUstep XCode library is a free software package for reading,
+        parsing, and building Xcode project files (.xcodeproj and .xcworkspace)
+        on non-Apple platforms. It provides a complete implementation of the
+        Xcode project model including all PBX* classes that represent various
+        components of an Xcode project.
       </p>
       <p>
-        Read the
-        <uref url="../ReleaseNotes/ReleaseNotes.html">Release Notes</uref>
-        for the current release.
+        This library enables developers to:
       </p>
+      <list>
+        <item>Parse and load Xcode project files</item>
+        <item>Build Xcode projects on Linux, Windows, and other platforms</item>
+        <item>Generate makefiles and CMake files from Xcode projects</item>
+        <item>Analyze and manipulate Xcode project structure programmatically</item>
+      </list>
       <section>
-        <heading>Compatibility</heading>
+        <heading>Core Components</heading>
         <p>
-          GNUstep is generally compatible with the OpenStep specification and
-          with recent developments of the Mac OS X (Cocoa) API.  Where MacOS
-          deviates from the OpenStep API, GNUstep generally attempts to
-          support both versions.  In some cases the newer MacOS APIs are
-          incompatible with OpenStep, and GNUstep usually supports the richer
-          version. See the <uref
-          url="../General/OpenStepCompliance.html">OpenStep Compliance</uref>
-          section for more information on OpenStep Compliance.
+          The library is organized into several key areas:
+        </p>
+        <list>
+          <item><strong>PBX Classes:</strong> Core classes representing Xcode project elements (targets, build phases, file references, groups, etc.)</item>
+          <item><strong>Build System:</strong> Classes for managing the build process (GSXCBuildOperation, GSXCBuildContext, GSXCBuildDatabase)</item>
+          <item><strong>Configuration:</strong> Classes for handling build configurations (XCBuildConfiguration, XCConfigurationList)</item>
+          <item><strong>Generators:</strong> Support for generating makefiles and CMake files from Xcode projects</item>
+          <item><strong>Workspace Support:</strong> Classes for handling Xcode workspaces (XCWorkspace, XCFileRef, XCWorkspaceParser)</item>
+        </list>
+      </section>
+      <section>
+        <heading>Command Line Tool</heading>
+        <p>
+          The library includes <strong>buildtool</strong>, a command-line utility
+          for building Xcode projects from the terminal. See the buildtool(1)
+          manual page for usage information.
         </p>
       </section>
       <section>
-        <heading>Information and Setup</heading>
-      <p>
-	Nicola Pero has begun work on writing an
-	<uref url="../ProgrammingManual/manual_toc.html">introduction</uref>
-	to the basic concepts and use of the GNUstep GUI library.
-     </p>
-      <p>
-        Useful documentation for setting up GNUstep:
-      </p>
-      <list>
-        <item><uref url="../../../User/Gui/DefaultsSummary.html">Available User Defaults</uref></item>
-        <item><uref url="../../../User/Gui/LanguageSetup.html">Language Setup</uref></item>
-      </list>
+        <heading>Documentation</heading>
+        <p>
+          For detailed API documentation, see the
+          <uref url="Reference/index.html">XCode Reference</uref>.
+        </p>
       </section>
-
     </chapter>
-
     <back>
-      <chapter>
-        <heading>API Documentation</heading>
-        <list>
-          <item><uref url="Functions.html">Functions</uref></item>
-          <item><uref url="TypesAndConstants.html">Types and Constants</uref></item>
-        </list>
-      </chapter>
       <index scope="project" type="class" />
       <index scope="project" type="protocol" />
     </back>

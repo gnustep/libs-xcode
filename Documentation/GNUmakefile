@@ -28,11 +28,66 @@ include $(GNUSTEP_MAKEFILES)/common.make
 include ../Version
 
 # The documents to be generated
-DOCUMENT_NAME = ReleaseNotes
+DOCUMENT_NAME = XCodeReference
 
-# SUBPROJECTS = General GuiUser manual
+# Main document text
+DOCUMENT_TEXT_NAME = XCodeReference
 
-# The text documents to be generated
+# Autogsdoc options for generating documentation
+XCodeReference_AGSDOC_FILES = \
+	../XCode/GSXCBuildDatabase.h \
+	../XCode/GSXCBuildContext.h \
+	../XCode/NSArray+Additions.h \
+	../XCode/NSString+PBXAdditions.h \
+	../XCode/PBXBuildPhase.h \
+	../XCode/PBXTarget.h \
+	../XCode/PBXApplicationTarget.h \
+	../XCode/PBXAggregateTarget.h \
+	../XCode/PBXBuildFile.h \
+	../XCode/PBXBuildRule.h \
+	../XCode/PBXBundleTarget.h \
+	../XCode/PBXCoder.h \
+	../XCode/PBXContainer.h \
+	../XCode/PBXContainerItemProxy.h \
+	../XCode/PBXCopyFilesBuildPhase.h \
+	../XCode/PBXFileReference.h \
+	../XCode/PBXFrameworksBuildPhase.h \
+	../XCode/PBXFrameworkTarget.h \
+	../XCode/PBXFileSystemSynchronizedRootGroup.h \
+	../XCode/PBXGroup.h \
+	../XCode/PBXHeadersBuildPhase.h \
+	../XCode/PBXNativeTarget.h \
+	../XCode/PBXProject.h \
+	../XCode/PBXReferenceProxy.h \
+	../XCode/PBXResourcesBuildPhase.h \
+	../XCode/PBXRezBuildPhase.h \
+	../XCode/PBXShellScriptBuildPhase.h \
+	../XCode/PBXSourcesBuildPhase.h \
+	../XCode/PBXTargetDependency.h \
+	../XCode/PBXVariantGroup.h \
+	../XCode/XCAbstractDelegate.h \
+	../XCode/XCBuildConfiguration.h \
+	../XCode/XCConfigurationList.h \
+	../XCode/XCVersionGroup.h \
+	../XCode/XCWorkspace.h \
+	../XCode/XCFileRef.h \
+	../XCode/XCWorkspaceParser.h \
+	../XCode/PBXLegacyTarget.h \
+	../XCode/GSXCBuildOperation.h \
+	../XCode/GSXCBuildDelegate.h \
+	../XCode/GSXCGenerator.h \
+	../XCode/NSObject+KeyExtraction.h
+
+XCodeReference_AGSDOC_FLAGS = \
+	-MakeFrames YES \
+	-Project XCode \
+	-Standards YES \
+	-DocumentationDirectory Reference \
+	-HeaderDirectory ../XCode \
+	-Verbose YES \
+	-ConstantsTemplate TypesAndConstants \
+	-FunctionsTemplate Functions \
+	-MacrosTemplate Functions
 
 # Manual pages to install
 MAN1_PAGES = \

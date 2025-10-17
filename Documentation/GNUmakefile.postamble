@@ -26,24 +26,35 @@
 # Things to do before compiling
 # before-all::
 
-# After building local documentation, we need to run the special makefile
-# in the source directory to generate library reference documentation from
-# the source code.
+# After building documentation
 after-all::
+	@echo "Documentation generation complete"
+	@echo "HTML documentation is in Reference/"
 
 # Things to do before installing
 # before-install::
 
-# Install the library reference documentation manually
-#
+# Install the library reference documentation
 after-install::
+	$(MKINSTALLDIRS) $(GNUSTEP_DOC)/XCode
+	if [ -d Reference ]; then \
+	  $(INSTALL_DATA) Reference/*.html $(GNUSTEP_DOC)/XCode/; \
+	  if [ -d Reference/Protocols ]; then \
+	    $(MKINSTALLDIRS) $(GNUSTEP_DOC)/XCode/Protocols; \
+	    $(INSTALL_DATA) Reference/Protocols/*.html $(GNUSTEP_DOC)/XCode/Protocols/; \
+	  fi; \
+	  if [ -d Reference/Classes ]; then \
+	    $(MKINSTALLDIRS) $(GNUSTEP_DOC)/XCode/Classes; \
+	    $(INSTALL_DATA) Reference/Classes/*.html $(GNUSTEP_DOC)/XCode/Classes/; \
+	  fi; \
+	fi
 
 # Things to do before uninstalling
 # before-uninstall::
 
 # Things to do after uninstalling
 after-uninstall::
-	rm -rf $(REF_DOC_INSTALL_DIR)
+	rm -rf $(GNUSTEP_DOC)/XCode
 
 # Things to do before cleaning
 # before-clean::
@@ -63,23 +74,9 @@ after-clean::
 # Things to do after checking
 # after-check::
 
-regenerate: $(DOCUMENT_TEXT_NAME)
-	mv -f $(TOP_DOC_FILES) ..
+regenerate:
+	@echo "Regenerating documentation..."
+	$(MAKE) clean
+	$(MAKE) all
 
-version.texi: ../Version
-	rm -f version.texi
-	echo '@set GNUSTEP-GUI-VERSION' $(GNUSTEP_GUI_VERSION) \
-		> version.texi
-	echo '@set GNUSTEP-GUI-GCC $(GNUSTEP_GUI_GCC)' \
-		>> version.texi
-	echo '@set GNUSTEP-GUI-BASE $(GNUSTEP_GUI_BASE)' \
-		>> version.texi
-	echo '@set GNUSTEP-GUI-LIBTIFF $(GNUSTEP_GUI_LIBTIFF)' \
-		>> version.texi
-	if [ $(GNUSTEP_GUI_FTP_MACHINE) ]; then \
-	  echo '@set GNUSTEP-GUI-FTP-MACHINE $(GNUSTEP_GUI_FTP_MACHINE)' \
-		>> version.texi; fi
-	if [ $(GNUSTEP_GUI_FTP_DIRECTORY) ]; then \
-	  echo '@set GNUSTEP-GUI-FTP-DIRECTORY $(GNUSTEP_GUI_FTP_DIRECTORY)' \
-		>> version.texi; fi
 

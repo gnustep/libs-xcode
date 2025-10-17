@@ -1,12 +1,42 @@
 # XCode lib manual
 
-This manual is intended as a guide to using the libs-xcode library along with buildtool, it's command line front-end.   This library and tool were written for the purpose of allowing the user to easily build xcode projects on any other platform that GNUstep currently supports.
+This manual is intended as a guide to using the libs-xcode library along with buildtool, its command line front-end. This library and tool were written for the purpose of allowing the user to easily build Xcode projects on any other platform that GNUstep currently supports.
+
+## Generating Documentation
+
+The XCode library documentation is generated using autogsdoc. To generate the documentation:
+
+```bash
+cd Documentation
+make
+```
+
+This will generate HTML documentation in the `Reference/` directory. The documentation includes:
+
+- Class references for all PBX* classes
+- Build system classes (GSXC* classes)
+- Configuration classes (XC* classes)
+- Utility categories on NSString, NSArray, and NSObject
+
+To install the documentation:
+
+```bash
+make install
+```
+
+The documentation will be installed to `$GNUSTEP_DOC/XCode/`.
+
+To clean the documentation:
+
+```bash
+make clean
+```
 
 ## Property list values
 
 With any project it is possible to use a propertly list file called buildtool.plist.  This propery file allows you to set specific paramters to alter the behavior of the build for whatever platform you are building on.
 
-An example property list is here: 
+An example property list is here:
 
 ```
 {
@@ -18,20 +48,20 @@ An example property list is here:
 
     "# Comment" = "This target name maps to the above...";
     msvc = {
-		additional = (
-			   "-lgdi32",
-		);
-		copylibs = YES;
-		ignored = ( "VideoToolbox", "CoreMedia" );
+  additional = (
+      "-lgdi32",
+  );
+  copylibs = YES;
+  ignored = ( "VideoToolbox", "CoreMedia" );
     }; 
         
-    headerPaths = (	"/home/gregc/headers" );
+    headerPaths = ( "/home/gregc/headers" );
 
     remappedSource = { "ASourceFile.m" = "AlternateSourceFile.m"; };
 
     skippedTarget = ( "ASkippedTargetName" );
 
-	mapped = { "curl" = "-llibcurl"; };
+ mapped = { "curl" = "-llibcurl"; };
 
     ignored = ( "ssh2" );
 
@@ -47,39 +77,39 @@ An example property list is here:
 
 The property list contains the following elements, many of which are fairely self explanitory:
 
-* ```target``` = the values of this can be "msvc", "linux", or "msys2" usually this is left blank.   It is usually only specified when building on msvc (or VisualStudio) targets since buildtool/xcode can't currently detect if you are using msvc automatically.  The need for this parameter might become obsolete.
+- ```target``` = the values of this can be "msvc", "linux", or "msys2" usually this is left blank.   It is usually only specified when building on msvc (or VisualStudio) targets since buildtool/xcode can't currently detect if you are using msvc automatically.  The need for this parameter might become obsolete.
 
-* ```setupScript``` = This is a script which is run before the build is done.   In this case it is used to set up a new environment for buildtool/xcode to use to build the application.  This is done, for instance, to set up paths for alternate tool chains (Android/VisualStudio/etc).
+- ```setupScript``` = This is a script which is run before the build is done.   In this case it is used to set up a new environment for buildtool/xcode to use to build the application.  This is done, for instance, to set up paths for alternate tool chains (Android/VisualStudio/etc).
 
-* ```TargetName``` = In our example this is a proxy for whatever target you need to set up specific parameters for.  For example if your target is named "Foo" replace "TargetName" with that name.   This dictionary can contain all of the same entries as the parent list, but they will only be applied to the given target
+- ```TargetName``` = In our example this is a proxy for whatever target you need to set up specific parameters for.  For example if your target is named "Foo" replace "TargetName" with that name.   This dictionary can contain all of the same entries as the parent list, but they will only be applied to the given target
 
-* ```buildType``` = The values for this are "linear" and "parallel".  A linear build builds the files one by one, the parallel mode builds on all available processors unless otherwise specified.
+- ```buildType``` = The values for this are "linear" and "parallel".  A linear build builds the files one by one, the parallel mode builds on all available processors unless otherwise specified.
 
-* ```cpus``` = This specifies the number of cpus to use in a parallel build.
+- ```cpus``` = This specifies the number of cpus to use in a parallel build.
 
-* ```copylibs``` = YES / NO - If YES then the tool will copy shared libraries into the .app folder (presuming you're building an application or other bundle) when the build completes.
+- ```copylibs``` = YES / NO - If YES then the tool will copy shared libraries into the .app folder (presuming you're building an application or other bundle) when the build completes.
 
-* ```ignored``` = Ignore a given set (array) of frameworks or libraries when linking.
+- ```ignored``` = Ignore a given set (array) of frameworks or libraries when linking.
 
-* ```headerPaths``` = An array of additional header paths to add when building.
+- ```headerPaths``` = An array of additional header paths to add when building.
 
-* ```remappedSource	``` = A dictionary of source files to remap.  Remapping a file causes the file it is mapped to to build instead.  This is useful for GNUstep specific code.
+- ```remappedSource ``` = A dictionary of source files to remap.  Remapping a file causes the file it is mapped to to build instead.  This is useful for GNUstep specific code.
 
-* ```skippedTarget``` = An array of targets to skip.
+- ```skippedTarget``` = An array of targets to skip.
 
-* ```linkerPaths``` = An array of additional paths to check when linking.  This adds -L directives to the compiler invocation.
+- ```linkerPaths``` = An array of additional paths to check when linking.  This adds -L directives to the compiler invocation.
 
-* ```additionalCFlags``` = A string that contains any additional C flags that need to be added.
+- ```additionalCFlags``` = A string that contains any additional C flags that need to be added.
 
-* ```substitutions``` = An dictionary containing mappings of a library to a given library on your architecture.  Mapping a library to "" is equivalent to adding it to the ```ignored``` array.
+- ```substitutions``` = An dictionary containing mappings of a library to a given library on your architecture.  Mapping a library to "" is equivalent to adding it to the ```ignored``` array.
 
-* ```additional``` = An array containing more libraries to be added
+- ```additional``` = An array containing more libraries to be added
 
-### Planned for the future:
+### Planned for the future
 
-* For ```buildType``` the value distributed will be used to send files to build "servers" to help speed up the build.  In this case the ```cpus``` setting will be used to determine the number of servers to use.
+- For ```buildType``` the value distributed will be used to send files to build "servers" to help speed up the build.  In this case the ```cpus``` setting will be used to determine the number of servers to use.
 
-### Also planned:
+### Also planned
 
 Work on the YCode application is planned in the near future.  Currently it is a stub, but it should start seeing serious development in 2023.
 
