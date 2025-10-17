@@ -41,20 +41,64 @@
   NSUInteger _currentFile;
 }
 
-// Methods....
-- (PBXFileReference *) fileRef; // getter
-- (void) setFileRef: (PBXFileReference *)object; // setter
-- (NSMutableDictionary *) settings; // getter
-- (void) setSettings: (NSMutableDictionary *)object; // setter
+/**
+ * Returns the file reference for this build file.
+ */
+- (PBXFileReference *) fileRef;
+
+/**
+ * Sets the file reference for this build file.
+ */
+- (void) setFileRef: (PBXFileReference *)object;
+
+/**
+ * Returns the settings for this build file.
+ */
+- (NSMutableDictionary *) settings;
+
+/**
+ * Sets the settings for this build file.
+ */
+- (void) setSettings: (NSMutableDictionary *)object;
+
+/**
+ * Sets the platform filter for this build file.
+ */
 - (void) setPlatformFilter: (NSString *)f;
+
+/**
+ * Sets the target for this build file.
+ */
 - (void) setTarget: (PBXNativeTarget *)t;
 
+/**
+ * Sets the total number of files.
+ */
 - (void) setTotalFiles: (NSUInteger)t;
+
+/**
+ * Sets the current file number.
+ */
 - (void) setCurrentFile: (NSUInteger)n;
 
+/**
+ * Returns the path for this build file.
+ */
 - (NSString *) path;
+
+/**
+ * Returns the build path for this build file.
+ */
 - (NSString *) buildPath;
+
+/**
+ * Builds the build file.
+ */
 - (BOOL) build;
+
+/**
+ * Generates the build file.
+ */
 - (BOOL) generate;
 
 @end

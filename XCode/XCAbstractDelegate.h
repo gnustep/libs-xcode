@@ -27,6 +27,9 @@
 
 @interface XCAbstractDelegate : NSObject
 
+/**
+ * Posts a formatted message.
+ */
 - (void) postMessage: (NSString *)format, ...;
 
 @end

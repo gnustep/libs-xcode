@@ -38,20 +38,69 @@
   NSMutableArray *_outputFileListPaths;
 }
 
-// Methods....
-- (NSString *) shellPath; // getter
-- (void) setShellPath: (NSString *)object; // setter
-- (NSString *) shellScript; // getter
-- (void) setShellScript: (NSString *)object; // setter
-- (NSMutableArray *) inputPaths; // getter
-- (void) setInputPaths: (NSMutableArray *)object; // setter
-- (NSMutableArray *) outputPaths; // getter
-- (void) setOutputPaths: (NSMutableArray *)object; // setter
-- (NSMutableArray *) inputFileListPaths; // getter
-- (void) setInputFileListPaths: (NSMutableArray *)object; // setter
-- (NSMutableArray *) outputFileListPaths; // getter
-- (void) setOutputFileListPaths: (NSMutableArray *)object; // setter
+/**
+ * Returns the shell path for this shell script build phase.
+ */
+- (NSString *) shellPath;
 
-// build...
+/**
+ * Sets the shell path for this shell script build phase.
+ */
+- (void) setShellPath: (NSString *)object;
+
+/**
+ * Returns the shell script for this build phase.
+ */
+- (NSString *) shellScript;
+
+/**
+ * Sets the shell script for this build phase.
+ */
+- (void) setShellScript: (NSString *)object;
+
+/**
+ * Returns the input paths for this build phase.
+ */
+- (NSMutableArray *) inputPaths;
+
+/**
+ * Sets the input paths for this build phase.
+ */
+- (void) setInputPaths: (NSMutableArray *)object;
+
+/**
+ * Returns the output paths for this build phase.
+ */
+- (NSMutableArray *) outputPaths;
+
+/**
+ * Sets the output paths for this build phase.
+ */
+- (void) setOutputPaths: (NSMutableArray *)object;
+
+/**
+ * Returns the input file list paths for this build phase.
+ */
+- (NSMutableArray *) inputFileListPaths;
+
+/**
+ * Sets the input file list paths for this build phase.
+ */
+- (void) setInputFileListPaths: (NSMutableArray *)object;
+
+/**
+ * Returns the output file list paths for this build phase.
+ */
+- (NSMutableArray *) outputFileListPaths;
+
+/**
+ * Sets the output file list paths for this build phase.
+ */
+- (void) setOutputFileListPaths: (NSMutableArray *)object;
+
+/**
+ * Builds the shell script build phase.
+ */
 - (BOOL) build;
+
 @end

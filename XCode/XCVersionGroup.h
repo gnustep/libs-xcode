@@ -39,22 +39,64 @@
   NSUInteger _totalFiles;
 }
 
-// Methods....
-- (NSString *) sourceTree; // getter
-- (void) setSourceTree: (NSString *)object; // setter
+/**
+ * Returns the source tree for this version group.
+ */
+- (NSString *) sourceTree;
 
-- (PBXFileReference *) currentVersion; // getter
-- (void) setCurrentVersion: (PBXFileReference *)object; // setter
+/**
+ * Sets the source tree for this version group.
+ */
+- (void) setSourceTree: (NSString *)object;
 
-- (NSString *) versionGroupType; // getter
-- (void) setVersionGroupType: (NSString *)object; // setter
+/**
+ * Returns the current version for this group.
+ */
+- (PBXFileReference *) currentVersion;
 
-- (NSString *) path; // getter
-- (void) setPath: (NSString *)object; // setter
+/**
+ * Sets the current version for this group.
+ */
+- (void) setCurrentVersion: (PBXFileReference *)object;
 
-- (NSMutableArray *) children; // getter
-- (void) setChildren: (NSMutableArray *)object; // setter
+/**
+ * Returns the version group type.
+ */
+- (NSString *) versionGroupType;
 
+/**
+ * Sets the version group type.
+ */
+- (void) setVersionGroupType: (NSString *)object;
+
+/**
+ * Returns the path for this version group.
+ */
+- (NSString *) path;
+
+/**
+ * Sets the path for this version group.
+ */
+- (void) setPath: (NSString *)object;
+
+/**
+ * Returns the children of this version group.
+ */
+- (NSMutableArray *) children;
+
+/**
+ * Sets the children of this version group.
+ */
+- (void) setChildren: (NSMutableArray *)object;
+
+/**
+ * Sets the total number of files in this group.
+ */
 - (void) setTotalFiles: (NSUInteger)total;
+
+/**
+ * Returns the total number of files in this group.
+ */
 - (NSUInteger) totalFiles;
+
 @end

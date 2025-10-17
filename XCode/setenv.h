@@ -28,5 +28,8 @@
 #endif
 #include <stdio.h>
 
+/**
+ * Sets an environment variable.
+ */
 int setenv(const char *key, const char *value, int overwrite);
-// char *getenv(const char *key);
+

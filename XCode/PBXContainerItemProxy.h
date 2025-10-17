@@ -37,18 +37,64 @@
   NSString *remoteInfo;
 }
 
-// Methods....
-- (NSString *) proxyType; // getter
-- (void) setProxyType: (NSString *)object; // setter
-- (NSString *) remoteGlobalIDString; // getter
-- (void) setRemoteGlobalIDString: (NSString *)object; // setter
-- (id) containerPortal; // getter
-- (void) setContainerPortal: (id)object; // setter
-- (NSString *) remoteInfo; // getter
-- (void) setRemoteInfo: (NSString *)object; // setter
+/**
+ * Returns the proxy type for this container item proxy.
+ */
+- (NSString *) proxyType;
 
+/**
+ * Sets the proxy type for this container item proxy.
+ */
+- (void) setProxyType: (NSString *)object;
+
+/**
+ * Returns the remote global ID string.
+ */
+- (NSString *) remoteGlobalIDString;
+
+/**
+ * Sets the remote global ID string.
+ */
+- (void) setRemoteGlobalIDString: (NSString *)object;
+
+/**
+ * Returns the container portal.
+ */
+- (id) containerPortal;
+
+/**
+ * Sets the container portal.
+ */
+- (void) setContainerPortal: (id)object;
+
+/**
+ * Returns the remote info string.
+ */
+- (NSString *) remoteInfo;
+
+/**
+ * Sets the remote info string.
+ */
+- (void) setRemoteInfo: (NSString *)object;
+
+/**
+ * Builds the container item proxy.
+ */
 - (BOOL) build;
+
+/**
+ * Generates the container item proxy.
+ */
 - (BOOL) generate;
+
+/**
+ * Cleans the container item proxy.
+ */
 - (BOOL) clean;
+
+/**
+ * Saves the container item proxy.
+ */
 - (BOOL) save;
+
 @end

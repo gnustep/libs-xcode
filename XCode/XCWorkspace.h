@@ -34,23 +34,59 @@
   NSString *_filename;
 }
 
+/**
+ * Creates a new workspace instance.
+ */
 + (instancetype) workspace;
 
+/**
+ * Returns the version of this workspace.
+ */
 - (NSString *) version;
+
+/**
+ * Sets the version of this workspace.
+ */
 - (void) setVersion: (NSString *)v;
 
+/**
+ * Returns the file references in this workspace.
+ */
 - (NSArray *) fileRefs;
+
+/**
+ * Sets the file references in this workspace.
+ */
 - (void) setFileRefs: (NSArray *)refs;
 
+/**
+ * Returns the filename of this workspace.
+ */
 - (NSString *) filename;
+
+/**
+ * Sets the filename of this workspace.
+ */
 - (void) setFilename: (NSString *)filename;
 
+/**
+ * Builds the workspace.
+ */
 - (BOOL) build;
 
+/**
+ * Cleans the workspace.
+ */
 - (BOOL) clean;
 
+/**
+ * Installs the workspace.
+ */
 - (BOOL) install;
 
+/**
+ * Links the workspace.
+ */
 - (BOOL) link;
 
 @end

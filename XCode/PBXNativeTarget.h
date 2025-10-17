@@ -40,16 +40,44 @@
   XCConfigurationList *_xcConfigurationList;
 }
 
-// Methods....
-- (PBXFileReference *) productReference; // getter
-- (void) setProductReference: (PBXFileReference *)object; // setter
-- (NSString *) productInstallPath; // getter
-- (void) setProductInstallPath: (NSString *)object; // setter
-- (NSMutableArray *) buildRules; // getter
-- (void) setBuildRules: (NSMutableArray *)object; // setter
-- (NSString *) productSettingsXML; // getter
-- (void) setProductSettingsXML: (NSString *)object; // setter
-// - (XCConfigurationList *) buildConfigurationList;
-// - (void) setBuildConfigurationList: (XCConfigurationList *)list;
+/**
+ * Returns the product reference for this native target.
+ */
+- (PBXFileReference *) productReference;
+
+/**
+ * Sets the product reference for this native target.
+ */
+- (void) setProductReference: (PBXFileReference *)object;
+
+/**
+ * Returns the product install path for this native target.
+ */
+- (NSString *) productInstallPath;
+
+/**
+ * Sets the product install path for this native target.
+ */
+- (void) setProductInstallPath: (NSString *)object;
+
+/**
+ * Returns the build rules for this native target.
+ */
+- (NSMutableArray *) buildRules;
+
+/**
+ * Sets the build rules for this native target.
+ */
+- (void) setBuildRules: (NSMutableArray *)object;
+
+/**
+ * Returns the product settings XML for this native target.
+ */
+- (NSString *) productSettingsXML;
+
+/**
+ * Sets the product settings XML for this native target.
+ */
+- (void) setProductSettingsXML: (NSString *)object;
 
 @end

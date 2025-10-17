@@ -36,16 +36,49 @@
   PBXNativeTarget *_target;
 }
 
-// Methods....
-- (PBXContainerItemProxy *) targetProxy; // getter
-- (void) setTargetProxy: (PBXContainerItemProxy *)object; // setter
-- (NSString *) name; // getter
-- (void) setName: (NSString *)object; // setter
+/**
+ * Returns the target proxy for this dependency.
+ */
+- (PBXContainerItemProxy *) targetProxy;
+
+/**
+ * Sets the target proxy for this dependency.
+ */
+- (void) setTargetProxy: (PBXContainerItemProxy *)object;
+
+/**
+ * Returns the name of this dependency.
+ */
+- (NSString *) name;
+
+/**
+ * Sets the name of this dependency.
+ */
+- (void) setName: (NSString *)object;
+
+/**
+ * Returns the target for this dependency.
+ */
 - (PBXNativeTarget *) target;
+
+/**
+ * Sets the target for this dependency.
+ */
 - (void) setTarget: (PBXNativeTarget *)object;
 
-// build
+/**
+ * Builds the target dependency.
+ */
 - (BOOL) build;
+
+/**
+ * Generates the target dependency.
+ */
 - (BOOL) generate;
+
+/**
+ * Cleans the target dependency.
+ */
 - (BOOL) clean;
+
 @end

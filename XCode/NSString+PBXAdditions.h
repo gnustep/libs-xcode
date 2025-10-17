@@ -26,23 +26,80 @@
 
 @interface NSString (PBXAdditions)
 
+/**
+ * Returns the first path component of the receiver.
+ */
 - (NSString *) firstPathComponent;
 
+/**
+ * Returns a string with the path extension replaced.
+ */
 - (NSString *) stringByReplacingPathExtensionWith: (NSString *)ext;
+
+/**
+ * Returns a string with special characters escaped.
+ */
 - (NSString *) stringByEscapingSpecialCharacters;
+
+/**
+ * Returns a string with special characters eliminated.
+ */
 - (NSString *) stringByEliminatingSpecialCharacters;
+
+/**
+ * Returns a string with the first character capitalized.
+ */
 - (NSString *) stringByCapitalizingFirstCharacter;
+
+/**
+ * Returns a string with the first path component deleted.
+ */
 - (NSString *) stringByDeletingFirstPathComponent;
+
+/**
+ * Returns a string with environment variables replaced by their values.
+ */
 - (NSString *) stringByReplacingEnvironmentVariablesWithValues;
+
+/**
+ * Returns a string with quotation marks added.
+ */
 - (NSString *) stringByAddingQuotationMarks;
+
+/**
+ * Returns the executable path for this string.
+ */
 - (NSString *) execPathForString;
 
+/**
+ * Returns the output string from executing the given command.
+ */
 + (NSString *) stringForCommand: (NSString *)command;
+
+/**
+ * Returns the string value for the given environment variable.
+ */
 + (NSString *) stringForEnvironmentVariable: (char *)envvar;
+
+/**
+ * Returns the string value for the given environment variable with a default.
+ */
 + (NSString *) stringForEnvironmentVariable: (NSString *)v
                                defaultValue: (NSString *)d;
+
+/**
+ * Returns a string with trailing characters from the set trimmed.
+ */
 - (NSString *) stringByTrimmingTrailingCharactersInSet: (NSCharacterSet *)characterSet;
+
+/**
+ * Returns a string with the path resolved.
+ */
 - (NSString *) stringByResolvingPath;
+
+/**
+ * Returns a string with the first character in lowercase.
+ */
 - (NSString *) lowercaseFirstCharacter;
 
 @end

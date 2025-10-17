@@ -39,10 +39,24 @@ extern "C" {
   PBXBuildFile *_file;
 }
 
+/**
+ * Creates an operation with the given file.
+ */
 + (instancetype) operationWithFile: (PBXBuildFile *)file;
 
+/**
+ * Initializes the operation with the given file.
+ */
 - (instancetype) initWithFile: (PBXBuildFile *)file;
+
+/**
+ * Returns the file for this operation.
+ */
 - (PBXBuildFile *) file;
+
+/**
+ * Sets the file for this operation.
+ */
 - (void) setFile: (PBXBuildFile *)file;
   
 @end

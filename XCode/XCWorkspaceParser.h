@@ -32,10 +32,24 @@
   NSString *_filename;
 }
 
+/**
+ * Parses the workspace from the given file.
+ */
 + (instancetype) parseWorkspaceFile: (NSString *)file;
+
+/**
+ * Parses the workspace from the given directory.
+ */
 + (instancetype) parseWorkspaceDirectory: (NSString *)dir;
+
+/**
+ * Initializes the parser with the contents of the given file.
+ */
 - (instancetype) initWithContentsOfFile: (NSString *)file;
 
+/**
+ * Returns the parsed workspace.
+ */
 - (XCWorkspace *) workspace;
 
 @end

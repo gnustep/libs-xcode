@@ -30,16 +30,31 @@
 @class NSMutableArray;
 @class NSSet;
 
+/**
+ * Finds the project filename from directory entries.
+ */
 NSString *findProjectFilename(NSArray *projectDirEntries);
 
+/**
+ * Finds the workspace filename from directory entries.
+ */
 NSString *findWorkspaceFilename(NSArray *projectDirEntries);
 
+/**
+ * Resolves the project name and sets whether it is a project.
+ */
 NSString *resolveProjectName(BOOL *isProject);
 
 @interface ToolDelegate : XCAbstractDelegate
 
-// Handling arguments
+/**
+ * Parses command line arguments.
+ */
 - (NSDictionary *) parseArguments;
+
+/**
+ * Processes the tool operation.
+ */
 - (void) process;
 
 @end

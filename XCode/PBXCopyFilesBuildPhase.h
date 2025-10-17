@@ -32,10 +32,24 @@
   NSString *dstSubfolderSpec;
 }
 
-// Methods....
-- (NSString *) dstPath; // getter
-- (void) setDstPath: (NSString *)object; // setter
-- (NSString *) dstSubfolderSpec; // getter
-- (void) setDstSubfolderSpec: (NSString *)object; // setter
+/**
+ * Returns the destination path for this copy files build phase.
+ */
+- (NSString *) dstPath;
+
+/**
+ * Sets the destination path for this copy files build phase.
+ */
+- (void) setDstPath: (NSString *)object;
+
+/**
+ * Returns the destination subfolder specification.
+ */
+- (NSString *) dstSubfolderSpec;
+
+/**
+ * Sets the destination subfolder specification.
+ */
+- (void) setDstSubfolderSpec: (NSString *)object;
 
 @end

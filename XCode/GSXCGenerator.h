@@ -32,12 +32,24 @@
   PBXTarget *_target;
 }
 
+/**
+ * Initializes the generator with the given target.
+ */
 - (instancetype) initWithTarget: (PBXTarget *)target;
 
+/**
+ * Returns the target for this generator.
+ */
 - (PBXTarget *) target;
 
+/**
+ * Sets the target for this generator.
+ */
 - (void) setTarget: (PBXTarget *)target;
 
+/**
+ * Generates the target.
+ */
 - (BOOL) generate;
 
 @end

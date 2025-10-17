@@ -49,47 +49,144 @@
   GSXCBuildDatabase *_database;
 }
 
-// Methods....
+/**
+ * Returns the file system synchronized groups for this target.
+ */
 - (NSMutableArray *) fileSystemSynchronizedGroups;
+
+/**
+ * Sets the file system synchronized groups for this target.
+ */
 - (void) setFileSystemSynchronizedGroups: (NSMutableArray *)object;
 
+/**
+ * Returns the package product dependencies for this target.
+ */
 - (NSMutableArray *) packageProductDependencies;
+
+/**
+ * Sets the package product dependencies for this target.
+ */
 - (void) setPackageProductDependencies: (NSMutableArray *)object;
 
-- (NSMutableArray *) dependencies; // getter
-- (void) setDependencies: (NSMutableArray *)object; // setter
+/**
+ * Returns the dependencies for this target.
+ */
+- (NSMutableArray *) dependencies;
 
-- (XCConfigurationList *) buildConfigurationList; // getter
-- (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
+/**
+ * Sets the dependencies for this target.
+ */
+- (void) setDependencies: (NSMutableArray *)object;
 
-- (NSString *) productName; // getter
-- (void) setProductName: (NSString *)object; // setter
+/**
+ * Returns the build configuration list for this target.
+ */
+- (XCConfigurationList *) buildConfigurationList;
 
-- (NSMutableArray *) buildPhases; // getter
-- (void) setBuildPhases: (NSMutableArray *)object; // setter
+/**
+ * Sets the build configuration list for this target.
+ */
+- (void) setBuildConfigurationList: (XCConfigurationList *)object;
 
-- (NSString *) name; // getter
-- (void) setName: (NSString *)object; // setter
+/**
+ * Returns the product name for this target.
+ */
+- (NSString *) productName;
 
+/**
+ * Sets the product name for this target.
+ */
+- (void) setProductName: (NSString *)object;
+
+/**
+ * Returns the build phases for this target.
+ */
+- (NSMutableArray *) buildPhases;
+
+/**
+ * Sets the build phases for this target.
+ */
+- (void) setBuildPhases: (NSMutableArray *)object;
+
+/**
+ * Returns the name of this target.
+ */
+- (NSString *) name;
+
+/**
+ * Sets the name of this target.
+ */
+- (void) setName: (NSString *)object;
+
+/**
+ * Returns the project for this target.
+ */
 - (PBXProject *) project;
+
+/**
+ * Sets the project for this target.
+ */
 - (void) setProject: (PBXProject *)project;
 
+/**
+ * Returns the build database for this target.
+ */
 - (GSXCBuildDatabase *) database;
+
+/**
+ * Sets the build database for this target.
+ */
 - (void) setDatabase: (GSXCBuildDatabase *)db;
 
-- (NSString *) productType; // getter
-- (void) setProductType: (NSString *)object; // setter
+/**
+ * Returns the product type for this target.
+ */
+- (NSString *) productType;
 
-// Utility methods...
+/**
+ * Sets the product type for this target.
+ */
+- (void) setProductType: (NSString *)object;
+
+/**
+ * Returns the synchronized sources for this target.
+ */
 - (NSArray *) synchronizedSources;
+
+/**
+ * Returns the synchronized headers for this target.
+ */
 - (NSArray *) synchronizedHeaders;
+
+/**
+ * Returns the synchronized resources for this target.
+ */
 - (NSArray *) synchronizedResources;
 
-// build
+/**
+ * Builds the target.
+ */
 - (BOOL) build;
+
+/**
+ * Cleans the target.
+ */
 - (BOOL) clean;
+
+/**
+ * Installs the target.
+ */
 - (BOOL) install;
+
+/**
+ * Generates the target.
+ */
 - (BOOL) generate;
+
+/**
+ * Links the target.
+ */
 - (BOOL) link;
 
 @end

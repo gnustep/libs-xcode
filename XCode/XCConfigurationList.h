@@ -37,18 +37,51 @@
   NSString *defaultConfigurationName;
 }
 
+/**
+ * Initializes the configuration list with the given configurations.
+ */
 - (instancetype) initWithConfigurations: (NSMutableArray *)configs;
 
-// Methods....
-- (NSString *) defaultConfigurationIsVisible; // getter
-- (void) setDefaultConfigurationIsVisible: (NSString *)object; // setter
-- (NSMutableArray *) buildConfigurations; // getter
-- (void) setBuildConfigurations: (NSMutableArray *)object; // setter
-- (NSString *) defaultConfigurationName; // getter
-- (void) setDefaultConfigurationName: (NSString *)object; // setter
+/**
+ * Returns whether the default configuration is visible.
+ */
+- (NSString *) defaultConfigurationIsVisible;
+
+/**
+ * Sets whether the default configuration is visible.
+ */
+- (void) setDefaultConfigurationIsVisible: (NSString *)object;
+
+/**
+ * Returns the build configurations for this list.
+ */
+- (NSMutableArray *) buildConfigurations;
+
+/**
+ * Sets the build configurations for this list.
+ */
+- (void) setBuildConfigurations: (NSMutableArray *)object;
+
+/**
+ * Returns the default configuration name.
+ */
+- (NSString *) defaultConfigurationName;
+
+/**
+ * Sets the default configuration name.
+ */
+- (void) setDefaultConfigurationName: (NSString *)object;
+
+/**
+ * Returns the default configuration.
+ */
 - (XCBuildConfiguration *) defaultConfiguration;
 
+/**
+ * Applies the default configuration.
+ */
 - (void) applyDefaultConfiguration;
+
 @end
 
 #endif

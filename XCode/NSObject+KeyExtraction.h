@@ -26,9 +26,24 @@
 
 @interface NSObject (KeyExtraction)
 
+/**
+ * Returns an array of keys to skip during extraction.
+ */
 + (NSArray *) skippedKeys;
+
+/**
+ * Returns the keys for the given object.
+ */
 - (NSArray *) keysForObject: (id)object;
+
+/**
+ * Returns a dictionary of recursive keys and values for the given object.
+ */
 - (NSDictionary *) recursiveKeysAndValuesForObject: (id)object;
+
+/**
+ * Returns all keys and values for this object.
+ */
 - (NSDictionary *) allKeysAndValues;
 
 @end

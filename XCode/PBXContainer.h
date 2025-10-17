@@ -43,44 +43,139 @@
   NSString *_workspaceIncludes;
 }
 
+/**
+ * Initializes the container with the given root object.
+ */
 - (instancetype) initWithRootObject: (id)object;
 
+/**
+ * Sets the workspace includes path.
+ */
 - (void) setWorkspaceIncludes: (NSString *)i;
+
+/**
+ * Returns the workspace includes path.
+ */
 - (NSString *) workspaceIncludes;
 
+/**
+ * Sets the workspace libraries path.
+ */
 - (void) setWorkspaceLibs: (NSString *)l;
+
+/**
+ * Returns the workspace libraries path.
+ */
 - (NSString *) workspaceLibs;
 
+/**
+ * Sets the workspace link.
+ */
 - (void) setWorkspaceLink: (NSString *)w;
+
+/**
+ * Returns the workspace link.
+ */
 - (NSString *) workspaceLink;
 
+/**
+ * Sets the parameter for this container.
+ */
 - (void) setParameter: (NSString *)p;
+
+/**
+ * Returns the parameter for this container.
+ */
 - (NSString *) parameter;
 
+/**
+ * Sets the archive version for this container.
+ */
 - (void) setArchiveVersion: (NSString *)version;
+
+/**
+ * Returns the archive version for this container.
+ */
 - (NSString *) archiveVersion;
 
+/**
+ * Sets the classes dictionary for this container.
+ */
 - (void) setClasses: (NSMutableDictionary *)dict;
+
+/**
+ * Returns the classes dictionary for this container.
+ */
 - (NSMutableDictionary *) classes;
 
+/**
+ * Sets the object version for this container.
+ */
 - (void) setObjectVersion: (NSString *)version;
+
+/**
+ * Returns the object version for this container.
+ */
 - (NSString *) objectVersion;
 
+/**
+ * Sets the objects dictionary for this container.
+ */
 - (void) setObjects: (NSMutableDictionary *)dict;
+
+/**
+ * Returns the objects dictionary for this container.
+ */
 - (NSMutableDictionary *) objects;
 
+/**
+ * Sets the root object for this container.
+ */
 - (void) setRootObject: (id)object;
+
+/**
+ * Returns the root object for this container.
+ */
 - (id) rootObject;
 
+/**
+ * Sets the filename for this container.
+ */
 - (void) setFilename: (NSString *)fn;
+
+/**
+ * Returns the filename for this container.
+ */
 - (NSString *) filename;
 
-// Build...			  
+/**
+ * Builds the container.
+ */
 - (BOOL) build;
+
+/**
+ * Cleans the container.
+ */
 - (BOOL) clean;
+
+/**
+ * Installs the container.
+ */
 - (BOOL) install;
+
+/**
+ * Generates the container.
+ */
 - (BOOL) generate;
+
+/**
+ * Links the container.
+ */
 - (BOOL) link;
+
+/**
+ * Saves the container.
+ */
 - (BOOL) save;
 
 @end

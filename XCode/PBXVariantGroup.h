@@ -34,17 +34,49 @@
   NSString *name;
 }
 
-// Methods....
-- (NSString *) sourceTree; // getter
-- (void) setSourceTree: (NSString *)object; // setter
-- (NSString *) path; // getter
-- (void) setPath: (NSString *)object; // setter
-- (NSMutableArray *) children; // getter
-- (void) setChildren: (NSMutableArray *)object; // setter
-- (NSString *) name; // getter
-- (void) setName: (NSString *)object; // setter
+/**
+ * Returns the source tree for this variant group.
+ */
+- (NSString *) sourceTree;
 
-// build...
+/**
+ * Sets the source tree for this variant group.
+ */
+- (void) setSourceTree: (NSString *)object;
+
+/**
+ * Returns the path for this variant group.
+ */
+- (NSString *) path;
+
+/**
+ * Sets the path for this variant group.
+ */
+- (void) setPath: (NSString *)object;
+
+/**
+ * Returns the children of this variant group.
+ */
+- (NSMutableArray *) children;
+
+/**
+ * Sets the children of this variant group.
+ */
+- (void) setChildren: (NSMutableArray *)object;
+
+/**
+ * Returns the name of this variant group.
+ */
+- (NSString *) name;
+
+/**
+ * Sets the name of this variant group.
+ */
+- (void) setName: (NSString *)object;
+
+/**
+ * Returns the build path for this variant group.
+ */
 - (NSString *) buildPath;
 
 @end

@@ -35,7 +35,14 @@
   NSMutableDictionary *classNameMap;
 }
 
+/**
+ * Initializes with the given plist file name.
+ */
 - (id) initWithPlist: (NSString *)plistName;
+
+/**
+ * Generates the output from the plist.
+ */
 - (void) generate;
 
 @end

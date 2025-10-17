@@ -34,21 +34,74 @@
   NSString *_workspaceLibs;
 }
 
+/**
+ * Creates a new file reference instance.
+ */
 + (instancetype) fileRef;
 
+/**
+ * Returns the workspace includes path.
+ */
 - (NSString *) workspaceIncludes;
+
+/**
+ * Sets the workspace includes path.
+ */
 - (void) setWorkspaceIncludes: (NSString *)wsInc;
+
+/**
+ * Returns the workspace link.
+ */
 - (NSString *) workspaceLink;
+
+/**
+ * Sets the workspace link.
+ */
 - (void) setWorkspaceLink: (NSString *)wsLink;
+
+/**
+ * Returns the workspace libraries path.
+ */
 - (NSString *) workspaceLibs;
+
+/**
+ * Sets the workspace libraries path.
+ */
 - (void) setWorkspaceLibs: (NSString *)wsLibs;
+
+/**
+ * Returns the location for this file reference.
+ */
 - (NSString *) location;
+
+/**
+ * Sets the location for this file reference.
+ */
 - (void) setLocation: (NSString *)loc;
+
+/**
+ * Returns the targets associated with this file reference.
+ */
 - (NSArray *) targets;
 
+/**
+ * Builds the file reference.
+ */
 - (BOOL) build;
+
+/**
+ * Cleans the file reference.
+ */
 - (BOOL) clean;
+
+/**
+ * Installs the file reference.
+ */
 - (BOOL) install;
+
+/**
+ * Links the file reference.
+ */
 - (BOOL) link;
 
 @end

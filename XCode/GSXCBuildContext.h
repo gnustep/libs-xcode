@@ -30,17 +30,49 @@
   NSDictionary *config;
 }
 
+/**
+ * Returns the shared build context instance.
+ */
 + (id) sharedBuildContext;
 
+/**
+ * Returns the current context dictionary.
+ */
 - (NSMutableDictionary *) currentContext;
+
+/**
+ * Returns the context dictionary for the given name.
+ */
 - (NSMutableDictionary *) contextDictionaryForName: (NSString *)name;
+
+/**
+ * Pops and returns the current context.
+ */
 - (NSMutableDictionary *) popCurrentContext;
 
+/**
+ * Returns the configuration dictionary.
+ */
 - (NSDictionary *) config;
+
+/**
+ * Returns the configuration for the given target name.
+ */
 - (NSDictionary *) configForTargetName: (NSString *)name;
 
+/**
+ * Sets an object for the given key in the current context.
+ */
 - (void) setObject: (id)object forKey: (id)key;
+
+/**
+ * Returns the object for the given key from the current context.
+ */
 - (id) objectForKey: (id)key;
+
+/**
+ * Adds entries from the given dictionary to the current context.
+ */
 - (void) addEntriesFromDictionary: (NSDictionary *)dict;
 
 @end

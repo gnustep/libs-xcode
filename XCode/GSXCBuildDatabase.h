@@ -35,11 +35,24 @@
   NSMutableDictionary *_dictionary;
 }
 
+/**
+ * Creates a record from the contents of the given file.
+ */
 + (instancetype) recordWithContentsOfFile: (NSString *)path;
 
+/**
+ * Initializes the record with the contents of the given file.
+ */
 - (instancetype) initWithContentsOfFile: (NSString *)path;
+
+/**
+ * Initializes the record with the given dictionary.
+ */
 - (instancetype) initWithDictionary: (NSDictionary *)dict;
 
+/**
+ * Returns the dictionary for this record.
+ */
 - (NSDictionary *) dictionary;
 
 @end
@@ -53,19 +66,54 @@
   PBXFileReference *_fileReference;
 }
 
+/**
+ * Initializes the file record with the given dictionary.
+ */
 - (instancetype) initWithDictonary: (NSDictionary *)dict;
+
+/**
+ * Initializes the file record with the given build file and path.
+ */
 - (instancetype) initWithFile: (PBXBuildFile *)f path: (NSString *)path;
+
+/**
+ * Creates a file record with the given build file and path.
+ */
 + (instancetype) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path;
 
+/**
+ * Sets the file name for this record.
+ */
 - (void) setFileName: (NSString *)fn;
+
+/**
+ * Returns the file name for this record.
+ */
 - (NSString *) fileName;
 
+/**
+ * Sets the date modified for this file.
+ */
 - (void) setDateModified: (NSDate *)d;
+
+/**
+ * Returns the date modified for this file.
+ */
 - (NSDate *) dateModified;
 
+/**
+ * Sets the date built for this file.
+ */
 - (void) setDateBuilt: (NSDate *)d;
+
+/**
+ * Returns the date built for this file.
+ */
 - (NSDate *) dateBuilt;
 
+/**
+ * Returns the file reference for this record.
+ */
 - (PBXFileReference *) fileReference;
 
 @end
@@ -76,16 +124,39 @@
   PBXTarget *_target;
 }
 
+/**
+ * Creates a build database for the given target.
+ */
 + (instancetype) buildDatabaseWithTarget: (PBXTarget *)target;
+
+/**
+ * Initializes the build database with the given target.
+ */
 - (instancetype) initWithTarget: (PBXTarget *)target;
 
+/**
+ * Sets the target for this database.
+ */
 - (void) setTarget: (PBXTarget *)t;
+
+/**
+ * Returns the target for this database.
+ */
 - (PBXTarget *) target;
 
+/**
+ * Adds a record to the database.
+ */
 - (void) addRecord: (GSXCRecord *)record;
 
+/**
+ * Returns all files in the database.
+ */
 - (NSArray *) files;
 
+/**
+ * Returns whether the database is empty.
+ */
 - (BOOL) isEmpty;
 
 @end

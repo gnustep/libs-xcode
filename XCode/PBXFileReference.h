@@ -55,39 +55,154 @@
   NSUInteger _currentFile;
 }
 
+/**
+ * Returns the file type determined from the given path.
+ */
 + (NSString *) fileTypeFromPath: (NSString *)path;
+
+/**
+ * Returns the file extension for the given file type.
+ */
 + (NSString *) extForFileType: (NSString *)type;
+
+/**
+ * Initializes the file reference with the given path.
+ */
 - (instancetype) initWithPath: (NSString *)path;
 
+/**
+ * Sets the total number of files.
+ */
 - (void) setTotalFiles: (NSUInteger)t;
+
+/**
+ * Sets the current file number.
+ */
 - (void) setCurrentFile: (NSUInteger)n;
 
-- (NSString *) sourceTree; // getter
-- (void) setSourceTree: (NSString *)object; // setter
-- (NSString *) lastKnownFileType; // getter
-- (void) setLastKnownFileType: (NSString *)object; // setter
-- (NSString *) path; // getter
-- (void) setPath: (NSString *)object; // setter
-- (NSString *) fileEncoding; // getter
-- (void) setFileEncoding: (NSString *)object; // setter
+/**
+ * Returns the source tree for this file reference.
+ */
+- (NSString *) sourceTree;
+
+/**
+ * Sets the source tree for this file reference.
+ */
+- (void) setSourceTree: (NSString *)object;
+
+/**
+ * Returns the last known file type.
+ */
+- (NSString *) lastKnownFileType;
+
+/**
+ * Sets the last known file type.
+ */
+- (void) setLastKnownFileType: (NSString *)object;
+
+/**
+ * Returns the path of this file reference.
+ */
+- (NSString *) path;
+
+/**
+ * Sets the path of this file reference.
+ */
+- (void) setPath: (NSString *)object;
+
+/**
+ * Returns the file encoding.
+ */
+- (NSString *) fileEncoding;
+
+/**
+ * Sets the file encoding.
+ */
+- (void) setFileEncoding: (NSString *)object;
+
+/**
+ * Returns the explicit file type.
+ */
 - (NSString *) explicitFileType;
+
+/**
+ * Sets the explicit file type.
+ */
 - (void) setExplicitFileType: (NSString *)object;
+
+/**
+ * Returns the name of this file reference.
+ */
 - (NSString *) name;
+
+/**
+ * Sets the name of this file reference.
+ */
 - (void) setName: (NSString *)object;
+
+/**
+ * Sets the plist structure definition identifier.
+ */
 - (void) setPlistStructureDefinitionIdentifier: (NSString *)object;
+
+/**
+ * Returns the Xcode language specification identifier.
+ */
 - (NSString *) xcLanguageSpecificationIdentifier;
+
+/**
+ * Sets the Xcode language specification identifier.
+ */
 - (void) setXcLanguageSpecificationIdentifier: (NSString *)object;
+
+/**
+ * Returns the line ending style.
+ */
 - (NSString *) lineEnding;
+
+/**
+ * Sets the line ending style.
+ */
 - (void) setLineEnding: (NSString *)object;
+
+/**
+ * Sets the target associated with this file reference.
+ */
 - (void) setTarget: (PBXNativeTarget *)t;
+
+/**
+ * Sets whether lines should wrap.
+ */
 - (void) setWrapsLines: (NSString *)o;
+
+/**
+ * Returns whether this file should be included in the index.
+ */
 - (NSString *) includeInIndex;
+
+/**
+ * Sets whether this file should be included in the index.
+ */
 - (void) setIncludeInIndex: (NSString *)includeInIndex;
+
+/**
+ * Returns the product name.
+ */
 - (NSString *) productName;
 
-// Build methods...
+/**
+ * Returns the build path for this file reference.
+ */
 - (NSString *) buildPath;
+
+/**
+ * Builds the file reference.
+ */
 - (BOOL) build;
+
+/**
+ * Generates the file reference.
+ */
 - (BOOL) generate;
 
 @end

@@ -36,11 +36,26 @@
   NSString *_value;
 }
 
+/**
+ * Sets the argument for this pair.
+ */
 - (void) setArgument: (NSString *)arg;
+
+/**
+ * Returns the argument for this pair.
+ */
 - (NSString *) argument;
 
+/**
+ * Sets the value for this pair.
+ */
 - (void) setValue: (NSString *)val;
+
+/**
+ * Returns the value for this pair.
+ */
 - (NSString *) value;
+
 @end
 
 #endif // INCLUDE_ArgPair_H

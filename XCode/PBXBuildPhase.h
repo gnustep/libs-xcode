@@ -41,34 +41,88 @@
   NSString *_name;
 }
 
+/**
+ * Initializes the build phase with the given parameters.
+ */
 - (instancetype) initWithFiles: (NSMutableArray *)files
 	       buildActionMask: (NSString *)buildActionMask
 	  runOnlyForDeployment: (NSString *)runOnlyForDeployment
 			target: (PBXNativeTarget *)target
                           name: (NSString *)name;
 
-// Methods....
-- (NSMutableArray *) files; // getter
-- (void) setFiles: (NSMutableArray *)object; // setter
+/**
+ * Returns the files for this build phase.
+ */
+- (NSMutableArray *) files;
 
-- (NSString *) buildActionMask; // getter
-- (void) setBuildActionMask: (NSString *)object; // setter
+/**
+ * Sets the files for this build phase.
+ */
+- (void) setFiles: (NSMutableArray *)object;
 
-- (NSString *) runOnlyForDeploymentPostprocessing; // getter
-- (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
+/**
+ * Returns the build action mask for this build phase.
+ */
+- (NSString *) buildActionMask;
 
-- (BOOL) showEnvVarsInLog; // setter
+/**
+ * Sets the build action mask for this build phase.
+ */
+- (void) setBuildActionMask: (NSString *)object;
+
+/**
+ * Returns whether to run only for deployment postprocessing.
+ */
+- (NSString *) runOnlyForDeploymentPostprocessing;
+
+/**
+ * Sets whether to run only for deployment postprocessing.
+ */
+- (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object;
+
+/**
+ * Returns whether to show environment variables in the log.
+ */
+- (BOOL) showEnvVarsInLog;
+
+/**
+ * Sets whether to show environment variables in the log.
+ */
 - (void) setShowEnvVarsInLog: (BOOL)flag;
 
+/**
+ * Sets the target for this build phase.
+ */
 - (void) setTarget: (PBXNativeTarget *)t;
+
+/**
+ * Returns the target for this build phase.
+ */
 - (PBXNativeTarget *) target;
 
+/**
+ * Sets the name for this build phase.
+ */
 - (void) setName: (NSString *)n;
+
+/**
+ * Returns the name for this build phase.
+ */
 - (NSString *) name;
 
-// build
+/**
+ * Builds the build phase.
+ */
 - (BOOL) build;
+
+/**
+ * Generates the build phase.
+ */
 - (BOOL) generate;
+
+/**
+ * Links the build phase.
+ */
 - (BOOL) link;
 
 @end

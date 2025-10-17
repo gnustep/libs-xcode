@@ -38,18 +38,42 @@
   PBXFileReference *baseConfigurationReference;
 }
 
-// Initialization...
+/**
+ * Initializes the build configuration with the given name and build settings.
+ */
 - (instancetype) initWithName: (NSString *)theName
                 buildSettings: (NSMutableDictionary *)settings;
+
+/**
+ * Initializes the build configuration with the given name.
+ */
 - (instancetype) initWithName: (NSString *)theName;
 
-// Methods....
-- (NSMutableDictionary *) buildSettings; // getter
-- (void) setBuildSettings: (NSMutableDictionary *)object; // setter
-- (NSString *) name; // getter
-- (void) setName: (NSString *)object; // setter
+/**
+ * Returns the build settings for this configuration.
+ */
+- (NSMutableDictionary *) buildSettings;
 
+/**
+ * Sets the build settings for this configuration.
+ */
+- (void) setBuildSettings: (NSMutableDictionary *)object;
+
+/**
+ * Returns the name of this configuration.
+ */
+- (NSString *) name;
+
+/**
+ * Sets the name of this configuration.
+ */
+- (void) setName: (NSString *)object;
+
+/**
+ * Applies this build configuration.
+ */
 - (void) apply;
+
 @end
 
 #endif

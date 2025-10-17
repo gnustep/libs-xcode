@@ -39,21 +39,74 @@
   NSString *_filePatterns;
 }
 
-// Methods....
-- (NSString *) fileType; // getter
-- (void) setFileType: (NSString *)object; // setter
-- (NSString *) isEditable; // getter
-- (void) setIsEditable: (NSString *)object; // setter
-- (NSMutableArray *) outputFiles; // getter
-- (void) setOutputFiles: (NSMutableArray *)object; // setter
-- (NSMutableArray *) inputFiles; // getter
-- (void) setInputFiles: (NSMutableArray *)object; // setter
-- (NSString *) compilerSpec; // getter
-- (void) setCompilerSpec: (NSString *)object; // setter
-- (NSString *) script; // getter
-- (void) setScript: (NSString *)object; // setter
-- (NSString *) filePatterns; // getter
-- (void) setFilePatterns: (NSString *)object; // setter
+/**
+ * Returns the file type for this build rule.
+ */
+- (NSString *) fileType;
 
+/**
+ * Sets the file type for this build rule.
+ */
+- (void) setFileType: (NSString *)object;
+
+/**
+ * Returns whether this build rule is editable.
+ */
+- (NSString *) isEditable;
+
+/**
+ * Sets whether this build rule is editable.
+ */
+- (void) setIsEditable: (NSString *)object;
+
+/**
+ * Returns the output files for this build rule.
+ */
+- (NSMutableArray *) outputFiles;
+
+/**
+ * Sets the output files for this build rule.
+ */
+- (void) setOutputFiles: (NSMutableArray *)object;
+
+/**
+ * Returns the input files for this build rule.
+ */
+- (NSMutableArray *) inputFiles;
+
+/**
+ * Sets the input files for this build rule.
+ */
+- (void) setInputFiles: (NSMutableArray *)object;
+
+/**
+ * Returns the compiler specification for this build rule.
+ */
+- (NSString *) compilerSpec;
+
+/**
+ * Sets the compiler specification for this build rule.
+ */
+- (void) setCompilerSpec: (NSString *)object;
+
+/**
+ * Returns the script for this build rule.
+ */
+- (NSString *) script;
+
+/**
+ * Sets the script for this build rule.
+ */
+- (void) setScript: (NSString *)object;
+
+/**
+ * Returns the file patterns for this build rule.
+ */
+- (NSString *) filePatterns;
+
+/**
+ * Sets the file patterns for this build rule.
+ */
+- (void) setFilePatterns: (NSString *)object;
 
 @end

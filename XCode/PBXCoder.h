@@ -42,35 +42,75 @@
   id _rootObject;
 }
 
-// Unarchiving...
+/**
+ * Unarchives a project from the given file.
+ */
 + (instancetype) unarchiveWithProjectFile: (NSString *)name;
 
+/**
+ * Initializes the coder with the given project file.
+ */
 - (instancetype) initWithProjectFile: (NSString *)name;
 
+/**
+ * Initializes the coder with the contents of the given file.
+ */
 - (instancetype) initWithContentsOfFile: (NSString *)name;
 
+/**
+ * Unarchives the project.
+ */
 - (id) unarchive;
 
+/**
+ * Unarchives an object for the given key.
+ */
 - (id) unarchiveObjectForKey: (NSString *)key;
 
+/**
+ * Unarchives an object from the given dictionary.
+ */
 - (id) unarchiveFromDictionary: (NSDictionary *)dictionary;
 
+/**
+ * Resolves array members for the given array.
+ */
 - (NSMutableArray *) resolveArrayMembers: (NSMutableArray *)array;
 
+/**
+ * Applies keys and values from the dictionary to the object.
+ */
 - (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
                                toObject: (id)object;
+
+/**
+ * Returns the project root.
+ */
 - (NSString *) projectRoot;
 
-// Delegate
+/**
+ * Returns the delegate for this coder.
+ */
 - (XCAbstractDelegate *) delegate;
 
+/**
+ * Sets the delegate for this coder.
+ */
 - (void) setDelegate: (XCAbstractDelegate *)delegate;
 
-// Archiving...
+/**
+ * Archives the project with the given root object.
+ */
 + (instancetype) archiveWithRootObject: (id)obj;
 
+/**
+ * Initializes the coder with the given root object.
+ */
 - (instancetype) initWithRootObject: (id)obj;
 
+/**
+ * Archives the project.
+ */
 - (id) archive;
 
 @end

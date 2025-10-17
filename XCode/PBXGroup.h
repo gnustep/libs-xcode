@@ -38,14 +38,44 @@
   NSString *_path;
 }
 
-// Methods....
-- (NSString *) sourceTree; // getter
-- (void) setSourceTree: (NSString *)object; // setter
-- (NSMutableArray *) children; // getter
-- (void) setChildren: (NSMutableArray *)object; // setter
-- (NSString *) name; // getter
-- (void) setName: (NSString *)object; // setter
-- (NSString *) path; // getter
-- (void) setPath: (NSString *)object; // setter
+/**
+ * Returns the source tree for this group.
+ */
+- (NSString *) sourceTree;
+
+/**
+ * Sets the source tree for this group.
+ */
+- (void) setSourceTree: (NSString *)object;
+
+/**
+ * Returns the children of this group.
+ */
+- (NSMutableArray *) children;
+
+/**
+ * Sets the children of this group.
+ */
+- (void) setChildren: (NSMutableArray *)object;
+
+/**
+ * Returns the name of this group.
+ */
+- (NSString *) name;
+
+/**
+ * Sets the name of this group.
+ */
+- (void) setName: (NSString *)object;
+
+/**
+ * Returns the path of this group.
+ */
+- (NSString *) path;
+
+/**
+ * Sets the path of this group.
+ */
+- (void) setPath: (NSString *)object;
 
 @end

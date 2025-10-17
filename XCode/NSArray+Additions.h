@@ -26,19 +26,48 @@
 
 @interface NSArray (Additions)
 
+/**
+ * Returns a string by joining array elements with the given separator.
+ */
 - (NSString *) implodeArrayWithSeparator: (NSString *)separator;
+
+/**
+ * Returns an array with duplicate entries removed.
+ */
 - (NSArray *) arrayByRemovingDuplicateEntries;
+
+/**
+ * Returns a string by removing duplicates and joining with the separator.
+ */
 - (NSString *) removeDuplicatesAndImplodeWithSeparator: (NSString *)separator;
+
+/**
+ * Returns an array with quotation marks added to each entry.
+ */
 - (NSArray *) arrayByAddingQuotationMarksToEntries;
 
+/**
+ * Returns a string formatted as a link list.
+ */
 - (NSString *) arrayToLinkList;
+
+/**
+ * Returns a string formatted as an include list.
+ */
 - (NSString *) arrayToIncludeList;
+
+/**
+ * Returns a string formatted as a list.
+ */
 - (NSString *) arrayToList;
 
 @end
 
 @interface NSMutableArray (Additions)
 
+/**
+ * Prepends objects from the given array to the receiver.
+ */
 - (void) prependObjectsFromArray: (NSArray *)array;
 
 @end

@@ -37,14 +37,44 @@
   NSString *path;
 }
 
-// Methods....
-- (NSString *) sourceTree; // getter
-- (void) setSourceTree: (NSString *)object; // setter
-- (NSString *) fileType; // getter
-- (void) setFileType: (NSString *)object; // setter
-- (PBXContainerItemProxy *) remoteRef; // getter
-- (void) setRemoteRef: (PBXContainerItemProxy *)object; // setter
-- (NSString *) path; // getter
-- (void) setPath: (NSString *)object; // setter
+/**
+ * Returns the source tree for this reference proxy.
+ */
+- (NSString *) sourceTree;
+
+/**
+ * Sets the source tree for this reference proxy.
+ */
+- (void) setSourceTree: (NSString *)object;
+
+/**
+ * Returns the file type for this reference proxy.
+ */
+- (NSString *) fileType;
+
+/**
+ * Sets the file type for this reference proxy.
+ */
+- (void) setFileType: (NSString *)object;
+
+/**
+ * Returns the remote reference for this proxy.
+ */
+- (PBXContainerItemProxy *) remoteRef;
+
+/**
+ * Sets the remote reference for this proxy.
+ */
+- (void) setRemoteRef: (PBXContainerItemProxy *)object;
+
+/**
+ * Returns the path for this reference proxy.
+ */
+- (NSString *) path;
+
+/**
+ * Sets the path for this reference proxy.
+ */
+- (void) setPath: (NSString *)object;
 
 @end

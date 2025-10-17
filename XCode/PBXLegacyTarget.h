@@ -35,16 +35,34 @@
   BOOL _passBuildSettingsInEnvironment;
 }
 
+/**
+ * Returns the build arguments string for this legacy target.
+ */
 - (NSString *) buildArgumentsString;
+
+/**
+ * Sets the build arguments string for this legacy target.
+ */
 - (void) setBuildArgumentsString: (NSString *)string;
 
+/**
+ * Returns the build tool path for this legacy target.
+ */
 - (NSString *) buildToolPath;
+
+/**
+ * Sets the build tool path for this legacy target.
+ */
 - (void) setBuildToolPath: (NSString *)path;
-/*
-- (NSArray *) dependencies;
-- (void) setDependencies: (NSArray *)deps;
-*/
+
+/**
+ * Returns whether to pass build settings in the environment.
+ */
 - (BOOL) passBuildSettingsInEnvironment;
+
+/**
+ * Sets whether to pass build settings in the environment.
+ */
 - (void) setPassBuildSettingsInEnvironment: (BOOL)f;
 
 @end

@@ -58,64 +58,196 @@
   NSString *_preferredProjectObjectVersion;
 }
 
-// Methods....
-- (BOOL) minimizedProjectReferenceProxies; // getter
-- (void) setMinimizedProjectReferenceProxies: (BOOL)flag; // setter
+/**
+ * Returns whether project reference proxies are minimized.
+ */
+- (BOOL) minimizedProjectReferenceProxies;
 
-- (NSString *) preferredProjectObjectVersion; // getter
-- (void) setPreferredProjectObjectVersion: (NSString *)object; // setter
+/**
+ * Sets whether project reference proxies are minimized.
+ */
+- (void) setMinimizedProjectReferenceProxies: (BOOL)flag;
 
-- (NSString *) developmentRegion; // getter
-- (void) setDevelopmentRegion: (NSString *)object; // setter
+/**
+ * Returns the preferred project object version.
+ */
+- (NSString *) preferredProjectObjectVersion;
 
-- (NSMutableArray *) knownRegions; // getter
-- (void) setKnownRegions: (NSMutableArray *)object; // setter
+/**
+ * Sets the preferred project object version.
+ */
+- (void) setPreferredProjectObjectVersion: (NSString *)object;
 
-- (NSString *) compatibilityVersion; // getter
-- (void) setCompatibilityVersion: (NSString *)object; // setter
+/**
+ * Returns the development region for this project.
+ */
+- (NSString *) developmentRegion;
 
-- (NSMutableArray *) projectReferences; // getter
-- (void) setProjectReferences: (NSMutableArray *)object; // setter
+/**
+ * Sets the development region for this project.
+ */
+- (void) setDevelopmentRegion: (NSString *)object;
 
-- (NSMutableArray *) targets; // getter
-- (void) setTargets: (NSMutableArray *)object; // setter
+/**
+ * Returns the known regions for this project.
+ */
+- (NSMutableArray *) knownRegions;
 
-- (NSString *) projectDirPath; // getter
-- (void) setProjectDirPath: (NSString *)object; // setter
+/**
+ * Sets the known regions for this project.
+ */
+- (void) setKnownRegions: (NSMutableArray *)object;
 
-- (NSString *) projectRoot; // getter
-- (void) setProjectRoot: (NSString *)object; // setter
+/**
+ * Returns the compatibility version for this project.
+ */
+- (NSString *) compatibilityVersion;
 
-- (XCConfigurationList *) buildConfigurationList; // getter
-- (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
+/**
+ * Sets the compatibility version for this project.
+ */
+- (void) setCompatibilityVersion: (NSString *)object;
 
-- (PBXGroup *) mainGroup; // getter
-- (void) setMainGroup: (PBXGroup *)object; // setter
+/**
+ * Returns the project references for this project.
+ */
+- (NSMutableArray *) projectReferences;
 
-- (NSString *) hasScannedForEncodings; // getter
-- (void) setHasScannedForEncodings: (NSString *)object; // setter
+/**
+ * Sets the project references for this project.
+ */
+- (void) setProjectReferences: (NSMutableArray *)object;
 
-- (PBXGroup *) productRefGroup; // getter
-- (void) setProductRefGroup: (PBXGroup *)object; // setter
+/**
+ * Returns the targets for this project.
+ */
+- (NSMutableArray *) targets;
 
+/**
+ * Sets the targets for this project.
+ */
+- (void) setTargets: (NSMutableArray *)object;
+
+/**
+ * Returns the project directory path.
+ */
+- (NSString *) projectDirPath;
+
+/**
+ * Sets the project directory path.
+ */
+- (void) setProjectDirPath: (NSString *)object;
+
+/**
+ * Returns the project root.
+ */
+- (NSString *) projectRoot;
+
+/**
+ * Sets the project root.
+ */
+- (void) setProjectRoot: (NSString *)object;
+
+/**
+ * Returns the build configuration list for this project.
+ */
+- (XCConfigurationList *) buildConfigurationList;
+
+/**
+ * Sets the build configuration list for this project.
+ */
+- (void) setBuildConfigurationList: (XCConfigurationList *)object;
+
+/**
+ * Returns the main group for this project.
+ */
+- (PBXGroup *) mainGroup;
+
+/**
+ * Sets the main group for this project.
+ */
+- (void) setMainGroup: (PBXGroup *)object;
+
+/**
+ * Returns whether the project has scanned for encodings.
+ */
+- (NSString *) hasScannedForEncodings;
+
+/**
+ * Sets whether the project has scanned for encodings.
+ */
+- (void) setHasScannedForEncodings: (NSString *)object;
+
+/**
+ * Returns the product reference group for this project.
+ */
+- (PBXGroup *) productRefGroup;
+
+/**
+ * Sets the product reference group for this project.
+ */
+- (void) setProductRefGroup: (PBXGroup *)object;
+
+/**
+ * Returns the container for this project.
+ */
 - (PBXContainer *) container;
+
+/**
+ * Sets the container for this project.
+ */
 - (void) setContainer: (PBXContainer *)container;
 
+/**
+ * Sets the context for this project.
+ */
 - (void) setContext: (NSDictionary *)ctx;
+
+/**
+ * Returns the context for this project.
+ */
 - (NSDictionary *) context;
 
+/**
+ * Sets the filename for this project.
+ */
 - (void) setFilename: (NSString *)fn;
+
+/**
+ * Returns the filename for this project.
+ */
 - (NSString *) filename;
 
-// calculate dependencies
+/**
+ * Plans the build by calculating dependencies.
+ */
 - (void) plan;
 
-// build
+/**
+ * Builds the project.
+ */
 - (BOOL) build;
+
+/**
+ * Cleans the project.
+ */
 - (BOOL) clean;
+
+/**
+ * Installs the project.
+ */
 - (BOOL) install;
+
+/**
+ * Generates the project.
+ */
 - (BOOL) generate;
+
+/**
+ * Saves the project.
+ */
 - (BOOL) save;
+
 @end
 
 #endif
