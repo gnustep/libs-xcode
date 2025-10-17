@@ -29,4 +29,7 @@
 #import "PBXBuildPhase.h"
 
 @interface PBXResourcesBuildPhase : PBXBuildPhase
+
+- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config;
+
 @end

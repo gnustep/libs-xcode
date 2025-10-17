@@ -76,6 +76,7 @@
  * Returns the default configuration.
  */
 - (XCBuildConfiguration *) defaultConfiguration;
+- (XCBuildConfiguration *) configurationWithName: (NSString *)name;
 
 /**
  * Applies the default configuration.

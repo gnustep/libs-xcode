@@ -207,6 +207,30 @@
   return result;
 }
 
+- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config
+{
+  NSMutableDictionary *ipd = [NSMutableDictionary dictionary];
+  NSDictionary *buildSettings = [config buildSettings];
+  // NSString *appIcon = [buildSettings objectForKey: @"ASSETCATALOG_COMPILER_APPICON_NAME"];
+  NSString *version = [buildSettings objectForKey: @"CURRENT_PROJECT_VERSION"];
+  NSString *copyright = [buildSettings objectForKey: @"INFOPLIST_KEY_NSHumanReadableCopyright"];
+  NSString *mainNib = [buildSettings objectForKey: @"INFOPLIST_KEY_NSMainNibFile"];
+  NSString *principalClass = [buildSettings objectForKey: @"INFOPLIST_KEY_NSPrincipalClass"];
+  NSString *bundleIdentifier = [buildSettings objectForKey: @"PRODUCT_BUNDLE_IDENTIFIER"];
+  NSString *iconFile = [self processAssets];
+
+  [ipd setObject: version forKey: @"CFBundleVersion"];
+  [ipd setObject: mainNib forKey: @"NSMainNibFile"];
+  [ipd setObject: copyright forKey: @"NSHumanReadableCopyright"];
+  [ipd setObject: principalClass forKey: @"NSPrincipalClass"];
+  [ipd setObject: iconFile forKey: @"NSIcon"];
+  [ipd setObject: @"$(DEVELOPMENT_LANGUAGE)" forKey: @"CFBundleDevelopmentRegion"];
+  [ipd setObject: @"$(EXECUTABLE_NAME)" forKey: @"CFBundlExecutable"];
+  [ipd setObject: bundleIdentifier forKey: @"CFBundleIdentifier"];
+  
+  return ipd;
+}
+
 - (BOOL) build
 {
   xcputs("=== Executing Resources Build Phase");
@@ -332,16 +356,29 @@
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
   NSDictionary *bs = [xbc buildSettings];
   NSString *infoPlist = [bs objectForKey: @"INFOPLIST_FILE"];
-
-  if ([mgr fileExistsAtPath: infoPlist] == NO)
-    {
-      infoPlist = [infoPlist lastPathComponent];
-    }
-
   NSString *outputPlist = [resourcesDir
 			    stringByAppendingPathComponent: @"Info-gnustep.plist"];
-  [self processInfoPlistInput: infoPlist
-		       output: outputPlist];
+
+  if (infoPlist != nil)
+    {
+      if ([mgr fileExistsAtPath: infoPlist] == NO)
+	{
+	  infoPlist = [infoPlist lastPathComponent];
+	}
+
+      [self processInfoPlistInput: infoPlist
+			   output: outputPlist];
+    }
+  else
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Generating info plist --> %s%@%s", GREEN, outputPlist, RESET] cString]);
+      XCBuildConfiguration *config = [xcl configurationWithName: @"Debug"];
+      NSMutableDictionary *ipl = [self configToInfoPlist: config];
+      NSString *plString = [ipl description];
+      
+      NSDebugLog(@"ipl = %@", ipl);
+      [plString writeToFile: outputPlist atomically: YES];
+    }
 
   xcputs("=== Resources Build Phase Completed");
   fflush(stdout);
