@@ -35,9 +35,9 @@
 
   if (self != nil)
     {
-      _archiveVersion = @"1";
+      ASSIGNCOPY(_archiveVersion, @"1");
       _classes = [[NSMutableDictionary alloc] init];
-      _objectVersion = @"56";
+      ASSIGNCOPY(_objectVersion, @"56");
       _objects = [[NSMutableDictionary alloc] init];
       _rootObject = nil;
       _filename = nil;
