@@ -86,12 +86,22 @@
       xcprintf("\t* Parallel build using %ld CPUs...\n", _cpus);
     }
 
+  xcputs("=== Executing Sources Build Phase");
+  
+  // Use the new allFiles method which includes files from groups
+  NSArray *allFiles = [self allFiles];
+  
+  // Check if we should use the database instead
+  BOOL usingSynchronizedGroups = NO;
   NSArray *synchronizedFiles = [_target synchronizedSources];
-  files = [files arrayByAddingObjectsFromArray: synchronizedFiles];
-  // NSLog(@"files = %@", files);
+  if ([synchronizedFiles count] > 0)
+    {
+      usingSynchronizedGroups = YES;
+      xcputs([[NSString stringWithFormat: @"%s+++ Using synchronized group...%s", YELLOW, RESET] cString]);      
+    }
   
   // if the database is present use it's list of files...
-  if (db != nil && [synchronizedFiles count] == 0)
+  if (db != nil && !usingSynchronizedGroups)
     {
       if ([db isEmpty])
 	{
@@ -103,11 +113,35 @@
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"%s+++ Using synchronized group...%s", YELLOW, RESET] cString]);      
+      // Filter to only include source files (since allFiles might include headers too)
+      NSMutableArray *sourceFiles = [NSMutableArray array];
+      NSEnumerator *allEn = [allFiles objectEnumerator];
+      id file = nil;
+      
+      while ((file = [allEn nextObject]) != nil)
+        {
+          if ([file isKindOfClass: [PBXBuildFile class]])
+            {
+              PBXFileReference *fr = [file fileRef];
+              NSString *name = [fr path];
+              
+              if ([[name pathExtension] isEqualToString: @"m"]
+                  || [[name pathExtension] isEqualToString: @"mm"]
+                  || [[name pathExtension] isEqualToString: @"M"]
+                  || [[name pathExtension] isEqualToString: @"c"]
+                  || [[name pathExtension] isEqualToString: @"cc"]
+                  || [[name pathExtension] isEqualToString: @"C"]
+                  || [[name pathExtension] isEqualToString: @"swift"])
+                {
+                  [sourceFiles addObject: file];
+                }
+            }
+        }
+      
+      files = sourceFiles;
     }
-    
-  en = [files objectEnumerator];                         
-  xcputs("=== Executing Sources Build Phase");
+  
+  en = [files objectEnumerator];
   while((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
@@ -148,9 +182,13 @@
 - (BOOL) generate
 {
   xcputs("=== Generating using Sources Build Phase");
-  NSEnumerator *en = [_files objectEnumerator];
+  
+  // Use the new allFiles method to include files from groups
+  NSArray *allFiles = [self allFiles];
+  NSEnumerator *en = [allFiles objectEnumerator];
   id file = nil;
   BOOL result = YES;
+  
   while((file = [en nextObject]) != nil && result)
     {
       [file setTarget: _target];
@@ -175,9 +213,9 @@
 
   buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
 
-  NSArray *synchronizedFiles = [_target synchronizedSources];
-  NSArray *files = [_files arrayByAddingObjectsFromArray: synchronizedFiles];
-  en = [files objectEnumerator];
+  // Use the new allFiles method to include files from groups
+  NSArray *allFiles = [self allFiles];
+  en = [allFiles objectEnumerator];
   
   xcputs("=== Executing Sources Build Phase (LINK)");
   while((file = [en nextObject]) != nil && result)

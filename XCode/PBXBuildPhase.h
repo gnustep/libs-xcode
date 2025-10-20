@@ -125,6 +125,18 @@
  */
 - (BOOL) link;
 
+/**
+ * Returns all files including those from groups (like synchronized groups).
+ * This method combines the regular files with files discovered from groups.
+ */
+- (NSArray *) allFiles;
+
+/**
+ * Returns files from groups that support the children method.
+ * This includes PBXFileSystemSynchronizedRootGroup and other group types.
+ */
+- (NSArray *) filesFromGroups;
+
 @end
 
 #endif

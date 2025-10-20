@@ -50,10 +50,10 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSError *error = nil;
 
-  NSArray *synchronizedFiles = [_target synchronizedHeaders];
-  NSArray *files = [_files arrayByAddingObjectsFromArray: synchronizedFiles];
+  // Use the new allFiles method to include files from groups
+  NSArray *allFiles = [self allFiles];
   
-  NSEnumerator *en = [files objectEnumerator];
+  NSEnumerator *en = [allFiles objectEnumerator];
   NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
   while((file = [en nextObject]) != nil && result)
     {
@@ -74,7 +74,29 @@
   if([productType isEqualToString: FRAMEWORK_TYPE])
     {
       xcputs([[NSString stringWithFormat: @"\t* Copying headers to framework header folder..."] cString]);
-      en = [_files objectEnumerator];
+      
+      // Filter for header files only in framework case
+      NSMutableArray *headerFiles = [NSMutableArray array];
+      NSEnumerator *allEn = [allFiles objectEnumerator];
+      id headerFile = nil;
+      
+      while ((headerFile = [allEn nextObject]) != nil)
+        {
+          if ([headerFile isKindOfClass: [PBXBuildFile class]])
+            {
+              PBXFileReference *fr = [headerFile fileRef];
+              NSString *name = [fr path];
+              
+              if ([[name pathExtension] isEqualToString: @"h"]
+                  || [[name pathExtension] isEqualToString: @"hpp"]
+                  || [[name pathExtension] isEqualToString: @"hh"])
+                {
+                  [headerFiles addObject: headerFile];
+                }
+            }
+        }
+      
+      en = [headerFiles objectEnumerator];
       NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
       while((file = [en nextObject]) != nil && result)
 	{
@@ -112,15 +134,18 @@
   BOOL result = YES;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
+  // Use the new allFiles method to include files from groups
+  NSArray *allFiles = [self allFiles];
+  
   // NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
-  [context setObject: _files forKey: @"DERIVED_HEADERS"];
+  [context setObject: allFiles forKey: @"DERIVED_HEADERS"];
   xcputs([[NSString stringWithFormat: @"\tAdding entry for derived header files"] cString]);
 
   // Only copy into the framework header folder, if it's a framework...
   if([productType isEqualToString: FRAMEWORK_TYPE])
     {
       // NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
-      [context setObject: _files forKey: @"HEADERS"];
+      [context setObject: allFiles forKey: @"HEADERS"];
       xcputs([[NSString stringWithFormat: @"\tAdding entry for derived header"] cString]);    
     }
 

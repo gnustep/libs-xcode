@@ -134,4 +134,54 @@
   return YES;
 }
 
+- (NSArray *) allFiles
+{
+  NSMutableArray *result = [NSMutableArray arrayWithArray: _files];
+  NSArray *groupFiles = [self filesFromGroups];
+  [result addObjectsFromArray: groupFiles];
+  return result;
+}
+
+- (NSArray *) filesFromGroups
+{
+  NSMutableArray *result = [NSMutableArray array];
+  
+  if (_target != nil)
+    {
+      // Get files from synchronized groups (like PBXFileSystemSynchronizedRootGroup)
+      NSArray *synchronizedSources = [_target synchronizedSources];
+      if (synchronizedSources != nil)
+        {
+          [result addObjectsFromArray: synchronizedSources];
+        }
+      
+      // Get files from synchronized headers
+      NSArray *synchronizedHeaders = [_target synchronizedHeaders];
+      if (synchronizedHeaders != nil)
+        {
+          [result addObjectsFromArray: synchronizedHeaders];
+        }
+      
+      // Future enhancement: We could extend this to handle other group types
+      // that support the children method by iterating through all groups in the target.
+      // This would allow build phases to automatically discover files from any
+      // group type that implements the children method, not just synchronized groups.
+      //
+      // Example approach for future expansion:
+      // NSArray *allGroups = [_target allGroups]; // hypothetical method
+      // NSEnumerator *groupEnum = [allGroups objectEnumerator];
+      // id group = nil;
+      // while ((group = [groupEnum nextObject]) != nil)
+      //   {
+      //     if ([group respondsToSelector: @selector(children)])
+      //       {
+      //         NSArray *children = [group children];
+      //         [result addObjectsFromArray: children];
+      //       }
+      //   }
+    }
+  
+  return result;
+}
+
 @end
