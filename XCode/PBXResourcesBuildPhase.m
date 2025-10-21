@@ -406,6 +406,32 @@
   while((file = [en nextObject]) != nil && result)
     {
       id fileRef = [file fileRef];
+      
+      // Skip source code files - they should not be treated as resources
+      if ([file respondsToSelector: @selector(fileRef)])
+        {
+          PBXFileReference *fr = [file fileRef];
+          if (fr != nil && [fr respondsToSelector: @selector(path)])
+            {
+              NSString *path = [fr path];
+              NSString *ext = [[path pathExtension] lowercaseString];
+              
+              // Skip common source code file extensions
+              if ([ext isEqualToString: @"m"] ||
+                  [ext isEqualToString: @"mm"] ||
+                  [ext isEqualToString: @"c"] ||
+                  [ext isEqualToString: @"cc"] ||
+                  [ext isEqualToString: @"cpp"] ||
+                  [ext isEqualToString: @"cxx"] ||
+                  [ext isEqualToString: @"swift"])
+                {
+                  // Skip this source file
+                  xcputs([[NSString stringWithFormat: @"\tSkipping source file: %@", path] cString]);
+                  continue;
+                }
+            }
+        }
+      
       if ([fileRef isKindOfClass: [PBXVariantGroup class]])
 	{
 	  NSArray *children = [fileRef children];
@@ -465,31 +491,16 @@
   return result;
 }
 
-// Override filesFromGroups for resources - could include any file type
+// Override filesFromGroups for resources - exclude source code files
 - (NSArray *) filesFromGroups
 {
-  NSMutableArray *result = [NSMutableArray array];
-  
-  if (_target != nil)
-    {
-      // Resources can include both source and header files, plus other resource types
-      // For now, we get both synchronized sources and headers
-      NSArray *synchronizedSources = [_target synchronizedSources];
-      if (synchronizedSources != nil)
-        {
-          [result addObjectsFromArray: synchronizedSources];
-        }
-      
-      NSArray *synchronizedHeaders = [_target synchronizedHeaders];
-      if (synchronizedHeaders != nil)
-        {
-          [result addObjectsFromArray: synchronizedHeaders];
-        }
-      
-      // TODO: Could extend this to handle other resource types from groups
-    }
-  
-  return result;
+  // For now, return empty array since resources are typically explicitly
+  // added to the resources build phase, not automatically discovered from
+  // synchronized groups. Synchronized groups are primarily for source files.
+  // 
+  // If we need to support resource files from synchronized groups in the future,
+  // we would need to filter them to exclude source code files here as well.
+  return [NSArray array];
 }
 
 - (BOOL) link
