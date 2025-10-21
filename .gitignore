@@ -9,3 +9,5 @@ derived_src
 *.backup/*
 build
 .DS_Store
+Reference
+XCodeReference
