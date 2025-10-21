@@ -134,6 +134,8 @@
 /**
  * Returns files from groups that support the children method.
  * This includes PBXFileSystemSynchronizedRootGroup and other group types.
+ * Base implementation returns empty array - subclasses should override
+ * to return appropriate file types for their specific build phase.
  */
 - (NSArray *) filesFromGroups;
 

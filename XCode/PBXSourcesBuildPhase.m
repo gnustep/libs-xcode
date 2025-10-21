@@ -113,32 +113,8 @@
     }
   else
     {
-      // Filter to only include source files (since allFiles might include headers too)
-      NSMutableArray *sourceFiles = [NSMutableArray array];
-      NSEnumerator *allEn = [allFiles objectEnumerator];
-      id file = nil;
-      
-      while ((file = [allEn nextObject]) != nil)
-        {
-          if ([file isKindOfClass: [PBXBuildFile class]])
-            {
-              PBXFileReference *fr = [file fileRef];
-              NSString *name = [fr path];
-              
-              if ([[name pathExtension] isEqualToString: @"m"]
-                  || [[name pathExtension] isEqualToString: @"mm"]
-                  || [[name pathExtension] isEqualToString: @"M"]
-                  || [[name pathExtension] isEqualToString: @"c"]
-                  || [[name pathExtension] isEqualToString: @"cc"]
-                  || [[name pathExtension] isEqualToString: @"C"]
-                  || [[name pathExtension] isEqualToString: @"swift"])
-                {
-                  [sourceFiles addObject: file];
-                }
-            }
-        }
-      
-      files = sourceFiles;
+      // Use all files from groups and regular files
+      files = allFiles;
     }
   
   en = [files objectEnumerator];
@@ -196,6 +172,24 @@
     }
   xcputs("=== Sources Build Phase generation completed");
 
+  return result;
+}
+
+// Override filesFromGroups to only return source files for PBXSourcesBuildPhase
+- (NSArray *) filesFromGroups
+{
+  NSMutableArray *result = [NSMutableArray array];
+  
+  if (_target != nil)
+    {
+      // Only get source files for the sources build phase
+      NSArray *synchronizedSources = [_target synchronizedSources];
+      if (synchronizedSources != nil)
+        {
+          [result addObjectsFromArray: synchronizedSources];
+        }
+    }
+  
   return result;
 }
 

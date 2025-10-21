@@ -154,6 +154,24 @@
   return result;
 }
 
+// Override filesFromGroups to only return header files for PBXHeadersBuildPhase
+- (NSArray *) filesFromGroups
+{
+  NSMutableArray *result = [NSMutableArray array];
+  
+  if (_target != nil)
+    {
+      // Only get header files for the headers build phase
+      NSArray *synchronizedHeaders = [_target synchronizedHeaders];
+      if (synchronizedHeaders != nil)
+        {
+          [result addObjectsFromArray: synchronizedHeaders];
+        }
+    }
+  
+  return result;
+}
+
 - (BOOL) link
 {
   return YES;

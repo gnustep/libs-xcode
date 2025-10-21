@@ -389,7 +389,10 @@
 - (BOOL) generate
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [_files count]];
+  
+  // Use the new allFiles method to include files from groups
+  NSArray *allFiles = [self allFiles];
+  NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [allFiles count]];
 
   xcputs("=== Generating Resources Entries Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
@@ -397,7 +400,7 @@
   NSString *appName = [productName stringByDeletingPathExtension];
 
   // Copy all resources...
-  NSEnumerator *en = [_files objectEnumerator];
+  NSEnumerator *en = [allFiles objectEnumerator];
   BOOL result = YES;
   id file = nil;
   while((file = [en nextObject]) != nil && result)
@@ -459,6 +462,33 @@
   [context setObject: resources forKey: @"RESOURCES"];
   xcputs("=== Resources Build Phase Completed (generate)");
 
+  return result;
+}
+
+// Override filesFromGroups for resources - could include any file type
+- (NSArray *) filesFromGroups
+{
+  NSMutableArray *result = [NSMutableArray array];
+  
+  if (_target != nil)
+    {
+      // Resources can include both source and header files, plus other resource types
+      // For now, we get both synchronized sources and headers
+      NSArray *synchronizedSources = [_target synchronizedSources];
+      if (synchronizedSources != nil)
+        {
+          [result addObjectsFromArray: synchronizedSources];
+        }
+      
+      NSArray *synchronizedHeaders = [_target synchronizedHeaders];
+      if (synchronizedHeaders != nil)
+        {
+          [result addObjectsFromArray: synchronizedHeaders];
+        }
+      
+      // TODO: Could extend this to handle other resource types from groups
+    }
+  
   return result;
 }
 
