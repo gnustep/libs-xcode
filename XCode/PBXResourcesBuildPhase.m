@@ -386,6 +386,13 @@
   return result;
 }
 
+- (NSArray *) allFiles
+{
+  NSArray *synchronizedFiles = [_target synchronizedResources];
+  NSArray *files = [_files arrayByAddingObjectsFromArray: synchronizedFiles];
+  return files;
+}
+
 - (BOOL) generate
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
