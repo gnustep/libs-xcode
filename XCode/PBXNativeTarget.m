@@ -665,7 +665,8 @@
   NSString *generatorName = [[_project container] parameter]; // @"Makefile";  // default if not specified...
   NSString *bundlesDir = nil;
   GSXCGenerator *generator = nil;
-  
+
+  generatorName = [generatorName lowercaseString]; // all generators should be lowercase...
   bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
   bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
   generator = [self _loadGeneratorBundleFromDirectory: bundlesDir

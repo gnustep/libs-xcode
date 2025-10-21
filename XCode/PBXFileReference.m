@@ -1037,7 +1037,7 @@ static NSLock *lock = nil;
       [objcppFiles addObject: compilePath];
     }
 
-  if ([_lastKnownFileType isEqualToString: @"sourcexode.c.h"])
+  if ([_lastKnownFileType isEqualToString: @"sourcecode.c.h"])
     {
       
     }

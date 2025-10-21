@@ -3,7 +3,7 @@
 include $(GNUSTEP_MAKEFILES)/common.make
 
 ADDITIONAL_INCLUDE_DIRS += -I../..
-BUNDLE_NAME = ProjectCenter
+BUNDLE_NAME = projectcenter
 BUNDLE_EXTENSION = .generator
 ProjectCenter_PRINCIPAL_CLASS = 
 

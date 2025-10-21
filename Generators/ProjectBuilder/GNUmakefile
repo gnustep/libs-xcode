@@ -3,7 +3,7 @@
 include $(GNUSTEP_MAKEFILES)/common.make
 
 ADDITIONAL_INCLUDE_DIRS += -I../..
-BUNDLE_NAME = ProjectBuilder
+BUNDLE_NAME = projectbuilder
 BUNDLE_EXTENSION = .generator
 ProjectBuilder_PRINCIPAL_CLASS = 
 
