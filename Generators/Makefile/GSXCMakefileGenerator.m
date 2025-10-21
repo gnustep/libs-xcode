@@ -43,14 +43,14 @@
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Debug output to see what we're getting from the context
-  NSLog(@"=== DEBUG: Makefile Generator Context ===");
-  NSLog(@"OBJC_FILES: %@", [context objectForKey: @"OBJC_FILES"]);
-  NSLog(@"C_FILES: %@", [context objectForKey: @"C_FILES"]);
-  NSLog(@"CPP_FILES: %@", [context objectForKey: @"CPP_FILES"]);
-  NSLog(@"OBJCPP_FILES: %@", [context objectForKey: @"OBJCPP_FILES"]);
-  NSLog(@"RESOURCES: %@", [context objectForKey: @"RESOURCES"]);
-  NSLog(@"PROJECT_TYPE: %@", projectType);
-  NSLog(@"========================================");
+  NSDebugLog(@"=== DEBUG: Makefile Generator Context ===");
+  NSDebugLog(@"OBJC_FILES: %@", [context objectForKey: @"OBJC_FILES"]);
+  NSDebugLog(@"C_FILES: %@", [context objectForKey: @"C_FILES"]);
+  NSDebugLog(@"CPP_FILES: %@", [context objectForKey: @"CPP_FILES"]);
+  NSDebugLog(@"OBJCPP_FILES: %@", [context objectForKey: @"OBJCPP_FILES"]);
+  NSDebugLog(@"RESOURCES: %@", [context objectForKey: @"RESOURCES"]);
+  NSDebugLog(@"PROJECT_TYPE: %@", projectType);
+  NSDebugLog(@"========================================");
 
   // Construct the makefile out of the data we have thusfar collected.
   xcputs("\t* Generating GNUmakefile");
