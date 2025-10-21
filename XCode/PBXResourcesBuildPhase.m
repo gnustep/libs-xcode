@@ -250,9 +250,7 @@
 		       error:&error];
 
   // Copy all resources...
-  NSArray *synchronizedFiles = [_target synchronizedResources];
-  NSArray *files = [_files arrayByAddingObjectsFromArray: synchronizedFiles];
-  
+  NSArray *files = [self allFiles];  
   NSEnumerator *en = [files objectEnumerator];
   BOOL result = YES;
   id file = nil;
