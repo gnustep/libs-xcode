@@ -32,6 +32,7 @@
 
 // Icon discovery methods
 - (NSString *) discoverAppIcon;
+- (NSString *) discoverAppIconPath;
 - (BOOL) copyAppIconToResources: (NSString *)iconFilename;
 
 // Info.plist generation methods

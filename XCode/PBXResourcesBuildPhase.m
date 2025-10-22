@@ -118,6 +118,19 @@
   return filename;
 }
 
+- (NSString *) discoverAppIconPath
+{
+  NSString *filename = [self discoverAppIcon];
+  if (filename != nil)
+    {
+      NSString *productName = [_target name];
+      NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
+      NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+      return [appIconDir stringByAppendingPathComponent: filename];
+    }
+  return nil;
+}
+
 - (BOOL) copyAppIconToResources: (NSString *)iconFilename
 {
   if (iconFilename == nil)
@@ -530,13 +543,16 @@
 
   // Discover app icon separately from Info.plist generation
   NSString *iconFile = [self discoverAppIcon];
+  NSString *iconPath = [self discoverAppIconPath];
   xcputs([[NSString stringWithFormat: @"\t* Discovered app icon: %@", iconFile ? iconFile : @"(none)"] cString]);
-  NSString *appIconPath = [iconFile stringByDeletingFirstPathComponent];
-  [resources addObject: appIconPath];
 
-  // Copy app icon to resources if found
-  if (iconFile != nil)
+  // Add icon file to resources if found
+  if (iconPath != nil)
     {
+      xcputs([[NSString stringWithFormat: @"\t* Adding app icon to resources: %@", iconPath] cString]);
+      [resources addObject: iconPath];
+      
+      // Copy app icon to resources directory
       BOOL iconCopied = [self copyAppIconToResources: iconFile];
       if (iconCopied)
         {
