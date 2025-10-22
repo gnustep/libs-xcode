@@ -667,19 +667,22 @@
   GSXCGenerator *generator = nil;
 
   generatorName = [generatorName lowercaseString]; // all generators should be lowercase...
-  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
+  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,
+						    NSUserDomainMask, YES) lastObject];
   bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
   generator = [self _loadGeneratorBundleFromDirectory: bundlesDir
                                              withName: generatorName];
   if (generator) return [generator generate];
 
-  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES) lastObject];
+  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,
+						    NSLocalDomainMask, YES) lastObject];
   bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
   generator = [self _loadGeneratorBundleFromDirectory: bundlesDir
                                              withName: generatorName];
   if (generator) return [generator generate];
 
-  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSSystemDomainMask, YES) lastObject];
+  bundlesDir = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,
+						    NSSystemDomainMask, YES) lastObject];
   bundlesDir = [bundlesDir stringByAppendingPathComponent: @"Bundles"];
   generator = [self _loadGeneratorBundleFromDirectory: bundlesDir
                                              withName: generatorName];
