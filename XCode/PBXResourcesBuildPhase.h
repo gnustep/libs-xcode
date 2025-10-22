@@ -35,6 +35,9 @@
 - (NSString *) discoverAppIconPath;
 - (BOOL) copyAppIconToResources: (NSString *)iconFilename;
 
+// Helper methods
+- (NSString *) escapeFilenameForMakefile: (NSString *)filename;
+
 // Info.plist generation methods
 - (NSString *) generateInfoPlistOutput: (NSString *)outputPlist;
 - (NSString *) generateInfoPlistOutput: (NSString *)outputPlist withIconFile: (NSString *)iconFile;

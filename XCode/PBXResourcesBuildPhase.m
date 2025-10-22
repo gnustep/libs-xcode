@@ -131,6 +131,42 @@
   return nil;
 }
 
+// Helper method to escape filenames for makefile compatibility
+- (NSString *) escapeFilenameForMakefile: (NSString *)filename
+{
+  if (filename == nil)
+    {
+      return nil;
+    }
+
+  // Escape spaces and other special characters for makefile usage
+  NSMutableString *escaped = [NSMutableString stringWithString: filename];
+  
+  // Replace spaces with escaped spaces
+  [escaped replaceOccurrencesOfString: @" " 
+                           withString: @"\\ " 
+                              options: 0 
+                                range: NSMakeRange(0, [escaped length])];
+  
+  // Escape other special makefile characters
+  [escaped replaceOccurrencesOfString: @"$" 
+                           withString: @"$$" 
+                              options: 0 
+                                range: NSMakeRange(0, [escaped length])];
+  
+  [escaped replaceOccurrencesOfString: @"#" 
+                           withString: @"\\#" 
+                              options: 0 
+                                range: NSMakeRange(0, [escaped length])];
+  
+  [escaped replaceOccurrencesOfString: @":" 
+                           withString: @"\\:" 
+                              options: 0 
+                                range: NSMakeRange(0, [escaped length])];
+  
+  return [NSString stringWithString: escaped];
+}
+
 - (BOOL) copyAppIconToResources: (NSString *)iconFilename
 {
   if (iconFilename == nil)
@@ -150,13 +186,50 @@
   NSString *imagePath = [appIconDir stringByAppendingPathComponent: iconFilename];
   NSString *destPath = [resourcesDir stringByAppendingPathComponent: iconFilename];
 
-  // Copy the item, remove it first to make sure there is no issue.
-  //[mgr removeItemAtPath: destPath
-  //	      error: NULL];
+  // Debug output for paths
+  xcputs([[NSString stringWithFormat: @"\t* Icon filename: '%@'", iconFilename] cString]);
+  xcputs([[NSString stringWithFormat: @"\t* Source path: '%@'", imagePath] cString]);
+  xcputs([[NSString stringWithFormat: @"\t* Dest path: '%@'", destPath] cString]);
 
-  return [mgr copyItemAtPath: imagePath
-		      toPath: destPath
-		       error: NULL];
+  // Check if source file exists
+  if (![mgr fileExistsAtPath: imagePath])
+    {
+      xcputs([[NSString stringWithFormat: @"\t* ERROR: Source icon file does not exist: %@", imagePath] cString]);
+      return NO;
+    }
+
+  // Ensure resources directory exists
+  NSError *error = nil;
+  if (![mgr fileExistsAtPath: resourcesDir])
+    {
+      BOOL created = [mgr createDirectoryAtPath: resourcesDir
+			    withIntermediateDirectories: YES
+					     attributes: nil
+						  error: &error];
+      if (!created)
+        {
+          xcputs([[NSString stringWithFormat: @"\t* ERROR: Could not create resources directory: %@", [error localizedDescription]] cString]);
+          return NO;
+        }
+    }
+
+  // Remove existing file if it exists
+  if ([mgr fileExistsAtPath: destPath])
+    {
+      [mgr removeItemAtPath: destPath error: NULL];
+    }
+
+  // Copy the icon file
+  BOOL success = [mgr copyItemAtPath: imagePath
+			      toPath: destPath
+			       error: &error];
+  
+  if (!success)
+    {
+      xcputs([[NSString stringWithFormat: @"\t* ERROR: Failed to copy icon file: %@", error ? [error localizedDescription] : @"Unknown error"] cString]);
+    }
+
+  return success;
 }
 
 - (NSString *) processAssets
@@ -524,8 +597,9 @@
 		  filePath = [productName stringByAppendingPathComponent: [child path]];
 		}
 
+	      NSString *escapedFilePath = [self escapeFilenameForMakefile: filePath];
 	      xcputs([[NSString stringWithFormat: @"\tAdd child resource entry %@", filePath] cString]);
-	      [resources addObject: filePath];
+	      [resources addObject: escapedFilePath];
 	    }
 	  continue;
 	}
@@ -536,9 +610,10 @@
 	  filePath = [productName stringByAppendingPathComponent: [file path]];
 	}
 
+      NSString *escapedFilePath = [self escapeFilenameForMakefile: filePath];
       xcputs([[NSString stringWithFormat: @"\tAdd resource entry %@",filePath] cString]);
 
-      [resources addObject: filePath];
+      [resources addObject: escapedFilePath];
     }
 
   // Discover app icon separately from Info.plist generation
@@ -549,8 +624,9 @@
   // Add icon file to resources if found
   if (iconPath != nil)
     {
+      NSString *escapedIconPath = [self escapeFilenameForMakefile: iconPath];
       xcputs([[NSString stringWithFormat: @"\t* Adding app icon to resources: %@", iconPath] cString]);
-      [resources addObject: iconPath];
+      [resources addObject: escapedIconPath];
       
       // Copy app icon to resources directory
       BOOL iconCopied = [self copyAppIconToResources: iconFile];
@@ -578,7 +654,8 @@
   // NSString *baseLproj =  @"Base.lproj/*";
   // NSString *engLproj =  @"English.lproj";
   // [resources addObject: engLproj];
-  [resources addObject: outputPlist];
+  NSString *escapedOutputPlist = [self escapeFilenameForMakefile: outputPlist];
+  [resources addObject: escapedOutputPlist];
 
   [context setObject: resources forKey: @"RESOURCES"];
   xcputs("=== Resources Build Phase Completed (generate)");
