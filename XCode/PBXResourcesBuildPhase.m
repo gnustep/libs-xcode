@@ -82,7 +82,7 @@
   return productName;
 }
 
-- (NSString *) processAssets
+- (NSString *) discoverAppIcon
 {
   NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *filename = nil;
@@ -113,28 +113,49 @@
 	      break;
 	    }
 	}
-
-      // Copy icons to resource dir...
-      GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-      NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
-      NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
-      NSString *imagePath = [appIconDir stringByAppendingPathComponent: filename];
-      NSString *destPath = [resourcesDir stringByAppendingPathComponent: filename];
-
-      // Copy the item, remove it first to make sure there is no issue.
-      //[mgr removeItemAtPath: destPath
-      //	      error: NULL];
-
-      [mgr copyItemAtPath: imagePath
-		   toPath: destPath
-		    error: NULL];
     }
 
   return filename;
 }
 
+- (BOOL) copyAppIconToResources: (NSString *)iconFilename
+{
+  if (iconFilename == nil)
+    {
+      return NO;
+    }
+
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  NSString *productName = [_target name];
+  NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
+  NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+  
+  // Copy icons to resource dir...
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
+  NSString *imagePath = [appIconDir stringByAppendingPathComponent: iconFilename];
+  NSString *destPath = [resourcesDir stringByAppendingPathComponent: iconFilename];
+
+  // Copy the item, remove it first to make sure there is no issue.
+  //[mgr removeItemAtPath: destPath
+  //	      error: NULL];
+
+  return [mgr copyItemAtPath: imagePath
+		      toPath: destPath
+		       error: NULL];
+}
+
+- (NSString *) processAssets
+{
+  NSString *filename = [self discoverAppIcon];
+  [self copyAppIconToResources: filename];
+  return filename;
+}
+
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
 			output: (NSString *)outputFileName
+		  withIconFile: (NSString *)iconFileName
 {
   if (inputFileName != nil)
     {
@@ -145,11 +166,10 @@
 	  NSString *inputFileString = [NSString stringWithContentsOfFile: inputFileName];
 	  NSString *outputFileString = [inputFileString stringByReplacingEnvironmentVariablesWithValues];
 	  NSMutableDictionary *plistDict = [NSMutableDictionary dictionaryWithDictionary: [outputFileString propertyList]];
-	  NSString *filename = [self processAssets];
 
-	  if (filename != nil)
+	  if (iconFileName != nil)
 	    {
-	      [plistDict setObject: filename forKey: @"NSIcon"];
+	      [plistDict setObject: iconFileName forKey: @"NSIcon"];
 	    }
 
 	  [plistDict writeToFile: outputFileName
@@ -176,6 +196,16 @@
     }
 
   return YES;
+}
+
+// Backward compatibility method
+- (BOOL) processInfoPlistInput: (NSString *)inputFileName
+			output: (NSString *)outputFileName
+{
+  NSString *iconFile = [self processAssets];
+  return [self processInfoPlistInput: inputFileName
+			      output: outputFileName
+			withIconFile: iconFile];
 }
 
 - (BOOL) copyResourceFrom: (NSString *)srcPath to: (NSString *)dstPath
@@ -207,7 +237,7 @@
   return result;
 }
 
-- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config
+- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config withIconFile: (NSString *)iconFile
 {
   NSMutableDictionary *ipd = [NSMutableDictionary dictionary];
   NSDictionary *buildSettings = [config buildSettings];
@@ -217,13 +247,15 @@
   NSString *mainNib = [buildSettings objectForKey: @"INFOPLIST_KEY_NSMainNibFile"];
   NSString *principalClass = [buildSettings objectForKey: @"INFOPLIST_KEY_NSPrincipalClass"];
   NSString *bundleIdentifier = [buildSettings objectForKey: @"PRODUCT_BUNDLE_IDENTIFIER"];
-  NSString *iconFile = [self processAssets];
 
   [ipd setObject: version forKey: @"CFBundleVersion"];
   [ipd setObject: mainNib forKey: @"NSMainNibFile"];
   [ipd setObject: copyright forKey: @"NSHumanReadableCopyright"];
   [ipd setObject: principalClass forKey: @"NSPrincipalClass"];
-  [ipd setObject: iconFile forKey: @"NSIcon"];
+  if (iconFile != nil)
+    {
+      [ipd setObject: iconFile forKey: @"NSIcon"];
+    }
   [ipd setObject: @"$(DEVELOPMENT_LANGUAGE)" forKey: @"CFBundleDevelopmentRegion"];
   [ipd setObject: @"$(EXECUTABLE_NAME)" forKey: @"CFBundlExecutable"];
   [ipd setObject: bundleIdentifier forKey: @"CFBundleIdentifier"];
@@ -231,7 +263,7 @@
   return ipd;
 }
 
-- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist
+- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist withIconFile: (NSString *)iconFile
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   // NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
@@ -251,17 +283,25 @@
 	}
 
       [self processInfoPlistInput: infoPlist
-			   output: outputPlist];
+			   output: outputPlist
+		     withIconFile: iconFile];
     }
   else
     {
       xcputs([[NSString stringWithFormat: @"\t* Generating info plist --> %s%@%s", GREEN, outputPlist, RESET] cString]);
       XCBuildConfiguration *config = [xcl configurationWithName: @"Debug"];
-      NSMutableDictionary *ipl = [self configToInfoPlist: config];
+      NSMutableDictionary *ipl = [self configToInfoPlist: config withIconFile: iconFile];
       pl = [ipl description];
     }
 
   return pl;
+}
+
+// Backward compatibility method
+- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist
+{
+  NSString *iconFile = [self processAssets];
+  return [self generateInfoPlistOutput: outputPlist withIconFile: iconFile];
 }
 
 - (BOOL) build
@@ -382,8 +422,16 @@
 	}
     }
 
-  // Handle Info.plist....
-  NSString *pl = [self generateInfoPlistOutput: outputPlist];
+  // Handle Info.plist.... 
+  // Discover and copy app icon first
+  NSString *iconFile = [self discoverAppIcon];
+  if (iconFile != nil)
+    {
+      [self copyAppIconToResources: iconFile];
+    }
+  
+  // Generate Info.plist with the discovered icon
+  NSString *pl = [self generateInfoPlistOutput: outputPlist withIconFile: iconFile];
   BOOL f = [pl writeToFile: outputPlist atomically: YES];
   if (f == NO)
     {
@@ -480,23 +528,29 @@
       [resources addObject: filePath];
     }
 
-  // Handle Info.plist...
-  /*
-  NSDictionary *ctx = [context currentContext];
-  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
-  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
-  NSDictionary *bs = [xbc buildSettings];
-  NSString *inputPlist = [bs objectForKey: @"INFOPLIST_FILE"];
-  if ([mgr fileExistsAtPath: inputPlist] == NO)
-    {
-      inputPlist = [inputPlist lastPathComponent];
-    }
-  */
+  // Discover app icon separately from Info.plist generation
+  NSString *iconFile = [self discoverAppIcon];
+  xcputs([[NSString stringWithFormat: @"\t* Discovered app icon: %@", iconFile ? iconFile : @"(none)"] cString]);
+  NSString *appIconPath = [iconFile stringByDeletingFirstPathComponent];
+  [resources addObject: appIconPath];
 
+  // Copy app icon to resources if found
+  if (iconFile != nil)
+    {
+      BOOL iconCopied = [self copyAppIconToResources: iconFile];
+      if (iconCopied)
+        {
+          xcputs([[NSString stringWithFormat: @"\t* Copied app icon to resources: %@", iconFile] cString]);
+        }
+      else
+        {
+          xcputs([[NSString stringWithFormat: @"\t* Failed to copy app icon: %@", iconFile] cString]);
+        }
+    }
+
+  // Generate Info.plist with the discovered icon
   NSString *outputPlist = [NSString stringWithFormat: @"%@Info.plist",appName] ;
-  //[self processInfoPlistInput: inputPlist
-  //		       output: outputPlist];
-  NSString *pl = [self generateInfoPlistOutput: outputPlist];
+  NSString *pl = [self generateInfoPlistOutput: outputPlist withIconFile: iconFile];
   BOOL f = [pl writeToFile: outputPlist atomically: YES];
   if (f == NO)
     {

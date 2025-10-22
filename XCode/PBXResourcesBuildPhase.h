@@ -30,7 +30,22 @@
 
 @interface PBXResourcesBuildPhase : PBXBuildPhase
 
+// Icon discovery methods
+- (NSString *) discoverAppIcon;
+- (BOOL) copyAppIconToResources: (NSString *)iconFilename;
+
+// Info.plist generation methods
 - (NSString *) generateInfoPlistOutput: (NSString *)outputPlist;
+- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist withIconFile: (NSString *)iconFile;
 - (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config;
+- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config withIconFile: (NSString *)iconFile;
+- (BOOL) processInfoPlistInput: (NSString *)inputFileName
+			output: (NSString *)outputFileName;
+- (BOOL) processInfoPlistInput: (NSString *)inputFileName
+			output: (NSString *)outputFileName
+		  withIconFile: (NSString *)iconFileName;
+
+// Legacy method (backward compatibility)
+- (NSString *) processAssets;
 
 @end
