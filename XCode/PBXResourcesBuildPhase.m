@@ -227,21 +227,55 @@
   [ipd setObject: @"$(DEVELOPMENT_LANGUAGE)" forKey: @"CFBundleDevelopmentRegion"];
   [ipd setObject: @"$(EXECUTABLE_NAME)" forKey: @"CFBundlExecutable"];
   [ipd setObject: bundleIdentifier forKey: @"CFBundleIdentifier"];
-  
+
   return ipd;
+}
+
+- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  // NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  NSDictionary *ctx = [context currentContext];
+  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
+  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
+  NSDictionary *bs = [xbc buildSettings];
+  NSString *infoPlist = [bs objectForKey: @"INFOPLIST_FILE"];
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  NSString *pl = nil;
+  
+  if (infoPlist != nil)
+    {
+      if ([mgr fileExistsAtPath: infoPlist] == NO)
+	{
+	  infoPlist = [infoPlist lastPathComponent];
+	}
+
+      [self processInfoPlistInput: infoPlist
+			   output: outputPlist];
+    }
+  else
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Generating info plist --> %s%@%s", GREEN, outputPlist, RESET] cString]);
+      XCBuildConfiguration *config = [xcl configurationWithName: @"Debug"];
+      NSMutableDictionary *ipl = [self configToInfoPlist: config];
+      pl = [ipl description];
+    }
+
+  return pl;
 }
 
 - (BOOL) build
 {
-  xcputs("=== Executing Resources Build Phase");
   NSFileManager *mgr = [NSFileManager defaultManager];
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"]; // [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
+  NSString *outputPlist = [resourcesDir stringByAppendingPathComponent: @"Info-gnustep.plist"];
   NSError *error = nil;
-  NSString *productName = [self productName]; // @""; // [_target productName];
+  NSString *productName = [self productName];
 
   NSDebugLog(@"productName = %@", productName);
+  xcputs("=== Executing Resources Build Phase");
 
   // Pre create directory....
   [mgr createDirectoryAtPath:resourcesDir
@@ -250,7 +284,7 @@
 		       error:&error];
 
   // Copy all resources...
-  NSArray *files = [self allFiles];  
+  NSArray *files = [self allFiles];
   NSEnumerator *en = [files objectEnumerator];
   BOOL result = YES;
   id file = nil;
@@ -349,35 +383,13 @@
     }
 
   // Handle Info.plist....
-  NSDictionary *ctx = [context currentContext];
-  XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
-  XCBuildConfiguration *xbc = [xcl defaultConfiguration];
-  NSDictionary *bs = [xbc buildSettings];
-  NSString *infoPlist = [bs objectForKey: @"INFOPLIST_FILE"];
-  NSString *outputPlist = [resourcesDir
-			    stringByAppendingPathComponent: @"Info-gnustep.plist"];
-
-  if (infoPlist != nil)
+  NSString *pl = [self generateInfoPlistOutput: outputPlist];
+  BOOL f = [pl writeToFile: outputPlist atomically: YES];
+  if (f == NO)
     {
-      if ([mgr fileExistsAtPath: infoPlist] == NO)
-	{
-	  infoPlist = [infoPlist lastPathComponent];
-	}
-
-      [self processInfoPlistInput: infoPlist
-			   output: outputPlist];
+      NSLog(@"ERROR: Issue writing out plist file");
     }
-  else
-    {
-      xcputs([[NSString stringWithFormat: @"\t* Generating info plist --> %s%@%s", GREEN, outputPlist, RESET] cString]);
-      XCBuildConfiguration *config = [xcl configurationWithName: @"Debug"];
-      NSMutableDictionary *ipl = [self configToInfoPlist: config];
-      NSString *plString = [ipl description];
-      
-      NSDebugLog(@"ipl = %@", ipl);
-      [plString writeToFile: outputPlist atomically: YES];
-    }
-
+  
   xcputs("=== Resources Build Phase Completed");
   fflush(stdout);
 
@@ -394,7 +406,7 @@
 - (BOOL) generate
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  
+
   // Use the new allFiles method to include files from groups
   NSArray *allFiles = [self allFiles];
   NSMutableArray *resources = [NSMutableArray arrayWithCapacity: [allFiles count]];
@@ -411,32 +423,32 @@
   while((file = [en nextObject]) != nil && result)
     {
       id fileRef = [file fileRef];
-      
+
       // Skip source code files - they should not be treated as resources
       if ([file respondsToSelector: @selector(fileRef)])
-        {
-          PBXFileReference *fr = [file fileRef];
-          if (fr != nil && [fr respondsToSelector: @selector(path)])
-            {
-              NSString *path = [fr path];
-              NSString *ext = [[path pathExtension] lowercaseString];
-              
-              // Skip common source code file extensions
-              if ([ext isEqualToString: @"m"] ||
-                  [ext isEqualToString: @"mm"] ||
-                  [ext isEqualToString: @"c"] ||
-                  [ext isEqualToString: @"cc"] ||
-                  [ext isEqualToString: @"cpp"] ||
-                  [ext isEqualToString: @"cxx"] ||
-                  [ext isEqualToString: @"swift"])
-                {
-                  // Skip this source file
-                  xcputs([[NSString stringWithFormat: @"\tSkipping source file: %@", path] cString]);
-                  continue;
-                }
-            }
-        }
-      
+	{
+	  PBXFileReference *fr = [file fileRef];
+	  if (fr != nil && [fr respondsToSelector: @selector(path)])
+	    {
+	      NSString *path = [fr path];
+	      NSString *ext = [[path pathExtension] lowercaseString];
+
+	      // Skip common source code file extensions
+	      if ([ext isEqualToString: @"m"] ||
+		  [ext isEqualToString: @"mm"] ||
+		  [ext isEqualToString: @"c"] ||
+		  [ext isEqualToString: @"cc"] ||
+		  [ext isEqualToString: @"cpp"] ||
+		  [ext isEqualToString: @"cxx"] ||
+		  [ext isEqualToString: @"swift"])
+		{
+		  // Skip this source file
+		  xcputs([[NSString stringWithFormat: @"\tSkipping source file: %@", path] cString]);
+		  continue;
+		}
+	    }
+	}
+
       if ([fileRef isKindOfClass: [PBXVariantGroup class]])
 	{
 	  NSArray *children = [fileRef children];
@@ -469,6 +481,7 @@
     }
 
   // Handle Info.plist...
+  /*
   NSDictionary *ctx = [context currentContext];
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
@@ -478,11 +491,18 @@
     {
       inputPlist = [inputPlist lastPathComponent];
     }
-
+  */
 
   NSString *outputPlist = [NSString stringWithFormat: @"%@Info.plist",appName] ;
-  [self processInfoPlistInput: inputPlist
-		       output: outputPlist];
+  //[self processInfoPlistInput: inputPlist
+  //		       output: outputPlist];
+  NSString *pl = [self generateInfoPlistOutput: outputPlist];
+  BOOL f = [pl writeToFile: outputPlist atomically: YES];
+  if (f == NO)
+    {
+      NSLog(@"ERROR: Issue writing out plist file");
+    }
+  
 
   // Move Base.lproj to English.lproj until Base.lproj is supported..
   // NSString *baseLproj =  @"Base.lproj/*";
@@ -502,7 +522,7 @@
   // For now, return empty array since resources are typically explicitly
   // added to the resources build phase, not automatically discovered from
   // synchronized groups. Synchronized groups are primarily for source files.
-  // 
+  //
   // If we need to support resource files from synchronized groups in the future,
   // we would need to filter them to exclude source code files here as well.
   return [NSArray array];

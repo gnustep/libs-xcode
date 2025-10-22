@@ -30,6 +30,7 @@
 
 @interface PBXResourcesBuildPhase : PBXBuildPhase
 
+- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist;
 - (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config;
 
 @end

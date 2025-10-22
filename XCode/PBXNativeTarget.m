@@ -691,7 +691,6 @@
   return NO;
 }
 
-
 - (BOOL) generate
 {
   BOOL result = YES;
