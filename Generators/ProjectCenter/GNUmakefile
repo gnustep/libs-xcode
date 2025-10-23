@@ -1,17 +1,17 @@
-# Makefile for GNUmakefile generation
+# Makefile for ProjectCenter generation
 
 include $(GNUSTEP_MAKEFILES)/common.make
 
 ADDITIONAL_INCLUDE_DIRS += -I../..
 BUNDLE_NAME = projectcenter
 BUNDLE_EXTENSION = .generator
-ProjectCenter_PRINCIPAL_CLASS = 
+projectcenter_PRINCIPAL_CLASS = GSXCProjectCenterGenerator
 
-ProjectCenter_HAS_RESOURCE_BUNDLE = yes
+projectcenter_HAS_RESOURCE_BUNDLE = yes
 
-ProjectCenter_OBJC_FILES = 
+projectcenter_OBJC_FILES = GSXCProjectCenterGenerator.m
 
-ProjectCenter_RESOURCE_FILES =
+projectcenter_RESOURCE_FILES =
 
 ProjectCenter_STANDARD_INSTALL = yes
 

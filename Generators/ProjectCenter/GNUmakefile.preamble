@@ -1,0 +1,15 @@
+# Additional include directories the compiler should search
+ADDITIONAL_INCLUDE_DIRS += -I../../XCode
+
+ifeq ($(GNUSTEP_TARGET_OS),mingw32)
+ADDITIONAL_LIB_DIRS += \
+        -L../../XCode/XCode.framework 
+
+ADDITIONAL_GUI_LIBS += -lXCode
+endif
+ifeq ($(GNUSTEP_TARGET_OS),windows)
+ADDITIONAL_LIB_DIRS += \
+        -L../../XCode/XCode.framework \
+
+ADDITIONAL_GUI_LIBS += -lXCode
+endif
