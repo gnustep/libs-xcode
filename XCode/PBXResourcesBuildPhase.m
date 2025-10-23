@@ -61,13 +61,8 @@
   NSDictionary *bs = [xbc buildSettings];
   NSString *productName = [bs objectForKey: @"PRODUCT_NAME"];
 
-  // NSProcessInfo *info = [NSProcessInfo processInfo];
-  // NSDictionary *env = [info environment];
   NSDebugLog(@"bs = %@", bs);
 
-  // This is kind of a kludge, but better than what was here before.
-  // I believe that when the context has the variable name it means to use
-  // the product name from the target.
   if ([productName isEqualToString: @"$(TARGET_NAME)"])
     {
       productName = [_target productName];
@@ -327,7 +322,6 @@
 {
   NSMutableDictionary *ipd = [NSMutableDictionary dictionary];
   NSDictionary *buildSettings = [config buildSettings];
-  // NSString *appIcon = [buildSettings objectForKey: @"ASSETCATALOG_COMPILER_APPICON_NAME"];
   NSString *version = [buildSettings objectForKey: @"CURRENT_PROJECT_VERSION"];
   NSString *copyright = [buildSettings objectForKey: @"INFOPLIST_KEY_NSHumanReadableCopyright"];
   NSString *mainNib = [buildSettings objectForKey: @"INFOPLIST_KEY_NSMainNibFile"];
@@ -352,7 +346,6 @@
 - (NSString *) generateInfoPlistOutput: (NSString *)outputPlist withIconFile: (NSString *)iconFile
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  // NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSDictionary *ctx = [context currentContext];
   XCConfigurationList *xcl = [ctx objectForKey: @"buildConfig"];
   XCBuildConfiguration *xbc = [xcl defaultConfiguration];
@@ -650,10 +643,6 @@
     }
   
 
-  // Move Base.lproj to English.lproj until Base.lproj is supported..
-  // NSString *baseLproj =  @"Base.lproj/*";
-  // NSString *engLproj =  @"English.lproj";
-  // [resources addObject: engLproj];
   NSString *escapedOutputPlist = [self escapeFilenameForMakefile: outputPlist];
   [resources addObject: escapedOutputPlist];
 

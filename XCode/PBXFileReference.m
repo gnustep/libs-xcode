@@ -93,6 +93,10 @@ static NSLock *lock = nil;
     {
       result = @"text.plist.entitlements";
     }
+  else if ([ext isEqualToString: @"h"])
+    {
+      result = @"sourcecode.c.h";
+    }
 	   
   return result;
 }
@@ -144,6 +148,10 @@ static NSLock *lock = nil;
   else if ([type isEqualToString: @"text.plist.entitlements"])
     {
       result = @"entitlements";
+    }
+  else if ([type isEqualToString: @"sourcecode.c.h"])
+    {
+      result = @"h";
     }
 
   return result;
@@ -912,7 +920,7 @@ static NSLock *lock = nil;
   NSMutableArray *objcFiles = [self _arrayForKey: @"OBJC_FILES"];
   NSMutableArray *cFiles = [self _arrayForKey: @"C_FILES"];
   NSMutableArray *cppFiles = [self _arrayForKey: @"CPP_FILES"];
-  // NSMutableArray *hFiles = [self _arrayForKey: @"HEADERS"];
+  NSMutableArray *hFiles = [self _arrayForKey: @"HEADERS"];
   NSMutableArray *objcppFiles = [self _arrayForKey: @"OBJCPP_FILES"];
   NSMutableArray *addlIncDirs = [self _arrayForKey: @"ADDITIONAL_INCLUDE_DIRS"];
   NSString *of = [context objectForKey: @"OUTPUT_FILES"];
@@ -1039,7 +1047,7 @@ static NSLock *lock = nil;
 
   if ([_lastKnownFileType isEqualToString: @"sourcecode.c.h"])
     {
-      
+      [hFiles addObject: compilePath];  
     }
   
   NSString *includePath = [compilePath stringByDeletingLastPathComponent];
