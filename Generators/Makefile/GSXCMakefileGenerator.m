@@ -75,6 +75,10 @@
   NSString *additionalIncludes = [self safeStringFromArray: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"] withMethod: @selector(arrayToIncludeList)];
   NSString *additionalOCflags = [self safeStringFromArray: [context objectForKey: @"ADDITIONAL_OBJC_LIBS"] withMethod: @selector(arrayToLinkList)];
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
+  
+  // Get app icon information from build context
+  NSString *appIconFile = [context objectForKey: @"APP_ICON_FILE"];
+  NSString *safeAppIconFile = [context objectForKey: @"APP_ICON_SAFE_FILE"];
 
   // Debug output to see what we're getting from the context
   NSDebugLog(@"=== DEBUG: Makefile Generator Context ===");
@@ -84,6 +88,8 @@
   NSDebugLog(@"OBJCPP_FILES: %@", [context objectForKey: @"OBJCPP_FILES"]);
   NSDebugLog(@"RESOURCES: %@", [context objectForKey: @"RESOURCES"]);
   NSDebugLog(@"PROJECT_TYPE: %@", projectType);
+  NSDebugLog(@"APP_ICON_FILE: %@", appIconFile);
+  NSDebugLog(@"APP_ICON_SAFE_FILE: %@", safeAppIconFile);
   NSDebugLog(@"========================================");
 
   // Construct the makefile out of the data we have thusfar collected.
@@ -141,6 +147,23 @@
     {
       makefileString = [makefileString stringByAppendingString:
                                     [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, resourceFilesString]];
+    }
+  
+  // Add app icon handling if an icon was discovered
+  if (appIconFile != nil && [projectType isEqualToString: @"application"])
+    {
+      NSString *iconToUse = safeAppIconFile ? safeAppIconFile : appIconFile;
+      makefileString = [makefileString stringByAppendingString: @"# App icon handling\n"];
+      makefileString = [makefileString stringByAppendingString: 
+                                    [NSString stringWithFormat: @"%@_MAIN_MODEL_FILE = %@\n", appName, iconToUse]];
+      
+      // Add a rule to copy the app icon to the app bundle
+      makefileString = [makefileString stringByAppendingString: @"# Copy app icon to Resources directory\n"];
+      makefileString = [makefileString stringByAppendingString: 
+                                    [NSString stringWithFormat: @"after-install::\n\t$(INSTALL_DATA) %@ $(GNUSTEP_APP_INSTALL_DIR)/%@.app/Resources/\n\n", 
+                                                               iconToUse, appName]];
+      
+      xcputs([[NSString stringWithFormat: @"\t* Added app icon to makefile: %@", iconToUse] cString]);
     }
   
   if ([additionalIncludes length] > 0)

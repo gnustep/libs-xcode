@@ -56,6 +56,14 @@
 - (BOOL) copyAppIconToResources: (NSString *)iconFilename;
 
 /**
+ * Creates a safe copy of the app icon file with spaces replaced by underscores.
+ * If the icon filename contains spaces, creates a copy with a makefile-safe name.
+ * Takes the name of the icon file to process as parameter.
+ * Returns the safe filename if a copy was created, or nil if no spaces were found.
+ */
+- (NSString *) createSafeIconCopy: (NSString *)iconFilename;
+
+/**
  * Escapes special characters in filenames for makefile compatibility.
  * Handles spaces, dollar signs, hash symbols, and colons that have special 
  * meaning in makefiles. Takes the filename to escape as parameter.
