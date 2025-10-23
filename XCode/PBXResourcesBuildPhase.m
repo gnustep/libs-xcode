@@ -238,46 +238,6 @@
   return success;
 }
 
-- (NSString *) createSafeIconCopy: (NSString *)iconFilename
-{
-  if (iconFilename == nil || [iconFilename rangeOfString: @" "].location == NSNotFound)
-    {
-      // No spaces, return original filename
-      return nil;
-    }
-
-  NSFileManager *mgr = [NSFileManager defaultManager];
-  NSString *productName = [_target name];
-  NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
-  NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
-  NSString *sourcePath = [appIconDir stringByAppendingPathComponent: iconFilename];
-  
-  // Create safe filename by replacing spaces with underscores
-  NSString *safeFilename = [iconFilename stringByReplacingOccurrencesOfString: @" " withString: @"_"];
-  NSString *safePath = [appIconDir stringByAppendingPathComponent: safeFilename];
-  
-  xcputs([[NSString stringWithFormat: @"\t* Creating safe icon copy: %@ -> %@", iconFilename, safeFilename] cString]);
-  
-  // Copy original to safe filename
-  NSError *error = nil;
-  if ([mgr fileExistsAtPath: safePath])
-    {
-      [mgr removeItemAtPath: safePath error: NULL];
-    }
-  
-  BOOL success = [mgr copyItemAtPath: sourcePath toPath: safePath error: &error];
-  if (success)
-    {
-      xcputs([[NSString stringWithFormat: @"\t* Successfully created safe icon copy: %@", safeFilename] cString]);
-      return safeFilename;
-    }
-  else
-    {
-      xcputs([[NSString stringWithFormat: @"\t* ERROR: Failed to create safe icon copy: %@", error ? [error localizedDescription] : @"Unknown error"] cString]);
-      return nil;
-    }
-}
-
 - (NSString *) processAssets
 {
   NSString *filename = [self discoverAppIcon];
@@ -665,14 +625,6 @@
   NSString *iconPath = [self discoverAppIconPath];
   xcputs([[NSString stringWithFormat: @"\t* Discovered app icon: %@", iconFile ? iconFile : @"(none)"] cString]);
 
-  // Store app icon information in build context for makefile generation
-  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  if (iconFile != nil)
-    {
-      [context setObject: iconFile forKey: @"APP_ICON_FILE"];
-      xcputs([[NSString stringWithFormat: @"\t* Stored app icon in build context: %@", iconFile] cString]);
-    }
-
   // Add icon file to resources if found
   if (iconPath != nil)
     {
@@ -680,17 +632,11 @@
       xcputs([[NSString stringWithFormat: @"\t* Adding app icon to resources: %@", iconPath] cString]);
       [resources addObject: escapedIconPath];
       
-      // Copy app icon to resources directory with safe filename
-      NSString *safeIconFile = [self createSafeIconCopy: iconFile];
-      BOOL iconCopied = [self copyAppIconToResources: safeIconFile ? safeIconFile : iconFile];
+      // Copy app icon to resources directory
+      BOOL iconCopied = [self copyAppIconToResources: iconFile];
       if (iconCopied)
         {
-          xcputs([[NSString stringWithFormat: @"\t* Copied app icon to resources: %@", safeIconFile ? safeIconFile : iconFile] cString]);
-          // Store the safe filename for makefile generation
-          if (safeIconFile != nil)
-            {
-              [context setObject: safeIconFile forKey: @"APP_ICON_SAFE_FILE"];
-            }
+          xcputs([[NSString stringWithFormat: @"\t* Copied app icon to resources: %@", iconFile] cString]);
         }
       else
         {
