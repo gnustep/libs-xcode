@@ -79,7 +79,6 @@
 
 - (NSString *) discoverAppIcon
 {
-  NSFileManager *mgr = [NSFileManager defaultManager];
   NSString *filename = nil;
   NSString *productName = [_target name]; // [self productName];
   NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
@@ -184,7 +183,10 @@
   // Debug output for paths
   xcputs([[NSString stringWithFormat: @"\t* Icon filename: '%@'", iconFilename] cString]);
   xcputs([[NSString stringWithFormat: @"\t* Source path: '%@'", imagePath] cString]);
-  xcputs([[NSString stringWithFormat: @"\t* Dest path: '%@'", destPath] cString]);
+  if (destPath != NULL && destPath != nil)
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Dest path: '%@'", destPath] cString]);
+    }
 
   // Check if source file exists
   if (![mgr fileExistsAtPath: imagePath])
@@ -215,13 +217,22 @@
     }
 
   // Copy the icon file
-  BOOL success = [mgr copyItemAtPath: imagePath
-			      toPath: destPath
-			       error: &error];
-  
-  if (!success)
+  BOOL success = NO;
+  if (destPath != NULL && destPath != nil)
     {
-      xcputs([[NSString stringWithFormat: @"\t* ERROR: Failed to copy icon file: %@", error ? [error localizedDescription] : @"Unknown error"] cString]);
+      success = [mgr copyItemAtPath: imagePath
+			     toPath: destPath
+			      error: &error];
+  
+      if (!success)
+	{
+	  xcputs([[NSString stringWithFormat: @"\t* ERROR: Failed to copy icon file: %@", error ? [error localizedDescription] : @"Unknown error"] cString]);
+	}
+    }
+  else
+    {
+      success = YES;
+      xcputs("\t* WARN: Not copying icon file, no destination provided");
     }
 
   return success;

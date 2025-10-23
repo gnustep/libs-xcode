@@ -80,14 +80,6 @@
 - (NSString *) generateInfoPlistOutput: (NSString *)outputPlist withIconFile: (NSString *)iconFile;
 
 /**
- * Converts build configuration to Info.plist dictionary.
- * Extracts relevant settings from the build configuration for plist generation.
- * Takes the build configuration to process as parameter.
- * Returns a mutable dictionary containing plist key-value pairs.
- */
-- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config;
-
-/**
  * Converts build configuration to Info.plist dictionary with icon information.
  * Extracts settings and includes icon file reference in the generated dictionary.
  * Takes the build configuration to process and the name of the icon file as parameters.
