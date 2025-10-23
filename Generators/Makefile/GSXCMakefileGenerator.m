@@ -24,6 +24,40 @@
   return o != nil ? o : @"";
 }
 
+- (BOOL) arrayHasValidContent: (NSArray *)array
+{
+  if (array == nil || [array count] == 0)
+    {
+      return NO;
+    }
+  
+  // Check if all elements are non-empty strings
+  NSEnumerator *en = [array objectEnumerator];
+  id obj = nil;
+  while ((obj = [en nextObject]) != nil)
+    {
+      if (![obj isKindOfClass: [NSString class]] || 
+          [(NSString *)obj length] == 0)
+        {
+          continue; // Skip empty strings but don't reject the whole array
+        }
+      return YES; // Found at least one valid string
+    }
+  
+  return NO; // No valid strings found
+}
+
+- (NSString *) safeStringFromArray: (NSArray *)array withMethod: (SEL)method
+{
+  if (![self arrayHasValidContent: array])
+    {
+      return @"";
+    }
+  
+  NSString *result = [array performSelector: method];
+  return result != nil ? result : @"";
+}
+
 - (BOOL) generate
 {
   BOOL result = YES;
@@ -32,14 +66,14 @@
   NSString *appName = [name stringByDeletingPathExtension];
   NSString *makefileName = @"GNUmakefile";
   NSString *makefileString = @"";
-  NSString *headerFilesString = [[context objectForKey: @"HEADERS"] arrayToList];
-  NSString *objCFilesString = [[context objectForKey: @"OBJC_FILES"] arrayToList];
-  NSString *cFilesString = [[context objectForKey: @"C_FILES"] arrayToList];
-  NSString *cppFilesString = [[context objectForKey: @"CPP_FILES"] arrayToList];
-  NSString *objCPPFilesString = [[context objectForKey: @"OBJCPP_FILES"] arrayToList];  
-  NSString *resourceFilesString = [[context objectForKey: @"RESOURCES"] arrayToList];
-  NSString *additionalIncludes = [[context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"] arrayToIncludeList];
-  NSString *additionalOCflags = [[context objectForKey: @"ADDITIONAL_OBJC_LIBS"] arrayToLinkList];
+  NSString *headerFilesString = [self safeStringFromArray: [context objectForKey: @"HEADERS"] withMethod: @selector(arrayToList)];
+  NSString *objCFilesString = [self safeStringFromArray: [context objectForKey: @"OBJC_FILES"] withMethod: @selector(arrayToList)];
+  NSString *cFilesString = [self safeStringFromArray: [context objectForKey: @"C_FILES"] withMethod: @selector(arrayToList)];
+  NSString *cppFilesString = [self safeStringFromArray: [context objectForKey: @"CPP_FILES"] withMethod: @selector(arrayToList)];
+  NSString *objCPPFilesString = [self safeStringFromArray: [context objectForKey: @"OBJCPP_FILES"] withMethod: @selector(arrayToList)];  
+  NSString *resourceFilesString = [self safeStringFromArray: [context objectForKey: @"RESOURCES"] withMethod: @selector(arrayToList)];
+  NSString *additionalIncludes = [self safeStringFromArray: [context objectForKey: @"ADDITIONAL_INCLUDE_DIRS"] withMethod: @selector(arrayToIncludeList)];
+  NSString *additionalOCflags = [self safeStringFromArray: [context objectForKey: @"ADDITIONAL_OBJC_LIBS"] withMethod: @selector(arrayToLinkList)];
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Debug output to see what we're getting from the context
@@ -71,22 +105,55 @@
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n\n"];
   makefileString = [makefileString stringByAppendingString:
                                 [NSString stringWithFormat: @"%@_NAME = %@\n\n", [self projectTypeForString: [projectType uppercaseString]], appName]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_OBJC_FILES = %@\n\n", appName, [self objectForString: objCFilesString]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_C_FILES = %@\n\n", appName, [self objectForString: cFilesString]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_CC_FILES = %@\n\n", appName, [self objectForString: cppFilesString]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_OBJCC_FILES = %@\n\n", appName, [self objectForString: objCPPFilesString]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_HEADER_FILES = %@\n\n", appName, [self objectForString: headerFilesString]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, [self objectForString: resourceFilesString]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"ADDITIONAL_INCLUDE_DIRS += %@\n\n", [self objectForString: additionalIncludes]]];
-  makefileString = [makefileString stringByAppendingString:
-                                [NSString stringWithFormat: @"ADDITIONAL_OBJC_LIBS += %@\n\n", [self objectForString: additionalOCflags]]];
+  
+  // Only add file lists if they have content
+  if ([objCFilesString length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"%@_OBJC_FILES = %@\n\n", appName, objCFilesString]];
+    }
+  
+  if ([cFilesString length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"%@_C_FILES = %@\n\n", appName, cFilesString]];
+    }
+  
+  if ([cppFilesString length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"%@_CC_FILES = %@\n\n", appName, cppFilesString]];
+    }
+  
+  if ([objCPPFilesString length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"%@_OBJCC_FILES = %@\n\n", appName, objCPPFilesString]];
+    }
+  
+  if ([headerFilesString length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"%@_HEADER_FILES = %@\n\n", appName, headerFilesString]];
+    }
+  
+  if ([resourceFilesString length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"%@_RESOURCE_FILES = %@\n\n", appName, resourceFilesString]];
+    }
+  
+  if ([additionalIncludes length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"ADDITIONAL_INCLUDE_DIRS += %@\n\n", additionalIncludes]];
+    }
+  
+  if ([additionalOCflags length] > 0)
+    {
+      makefileString = [makefileString stringByAppendingString:
+                                    [NSString stringWithFormat: @"ADDITIONAL_OBJC_LIBS += %@\n\n", additionalOCflags]];
+    }
   
   makefileString = [makefileString stringByAppendingString: @"-include GNUmakefile.preamble\n"];
   makefileString = [makefileString stringByAppendingString: @"include $(GNUSTEP_MAKEFILES)/common.make\n"];
