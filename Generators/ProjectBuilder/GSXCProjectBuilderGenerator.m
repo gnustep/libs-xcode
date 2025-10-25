@@ -232,8 +232,10 @@
   [projectDict setObject: filesTable forKey: @"FILESTABLE"];
   
   // Add ProjectBuilder-specific metadata
-  [projectDict setObject: @"2.1" forKey: @"LANGUAGE"];
-  [projectDict setObject: @"NeXT Project Builder Project v2.1" forKey: @"NEXTSTEP_BUILDTOOL"];
+  [projectDict setObject: @"2.1"
+		  forKey: @"LANGUAGE"];
+  [projectDict setObject: @"gnumake" /* @"NeXT Project Builder Project v2.1" */
+		  forKey: @"NEXTSTEP_BUILDTOOL"];
   
   NSDebugLog(@"ProjectBuilder project dict = %@", projectDict);
 
