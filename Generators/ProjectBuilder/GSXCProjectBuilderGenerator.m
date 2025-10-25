@@ -232,7 +232,7 @@
   [projectDict setObject: filesTable forKey: @"FILESTABLE"];
   
   // Add ProjectBuilder-specific metadata
-  [projectDict setObject: @"2.1"
+  [projectDict setObject: @"English" // @"2.1"
 		  forKey: @"LANGUAGE"];
   [projectDict setObject: @"gnumake" /* @"NeXT Project Builder Project v2.1" */
 		  forKey: @"NEXTSTEP_BUILDTOOL"];
