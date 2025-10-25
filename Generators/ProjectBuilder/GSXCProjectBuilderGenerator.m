@@ -166,13 +166,73 @@
       [filesTable setObject: headerFiles forKey: @"H_FILES"];
     }
   
+  // Separate resource files into interfaces, images, and other categories
   if ([self arrayHasValidContent: resourceFiles])
     {
-      // ProjectBuilder uses INTERFACES for NIB/interface files, but we'll put resources here
-      [filesTable setObject: resourceFiles forKey: @"INTERFACES"];
+      NSMutableArray *interfaces = [NSMutableArray array];
+      NSMutableArray *images = [NSMutableArray array];
+      NSMutableArray *otherResources = [NSMutableArray array];
+      NSEnumerator *en = [resourceFiles objectEnumerator];
+      NSString *resourceFile = nil;
+      
+      while ((resourceFile = [en nextObject]) != nil)
+        {
+          NSString *ext = [[resourceFile pathExtension] lowercaseString];
+          
+          // NIB/XIB files go into INTERFACES
+          if ([ext isEqualToString: @"nib"] || 
+              [ext isEqualToString: @"xib"] ||
+              [ext isEqualToString: @"gorm"])
+            {
+              [interfaces addObject: resourceFile];
+            }
+          // Image files go into IMAGES
+          else if ([ext isEqualToString: @"png"] ||
+                   [ext isEqualToString: @"jpg"] ||
+                   [ext isEqualToString: @"jpeg"] ||
+                   [ext isEqualToString: @"gif"] ||
+                   [ext isEqualToString: @"tiff"] ||
+                   [ext isEqualToString: @"tif"] ||
+                   [ext isEqualToString: @"bmp"] ||
+                   [ext isEqualToString: @"ico"] ||
+                   [ext isEqualToString: @"icns"] ||
+                   [ext isEqualToString: @"pdf"] ||
+                   [ext isEqualToString: @"svg"])
+            {
+              [images addObject: resourceFile];
+            }
+          // Everything else goes into other resources
+          else
+            {
+              [otherResources addObject: resourceFile];
+            }
+        }
+      
+      if ([interfaces count] > 0)
+        {
+          [filesTable setObject: interfaces forKey: @"INTERFACES"];
+        }
+      if ([images count] > 0)
+        {
+          [filesTable setObject: images forKey: @"IMAGES"];
+        }
+      // Add other resources to OTHER_LINKED if they exist
+      if ([otherResources count] > 0)
+        {
+          NSMutableArray *otherLinked = [NSMutableArray array];
+          if ([self arrayHasValidContent: otherSources])
+            {
+              [otherLinked addObjectsFromArray: otherSources];
+            }
+          [otherLinked addObjectsFromArray: otherResources];
+          [filesTable setObject: otherLinked forKey: @"OTHER_LINKED"];
+        }
+      else if ([self arrayHasValidContent: otherSources])
+        {
+          [filesTable setObject: otherSources forKey: @"OTHER_LINKED"];
+        }
     }
-  
-  if ([self arrayHasValidContent: otherSources])
+  else if ([self arrayHasValidContent: otherSources])
     {
       [filesTable setObject: otherSources forKey: @"OTHER_LINKED"];
     }
