@@ -46,17 +46,17 @@ information in the Documentation directory of this project.
 ## 1.3 How can you help?
 
 * Give us feedback!  Tell us what you like; tell us what you think
-     could be better.
+could be better.
 
-     Please log bug reports on the GNUstep project page
-     `https://github.com/gnustep/libs-xcode/issues` or send bug reports
-     to <bug-gnustep@gnu.org>.
+Please log bug reports on the GNUstep project page
+`https://github.com/gnustep/libs-xcode/issues` or send bug reports
+to <bug-gnustep@gnu.org>.
 
-     Happy hacking!
+Happy hacking!
 
-   Copyright (C) 2005 Free Software Foundation
+Copyright (C) 2005 Free Software Foundation
 
-   Copying and distribution of this file, with or without modification,
+Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.
 
