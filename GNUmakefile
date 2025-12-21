@@ -21,8 +21,7 @@ SUBPROJECTS = \
 	XCode \
 	Generators \
 	Tools \
-	Applications \
-	Documentation
+	Applications
 
 #
 # Makefiles
