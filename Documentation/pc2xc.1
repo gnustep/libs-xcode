@@ -1,0 +1,86 @@
+."pc2xc(1) man page
+."put together by Gregory Casamento
+."Copyright (C) 2025 Free Software Foundation, Inc.
+."
+."Process this file with
+."groff -man -Tascii pc2xc.1
+."
+.TH PC2XC 1 "December 2025" GNUstep "GNUstep System Manual"
+.SH NAME
+pc2xc \- convert ProjectCenter/NeXT project files to Xcode .xcodeproj bundles
+.SH SYNOPSIS
+.B pc2xc
+.I input_project
+.I output_name
+.SH DESCRIPTION
+The
+.B pc2xc
+utility converts legacy project formats into an Xcode-compatible bundle. It
+accepts either a NeXTstep/Project Builder
+.I PB.project
+file or a ProjectCenter
+.I .pcproj
+bundle (containing
+.I PC.project
+) and produces an
+.I output_name.xcodeproj
+bundle in the current working directory. The generated bundle contains a
+.I project.pbxproj
+built using the libs-xcode classes.
+.PP
+Input detection is based on file extension:
+.IP \(bu 2
+If
+.I input_project
+ends with
+.I PB.project
+it is treated as an old-style NeXT project.
+.IP \(bu 2
+If
+.I input_project
+ends with
+.I .pcproj
+it is treated as a ProjectCenter project and
+.I PC.project
+is read from inside the bundle.
+.PP
+If the input type is not recognized or arguments are missing,
+.B pc2xc
+prints an error and exits with a non-zero status.
+.SH ARGUMENTS
+.TP
+.I input_project
+Path to either a
+.I PB.project
+file or a
+.I .pcproj
+bundle.
+.TP
+.I output_name
+Base name for the generated Xcode bundle. The tool appends
+.I .xcodeproj
+and writes the result to the current directory.
+.SH EXAMPLES
+Convert a ProjectCenter project to Xcode:
+.PP
+.I pc2xc MyApp.pcproj MyApp
+.PP
+Convert an old NeXT PB.project file:
+.PP
+.I pc2xc /tmp/LegacyApp/PB.project LegacyApp
+.SH EXIT STATUS
+Returns 0 on success. Returns 255 if the input cannot be parsed or the project
+cannot be written.
+.SH BUGS
+Framework build phases are not emitted; only sources and resources are wired
+into the target. Input validation is minimal and malformed project files may
+cause failed or partial output. Please report issues on the libs-xcode tracker.
+.SH HISTORY
+.B pc2xc
+was written in October 2023 to migrate ProjectCenter and legacy NeXT projects
+to Xcode format.
+.SH AUTHORS
+.B pc2xc
+was written by Gregory John Casamento <greg.casamento@gmail.com>.
+.P
+This man page was written by Gregory Casamento

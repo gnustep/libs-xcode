@@ -1,0 +1,59 @@
+."pcpg(1) man page
+."put together by Gregory John Casamento
+."Copyright (C) 2025 Free Software Foundation, Inc.
+."
+."Process this file with
+."groff -man -Tascii pcpg.1
+."
+.TH PCPG 1 "December 2025" GNUstep "GNUstep System Manual"
+.SH NAME
+pcpg \- parse Xcode project plists and generate placeholder class code
+.SH SYNOPSIS
+.B pcpg
+.I project.pbxproj
+.SH DESCRIPTION
+The
+.B pcpg
+utility is a small helper that reads an Xcode project property list (the
+.I project.pbxproj
+inside a .xcodeproj bundle) and infers the classes referenced by the
+.IB objects
+section. For every class it sees, it emits paired header and source files in
+the current working directory containing ivar declarations and simple getter
+and setter methods. This is intended as a metatool to help the libs-xcode
+maintainer map unknown or missing classes when parsing Xcode projects.
+.PP
+.B pcpg
+expects a single argument: the path to the plist or project file to inspect.
+If no argument is provided it exits without generating output.
+.SH OUTPUT
+For each class discovered,
+.B pcpg
+writes
+.I ClassName.h
+and
+.I ClassName.m
+files alongside where the tool was invoked. These stubs include imports for
+referenced types and generate minimal accessor methods based on the keys and
+value types found in the plist.
+.SH EXAMPLES
+Invoke the tool against a project file inside a bundle:
+.PP
+.I pcpg MyApp.xcodeproj/project.pbxproj
+.PP
+Generate stubs from a standalone plist snapshot:
+.PP
+.I pcpg /tmp/project-dump.plist
+.SH BUGS
+The tool currently accepts only one positional argument and performs no
+validation beyond loading the plist. If the input is malformed or incomplete,
+the generated stubs may be unusable. Report issues on the libs-xcode tracker.
+.SH HISTORY
+.B pcpg
+was written in August 2011 as an internal exploration tool and remains
+lightweight and experimental.
+.SH AUTHORS
+.B pcpg
+was written by Gregory John Casamento <greg.casamento@gmail.com>.
+.P
+This man page was written by Gregory John Casamento.

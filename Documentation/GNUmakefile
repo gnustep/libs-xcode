@@ -27,6 +27,29 @@ include $(GNUSTEP_MAKEFILES)/common.make
 
 include ../Version
 
+# Manual pages to install
+MAN1_PAGES = \
+	buildtool.1 \
+	pcpg.1 \
+	pc2xc.1
+
+GNUSTEP_SYSTEM_DOC_MAN=`gnustep-config --variable=GNUSTEP_SYSTEM_DOC_MAN`
+MAN1DIR = $(GNUSTEP_SYSTEM_DOC_MAN)/man1
+MKDIR_P ?= mkdir -p
+
+all::
+
+install:: install-man1
+
+uninstall:: uninstall-man1
+
+install-man1:
+	$(MKDIR_P) $(MAN1DIR)
+	$(INSTALL_DATA) $(MAN1_PAGES) $(MAN1DIR)
+
+uninstall-man1:
+	$(RM) -f $(addprefix $(MAN1DIR)/,$(MAN1_PAGES))
+
 # The documents to be generated
 DOCUMENT_NAME = XCodeReference
 
@@ -88,10 +111,6 @@ XCodeReference_AGSDOC_FLAGS = \
 	-ConstantsTemplate TypesAndConstants \
 	-FunctionsTemplate Functions \
 	-MacrosTemplate Functions
-
-# Manual pages to install
-MAN1_PAGES = \
-	buildtool.1
 
 -include GNUmakefile.preamble
 
