@@ -769,8 +769,55 @@
 
 - (BOOL) buildTest
 {
-  xcputs("=== Build tests...  currently unsupported...");
-  return YES;
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+
+  xcputs("=== Executing Frameworks / Linking Build Phase (XCTest Bundle)");
+  NSString *compiler = [self linkerForBuild];
+  NSString *outputFiles = [self processOutputFilesString];
+  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
+  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
+  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *linkString = [self linkString];
+
+  if ([linkString rangeOfString: @"-framework XCTest"].location == NSNotFound)
+    {
+      linkString = [linkString stringByAppendingString: @" -framework XCTest"];
+    }
+
+  NSProcessInfo *pi = [NSProcessInfo processInfo];
+  NSUInteger os = [pi operatingSystem];
+
+  NSString *command = [NSString stringWithFormat:
+                                  @"%@ -rdynamic -shared -o \"%@\" %@ %@",
+                                compiler,
+                                outputPath,
+                                outputFiles,
+                                linkString];
+
+  if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
+    {
+      command = [NSString stringWithFormat:
+                            @"%@ -shared  -o \"%@\" %@ %@",
+                          compiler,
+                          outputPath,
+                          outputFiles,
+                          linkString];
+    }
+
+  NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
+  int result = 0;
+  if([modified isEqualToString: @"YES"])
+    {
+      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
+      result = xcsystem(command);
+    }
+  else
+    {
+      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+    }
+
+  xcputs("=== Frameworks / Linking Build Phase Completed");
+  return (result == 0);
 }
 
 - (BOOL) build
@@ -817,10 +864,41 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
   NSDictionary *configDict = [context configForTargetName: [[self target] name]];
-  NSArray *additionalFlags = [configDict objectForKey: @"additional"];
-  
-  NSDebugLog(@"%@", additionalFlags);
-  if (additionalFlags != nil)
+  NSArray *configAdditionalFlags = [configDict objectForKey: @"additional"];
+  NSMutableArray *additionalFlags = nil;
+
+  if (configAdditionalFlags != nil)
+    {
+      additionalFlags = [NSMutableArray arrayWithArray: configAdditionalFlags];
+    }
+  else
+    {
+      additionalFlags = [NSMutableArray array];
+    }
+
+  if ([productType isEqualToString: TEST_TYPE])
+    {
+      BOOL hasXCTest = NO;
+      NSEnumerator *flagEnum = [additionalFlags objectEnumerator];
+      NSString *flag = nil;
+
+      while ((flag = [flagEnum nextObject]) != nil)
+        {
+          if ([flag rangeOfString: @"XCTest"].location != NSNotFound)
+            {
+              hasXCTest = YES;
+              break;
+            }
+        }
+
+      if (hasXCTest == NO)
+        {
+          [additionalFlags addObject: @"-framework"];
+          [additionalFlags addObject: @"XCTest"];
+        }
+    }
+
+  if ([additionalFlags count] > 0)
     {
       [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
     }
@@ -859,8 +937,22 @@
     }
   else if([productType isEqualToString: TEST_TYPE])
     {
-      [context setObject: @"test"
+      NSString *wrapperExt = [[[_target productReference] path] pathExtension];
+
+      if ([wrapperExt length] == 0)
+        {
+          wrapperExt = @"xctest";
+        }
+
+      [context setObject: @"bundle"
                   forKey: @"PROJECT_TYPE"];
+
+      if (wrapperExt != nil)
+        {
+          [context setObject: wrapperExt forKey: @"WRAPPER_EXTENSION"];
+        }
+
+      [context setObject: @"YES" forKey: @"IS_TEST_TARGET"];
     }
   else 
     {

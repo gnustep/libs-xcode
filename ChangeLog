@@ -1,220 +1,248 @@
+2026-01-10 Gregory John Casamento <greg.casamento@gmail.com>
+
+* XCode/PBXNativeTarget.m: Include TEST_TYPE in bundle-style
+ wrapper directory creation to ensure .xctest bundles are built
+ correctly.
+* XCode/PBXFrameworksBuildPhase.m (buildTest): Implement XCTest
+ bundle linking with automatic XCTest framework injection.
+ (generate): Add XCTest framework to link flags for test targets
+ and map TEST_TYPE to bundle project type with wrapper extension
+ tracking.
+* XCode/PBXResourcesBuildPhase.m (configToInfoPlist:withIconFile:):
+ Guard against nil values when setting Info.plist keys to prevent
+ NSInvalidArgumentException in test bundles.
+* Generators/Makefile/GSXCMakefileGenerator.m (projectTypeForString:):
+ Map TEST to BUNDLE type.
+ (generate): Emit BUNDLE_EXTENSION for test targets with wrapper
+ extensions.
+* Generators/CMake/GSXCCMakeGenerator.h: Add _bundleExtension ivar
+ to track wrapper extension.
+* Generators/CMake/GSXCCMakeGenerator.m (init): Initialize
+ _bundleExtension.
+ (generate): Capture wrapper extension from context.
+ (cmakeDeclareProject): Use wrapper extension for bundle output
+ directory naming.
+* Generators/ProjectBuilder/GSXCProjectBuilderGenerator.m
+ (projectTypeForString:): Map TEST to Bundle type.
+* Generators/ProjectCenter/GSXCProjectCenterGenerator.m
+ (projectTypeForString:): Map TEST to Bundle type.
+
 2025-02-16 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* GNUmakefile
-	* Version: Release 0.5.0
+* GNUmakefile
+* Version: Release 0.5.0
 
 2024-11-22 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* XCode/PBXFileReference.m
-	* XCode/PBXGroup.m
-	* XCode/PBXHeadersBuildPhase.m
-	* XCode/PBXResourcesBuildPhase.m
-	* XCode/PBXSourcesBuildPhase.m
-	* XCode/PBXFileSystemSynchronizedRootGroup.[hm]: Add
-	support for file system synchronized groups.
+* XCode/PBXFileReference.m
+* XCode/PBXGroup.m
+* XCode/PBXHeadersBuildPhase.m
+* XCode/PBXResourcesBuildPhase.m
+* XCode/PBXSourcesBuildPhase.m
+* XCode/PBXFileSystemSynchronizedRootGroup.[hm]: Add
+ support for file system synchronized groups.
 
 2022-04-12 Riccardo Mottola <rm@gnu.org>
 
-	* PBXFileReference.m (_headerStringForPath):
-	Look for headers only if it is a directory, skip if a file.
+* PBXFileReference.m (_headerStringForPath):
+ Look for headers only if it is a directory, skip if a file.
 
 2022-01-10 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFileReference.[hm]: Fix issues with resolving headers.
+* PBXFileReference.[hm]: Fix issues with resolving headers.
 
 2022-01-06 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* GSXCBuildContext.m
-	* NSString+PBXAdditions.h
-	* NSString+PBXAdditions.m: Add code to execute commend and collect
+* GSXCBuildContext.m
+* NSString+PBXAdditions.h
+* NSString+PBXAdditions.m: Add code to execute commend and collect
         output
-	* PBXAbstractBuildPhase.h
-	* PBXAbstractBuildPhase.m: Add call to get target information
-	* PBXBuildFile.h
-	* PBXBuildFile.m: Fixes
-	* PBXContainerItemProxy.m: Fixes for executing proxy'd project
-	* PBXFileReference.h
-	* PBXFileReference.m: Build fixes
-	* PBXFrameworksBuildPhase.m: Fix building of framework, bundle, etc.
-	* PBXNativeTarget.m
-	* PBXProject.h
-	* PBXProject.m: Fixes
-	* PBXShellScriptBuildPhase.m: Move script creation to /tmp
-	* PBXTargetDependency.h: Add declarations for call to get dependencies.
+* PBXAbstractBuildPhase.h
+* PBXAbstractBuildPhase.m: Add call to get target information
+* PBXBuildFile.h
+* PBXBuildFile.m: Fixes
+* PBXContainerItemProxy.m: Fixes for executing proxy'd project
+* PBXFileReference.h
+* PBXFileReference.m: Build fixes
+* PBXFrameworksBuildPhase.m: Fix building of framework, bundle, etc.
+* PBXNativeTarget.m
+* PBXProject.h
+* PBXProject.m: Fixes
+* PBXShellScriptBuildPhase.m: Move script creation to /tmp
+* PBXTargetDependency.h: Add declarations for call to get dependencies.
 
 2021-12-17 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* Resources/Framework-mapping.plist: Add OpenGL framework to the
+* Resources/Framework-mapping.plist: Add OpenGL framework to the
         mapping list.
 
 2021-10-10 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* GNUmakefile
-	* PBXFileReference.m
-	* PBXFrameworksBuildPhase.m
-	* Resources/Framework-mapping.plist: Add mapping plist so that
+* GNUmakefile
+* PBXFileReference.m
+* PBXFrameworksBuildPhase.m
+* Resources/Framework-mapping.plist: Add mapping plist so that
         these mappings are no longer hardcoded.
 
 2021-09-22 Gregory John Casamento <greg.casamento@gmail.com>
 
-	* NSString+PBXAdditions.m
-	* PBXFileReference.m
-	* PBXFrameworksBuildPhase.m
-	* PBXNativeTarget.m
-	* PBXProject.m: Refactor path handling.  Correct handling of escaping
-	paths.
+* NSString+PBXAdditions.m
+* PBXFileReference.m
+* PBXFrameworksBuildPhase.m
+* PBXNativeTarget.m
+* PBXProject.m: Refactor path handling.  Correct handling of escaping
+ paths.
 
 2016-05-08 00:37-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* Tools/pcpg/PLCPG.m: Fix issue with include/import of non-NS classes.
+* Tools/pcpg/PLCPG.m: Fix issue with include/import of non-NS classes.
 
 2016-04-26 20:48-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFrameworksBuildPhase.m: Fix tool compilation.
+* PBXFrameworksBuildPhase.m: Fix tool compilation.
 
 2016-04-26 19:45-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFrameworksBuildPhase.m: Use gnustep-config to get the
-	paths for GNUSTEP_SYSTEM_LIBRARY, GNUSTEP_LOCAL_LIBRARY and
-	GNUSTEP_USER_LIBRARY after RFM's change to gnustep-make.
-	This change makes the build method a little more consistent.
+* PBXFrameworksBuildPhase.m: Use gnustep-config to get the
+ paths for GNUSTEP_SYSTEM_LIBRARY, GNUSTEP_LOCAL_LIBRARY and
+ GNUSTEP_USER_LIBRARY after RFM's change to gnustep-make.
+ This change makes the build method a little more consistent.
 
 2014-08-03 03:49-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* Updated README and Tools/pcpg/README.
+* Updated README and Tools/pcpg/README.
 
 2014-03-25 03:49-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXProject.m: Change to debug settings
+* PBXProject.m: Change to debug settings
 
 2013-09-21 08:17-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFileReference.m: Add all subdirectories in the project
-	to the include directives.
+* PBXFileReference.m: Add all subdirectories in the project
+ to the include directives.
 
 2013-09-21 02:06-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFileReference.m: Use gnu99 as default.  Need to start thinking
-	about a specs file which will allow definition of defaults on
-	a per compiler/platform basis.
+* PBXFileReference.m: Use gnu99 as default.  Need to start thinking
+ about a specs file which will allow definition of defaults on
+ a per compiler/platform basis.
 
 2013-08-31  Fred Kiefer <FredKiefer@gmx.de>
 
-	* PBXCoder.h,
-	* PBXCoder.m: Remove method -changeToProjectRoot.
-	* GSXCBuildContext.m: Remove directory change from pop.
-	* PBXContainerItemProxy.m: Handle all directory changes here.
-	* PBXFileReference.m: Add std to the compile options.
-	* PBXFrameworksBuildPhase.m: Add frameworks in OTHER_LDFLAGS to
-	the link options.
+* PBXCoder.h,
+* PBXCoder.m: Remove method -changeToProjectRoot.
+* GSXCBuildContext.m: Remove directory change from pop.
+* PBXContainerItemProxy.m: Handle all directory changes here.
+* PBXFileReference.m: Add std to the compile options.
+* PBXFrameworksBuildPhase.m: Add frameworks in OTHER_LDFLAGS to
+ the link options.
 
 2013-05-09 12:56-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXApplicationTarget.m: Set the product type in init.
-	* PBXBundleTarget.m: Set the product type in init.
-	* PBXCommon.h: Add GSXCCommon.h to the header.
-	* PBXFrameworkTarget.m: Set the product type in init.
+* PBXApplicationTarget.m: Set the product type in init.
+* PBXBundleTarget.m: Set the product type in init.
+* PBXCommon.h: Add GSXCCommon.h to the header.
+* PBXFrameworkTarget.m: Set the product type in init.
 
 2013-05-09 12:44-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXApplicationTarget.h
-	* PBXApplicationTarget.m
-	* PBXBundleTarget.h
-	* PBXBundleTarget.m
-	* PBXFrameworkTarget.h
-	* PBXFrameworkTarget.m: Add new classes to handle older files for
-	these targets.
+* PBXApplicationTarget.h
+* PBXApplicationTarget.m
+* PBXBundleTarget.h
+* PBXBundleTarget.m
+* PBXFrameworkTarget.h
+* PBXFrameworkTarget.m: Add new classes to handle older files for
+ these targets.
 
 2013-05-09 12:44-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* GNUmakefile
-	* PBXNativeTarget.h
-	* PBXNativeTarget.m: Add new method.
+* GNUmakefile
+* PBXNativeTarget.h
+* PBXNativeTarget.m: Add new method.
 
 2013-05-07 19:58-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFrameworksBuildPhase.m: Use the gnustep-config script
-	everywhere to allow us to automatically use the default
-	compiler.
-	* Tools/pcpg/PLCPG.m: Fix an issue where mutable dictionary
-	was not used.
+* PBXFrameworksBuildPhase.m: Use the gnustep-config script
+ everywhere to allow us to automatically use the default
+ compiler.
+* Tools/pcpg/PLCPG.m: Fix an issue where mutable dictionary
+ was not used.
 
 2013-05-06 02:14-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXAbstractBuildPhase.h
-	* PBXAbstractBuildPhase.m: Added missing methods for property
-	showEnvVarsInLog.
+* PBXAbstractBuildPhase.h
+* PBXAbstractBuildPhase.m: Added missing methods for property
+ showEnvVarsInLog.
 
 2013-05-06 01:55-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFileReference.m: -build, override buildPath pre-prending
-	of project root in some cases.  This is likely due to differences
-	in some versions of the xcodeproj format.
+* PBXFileReference.m: -build, override buildPath pre-prending
+ of project root in some cases.  This is likely due to differences
+ in some versions of the xcodeproj format.
 
 2013-05-04 20:38-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXNativeTarget.m
-	* PBXResourcesBuildPhase.m: Fix issue with copying English.lproj
+* PBXNativeTarget.m
+* PBXResourcesBuildPhase.m: Fix issue with copying English.lproj
 
 2013-04-24 02:39-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* NSString+PBXAdditions.h
-	* NSString+PBXAdditions.m: Path manipulation methods.
-	* PBXFileReference.m
-	* PBXProject.m: Correct issue with handling older project files
-	after last modification.
+* NSString+PBXAdditions.h
+* NSString+PBXAdditions.m: Path manipulation methods.
+* PBXFileReference.m
+* PBXProject.m: Correct issue with handling older project files
+ after last modification.
 
 2013-04-20 23:16-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXContainerItemProxy.m
-	* PBXFileReference.h
-	* PBXFileReference.m: Use the compiler which was used to build
-	GNUstep instead of hardcoding.
-	* PBXProject.m: Proceed into target directories when doing the build
-	* PBXResourcesBuildPhase.m: Copy lproj files.
-	* PBXShellScriptBuildPhase.m: Improve building of 10.7 and 10.8
-	(Xcode 4.4 and 4.5) style files.
+* PBXContainerItemProxy.m
+* PBXFileReference.h
+* PBXFileReference.m: Use the compiler which was used to build
+ GNUstep instead of hardcoding.
+* PBXProject.m: Proceed into target directories when doing the build
+* PBXResourcesBuildPhase.m: Copy lproj files.
+* PBXShellScriptBuildPhase.m: Improve building of 10.7 and 10.8
+ (Xcode 4.4 and 4.5) style files.
 
 2012-10-15 13:20-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* GSXCBuildContext.h: Add declaration for addEntriesFromDictionary:
-	* GSXCBuildContext.m: Implement addEntriesFromDictionary:
-	* PBXContainerItemProxy.m: Correct warnings.
-	* PBXContainer.m: Added method to collect header directories
-	which need to be referenced for build.
-	* PBXFileReference.m: Add code to handle INCLUDE_DIRS context
-	variable.
-	* PBXProject.h: Added ivar
-	* PBXProject.m: Add project context.
+* GSXCBuildContext.h: Add declaration for addEntriesFromDictionary:
+* GSXCBuildContext.m: Implement addEntriesFromDictionary:
+* PBXContainerItemProxy.m: Correct warnings.
+* PBXContainer.m: Added method to collect header directories
+ which need to be referenced for build.
+* PBXFileReference.m: Add code to handle INCLUDE_DIRS context
+ variable.
+* PBXProject.h: Added ivar
+* PBXProject.m: Add project context.
 
 2012-08-07 01:13-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFrameworksBuildPhase.m: Automatically add link directives -I
-	and -L for frameworks present in the UninstalledProducts directory.
-	This allows for linking of dependencies prior to installation.
+* PBXFrameworksBuildPhase.m: Automatically add link directives -I
+ and -L for frameworks present in the UninstalledProducts directory.
+ This allows for linking of dependencies prior to installation.
 
 2012-08-07 00:09-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXNativeTarget.m: Generate the links with a relative path.
+* PBXNativeTarget.m: Generate the links with a relative path.
 
 2012-03-14 18:25-EDT Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXFrameworksBuildPhase.m: Remove commented out code..
-	* README: Update readme to reflect new name.
+* PBXFrameworksBuildPhase.m: Remove commented out code..
+* README: Update readme to reflect new name.
 
 2012-02-25 11:36-EST Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXResourcesBuildPhase.m: Fix issues with copying of resources
-	which are localized.
+* PBXResourcesBuildPhase.m: Fix issues with copying of resources
+ which are localized.
 
 2012-02-25 10:29-EST Gregory John Casamento <greg.casamento@gmail.com>
 
-	* PBXVariantGroup.m: More fixes for appending resource names.
-	Only use the last path component.
+* PBXVariantGroup.m: More fixes for appending resource names.
+ Only use the last path component.
 
 2012-02-25 00:53-EST Gregory John Casamento <greg.casamento@gmail.com>
 
-	* ChangeLog: Add ChangeLog.
-	* PBXVariantGroup.m: Fix issue with appending resource
-	names.
-
+* ChangeLog: Add ChangeLog.
+* PBXVariantGroup.m: Fix issue with appending resource
+ names.

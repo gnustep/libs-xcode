@@ -22,6 +22,7 @@
       _append = NO;
       _projectName = nil;
       _projectType = nil;
+      _bundleExtension = nil;
     }
   
   return self;
@@ -204,7 +205,9 @@
     }
   else if ([_projectType isEqualToString: @"bundle"])
     {
-      NSString *bundleName = @"bundle"; // this should be set by a variable/setting.
+      NSString *bundleName = (_bundleExtension != nil && [_bundleExtension length] > 0)
+        ? _bundleExtension
+        : @"bundle";
       output = [output stringByAppendingString:
 			 [NSString stringWithFormat: @"set_target_properties(%@ PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"%@.%@\")\n",
 				   _projectName, _projectName, bundleName]];
@@ -383,10 +386,17 @@
   NSString *projName = [name stringByDeletingPathExtension];
   NSString *outputName = @"CMakeLists.txt";
   NSString *outputString = @"";
+  NSString *wrapperExtension = [context objectForKey: @"WRAPPER_EXTENSION"];
+
+  if ([wrapperExtension length] == 0)
+    {
+      wrapperExtension = @"bundle";
+    }
 
   // Assign to ivars...
   ASSIGN(_projectType, projectType);
   ASSIGN(_projectName, projName);
+  ASSIGN(_bundleExtension, wrapperExtension);
   
   // Construct the makefile out of the data we have thusfar collected.
   xcputs("\t* Generating CMakeLists.txt...");

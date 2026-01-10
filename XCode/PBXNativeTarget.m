@@ -132,8 +132,9 @@
 						  error:&error];
   
   setenv("inherited","",1); // probably from a parent project or target..
-  if([_productType isEqualToString: BUNDLE_TYPE] ||
-     [_productType isEqualToString: APPLICATION_TYPE]) 
+    if([_productType isEqualToString: BUNDLE_TYPE] ||
+      [_productType isEqualToString: APPLICATION_TYPE] ||
+      [_productType isEqualToString: TEST_TYPE]) 
     {
       NSString *execName = [[fullPath lastPathComponent] stringByDeletingPathExtension];
 

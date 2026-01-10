@@ -54,6 +54,10 @@
     {
       return @"Tool";
     }
+  else if ([type isEqualToString: @"TEST"])
+    {
+      return @"Bundle";
+    }
   return type;
 }
 

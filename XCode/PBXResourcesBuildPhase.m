@@ -339,17 +339,38 @@
   NSString *principalClass = [buildSettings objectForKey: @"INFOPLIST_KEY_NSPrincipalClass"];
   NSString *bundleIdentifier = [buildSettings objectForKey: @"PRODUCT_BUNDLE_IDENTIFIER"];
 
-  [ipd setObject: version forKey: @"CFBundleVersion"];
-  [ipd setObject: mainNib forKey: @"NSMainNibFile"];
-  [ipd setObject: copyright forKey: @"NSHumanReadableCopyright"];
-  [ipd setObject: principalClass forKey: @"NSPrincipalClass"];
+  if (version != nil)
+    {
+      [ipd setObject: version forKey: @"CFBundleVersion"];
+    }
+
+  if (mainNib != nil)
+    {
+      [ipd setObject: mainNib forKey: @"NSMainNibFile"];
+    }
+
+  if (copyright != nil)
+    {
+      [ipd setObject: copyright forKey: @"NSHumanReadableCopyright"];
+    }
+
+  if (principalClass != nil)
+    {
+      [ipd setObject: principalClass forKey: @"NSPrincipalClass"];
+    }
+
   if (iconFile != nil)
     {
       [ipd setObject: iconFile forKey: @"NSIcon"];
     }
+
   [ipd setObject: @"$(DEVELOPMENT_LANGUAGE)" forKey: @"CFBundleDevelopmentRegion"];
   [ipd setObject: @"$(EXECUTABLE_NAME)" forKey: @"CFBundlExecutable"];
-  [ipd setObject: bundleIdentifier forKey: @"CFBundleIdentifier"];
+
+  if (bundleIdentifier != nil)
+    {
+      [ipd setObject: bundleIdentifier forKey: @"CFBundleIdentifier"];
+    }
 
   return ipd;
 }
