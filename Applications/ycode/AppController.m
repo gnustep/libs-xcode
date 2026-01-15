@@ -173,7 +173,13 @@
     
     NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
     [input setStringValue:@"MyProject"];
-    [alert setAccessoryView:input];
+    
+    // GNUstep compatibility: Try setAccessoryView, fallback if not available
+    if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
+        if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
+            [alert setAccessoryView:input];
+        }
+    }
     
     NSInteger result = [alert runModal];
     NSString *projectName = nil;

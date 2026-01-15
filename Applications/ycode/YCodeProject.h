@@ -81,6 +81,7 @@
 - (BOOL)buildProject;
 - (BOOL)cleanProject;
 - (BOOL)runProject;
+- (BOOL)saveProjectToPath:(NSString *)path;
 
 /**
  * File management
@@ -100,6 +101,12 @@
  */
 - (void)startWatchingFiles;
 - (void)stopWatchingFiles;
+
+/**
+ * Project conversion
+ */
+- (PBXContainer *)convertProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path;
+- (PBXContainer *)loadProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path;
 
 @end
 

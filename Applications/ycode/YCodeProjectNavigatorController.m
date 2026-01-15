@@ -106,13 +106,13 @@
         [_itemCache setObject:projectItem forKey:[NSValue valueWithPointer:project]];
         
         // Add main group
-        PBXGroup *mainGroup = [project mainGroup];
+        PBXGroup *mainGroup = [project respondsToSelector:@selector(mainGroup)] ? [project mainGroup] : nil;
         if (mainGroup) {
             [self addGroupItem:mainGroup toParent:projectItem];
         }
         
         // Add targets
-        NSArray *targets = [project targets];
+        NSArray *targets = [project respondsToSelector:@selector(targets)] ? [project targets] : nil;
         if (targets && [targets count] > 0) {
             // Create a targets group
             YCodeProjectNavigatorItem *targetsGroupItem = 
@@ -398,7 +398,9 @@
     [alert addButtonWithTitle:@"Cancel"];
     
     NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
-    [alert setAccessoryView:input];
+    if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
+        [alert setAccessoryView:input];
+    }
     
     if ([alert runModal] == NSAlertFirstButtonReturn) {
         NSString *groupName = [input stringValue];

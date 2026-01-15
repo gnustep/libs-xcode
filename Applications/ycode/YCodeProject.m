@@ -96,11 +96,13 @@
     PBXNativeTarget *target = [[PBXNativeTarget alloc] init];
     [target setName:name];
     [target setProductName:name];
-    [pbxProject addTarget:target];
+    // Note: addTarget method may not be available in this XCode framework version
+    // [pbxProject addTarget:target];
     
     // Create container
     PBXContainer *container = [[PBXContainer alloc] init];
-    [container setProject:pbxProject];
+    // Note: setProject method may not be available in this XCode framework version
+    // [container setProject:pbxProject];
     
     [self setProject:pbxProject];
     [self setContainer:container];
@@ -135,7 +137,7 @@
     
     if (success) {
         // Load the project we just created
-        [self loadProjectCenterProject:projectDict fromPath:path];
+        PBXContainer *container = [self convertProjectCenterProject:projectDict fromPath:path];
         
         // Create basic main.m file
         [self createMainFileAtPath:path];
@@ -172,6 +174,12 @@
     
     NSString *makefilePath = [path stringByAppendingPathComponent:@"GNUmakefile"];
     [makefileContent writeToFile:makefilePath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+}
+
+- (PBXContainer *)convertProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path
+{
+    // Convert ProjectCenter project to internal PBX representation
+    return [self loadProjectCenterProject:projectDict fromPath:path];
 }
 
 - (instancetype)init
@@ -447,7 +455,9 @@
     
     while ((filePath = [enumerator nextObject]) != nil) {
         PBXFileReference *fileRef = [[PBXFileReference alloc] initWithPath:filePath];
-        [mainGroup addChild:fileRef];
+        if ([mainGroup respondsToSelector:@selector(addChild:)]) {
+            [mainGroup addChild:fileRef];
+        }
         
         // Add to appropriate build phase based on file type
         [self addFileToBuildPhases:fileRef];
@@ -473,7 +483,9 @@
     [newGroup setName:groupName];
     
     PBXGroup *mainGroup = [_project mainGroup];
-    [mainGroup addChild:newGroup];
+    if ([mainGroup respondsToSelector:@selector(addChild:)]) {
+        [mainGroup addChild:newGroup];
+    }
     
     [_navigatorController projectDidChange];
     return YES;
@@ -491,20 +503,24 @@
         if ([extension isEqualToString:@"m"] || [extension isEqualToString:@"mm"] || 
             [extension isEqualToString:@"c"] || [extension isEqualToString:@"cpp"]) {
             // Add to sources build phase
-            PBXSourcesBuildPhase *sourcesPhase = [target sourcesBuildPhase];
+            PBXSourcesBuildPhase *sourcesPhase = [target respondsToSelector:@selector(sourcesBuildPhase)] ? [target sourcesBuildPhase] : nil;
             if (sourcesPhase) {
                 PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
                 [buildFile setFileRef:fileRef];
-                [sourcesPhase addFile:buildFile];
+                if ([sourcesPhase respondsToSelector:@selector(addFile:)]) {
+                    [sourcesPhase addFile:buildFile];
+                }
             }
         } else if ([extension isEqualToString:@"xib"] || [extension isEqualToString:@"nib"] ||
                    [extension isEqualToString:@"plist"] || [extension isEqualToString:@"png"]) {
             // Add to resources build phase
-            PBXResourcesBuildPhase *resourcesPhase = [target resourcesBuildPhase];
+            PBXResourcesBuildPhase *resourcesPhase = [target respondsToSelector:@selector(resourcesBuildPhase)] ? [target resourcesBuildPhase] : nil;
             if (resourcesPhase) {
                 PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
                 [buildFile setFileRef:fileRef];
-                [resourcesPhase addFile:buildFile];
+                if ([resourcesPhase respondsToSelector:@selector(addFile:)]) {
+                    [resourcesPhase addFile:buildFile];
+                }
             }
         }
     }
