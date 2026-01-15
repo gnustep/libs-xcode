@@ -9,6 +9,7 @@
 */
 
 #import "AppController.h"
+#import "YCodeWindowController.h"
 
 @implementation AppController
 
@@ -47,31 +48,95 @@
 
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif
 {
-// Uncomment if your application is Renaissance-based
-//  [NSBundle loadGSMarkupNamed: @"Main" owner: self];
+    // Create and show the main window
+    if (!windowController) {
+        windowController = [[YCodeWindowController alloc] init];
+    }
+    
+    [windowController showWindow:self];
+    [[windowController window] makeKeyAndOrderFront:self];
 }
 
 - (BOOL) applicationShouldTerminate: (id)sender
 {
-  return YES;
+    // Check if there are unsaved changes in open projects
+    if (windowController && [windowController project]) {
+        // TODO: Check for unsaved changes
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:@"Do you want to save your changes before closing?"];
+        [alert addButtonWithTitle:@"Save"];
+        [alert addButtonWithTitle:@"Don't Save"];
+        [alert addButtonWithTitle:@"Cancel"];
+        
+        NSInteger result = [alert runModal];
+        RELEASE(alert);
+        
+        if (result == NSAlertThirdButtonReturn) {
+            return NO; // Cancel
+        } else if (result == NSAlertFirstButtonReturn) {
+            // Save before quitting
+            // TODO: Implement save functionality
+        }
+    }
+    
+    return YES;
 }
 
 - (void) applicationWillTerminate: (NSNotification *)aNotif
 {
+    // Clean up
+    if (windowController) {
+        [windowController closeProject];
+    }
 }
 
 - (BOOL) application: (NSApplication *)application
 	    openFile: (NSString *)fileName
 {
-  return NO;
+    if (!windowController) {
+        windowController = [[YCodeWindowController alloc] init];
+        [windowController showWindow:self];
+    }
+    
+    // Check if it's a project file
+    NSString *extension = [fileName pathExtension];
+    if ([extension isEqualToString:@"xcodeproj"] || [extension isEqualToString:@"pcproj"]) {
+        [windowController openProject:fileName];
+        return YES;
+    }
+    
+    return NO;
 }
 
 - (void) showPrefPanel: (id)sender
 {
+    // TODO: Implement preferences panel
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:@"Preferences"];
+    [alert setInformativeText:@"Preferences panel not yet implemented"];
+    [alert runModal];
+    RELEASE(alert);
 }
 
 - (IBAction) openProject: (id)sender
 {
+    NSOpenPanel *openPanel = [NSOpenPanel openPanel];
+    [openPanel setCanChooseFiles:YES];
+    [openPanel setCanChooseDirectories:YES];
+    [openPanel setAllowsMultipleSelection:NO];
+    [openPanel setAllowedFileTypes:@[@"xcodeproj", @"pcproj"]];
+    [openPanel setMessage:@"Choose a project to open"];
+    
+    if ([openPanel runModal] == NSModalResponseOK) {
+        NSString *projectPath = [[openPanel URL] path];
+        
+        if (!windowController) {
+            windowController = [[YCodeWindowController alloc] init];
+            [windowController showWindow:self];
+        }
+        
+        [windowController openProject:projectPath];
+    }
 }
 
 @end

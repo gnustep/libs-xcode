@@ -27,6 +27,15 @@ PACKAGE_NAME = Ycode
 APP_NAME = Ycode
 Ycode_APPLICATION_ICON = 
 
+#
+# Libraries and Frameworks
+#
+Ycode_GUI_LIBS += -lXCode
+Ycode_FRAMEWORK_DIRS += ../XCode
+
+# Additional include directories
+ADDITIONAL_INCLUDE_DIRS += -I../XCode 
+
 
 #
 # Resource files
@@ -44,7 +53,14 @@ YCodeDocumentController.h \
 YCTreeView.h \
 YCEditorView.h \
 YCInspectorView.h \
-YCodeWindowController.h
+YCodeWindowController.h \
+YCodeProject.h \
+YCodeProjectNavigatorController.h \
+YCodeProjectNavigatorItem.h \
+YCodeEditorController.h \
+YCodeEditorDocument.h \
+YCodeSyntaxHighlighter.h \
+YCodeBuildSystem.h
 
 #
 # Objective-C Class files
@@ -55,7 +71,14 @@ YCodeDocumentController.m \
 YCTreeView.m \
 YCEditorView.m \
 YCInspectorView.m \
-YCodeWindowController.m
+YCodeWindowController.m \
+YCodeProject.m \
+YCodeProjectNavigatorController.m \
+YCodeProjectNavigatorItem.m \
+YCodeEditorController.m \
+YCodeEditorDocument.m \
+YCodeSyntaxHighlighter.m \
+YCodeBuildSystem.m
 
 #
 # Other sources
