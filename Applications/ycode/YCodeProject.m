@@ -41,6 +41,139 @@
 
 @implementation YCodeProject
 
+#pragma mark - Class Methods
+
++ (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name type:(NSString *)type
+{
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+    // Create project directory if it doesn't exist
+    if (![fileManager fileExistsAtPath:path]) {
+        NSError *error;
+        if (![fileManager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:&error]) {
+            NSLog(@"Failed to create project directory: %@", [error localizedDescription]);
+            return nil;
+        }
+    }
+    
+    // Create project instance
+    YCodeProject *project = [[YCodeProject alloc] init];
+    [project setProjectPath:path];
+    
+    if ([type isEqualToString:@"Xcode"]) {
+        [project createXcodeProjectWithName:name atPath:path];
+    } else {
+        [project createProjectCenterProjectWithName:name atPath:path];
+    }
+    
+    return AUTORELEASE(project);
+}
+
+- (BOOL)createXcodeProjectWithName:(NSString *)name atPath:(NSString *)path
+{
+    // Create basic Xcode project structure
+    NSString *projectFile = [NSString stringWithFormat:@"%@.xcodeproj", name];
+    NSString *projectPath = [path stringByAppendingPathComponent:projectFile];
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    if (![fileManager createDirectoryAtPath:projectPath withIntermediateDirectories:YES attributes:nil error:nil]) {
+        return NO;
+    }
+    
+    // Create project structure
+    PBXProject *pbxProject = [[PBXProject alloc] init];
+    [pbxProject setProjectDirPath:@""];
+    [pbxProject setProjectRoot:@""];
+    [pbxProject setCompatibilityVersion:@"Xcode 15.0"];
+    [pbxProject setDevelopmentRegion:@"en"];
+    
+    // Create main group
+    PBXGroup *mainGroup = [[PBXGroup alloc] init];
+    [mainGroup setName:name];
+    [pbxProject setMainGroup:mainGroup];
+    
+    // Create a simple target
+    PBXNativeTarget *target = [[PBXNativeTarget alloc] init];
+    [target setName:name];
+    [target setProductName:name];
+    [pbxProject addTarget:target];
+    
+    // Create container
+    PBXContainer *container = [[PBXContainer alloc] init];
+    [container setProject:pbxProject];
+    
+    [self setProject:pbxProject];
+    [self setContainer:container];
+    
+    // Create basic main.m file
+    [self createMainFileAtPath:path];
+    
+    RELEASE(pbxProject);
+    RELEASE(mainGroup);
+    RELEASE(target);
+    RELEASE(container);
+    
+    return YES;
+}
+
+- (BOOL)createProjectCenterProjectWithName:(NSString *)name atPath:(NSString *)path
+{
+    // Create ProjectCenter project file
+    NSString *projectFile = [NSString stringWithFormat:@"%@.pcproj", name];
+    NSString *projectPath = [path stringByAppendingPathComponent:projectFile];
+    
+    NSMutableDictionary *projectDict = [NSMutableDictionary dictionary];
+    [projectDict setObject:name forKey:@"PROJECT_NAME"];
+    [projectDict setObject:@"Application" forKey:@"PROJECT_TYPE"];
+    [projectDict setObject:name forKey:@"PRINCIPAL_CLASS"];
+    [projectDict setObject:[NSArray array] forKey:@"CLASS_FILES"];
+    [projectDict setObject:[NSArray array] forKey:@"HEADER_FILES"];
+    [projectDict setObject:[NSArray array] forKey:@"LOCALIZED_RESOURCES"];
+    [projectDict setObject:[NSArray array] forKey:@"LIBRARIES"];
+    
+    BOOL success = [projectDict writeToFile:projectPath atomically:YES];
+    
+    if (success) {
+        // Load the project we just created
+        [self loadProjectCenterProject:projectDict fromPath:path];
+        
+        // Create basic main.m file
+        [self createMainFileAtPath:path];
+        
+        // Create basic GNUmakefile
+        [self createGNUMakefileAtPath:path withName:name];
+    }
+    
+    return success;
+}
+
+- (void)createMainFileAtPath:(NSString *)path
+{
+    NSString *mainContent = @"#import <Foundation/Foundation.h>\n"
+                           @"#import <AppKit/AppKit.h>\n\n"
+                           @"int main(int argc, const char *argv[])\n"
+                           @"{\n"
+                           @"    return NSApplicationMain(argc, argv);\n"
+                           @"}\n";
+    
+    NSString *mainPath = [path stringByAppendingPathComponent:@"main.m"];
+    [mainContent writeToFile:mainPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+}
+
+- (void)createGNUMakefileAtPath:(NSString *)path withName:(NSString *)name
+{
+    NSString *makefileContent = [NSString stringWithFormat:
+        @"include $(GNUSTEP_MAKEFILES)/common.make\n\n"
+        @"APP_NAME = %@\n"
+        @"%@_OBJC_FILES = main.m\n"
+        @"%@_RESOURCE_FILES = \n\n"
+        @"include $(GNUSTEP_MAKEFILES)/application.make\n",
+        name, name, name];
+    
+    NSString *makefilePath = [path stringByAppendingPathComponent:@"GNUmakefile"];
+    [makefileContent writeToFile:makefilePath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+}
+
 - (instancetype)init
 {
     self = [super init];

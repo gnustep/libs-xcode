@@ -14,6 +14,7 @@
 #import <AppKit/AppKit.h>
 
 @class YCodeWindowController;
+@class YCodeProject;
 
 @interface AppController : NSObject
 {
@@ -44,6 +45,21 @@
  * Called when the application finishes launching.
  */
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif;
+
+/**
+ * Creates a new project.
+ */
+- (IBAction) newProject: (id)sender;
+
+/**
+ * Creates a new project at the specified URL.
+ */
+- (void) createNewProjectAtURL:(NSURL *)projectURL;
+
+/**
+ * Gets project name from user input.
+ */
+- (NSString *) getProjectNameFromUser;
 
 /**
  * Determines whether the application should terminate.

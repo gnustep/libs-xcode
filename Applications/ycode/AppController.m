@@ -10,6 +10,7 @@
 
 #import "AppController.h"
 #import "YCodeWindowController.h"
+#import "YCodeProject.h"
 
 @implementation AppController
 
@@ -88,6 +89,103 @@
     if (windowController) {
         [windowController closeProject];
     }
+}
+
+- (IBAction) newProject: (id)sender
+{
+    // Show new project dialog
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    [panel setCanChooseDirectories:YES];
+    [panel setCanChooseFiles:NO];
+    [panel setCanCreateDirectories:YES];
+    [panel setAllowsMultipleSelection:NO];
+    [panel setTitle:@"Create New Project"];
+    [panel setPrompt:@"Create"];
+    [panel setMessage:@"Choose location for new project:"];
+    
+    NSInteger result = [panel runModal];
+    if (result == NSModalResponseOK) {
+        NSURL *selectedURL = [[panel URLs] firstObject];
+        if (selectedURL) {
+            [self createNewProjectAtURL:selectedURL];
+        }
+    }
+}
+
+- (void) createNewProjectAtURL:(NSURL *)projectURL
+{
+    // Show project type selection dialog
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:@"Choose Project Type"];
+    [alert setInformativeText:@"Select the type of project you want to create:"];
+    [alert addButtonWithTitle:@"Xcode Project"];
+    [alert addButtonWithTitle:@"ProjectCenter Project"];
+    [alert addButtonWithTitle:@"Cancel"];
+    
+    NSInteger choice = [alert runModal];
+    RELEASE(alert);
+    
+    if (choice == NSAlertThirdButtonReturn) {
+        return; // Cancel
+    }
+    
+    // Get project name
+    NSString *projectName = [self getProjectNameFromUser];
+    if (!projectName || [projectName length] == 0) {
+        return;
+    }
+    
+    BOOL isXcodeProject = (choice == NSAlertFirstButtonReturn);
+    NSString *projectPath = [[projectURL path] stringByAppendingPathComponent:projectName];
+    
+    // Create the project
+    YCodeProject *newProject = [YCodeProject createNewProjectAtPath:projectPath 
+                                                               name:projectName 
+                                                               type:isXcodeProject ? @"Xcode" : @"ProjectCenter"];
+    
+    if (newProject) {
+        // Open the new project
+        if (!windowController) {
+            windowController = [[YCodeWindowController alloc] init];
+        }
+        [windowController setProject:newProject];
+        [windowController showWindow:self];
+        
+        // Save the project immediately
+        [newProject saveProjectToPath:projectPath];
+    } else {
+        NSAlert *errorAlert = [[NSAlert alloc] init];
+        [errorAlert setMessageText:@"Project Creation Failed"];
+        [errorAlert setInformativeText:@"Could not create the new project. Please check the selected location and try again."];
+        [errorAlert addButtonWithTitle:@"OK"];
+        [errorAlert runModal];
+        RELEASE(errorAlert);
+    }
+}
+
+- (NSString *) getProjectNameFromUser
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:@"Project Name"];
+    [alert setInformativeText:@"Enter a name for your new project:"];
+    [alert addButtonWithTitle:@"Create"];
+    [alert addButtonWithTitle:@"Cancel"];
+    
+    NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
+    [input setStringValue:@"MyProject"];
+    [alert setAccessoryView:input];
+    
+    NSInteger result = [alert runModal];
+    NSString *projectName = nil;
+    
+    if (result == NSAlertFirstButtonReturn) {
+        projectName = [input stringValue];
+    }
+    
+    RELEASE(input);
+    RELEASE(alert);
+    
+    return projectName;
 }
 
 - (BOOL) application: (NSApplication *)application
