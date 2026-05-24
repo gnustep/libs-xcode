@@ -37,6 +37,148 @@
 
 @implementation PBXResourcesBuildPhase
 
+- (NSString *) appIconSetDirectory
+{
+  NSString *productName = [_target name];
+  NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
+
+  return [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+}
+
+- (BOOL) parseIconSize: (NSString *)size
+		 width: (double *)width
+		height: (double *)height
+{
+  NSArray *components = [size componentsSeparatedByString: @"x"];
+
+  if ([components count] != 2)
+    {
+      return NO;
+    }
+
+  *width = [[components objectAtIndex: 0] doubleValue];
+  *height = [[components objectAtIndex: 1] doubleValue];
+
+  return (*width > 0.0 && *height > 0.0);
+}
+
+- (NSString *) sanitizedIconFilename: (NSString *)filename
+{
+  NSString *extension = [filename pathExtension];
+  NSString *baseName = [filename stringByDeletingPathExtension];
+  NSCharacterSet *allowed = [NSCharacterSet characterSetWithCharactersInString:
+					      @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"];
+  NSMutableString *sanitized = [NSMutableString string];
+  NSUInteger i = 0;
+
+  for (i = 0; i < [baseName length]; i++)
+    {
+      unichar c = [baseName characterAtIndex: i];
+
+      if ([allowed characterIsMember: c])
+	{
+	  [sanitized appendFormat: @"%C", c];
+	}
+      else
+	{
+	  [sanitized appendString: @"_"];
+	}
+    }
+
+  if ([sanitized length] == 0)
+    {
+      [sanitized appendString: @"AppIcon"];
+    }
+
+  [sanitized appendString: @"-48x48"];
+
+  if ([extension length] > 0)
+    {
+      [sanitized appendString: @"."];
+      [sanitized appendString: extension];
+    }
+
+  return [NSString stringWithString: sanitized];
+}
+
+- (NSString *) firstExecutablePathInArray: (NSArray *)paths
+{
+  NSFileManager *mgr = [NSFileManager defaultManager];
+  NSEnumerator *en = [paths objectEnumerator];
+  NSString *path = nil;
+
+  while ((path = [en nextObject]) != nil)
+    {
+      if ([mgr isExecutableFileAtPath: path])
+	{
+	  return path;
+	}
+    }
+
+  return nil;
+}
+
+- (NSArray *) resizeCommandForSource: (NSString *)sourcePath
+			 destination: (NSString *)destPath
+{
+  NSString *sips = [self firstExecutablePathInArray:
+			  [NSArray arrayWithObject: @"/usr/bin/sips"]];
+  NSString *magick = [self firstExecutablePathInArray:
+			    [NSArray arrayWithObjects: @"/opt/homebrew/bin/magick",
+				   @"/usr/local/bin/magick", @"/usr/bin/magick", nil]];
+  NSString *convert = [self firstExecutablePathInArray:
+			     [NSArray arrayWithObjects: @"/opt/homebrew/bin/convert",
+				    @"/usr/local/bin/convert", @"/usr/bin/convert", nil]];
+
+  if (sips != nil)
+    {
+      return [NSArray arrayWithObjects: sips,
+		      [NSArray arrayWithObjects: @"-z", @"48", @"48",
+			       sourcePath, @"--out", destPath, nil],
+		      nil];
+    }
+  else if (magick != nil)
+    {
+      return [NSArray arrayWithObjects: magick,
+		      [NSArray arrayWithObjects: sourcePath, @"-resize",
+			       @"48x48!", destPath, nil],
+		      nil];
+    }
+  else if (convert != nil)
+    {
+      return [NSArray arrayWithObjects: convert,
+		      [NSArray arrayWithObjects: sourcePath, @"-resize",
+			       @"48x48!", destPath, nil],
+		      nil];
+    }
+
+  return nil;
+}
+
+- (BOOL) resizeIconAtPath: (NSString *)sourcePath
+		       toPath: (NSString *)destPath
+{
+  NSArray *command = [self resizeCommandForSource: sourcePath destination: destPath];
+  NSTask *task = nil;
+  int status = 0;
+
+  if (command == nil)
+    {
+      xcputs("\t* ERROR: Could not find sips, magick, or convert to resize app icon");
+      return NO;
+    }
+
+  task = [[NSTask alloc] init];
+  [task setLaunchPath: [command objectAtIndex: 0]];
+  [task setArguments: [command objectAtIndex: 1]];
+  [task launch];
+  [task waitUntilExit];
+  status = [task terminationStatus];
+  RELEASE(task);
+
+  return status == 0;
+}
+
 - (instancetype) init
 {
   self = [super init];
@@ -80,9 +222,7 @@
 - (NSString *) discoverAppIcon
 {
   NSString *filename = nil;
-  NSString *productName = [_target name]; // [self productName];
-  NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
-  NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+  NSString *appIconDir = [self appIconSetDirectory];
   NSString *contentsJson = [appIconDir stringByAppendingPathComponent: @"Contents.json"];
   NSData *data = [NSData dataWithContentsOfFile: contentsJson];
 
@@ -94,17 +234,44 @@
       NSArray *imagesArray = [dict objectForKey: @"images"];
       NSDictionary *imageDict = nil;
       NSEnumerator *en = [imagesArray objectEnumerator];
+      double bestArea = 0.0;
 
       while ((imageDict = [en nextObject]) != nil)
 	{
 	  NSString *size = [imageDict objectForKey: @"size"];
 	  NSString *scale = [imageDict objectForKey: @"scale"];
+	  NSString *candidate = [imageDict objectForKey: @"filename"];
+	  double width = 0.0;
+	  double height = 0.0;
+	  double scaleValue = 1.0;
+	  double area = 0.0;
 
-	  if ([size isEqualToString: @"32x32"] &&
-	      [scale isEqualToString: @"1x"])
+	  if (![candidate isKindOfClass: [NSString class]] ||
+	      ![size isKindOfClass: [NSString class]])
 	    {
-	      filename = [imageDict objectForKey: @"filename"];
-	      break;
+	      continue;
+	    }
+
+	  if ([scale isKindOfClass: [NSString class]])
+	    {
+	      scaleValue = [scale doubleValue];
+	      if (scaleValue <= 0.0)
+		{
+		  scaleValue = 1.0;
+		}
+	    }
+
+	  if ([self parseIconSize: size width: &width height: &height])
+	    {
+	      width *= scaleValue;
+	      height *= scaleValue;
+	      area = width * height;
+
+	      if (area > bestArea)
+		{
+		  filename = candidate;
+		  bestArea = area;
+		}
 	    }
 	}
     }
@@ -117,9 +284,7 @@
   NSString *filename = [self discoverAppIcon];
   if (filename != nil)
     {
-      NSString *productName = [_target name];
-      NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
-      NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+      NSString *appIconDir = [self appIconSetDirectory];
       return [appIconDir stringByAppendingPathComponent: filename];
     }
   return nil;
@@ -169,19 +334,25 @@
     }
 
   NSFileManager *mgr = [NSFileManager defaultManager];
-  NSString *productName = [_target name];
-  NSString *assetsDir = [productName stringByAppendingPathComponent: @"Assets.xcassets"];
-  NSString *appIconDir = [assetsDir stringByAppendingPathComponent: @"AppIcon.appiconset"];
+  NSString *appIconDir = [self appIconSetDirectory];
   
   // Copy icons to resource dir...
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *productOutputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
+  if (productOutputDir == nil)
+    {
+      xcputs("\t* ERROR: Cannot copy app icon, PRODUCT_OUTPUT_DIR is not set");
+      return NO;
+    }
+
   NSString *resourcesDir = [productOutputDir stringByAppendingPathComponent: @"Resources"];
   NSString *imagePath = [appIconDir stringByAppendingPathComponent: iconFilename];
-  NSString *destPath = [resourcesDir stringByAppendingPathComponent: iconFilename];
+  NSString *resourceFilename = [self sanitizedIconFilename: iconFilename];
+  NSString *destPath = [resourcesDir stringByAppendingPathComponent: resourceFilename];
 
   // Debug output for paths
   xcputs([[NSString stringWithFormat: @"\t* Icon filename: '%@'", iconFilename] cString]);
+  xcputs([[NSString stringWithFormat: @"\t* Resource icon filename: '%@'", resourceFilename] cString]);
   xcputs([[NSString stringWithFormat: @"\t* Source path: '%@'", imagePath] cString]);
   if (destPath != NULL && destPath != nil)
     {
@@ -216,17 +387,15 @@
       [mgr removeItemAtPath: destPath error: NULL];
     }
 
-  // Copy the icon file
+  // Resize the icon file
   BOOL success = NO;
   if (destPath != NULL && destPath != nil)
     {
-      success = [mgr copyItemAtPath: imagePath
-			     toPath: destPath
-			      error: &error];
+      success = [self resizeIconAtPath: imagePath toPath: destPath];
   
       if (!success)
 	{
-	  xcputs([[NSString stringWithFormat: @"\t* ERROR: Failed to copy icon file: %@", error ? [error localizedDescription] : @"Unknown error"] cString]);
+	  xcputs([[NSString stringWithFormat: @"\t* ERROR: Failed to resize icon file: %@", error ? [error localizedDescription] : @"Unknown error"] cString]);
 	}
     }
   else
@@ -241,8 +410,12 @@
 - (NSString *) processAssets
 {
   NSString *filename = [self discoverAppIcon];
-  [self copyAppIconToResources: filename];
-  return filename;
+  if ([self copyAppIconToResources: filename])
+    {
+      return [self sanitizedIconFilename: filename];
+    }
+
+  return nil;
 }
 
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
@@ -534,12 +707,8 @@
     }
 
   // Handle Info.plist.... 
-  // Discover and copy app icon first
-  NSString *iconFile = [self discoverAppIcon];
-  if (iconFile != nil)
-    {
-      [self copyAppIconToResources: iconFile];
-    }
+  // Discover, resize, and copy app icon first.
+  NSString *iconFile = [self processAssets];
   
   // Generate Info.plist with the discovered icon
   NSString *pl = [self generateInfoPlistOutput: outputPlist withIconFile: iconFile];
@@ -642,26 +811,36 @@
     }
 
   // Discover app icon separately from Info.plist generation
-  NSString *iconFile = [self discoverAppIcon];
+  NSString *sourceIconFile = [self discoverAppIcon];
   NSString *iconPath = [self discoverAppIconPath];
-  xcputs([[NSString stringWithFormat: @"\t* Discovered app icon: %@", iconFile ? iconFile : @"(none)"] cString]);
+  NSString *iconFile = nil;
+  xcputs([[NSString stringWithFormat: @"\t* Discovered app icon: %@", sourceIconFile ? sourceIconFile : @"(none)"] cString]);
 
   // Add icon file to resources if found
   if (iconPath != nil)
     {
-      NSString *escapedIconPath = [self escapeFilenameForMakefile: iconPath];
       xcputs([[NSString stringWithFormat: @"\t* Adding app icon to resources: %@", iconPath] cString]);
-      [resources addObject: escapedIconPath];
-      
-      // Copy app icon to resources directory
-      BOOL iconCopied = [self copyAppIconToResources: iconFile];
+
+      iconFile = [self sanitizedIconFilename: sourceIconFile];
+      if ([mgr fileExistsAtPath: iconFile])
+	{
+	  [mgr removeItemAtPath: iconFile error: NULL];
+	}
+
+      // Generate a local resized icon for the generated makefile resources.
+      BOOL iconCopied = [self resizeIconAtPath: iconPath toPath: iconFile];
       if (iconCopied)
         {
-          xcputs([[NSString stringWithFormat: @"\t* Copied app icon to resources: %@", iconFile] cString]);
+	  NSString *escapedIconFile = nil;
+
+	  escapedIconFile = [self escapeFilenameForMakefile: iconFile];
+	  [resources addObject: escapedIconFile];
+          xcputs([[NSString stringWithFormat: @"\t* Generated app icon resource: %@", iconFile] cString]);
         }
       else
         {
-          xcputs([[NSString stringWithFormat: @"\t* Failed to copy app icon: %@", iconFile] cString]);
+	  iconFile = nil;
+          xcputs([[NSString stringWithFormat: @"\t* Failed to generate app icon resource: %@", sourceIconFile] cString]);
         }
     }
 

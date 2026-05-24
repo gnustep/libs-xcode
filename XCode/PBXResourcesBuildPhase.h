@@ -35,7 +35,7 @@
 
 /**
  * Discovers the app icon filename from the Assets.xcassets directory.
- * Searches for a 32x32@1x icon in the AppIcon.appiconset Contents.json file.
+ * Searches AppIcon.appiconset Contents.json for the largest declared icon.
  * Returns the filename of the discovered app icon, or nil if none found.
  */
 - (NSString *) discoverAppIcon;
@@ -49,9 +49,10 @@
 
 /**
  * Copies the specified icon file from Assets.xcassets to the resources directory.
- * Creates the resources directory if it doesn't exist and handles file overwriting.
+ * Creates the resources directory if it doesn't exist, normalizes the output
+ * filename, resizes the icon to 48x48, and handles file overwriting.
  * Takes the name of the icon file to copy as parameter.
- * Returns YES if the copy operation succeeded, NO otherwise.
+ * Returns YES if the resize/copy operation succeeded, NO otherwise.
  */
 - (BOOL) copyAppIconToResources: (NSString *)iconFilename;
 
@@ -109,7 +110,7 @@
 
 /**
  * Legacy method for backward compatibility.
- * Processes assets and returns the discovered icon filename.
+ * Processes assets and returns the generated resource icon filename.
  */
 - (NSString *) processAssets;
 
