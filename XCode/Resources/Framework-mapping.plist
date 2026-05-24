@@ -5,6 +5,7 @@
                 Cocoa = "`gnustep-config --gui-libs`";
                 Foundation = "`gnustep-config --base-libs`";
                 AppKit = "`gnustep-config --gui-libs`";
+		UIKit = "`gnustep-config --mobile-libs`";
                 CoreFoundation = "-lgnustep-corebase";
                 CoreGraphics = "-lopal";
                 Carbon = "-lgnustep-boron -lgnustep-corebase -lopal -licui18n";

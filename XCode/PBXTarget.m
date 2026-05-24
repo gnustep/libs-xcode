@@ -29,6 +29,29 @@
 #import "PBXProject.h"
 #import "GSXCBuildDatabase.h"
 
+static BOOL
+GSXCIsImageResourcePath(NSString *path)
+{
+  NSString *extension = [[path pathExtension] lowercaseString];
+  NSArray *imageExtensions = [NSArray arrayWithObjects:
+    @"bmp", @"gif", @"heic", @"heif", @"icns", @"ico", @"jpeg",
+    @"jpg", @"pdf", @"png", @"svg", @"tif", @"tiff", @"webp", nil];
+
+  return (extension != nil && [imageExtensions containsObject: extension]);
+}
+
+static BOOL
+GSXCIsSynchronizedResourcePath(NSString *path)
+{
+  NSString *extension = [[path pathExtension] lowercaseString];
+
+  return ([extension isEqualToString: @"xcassets"]
+	  || [extension isEqualToString: @"xib"]
+	  || [extension isEqualToString: @"nib"]
+	  || [extension isEqualToString: @"gorm"]
+	  || GSXCIsImageResourcePath(path));
+}
+
 @implementation PBXTarget
 
 - (void) dealloc
@@ -227,8 +250,7 @@
 	  PBXFileReference *fr = [buildFile fileRef];
 	  NSString *name = [fr path];
 
-	  if ([[name pathExtension] isEqualToString: @"xcassets"]
-	      || [[name pathExtension] isEqualToString: @"xib"])
+	  if (GSXCIsSynchronizedResourcePath(name))
 	    {
 	      [result addObject: buildFile];
 	    }
