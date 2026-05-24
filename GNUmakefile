@@ -20,8 +20,7 @@ PACKAGE_NAME = XCode
 SUBPROJECTS = \
 	XCode \
 	Generators \
-	Tools \
-	Applications
+	Tools
 
 #
 # Makefiles
