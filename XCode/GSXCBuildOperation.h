@@ -42,12 +42,12 @@ extern "C" {
 /**
  * Creates an operation with the given file.
  */
-+ (instancetype) operationWithFile: (PBXBuildFile *)file;
++ (id) operationWithFile: (PBXBuildFile *)file;
 
 /**
  * Initializes the operation with the given file.
  */
-- (instancetype) initWithFile: (PBXBuildFile *)file;
+- (id) initWithFile: (PBXBuildFile *)file;
 
 /**
  * Returns the file for this operation.

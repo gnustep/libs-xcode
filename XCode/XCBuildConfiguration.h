@@ -41,13 +41,13 @@
 /**
  * Initializes the build configuration with the given name and build settings.
  */
-- (instancetype) initWithName: (NSString *)theName
+- (id) initWithName: (NSString *)theName
                 buildSettings: (NSMutableDictionary *)settings;
 
 /**
  * Initializes the build configuration with the given name.
  */
-- (instancetype) initWithName: (NSString *)theName;
+- (id) initWithName: (NSString *)theName;
 
 /**
  * Returns the build settings for this configuration.

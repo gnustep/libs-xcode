@@ -9,7 +9,7 @@
 
 @implementation GSXCGenerator
 
-- (instancetype) initWithTarget: (PBXTarget *)target
+- (id) initWithTarget: (PBXTarget *)target
 {
   self = [super init];
   if (self != nil)

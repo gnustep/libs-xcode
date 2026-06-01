@@ -37,7 +37,7 @@
 /**
  * Creates a new workspace instance.
  */
-+ (instancetype) workspace;
++ (id) workspace;
 
 /**
  * Returns the version of this workspace.

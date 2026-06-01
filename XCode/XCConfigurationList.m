@@ -28,7 +28,7 @@
 
 @implementation XCConfigurationList
 
-- (instancetype) initWithConfigurations: (NSMutableArray *)configs
+- (id) initWithConfigurations: (NSMutableArray *)configs
 {
   self = [super init];
   if (self != nil)
@@ -39,7 +39,7 @@
 }
 
 /*
-- (instancetype) init
+- (id) init
 {
   return [self initWithConfigurations: [NSMutableArray array]];
 }

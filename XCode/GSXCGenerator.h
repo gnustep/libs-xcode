@@ -35,7 +35,7 @@
 /**
  * Initializes the generator with the given target.
  */
-- (instancetype) initWithTarget: (PBXTarget *)target;
+- (id) initWithTarget: (PBXTarget *)target;
 
 /**
  * Returns the target for this generator.

@@ -27,7 +27,7 @@
 
 @implementation PBXBuildPhase
 
-- (instancetype) initWithFiles: (NSMutableArray *)files
+- (id) initWithFiles: (NSMutableArray *)files
 	       buildActionMask: (NSString *)buildActionMask
 	  runOnlyForDeployment: (NSString *)runOnlyForDeployment
 			target: (PBXNativeTarget *)target

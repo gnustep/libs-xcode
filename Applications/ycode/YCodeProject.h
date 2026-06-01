@@ -53,6 +53,8 @@
   NSMutableDictionary *_fileWatchers;
 }
 
++ (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name type:(NSString *)type;
+
 /**
  * Project access
  */

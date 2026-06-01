@@ -49,12 +49,12 @@
 }
 
 // Methods for unarchiving a pbxproj file...
-+ (instancetype) unarchiveWithProjectFile: (NSString *)name
++ (id) unarchiveWithProjectFile: (NSString *)name
 {
   return AUTORELEASE([[self alloc] initWithProjectFile: name]);
 }
 
-- (instancetype) initWithContentsOfFile: (NSString *)name
+- (id) initWithContentsOfFile: (NSString *)name
 {
   if((self = [super init]) != nil)
     {
@@ -79,7 +79,7 @@
   return self;
 }
 
-- (instancetype) initWithProjectFile: (NSString *)name
+- (id) initWithProjectFile: (NSString *)name
 {
   NSString *newName = [name stringByAppendingPathComponent: @"project.pbxproj"];
   return [self initWithContentsOfFile: newName];
@@ -258,7 +258,7 @@
   return [coder archive];
 }
 
-- (instancetype) initWithRootObject: (id)root
+- (id) initWithRootObject: (id)root
 {
   self = [super init];
   if (self != nil)

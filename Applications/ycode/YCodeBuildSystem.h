@@ -81,7 +81,7 @@ typedef enum {
 /**
  * Initialization
  */
-- (instancetype)initWithProject:(YCodeProject *)project;
+- (id)initWithProject:(YCodeProject *)project;
 
 /**
  * Project association

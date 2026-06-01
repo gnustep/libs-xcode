@@ -37,9 +37,9 @@
 - (NSArray *) keysForObject: (id)object;
 
 /**
- * Returns a dictionary of recursive keys and values for the given object.
+ * Returns recursive plist values for the given object.
  */
-- (NSDictionary *) recursiveKeysAndValuesForObject: (id)object;
+- (id) recursiveKeysAndValuesForObject: (id)object;
 
 /**
  * Returns all keys and values for this object.

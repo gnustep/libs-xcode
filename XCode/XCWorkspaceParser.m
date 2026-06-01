@@ -34,7 +34,7 @@
 
 @implementation XCWorkspaceParser
 
-- (instancetype) initWithContentsOfFile: (NSString *)file
+- (id) initWithContentsOfFile: (NSString *)file
 {
   ASSIGN(_filename, file);
   if ((self = [super init]) != nil)
@@ -66,12 +66,12 @@
   return self;
 }
 
-+ (instancetype) parseWorkspaceFile: (NSString *)file
++ (id) parseWorkspaceFile: (NSString *)file
 {
   return AUTORELEASE([[self alloc] initWithContentsOfFile: file]);
 }
 
-+ (instancetype) parseWorkspaceDirectory: (NSString *)dir
++ (id) parseWorkspaceDirectory: (NSString *)dir
 {
   NSString *datafile = [dir stringByAppendingPathComponent: @"contents.xcworkspacedata"];  
   return [self parseWorkspaceFile: datafile];

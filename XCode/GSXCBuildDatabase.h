@@ -38,17 +38,17 @@
 /**
  * Creates a record from the contents of the given file.
  */
-+ (instancetype) recordWithContentsOfFile: (NSString *)path;
++ (id) recordWithContentsOfFile: (NSString *)path;
 
 /**
  * Initializes the record with the contents of the given file.
  */
-- (instancetype) initWithContentsOfFile: (NSString *)path;
+- (id) initWithContentsOfFile: (NSString *)path;
 
 /**
  * Initializes the record with the given dictionary.
  */
-- (instancetype) initWithDictionary: (NSDictionary *)dict;
+- (id) initWithDictionary: (NSDictionary *)dict;
 
 /**
  * Returns the dictionary for this record.
@@ -69,17 +69,17 @@
 /**
  * Initializes the file record with the given dictionary.
  */
-- (instancetype) initWithDictonary: (NSDictionary *)dict;
+- (id) initWithDictonary: (NSDictionary *)dict;
 
 /**
  * Initializes the file record with the given build file and path.
  */
-- (instancetype) initWithFile: (PBXBuildFile *)f path: (NSString *)path;
+- (id) initWithFile: (PBXBuildFile *)f path: (NSString *)path;
 
 /**
  * Creates a file record with the given build file and path.
  */
-+ (instancetype) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path;
++ (id) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path;
 
 /**
  * Sets the file name for this record.
@@ -127,12 +127,12 @@
 /**
  * Creates a build database for the given target.
  */
-+ (instancetype) buildDatabaseWithTarget: (PBXTarget *)target;
++ (id) buildDatabaseWithTarget: (PBXTarget *)target;
 
 /**
  * Initializes the build database with the given target.
  */
-- (instancetype) initWithTarget: (PBXTarget *)target;
+- (id) initWithTarget: (PBXTarget *)target;
 
 /**
  * Sets the target for this database.

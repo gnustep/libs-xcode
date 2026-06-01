@@ -37,7 +37,7 @@
 /**
  * Creates a new file reference instance.
  */
-+ (instancetype) fileRef;
++ (id) fileRef;
 
 /**
  * Returns the workspace includes path.

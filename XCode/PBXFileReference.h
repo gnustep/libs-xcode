@@ -68,7 +68,7 @@
 /**
  * Initializes the file reference with the given path.
  */
-- (instancetype) initWithPath: (NSString *)path;
+- (id) initWithPath: (NSString *)path;
 
 /**
  * Sets the total number of files.

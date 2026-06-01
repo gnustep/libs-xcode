@@ -179,7 +179,7 @@
   return status == 0;
 }
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
   if (self != nil)

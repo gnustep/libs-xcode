@@ -27,12 +27,12 @@
 
 @implementation GSXCBuildOperation
 
-+ (instancetype) operationWithFile: (PBXBuildFile *)file
++ (id) operationWithFile: (PBXBuildFile *)file
 {
   return AUTORELEASE([[self alloc] initWithFile: file]);
 }
 
-- (instancetype) initWithFile: (PBXBuildFile *)file
+- (id) initWithFile: (PBXBuildFile *)file
 {
   if ((self = [super init]) != nil)
     {

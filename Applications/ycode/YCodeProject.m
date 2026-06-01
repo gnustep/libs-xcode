@@ -38,6 +38,86 @@
 #import <XCode/PBXFrameworksBuildPhase.h>
 #import <XCode/PBXNativeTarget.h>
 #import <XCode/PBXCoder.h>
+#import <XCode/XCBuildConfiguration.h>
+#import <XCode/XCConfigurationList.h>
+
+static NSMutableDictionary *
+YCodeBuildSettingsForProduct(NSString *productName)
+{
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+
+    [settings setObject:@"macosx" forKey:@"SDKROOT"];
+    [settings setObject:@"$(inherited)" forKey:@"HEADER_SEARCH_PATHS"];
+    [settings setObject:@"$(inherited)" forKey:@"LIBRARY_SEARCH_PATHS"];
+    [settings setObject:productName forKey:@"PRODUCT_NAME"];
+    [settings setObject:@"YES" forKey:@"GCC_ENABLE_OBJC_EXCEPTIONS"];
+
+    return settings;
+}
+
+static XCConfigurationList *
+YCodeConfigurationList(NSString *productName)
+{
+    XCBuildConfiguration *debug = nil;
+    XCBuildConfiguration *release = nil;
+    XCConfigurationList *list = nil;
+    NSMutableDictionary *debugSettings = nil;
+    NSMutableDictionary *releaseSettings = nil;
+    NSMutableArray *configs = nil;
+
+    debugSettings = YCodeBuildSettingsForProduct(productName);
+    [debugSettings setObject:@"YES" forKey:@"GCC_GENERATE_DEBUGGING_SYMBOLS"];
+    [debugSettings setObject:@"0" forKey:@"GCC_OPTIMIZATION_LEVEL"];
+
+    releaseSettings = [NSMutableDictionary dictionaryWithDictionary:
+        YCodeBuildSettingsForProduct(productName)];
+    [releaseSettings setObject:@"NO" forKey:@"GCC_GENERATE_DEBUGGING_SYMBOLS"];
+    [releaseSettings setObject:@"s" forKey:@"GCC_OPTIMIZATION_LEVEL"];
+
+    debug = AUTORELEASE([[XCBuildConfiguration alloc]
+        initWithName:@"Debug"
+        buildSettings:debugSettings]);
+    release = AUTORELEASE([[XCBuildConfiguration alloc]
+        initWithName:@"Release"
+        buildSettings:releaseSettings]);
+    configs = [NSMutableArray arrayWithObjects:debug, release, nil];
+
+    list = AUTORELEASE([[XCConfigurationList alloc] initWithConfigurations:configs]);
+    [list setDefaultConfigurationName:@"Debug"];
+    [list setDefaultConfigurationIsVisible:@"0"];
+
+    return list;
+}
+
+static PBXBuildFile *
+YCodeBuildFile(PBXFileReference *fileRef)
+{
+    PBXBuildFile *buildFile = AUTORELEASE([[PBXBuildFile alloc] init]);
+    [buildFile setFileRef:fileRef];
+    return buildFile;
+}
+
+static PBXFileReference *
+YCodeFileReference(NSString *path)
+{
+    PBXFileReference *fileRef = AUTORELEASE([[PBXFileReference alloc]
+        initWithPath:path]);
+    [fileRef setSourceTree:@"<group>"];
+    return fileRef;
+}
+
+static PBXBuildPhase *
+YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target,
+    NSString *name)
+{
+    PBXBuildPhase *phase = AUTORELEASE([[phaseClass alloc]
+        initWithFiles:files
+        buildActionMask:@"2147483647"
+        runOnlyForDeployment:@"0"
+        target:target
+        name:name]);
+    return phase;
+}
 
 @implementation YCodeProject
 
@@ -71,9 +151,20 @@
 
 - (BOOL)createXcodeProjectWithName:(NSString *)name atPath:(NSString *)path
 {
-    // Create basic Xcode project structure
     NSString *projectFile = [NSString stringWithFormat:@"%@.xcodeproj", name];
     NSString *projectPath = [path stringByAppendingPathComponent:projectFile];
+    NSString *projectPBXPath = [projectPath stringByAppendingPathComponent:@"project.pbxproj"];
+    NSString *productPath = [NSString stringWithFormat:@"%@.app", name];
+    PBXFileReference *mainFile = nil;
+    PBXFileReference *productReference = nil;
+    PBXBuildFile *mainBuildFile = nil;
+    PBXSourcesBuildPhase *sourcesPhase = nil;
+    PBXResourcesBuildPhase *resourcesPhase = nil;
+    PBXFrameworksBuildPhase *frameworksPhase = nil;
+    NSMutableArray *mainChildren = nil;
+    NSMutableArray *productChildren = nil;
+    NSMutableArray *targets = nil;
+    NSMutableArray *buildPhases = nil;
     
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if (![fileManager createDirectoryAtPath:projectPath withIntermediateDirectories:YES attributes:nil error:nil]) {
@@ -86,32 +177,72 @@
     [pbxProject setProjectRoot:@""];
     [pbxProject setCompatibilityVersion:@"Xcode 15.0"];
     [pbxProject setDevelopmentRegion:@"en"];
+    [pbxProject setKnownRegions:[NSMutableArray arrayWithObjects:@"en", @"Base", nil]];
+    [pbxProject setBuildConfigurationList:YCodeConfigurationList(name)];
     
     // Create main group
     PBXGroup *mainGroup = [[PBXGroup alloc] init];
     [mainGroup setName:name];
+    [mainGroup setSourceTree:@"<group>"];
     [pbxProject setMainGroup:mainGroup];
+
+    PBXGroup *productsGroup = [[PBXGroup alloc] init];
+    [productsGroup setName:@"Products"];
+    [productsGroup setSourceTree:@"<group>"];
+    [pbxProject setProductRefGroup:productsGroup];
     
     // Create a simple target
     PBXNativeTarget *target = [[PBXNativeTarget alloc] init];
     [target setName:name];
     [target setProductName:name];
-    // Note: addTarget method may not be available in this XCode framework version
-    // [pbxProject addTarget:target];
+    [target setProductType:@"com.apple.product-type.application"];
+    [target setBuildConfigurationList:YCodeConfigurationList(name)];
+    [target setDependencies:[NSMutableArray array]];
+    [target setBuildRules:[NSMutableArray array]];
+
+    productReference = YCodeFileReference(productPath);
+    [productReference setExplicitFileType:@"wrapper.application"];
+    [productReference setSourceTree:@"BUILT_PRODUCTS_DIR"];
+    [target setProductReference:productReference];
+
+    mainFile = YCodeFileReference(@"main.m");
+    mainBuildFile = YCodeBuildFile(mainFile);
+
+    sourcesPhase = (PBXSourcesBuildPhase *)YCodeBuildPhase([PBXSourcesBuildPhase class],
+        [NSMutableArray arrayWithObject:mainBuildFile], target, @"Sources");
+    resourcesPhase = (PBXResourcesBuildPhase *)YCodeBuildPhase([PBXResourcesBuildPhase class],
+        [NSMutableArray array], target, @"Resources");
+    frameworksPhase = (PBXFrameworksBuildPhase *)YCodeBuildPhase([PBXFrameworksBuildPhase class],
+        [NSMutableArray array], target, @"Frameworks");
+
+    buildPhases = [NSMutableArray arrayWithObjects:
+        sourcesPhase, resourcesPhase, frameworksPhase, nil];
+    [target setBuildPhases:buildPhases];
+
+    mainChildren = [NSMutableArray arrayWithObjects:mainFile, productsGroup, nil];
+    productChildren = [NSMutableArray arrayWithObject:productReference];
+    [mainGroup setChildren:mainChildren];
+    [productsGroup setChildren:productChildren];
+
+    targets = [NSMutableArray arrayWithObject:target];
+    [pbxProject setTargets:targets];
     
     // Create container
-    PBXContainer *container = [[PBXContainer alloc] init];
-    // Note: setProject method may not be available in this XCode framework version
-    // [container setProject:pbxProject];
+    PBXContainer *container = [[PBXContainer alloc] initWithRootObject:pbxProject];
+    [container setFilename:projectPBXPath];
+    [container setParameter:projectPath];
+    [pbxProject setContainer:container];
     
     [self setProject:pbxProject];
     [self setContainer:container];
     
     // Create basic main.m file
     [self createMainFileAtPath:path];
+    [self saveProjectToPath:projectPath];
     
     RELEASE(pbxProject);
     RELEASE(mainGroup);
+    RELEASE(productsGroup);
     RELEASE(target);
     RELEASE(container);
     
@@ -137,7 +268,7 @@
     
     if (success) {
         // Load the project we just created
-        PBXContainer *container = [self convertProjectCenterProject:projectDict fromPath:path];
+        [self convertProjectCenterProject:projectDict fromPath:path];
         
         // Create basic main.m file
         [self createMainFileAtPath:path];
@@ -178,11 +309,36 @@
 
 - (PBXContainer *)convertProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path
 {
-    // Convert ProjectCenter project to internal PBX representation
-    return [self loadProjectCenterProject:projectDict fromPath:path];
+    PBXContainer *container = [self loadProjectCenterProject:projectDict fromPath:path];
+
+    if (container != nil) {
+        [self setContainer:container];
+        [self setProject:[container rootObject]];
+        [self setProjectPath:path];
+    }
+
+    return container;
 }
 
-- (instancetype)init
+- (PBXContainer *)loadProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path
+{
+    PBXContainer *container = [self convertProjectCenterProject:projectDict];
+    NSString *projectName = [projectDict objectForKey:@"PROJECT_NAME"];
+    NSString *projectPath = nil;
+
+    if (projectName == nil) {
+        projectName = [path lastPathComponent];
+    }
+
+    projectPath = [path stringByAppendingPathComponent:
+        [NSString stringWithFormat:@"%@.xcodeproj", projectName]];
+    [container setFilename:[projectPath stringByAppendingPathComponent:@"project.pbxproj"]];
+    [container setParameter:projectPath];
+
+    return container;
+}
+
+- (id)init
 {
     self = [super init];
     if (self) {
@@ -233,9 +389,11 @@
     }
     
     if (outError) {
+        NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"Unsupported project format"
+                                                             forKey:NSLocalizedDescriptionKey];
         *outError = [NSError errorWithDomain:NSCocoaErrorDomain 
                                         code:NSFileReadUnsupportedSchemeError 
-                                    userInfo:@{NSLocalizedDescriptionKey: @"Unsupported project format"}];
+                                    userInfo:userInfo];
     }
     return NO;
 }
@@ -244,9 +402,11 @@
 {
     if (_container == nil) {
         if (outError) {
+            NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"No project container to save"
+                                                                 forKey:NSLocalizedDescriptionKey];
             *outError = [NSError errorWithDomain:NSCocoaErrorDomain
                                             code:NSFileWriteUnknownError
-                                        userInfo:@{NSLocalizedDescriptionKey: @"No project container to save"}];
+                                        userInfo:userInfo];
         }
         return NO;
     }
@@ -306,6 +466,22 @@
 {
     // This is a simplified conversion - you might want to use the pc2xc logic
     NSString *projectName = [projectDict objectForKey:@"PROJECT_NAME"];
+    PBXNativeTarget *target = nil;
+    PBXGroup *mainGroup = nil;
+    PBXGroup *productsGroup = nil;
+    PBXFileReference *productReference = nil;
+    NSMutableArray *children = nil;
+    NSMutableArray *productChildren = nil;
+    NSMutableArray *targets = nil;
+    NSMutableArray *buildPhases = nil;
+    PBXSourcesBuildPhase *sourcesPhase = nil;
+    PBXResourcesBuildPhase *resourcesPhase = nil;
+    PBXFrameworksBuildPhase *frameworksPhase = nil;
+    NSString *productPath = nil;
+
+    if (projectName == nil) {
+        projectName = [[self projectDirectoryPath] lastPathComponent];
+    }
     
     // Create project structure
     PBXProject *project = [[PBXProject alloc] init];
@@ -313,40 +489,102 @@
     [project setProjectRoot:@""];
     [project setCompatibilityVersion:@"Xcode 15.0"];
     [project setDevelopmentRegion:@"en"];
+    [project setKnownRegions:[NSMutableArray arrayWithObjects:@"en", @"Base", nil]];
+    [project setBuildConfigurationList:YCodeConfigurationList(projectName)];
     
     // Create main group
-    PBXGroup *mainGroup = [[PBXGroup alloc] init];
+    mainGroup = [[PBXGroup alloc] init];
     [mainGroup setName:projectName];
+    [mainGroup setSourceTree:@"<group>"];
     [project setMainGroup:mainGroup];
+
+    productsGroup = [[PBXGroup alloc] init];
+    [productsGroup setName:@"Products"];
+    [productsGroup setSourceTree:@"<group>"];
+    [project setProductRefGroup:productsGroup];
+
+    target = [[PBXNativeTarget alloc] init];
+    [target setName:projectName];
+    [target setProductName:projectName];
+    [target setProductType:@"com.apple.product-type.application"];
+    [target setBuildConfigurationList:YCodeConfigurationList(projectName)];
+    [target setDependencies:[NSMutableArray array]];
+    [target setBuildRules:[NSMutableArray array]];
+
+    productPath = [NSString stringWithFormat:@"%@.app", projectName];
+    productReference = YCodeFileReference(productPath);
+    [productReference setExplicitFileType:@"wrapper.application"];
+    [productReference setSourceTree:@"BUILT_PRODUCTS_DIR"];
+    [target setProductReference:productReference];
+
+    sourcesPhase = (PBXSourcesBuildPhase *)YCodeBuildPhase([PBXSourcesBuildPhase class],
+        [NSMutableArray array], target, @"Sources");
+    resourcesPhase = (PBXResourcesBuildPhase *)YCodeBuildPhase([PBXResourcesBuildPhase class],
+        [NSMutableArray array], target, @"Resources");
+    frameworksPhase = (PBXFrameworksBuildPhase *)YCodeBuildPhase([PBXFrameworksBuildPhase class],
+        [NSMutableArray array], target, @"Frameworks");
+    buildPhases = [NSMutableArray arrayWithObjects:
+        sourcesPhase, resourcesPhase, frameworksPhase, nil];
+    [target setBuildPhases:buildPhases];
+
+    children = [NSMutableArray arrayWithObject:productsGroup];
+    productChildren = [NSMutableArray arrayWithObject:productReference];
+    [mainGroup setChildren:children];
+    [productsGroup setChildren:productChildren];
+
+    targets = [NSMutableArray arrayWithObject:target];
+    [project setTargets:targets];
     
     // Add files to groups
     // ... (implementation details for file organization)
     
     PBXContainer *container = [[PBXContainer alloc] initWithRootObject:project];
+    [project setContainer:container];
+
+    RELEASE(project);
+    RELEASE(mainGroup);
+    RELEASE(productsGroup);
+    RELEASE(target);
     
-    return container;
+    return AUTORELEASE(container);
 }
 
 #pragma mark - Project Saving
 
 - (BOOL)saveProjectToPath:(NSString *)path
 {
+    NSString *projectPath = path;
+    NSString *projectFile = nil;
+    BOOL isDirectory = NO;
+
     if (!_container) {
+        return NO;
+    }
+
+    if ([[path pathExtension] isEqualToString:@"pbxproj"]) {
+        projectPath = [path stringByDeletingLastPathComponent];
+    } else if (![[path pathExtension] isEqualToString:@"xcodeproj"]) {
+        projectPath = [path stringByAppendingPathComponent:
+            [NSString stringWithFormat:@"%@.xcodeproj", [[path lastPathComponent] stringByDeletingPathExtension]]];
+    }
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:projectPath isDirectory:&isDirectory] && !isDirectory) {
         return NO;
     }
     
     @try {
-        NSString *projectFile = [path stringByAppendingPathComponent:@"project.pbxproj"];
-        // For now, just create a simple placeholder save
-        // This would need proper PBXCoder implementation
-        NSString *placeholder = @"// Project placeholder";
-        BOOL success = [placeholder writeToFile:projectFile 
-                                      atomically:YES 
-                                        encoding:NSUTF8StringEncoding 
-                                           error:nil];
+        projectFile = [projectPath stringByAppendingPathComponent:@"project.pbxproj"];
+        [_container setParameter:projectPath];
+        [_container setFilename:projectFile];
+
+        if (_project) {
+            [_project setContainer:_container];
+        }
+
+        BOOL success = [_container save];
         
         if (success) {
-            [self setProjectPath:path];
+            [self setProjectPath:projectPath];
         }
         
         return success;
@@ -455,12 +693,17 @@
     
     while ((filePath = [enumerator nextObject]) != nil) {
         PBXFileReference *fileRef = [[PBXFileReference alloc] initWithPath:filePath];
-        if ([mainGroup respondsToSelector:@selector(addChild:)]) {
-            [mainGroup addChild:fileRef];
+        NSMutableArray *children = [mainGroup children];
+
+        if (children == nil) {
+            children = [NSMutableArray array];
+            [mainGroup setChildren:children];
         }
+        [children addObject:fileRef];
         
         // Add to appropriate build phase based on file type
         [self addFileToBuildPhases:fileRef];
+        RELEASE(fileRef);
     }
     
     // Notify navigator of changes
@@ -483,11 +726,16 @@
     [newGroup setName:groupName];
     
     PBXGroup *mainGroup = [_project mainGroup];
-    if ([mainGroup respondsToSelector:@selector(addChild:)]) {
-        [mainGroup addChild:newGroup];
+    NSMutableArray *children = [mainGroup children];
+
+    if (children == nil) {
+        children = [NSMutableArray array];
+        [mainGroup setChildren:children];
     }
+    [children addObject:newGroup];
     
     [_navigatorController projectDidChange];
+    RELEASE(newGroup);
     return YES;
 }
 
@@ -500,28 +748,39 @@
     PBXTarget *target;
     
     while ((target = [targetEnum nextObject]) != nil) {
+        NSEnumerator *phaseEnum = [[target buildPhases] objectEnumerator];
+        PBXBuildPhase *phase = nil;
+        PBXBuildPhase *destinationPhase = nil;
+
         if ([extension isEqualToString:@"m"] || [extension isEqualToString:@"mm"] || 
             [extension isEqualToString:@"c"] || [extension isEqualToString:@"cpp"]) {
-            // Add to sources build phase
-            PBXSourcesBuildPhase *sourcesPhase = [target respondsToSelector:@selector(sourcesBuildPhase)] ? [target sourcesBuildPhase] : nil;
-            if (sourcesPhase) {
-                PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
-                [buildFile setFileRef:fileRef];
-                if ([sourcesPhase respondsToSelector:@selector(addFile:)]) {
-                    [sourcesPhase addFile:buildFile];
+            while ((phase = [phaseEnum nextObject]) != nil) {
+                if ([phase isKindOfClass:[PBXSourcesBuildPhase class]]) {
+                    destinationPhase = phase;
+                    break;
                 }
             }
         } else if ([extension isEqualToString:@"xib"] || [extension isEqualToString:@"nib"] ||
                    [extension isEqualToString:@"plist"] || [extension isEqualToString:@"png"]) {
-            // Add to resources build phase
-            PBXResourcesBuildPhase *resourcesPhase = [target respondsToSelector:@selector(resourcesBuildPhase)] ? [target resourcesBuildPhase] : nil;
-            if (resourcesPhase) {
-                PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
-                [buildFile setFileRef:fileRef];
-                if ([resourcesPhase respondsToSelector:@selector(addFile:)]) {
-                    [resourcesPhase addFile:buildFile];
+            while ((phase = [phaseEnum nextObject]) != nil) {
+                if ([phase isKindOfClass:[PBXResourcesBuildPhase class]]) {
+                    destinationPhase = phase;
+                    break;
                 }
             }
+        }
+
+        if (destinationPhase != nil) {
+            PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
+            NSMutableArray *files = [destinationPhase files];
+
+            if (files == nil) {
+                files = [NSMutableArray array];
+                [destinationPhase setFiles:files];
+            }
+            [buildFile setFileRef:fileRef];
+            [files addObject:buildFile];
+            RELEASE(buildFile);
         }
     }
 }

@@ -158,7 +158,7 @@ static NSLock *lock = nil;
   return result;
 }
 
-- (instancetype) initWithPath: (NSString *)path
+- (id) initWithPath: (NSString *)path
 {
   self = [super init];
   if (self != nil)

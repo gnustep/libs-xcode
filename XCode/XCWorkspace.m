@@ -36,12 +36,12 @@
 
 @implementation XCWorkspace
 
-+ (instancetype) workspace
++ (id) workspace
 {
   return AUTORELEASE([[self alloc] init]);
 }
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
 

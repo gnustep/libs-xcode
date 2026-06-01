@@ -22,9 +22,52 @@
    Boston, MA 02110 USA.
 */ 
 
+#import <Foundation/Foundation.h>
+
 #import "GSXCColors.h"
 #import "GSXCBuildContext.h"
 #import "xcsystem.h"
+
+#ifndef ASSIGN
+#define ASSIGN(object, value) \
+  do \
+    { \
+      id gsxcNewValue = (id)(value); \
+      id gsxcOldValue = (id)(object); \
+      if (gsxcNewValue != gsxcOldValue) \
+        { \
+          (object) = [gsxcNewValue retain]; \
+          [gsxcOldValue release]; \
+        } \
+    } \
+  while (0)
+#endif
+
+#ifndef RELEASE
+#define RELEASE(object) [(object) release]
+#endif
+
+#ifndef AUTORELEASE
+#define AUTORELEASE(object) [(object) autorelease]
+#endif
+
+#ifndef DESTROY
+#define DESTROY(object) \
+  do \
+    { \
+      [(object) release]; \
+      (object) = nil; \
+    } \
+  while (0)
+#endif
+
+#ifndef NSDebugLog
+#ifdef DEBUG
+#define NSDebugLog(format, ...) NSLog(format, ##__VA_ARGS__)
+#else
+#define NSDebugLog(format, ...)
+#endif
+#endif
 
 // product types...  
 #define LIBRARY_TYPE @"com.apple.product-type.library.static"
@@ -34,4 +77,3 @@
 #define TOOL_TYPE @"com.apple.product-type.tool"
 #define APPLICATION_TYPE @"com.apple.product-type.application"
 #define TEST_TYPE @"com.apple.product-type.bundle.unit-test"
-

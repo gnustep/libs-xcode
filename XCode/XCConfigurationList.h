@@ -40,7 +40,7 @@
 /**
  * Initializes the configuration list with the given configurations.
  */
-- (instancetype) initWithConfigurations: (NSMutableArray *)configs;
+- (id) initWithConfigurations: (NSMutableArray *)configs;
 
 /**
  * Returns whether the default configuration is visible.

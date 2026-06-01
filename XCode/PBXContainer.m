@@ -29,7 +29,7 @@
 
 @implementation PBXContainer
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
 
@@ -50,7 +50,7 @@
   return self;
 }
 
-- (instancetype) initWithRootObject: (id)object
+- (id) initWithRootObject: (id)object
 {
   self = [self init];
   if (self != nil)

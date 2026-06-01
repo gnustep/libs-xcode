@@ -46,7 +46,7 @@
 /**
  * Initializes the container with the given root object.
  */
-- (instancetype) initWithRootObject: (id)object;
+- (id) initWithRootObject: (id)object;
 
 /**
  * Sets the workspace includes path.

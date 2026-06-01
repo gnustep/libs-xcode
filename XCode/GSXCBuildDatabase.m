@@ -37,18 +37,18 @@
 
 @implementation GSXCRecord : NSObject
 
-+ (instancetype) recordWithContentsOfFile: (NSString *)path
++ (id) recordWithContentsOfFile: (NSString *)path
 {
   return [[self alloc] initWithContentsOfFile: path];
 }
 
-- (instancetype) initWithContentsOfFile: (NSString *)path
+- (id) initWithContentsOfFile: (NSString *)path
 {
   NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile: path];
   return [self initWithDictionary: dict];
 }
 
-- (instancetype) initWithDictionary: (NSDictionary *)dict
+- (id) initWithDictionary: (NSDictionary *)dict
 {
   self = [super init];
   if (self != nil)
@@ -58,7 +58,7 @@
   return self;
 }
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
   if (self != nil)
@@ -92,7 +92,7 @@
 
 @implementation GSXCFileRecord : GSXCRecord
 
-- (instancetype) initWithDictonary: (NSDictionary *)dict
+- (id) initWithDictonary: (NSDictionary *)dict
 {
   self = [super initWithDictionary: dict];
   if (self != nil)
@@ -108,7 +108,7 @@
   return self;
 }
 
-- (instancetype) initWithFile: (PBXBuildFile *)f path: (NSString *)path
+- (id) initWithFile: (PBXBuildFile *)f path: (NSString *)path
 {
   self = [super init];
   if (self != nil)
@@ -165,7 +165,7 @@
   return self;
 }
 
-+ (instancetype) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path
++ (id) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path
 {
   return AUTORELEASE( [[self alloc] initWithFile: f path: path] );
 }
@@ -229,7 +229,7 @@
 
 @implementation GSXCBuildDatabase : NSObject
 
-+ (instancetype) buildDatabaseWithTarget: (PBXTarget *)target
++ (id) buildDatabaseWithTarget: (PBXTarget *)target
 {
   return AUTORELEASE( [[self alloc] initWithTarget: target] );
 }
@@ -286,7 +286,7 @@
   return YES;
 }
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
   if (self != nil)
@@ -297,7 +297,7 @@
   return self;
 }
 
-- (instancetype) initWithTarget: (PBXTarget *)target
+- (id) initWithTarget: (PBXTarget *)target
 {
   self = [super init];
   if (self != nil)

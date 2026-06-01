@@ -34,12 +34,12 @@
 
 @implementation XCFileRef
 
-+ (instancetype) fileRef
++ (id) fileRef
 {
   return AUTORELEASE([[self alloc] init]);
 }
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
 

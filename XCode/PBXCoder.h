@@ -45,17 +45,17 @@
 /**
  * Unarchives a project from the given file.
  */
-+ (instancetype) unarchiveWithProjectFile: (NSString *)name;
++ (id) unarchiveWithProjectFile: (NSString *)name;
 
 /**
  * Initializes the coder with the given project file.
  */
-- (instancetype) initWithProjectFile: (NSString *)name;
+- (id) initWithProjectFile: (NSString *)name;
 
 /**
  * Initializes the coder with the contents of the given file.
  */
-- (instancetype) initWithContentsOfFile: (NSString *)name;
+- (id) initWithContentsOfFile: (NSString *)name;
 
 /**
  * Unarchives the project.
@@ -101,12 +101,12 @@
 /**
  * Archives the project with the given root object.
  */
-+ (instancetype) archiveWithRootObject: (id)obj;
++ (id) archiveWithRootObject: (id)obj;
 
 /**
  * Initializes the coder with the given root object.
  */
-- (instancetype) initWithRootObject: (id)obj;
+- (id) initWithRootObject: (id)obj;
 
 /**
  * Archives the project.

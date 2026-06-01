@@ -35,17 +35,17 @@
 /**
  * Parses the workspace from the given file.
  */
-+ (instancetype) parseWorkspaceFile: (NSString *)file;
++ (id) parseWorkspaceFile: (NSString *)file;
 
 /**
  * Parses the workspace from the given directory.
  */
-+ (instancetype) parseWorkspaceDirectory: (NSString *)dir;
++ (id) parseWorkspaceDirectory: (NSString *)dir;
 
 /**
  * Initializes the parser with the contents of the given file.
  */
-- (instancetype) initWithContentsOfFile: (NSString *)file;
+- (id) initWithContentsOfFile: (NSString *)file;
 
 /**
  * Returns the parsed workspace.

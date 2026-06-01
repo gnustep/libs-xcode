@@ -147,7 +147,7 @@
 
 @implementation PBXProject
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
 

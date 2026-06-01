@@ -278,7 +278,9 @@ NSDictionary *flattenPlist(id propertyList)
 {
   return [NSArray arrayWithObjects: @"context", // @"buildConfigurationList", @"buildConfigurations",
 		  @"array", @"valueforKey", @"objectatIndexedSubscript", @"totalFiles",
-		  @"filename", @"currentFile", @"parameter", @"showEnvVarsInLog", nil];
+		  @"filename", @"currentFile", @"parameter", @"showEnvVarsInLog",
+		  @"target", @"project", @"container", @"database",
+		  @"minimizedProjectReferenceProxies", nil];
 }
 
 - (NSArray *) keysForObject: (id)object
@@ -303,9 +305,17 @@ NSDictionary *flattenPlist(id propertyList)
   return result;
 }
 
-- (NSDictionary *) recursiveKeysAndValuesForObject: (id)object
+- (id) recursiveKeysAndValuesForObject: (id)object
 {
   NSMutableDictionary *keysAndValues = nil;
+
+  if ([object isKindOfClass: [NSString class]]
+      || [object isKindOfClass: [NSNumber class]]
+      || [object isKindOfClass: [NSData class]]
+      || [object isKindOfClass: [NSDate class]])
+    {
+      return object;
+    }
 
   if (object && [object isKindOfClass: [NSNull class]] == NO)
     {

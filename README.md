@@ -26,7 +26,22 @@ and it should build the project.  If it doesn't then submit a bug.
 Currently GNUstep can only build projects for macOS.  Once support for UIKit and
 other frameworks are available, those will be added.
 
-#### 1.2.1 Plans for the future
+#### 1.2.1 CocoaPods
+
+The library can also be consumed from CocoaPods on macOS:
+
+```
+pod 'XCode', :git => 'https://github.com/gnustep/libs-xcode.git'
+```
+
+The pod builds the Objective-C sources without ARC and exposes the public
+headers under the `XCode` module-style include path, for example:
+
+```
+#import <XCode/XCode.h>
+```
+
+#### 1.2.2 Plans for the future
 
 * Create delegate which will provide a way for the library to
   execute callbacks into the caller so that information can be shown.
@@ -37,7 +52,7 @@ other frameworks are available, those will be added.
   which target should be built.
 * Add support for translated to .pcproj files.
   
-#### 1.2.2 Documentation
+#### 1.2.3 Documentation
 
 I am working on a manual as well as gsdocs for the code so that the library is
 properly documented.  There is a manual for buildtool.plist settings and other

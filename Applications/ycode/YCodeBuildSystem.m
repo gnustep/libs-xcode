@@ -27,7 +27,7 @@
 
 @implementation YCodeBuildSystem
 
-- (instancetype)initWithProject:(YCodeProject *)project
+- (id)initWithProject:(YCodeProject *)project
 {
     self = [super init];
     if (self) {
@@ -69,7 +69,8 @@
     
     // Add common build tools to PATH if needed
     NSString *path = [environment objectForKey:@"PATH"];
-    NSArray *additionalPaths = @[@"/usr/local/bin", @"/opt/local/bin", @"/usr/bin", @"/bin"];
+    NSArray *additionalPaths = [NSArray arrayWithObjects:
+        @"/usr/local/bin", @"/opt/local/bin", @"/usr/bin", @"/bin", nil];
     
     for (NSString *additionalPath in additionalPaths) {
         if (![path containsString:additionalPath]) {
@@ -321,7 +322,7 @@
 
 - (BOOL)buildWithMake
 {
-    return [self runCommand:@"make" withArguments:@[]];
+    return [self runCommand:@"make" withArguments:[NSArray array]];
 }
 
 - (BOOL)buildWithGNUMake
@@ -350,14 +351,14 @@
         [fileManager createDirectoryAtPath:buildDir withIntermediateDirectories:YES attributes:nil error:nil];
         
         // Configure
-        NSArray *configureArgs = @[@"-S", @".", @"-B", @"build"];
+        NSArray *configureArgs = [NSArray arrayWithObjects:@"-S", @".", @"-B", @"build", nil];
         if (![self runCommand:@"cmake" withArguments:configureArgs]) {
             return NO;
         }
     }
     
     // Build
-    NSArray *buildArgs = @[@"--build", @"build"];
+    NSArray *buildArgs = [NSArray arrayWithObjects:@"--build", @"build", nil];
     return [self runCommand:@"cmake" withArguments:buildArgs];
 }
 
@@ -380,17 +381,18 @@
 
 - (BOOL)cleanWithMake
 {
-    return [self runCommand:@"make" withArguments:@[@"clean"]];
+    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"clean"]];
 }
 
 - (BOOL)cleanWithGNUMake
 {
-    return [self runCommand:@"make" withArguments:@[@"clean"]];
+    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"clean"]];
 }
 
 - (BOOL)cleanWithCMake
 {
-    return [self runCommand:@"cmake" withArguments:@[@"--build", @"build", @"--target", @"clean"]];
+    return [self runCommand:@"cmake" withArguments:
+        [NSArray arrayWithObjects:@"--build", @"build", @"--target", @"clean", nil]];
 }
 
 - (BOOL)testWithXcode
@@ -412,7 +414,7 @@
 
 - (BOOL)testWithMake
 {
-    return [self runCommand:@"make" withArguments:@[@"test"]];
+    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"test"]];
 }
 
 - (BOOL)archiveWithXcode
@@ -434,7 +436,7 @@
 
 - (BOOL)archiveWithMake
 {
-    return [self runCommand:@"make" withArguments:@[@"install"]];
+    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"install"]];
 }
 
 #pragma mark - Command Execution
@@ -498,13 +500,12 @@
 {
     // Look for built executable in common locations
     NSString *projectDir = [_project projectDirectoryPath];
-    NSArray *searchPaths = @[
+    NSArray *searchPaths = [NSArray arrayWithObjects:
         [projectDir stringByAppendingPathComponent:@"build/Debug"],
         [projectDir stringByAppendingPathComponent:@"build/Release"],
         [projectDir stringByAppendingPathComponent:@"build"],
         [projectDir stringByAppendingPathComponent:@"obj"],
-        projectDir
-    ];
+        projectDir, nil];
     
     NSFileManager *fileManager = [NSFileManager defaultManager];
     
@@ -534,7 +535,7 @@
 
 - (BOOL)runExecutable:(NSString *)executablePath
 {
-    return [self runCommand:executablePath withArguments:@[]];
+    return [self runCommand:executablePath withArguments:[NSArray array]];
 }
 
 #pragma mark - Task Notifications
