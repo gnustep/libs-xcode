@@ -17,6 +17,9 @@ along with your program, you must make the improvements you have made to
 the libraries freely available. You should read the COPYING.LIB file for
 more information.
 
+For Applications we are using the LICENSE file (GPLv3) and we use COPYING.LIB
+which is (LGPLv2.1) for the libraries/framworks.
+
 ### 1.2 How to use
 
 To use this library you need to build it and install it and then compile
