@@ -25,7 +25,7 @@ include $(GNUSTEP_MAKEFILES)/common.make
 VERSION = 0.1
 PACKAGE_NAME = Ycode
 APP_NAME = Ycode
-Ycode_APPLICATION_ICON = 
+Ycode_APPLICATION_ICON = Ycode.tiff
 
 #
 # Libraries and Frameworks
@@ -41,6 +41,7 @@ ADDITIONAL_INCLUDE_DIRS += -I../XCode
 # Resource files
 #
 Ycode_RESOURCE_FILES = \
+Resources/Ycode.tiff \
 Resources/Ycode.gorm \
 
 
