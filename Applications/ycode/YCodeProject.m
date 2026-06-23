@@ -119,6 +119,48 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
     return phase;
 }
 
+static NSString *
+YCodeProjectFilePathForPath(NSString *path)
+{
+    if ([[path pathExtension] isEqualToString:@"pbxproj"]) {
+        return path;
+    }
+
+    if ([[path pathExtension] isEqualToString:@"pcproj"]) {
+        NSString *name = [[path lastPathComponent] stringByDeletingPathExtension];
+        return [[path stringByAppendingPathComponent:
+            [NSString stringWithFormat:@"%@.xcodeproj", name]]
+                stringByAppendingPathComponent:@"project.pbxproj"];
+    }
+
+    if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
+        return [path stringByAppendingPathComponent:@"project.pbxproj"];
+    }
+
+    return [[path stringByAppendingPathExtension:@"xcodeproj"]
+        stringByAppendingPathComponent:@"project.pbxproj"];
+}
+
+static NSString *
+YCodeProjectPackagePathForPath(NSString *path)
+{
+    if ([[path pathExtension] isEqualToString:@"pbxproj"]) {
+        return [path stringByDeletingLastPathComponent];
+    }
+
+    if ([[path pathExtension] isEqualToString:@"pcproj"]) {
+        NSString *name = [[path lastPathComponent] stringByDeletingPathExtension];
+        return [path stringByAppendingPathComponent:
+            [NSString stringWithFormat:@"%@.xcodeproj", name]];
+    }
+
+    if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
+        return path;
+    }
+
+    return [path stringByAppendingPathExtension:@"xcodeproj"];
+}
+
 @implementation YCodeProject
 
 #pragma mark - Class Methods
@@ -254,6 +296,8 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
     // Create ProjectCenter project file
     NSString *projectFile = [NSString stringWithFormat:@"%@.pcproj", name];
     NSString *projectPath = [path stringByAppendingPathComponent:projectFile];
+    NSString *projectInfoPath = [projectPath stringByAppendingPathComponent:@"PC.project"];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
     
     NSMutableDictionary *projectDict = [NSMutableDictionary dictionary];
     [projectDict setObject:name forKey:@"PROJECT_NAME"];
@@ -264,11 +308,18 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
     [projectDict setObject:[NSArray array] forKey:@"LOCALIZED_RESOURCES"];
     [projectDict setObject:[NSArray array] forKey:@"LIBRARIES"];
     
-    BOOL success = [projectDict writeToFile:projectPath atomically:YES];
+    if (![fileManager createDirectoryAtPath:projectPath
+                withIntermediateDirectories:YES
+                                 attributes:nil
+                                      error:nil]) {
+        return NO;
+    }
+
+    BOOL success = [projectDict writeToFile:projectInfoPath atomically:YES];
     
     if (success) {
         // Load the project we just created
-        [self convertProjectCenterProject:projectDict fromPath:path];
+        [self convertProjectCenterProject:projectDict fromPath:projectPath];
         
         // Create basic main.m file
         [self createMainFileAtPath:path];
@@ -381,18 +432,32 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
 - (BOOL)readFromURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError
 {
     NSString *path = [url path];
+    BOOL success = NO;
     
     if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
-        return [self loadXcodeProjectAtPath:path];
+        success = [self loadXcodeProjectAtPath:path];
     } else if ([[path pathExtension] isEqualToString:@"pcproj"]) {
-        return [self loadProjectCenterProjectAtPath:path];
+        success = [self loadProjectCenterProjectAtPath:path];
+    } else {
+        if (outError) {
+            NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"Unsupported project format"
+                                                                 forKey:NSLocalizedDescriptionKey];
+            *outError = [NSError errorWithDomain:NSCocoaErrorDomain
+                                            code:NSFileReadUnsupportedSchemeError
+                                        userInfo:userInfo];
+        }
+        return NO;
     }
-    
+
+    if (success) {
+        return YES;
+    }
+
     if (outError) {
-        NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"Unsupported project format"
+        NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"The selected project could not be opened"
                                                              forKey:NSLocalizedDescriptionKey];
         *outError = [NSError errorWithDomain:NSCocoaErrorDomain 
-                                        code:NSFileReadUnsupportedSchemeError 
+                                        code:NSFileReadUnknownError
                                     userInfo:userInfo];
     }
     return NO;
@@ -411,7 +476,18 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
         return NO;
     }
     
-    return [self saveProjectToPath:[url path]];
+    if (![self saveProjectToPath:[url path]]) {
+        if (outError) {
+            NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"The project could not be saved"
+                                                                 forKey:NSLocalizedDescriptionKey];
+            *outError = [NSError errorWithDomain:NSCocoaErrorDomain
+                                            code:NSFileWriteUnknownError
+                                        userInfo:userInfo];
+        }
+        return NO;
+    }
+
+    return YES;
 }
 
 #pragma mark - Project Loading
@@ -419,13 +495,16 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
 - (BOOL)loadXcodeProjectAtPath:(NSString *)path
 {
     @try {
-        PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile:path];
+        NSString *projectFile = YCodeProjectFilePathForPath(path);
+        PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile:projectFile];
         if (coder) {
             PBXContainer *container = [coder unarchive];
             if (container) {
                 [self setContainer:container];
                 [self setProject:[container rootObject]];
-                [self setProjectPath:path];
+                [self setProjectPath:YCodeProjectPackagePathForPath(path)];
+                [container setFilename:projectFile];
+                [container setParameter:[self projectPath]];
                 
                 // Start watching files
                 [self startWatchingFiles];
@@ -553,7 +632,8 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
 
 - (BOOL)saveProjectToPath:(NSString *)path
 {
-    NSString *projectPath = path;
+    NSString *originalPath = path;
+    NSString *projectPath = YCodeProjectPackagePathForPath(path);
     NSString *projectFile = nil;
     BOOL isDirectory = NO;
 
@@ -561,15 +641,17 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
         return NO;
     }
 
-    if ([[path pathExtension] isEqualToString:@"pbxproj"]) {
-        projectPath = [path stringByDeletingLastPathComponent];
-    } else if (![[path pathExtension] isEqualToString:@"xcodeproj"]) {
-        projectPath = [path stringByAppendingPathComponent:
-            [NSString stringWithFormat:@"%@.xcodeproj", [[path lastPathComponent] stringByDeletingPathExtension]]];
-    }
-
     if ([[NSFileManager defaultManager] fileExistsAtPath:projectPath isDirectory:&isDirectory] && !isDirectory) {
         return NO;
+    }
+
+    if (![[NSFileManager defaultManager] fileExistsAtPath:projectPath]) {
+        if (![[NSFileManager defaultManager] createDirectoryAtPath:projectPath
+                                       withIntermediateDirectories:YES
+                                                        attributes:nil
+                                                             error:nil]) {
+            return NO;
+        }
     }
     
     @try {
@@ -584,7 +666,11 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
         BOOL success = [_container save];
         
         if (success) {
-            [self setProjectPath:projectPath];
+            if ([[originalPath pathExtension] isEqualToString:@"pcproj"]) {
+                [self setProjectPath:originalPath];
+            } else {
+                [self setProjectPath:projectPath];
+            }
         }
         
         return success;

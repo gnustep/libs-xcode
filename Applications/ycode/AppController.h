@@ -62,6 +62,14 @@
 - (NSString *) getProjectNameFromUser;
 
 /**
+ * Saves the active project.
+ */
+- (IBAction) saveDocument: (id)sender;
+- (IBAction) saveDocumentAs: (id)sender;
+- (IBAction) saveDocumentTo: (id)sender;
+- (IBAction) saveAllDocuments: (id)sender;
+
+/**
  * Determines whether the application should terminate.
  */
 - (BOOL) applicationShouldTerminate: (id)sender;
@@ -86,6 +94,12 @@
  * Opens a project.
  */
 - (IBAction) openProject: (id)sender;
+
+/**
+ * Standard document menu entry points.
+ */
+- (IBAction) newDocument: (id)sender;
+- (IBAction) openDocument: (id)sender;
 
 @end
 

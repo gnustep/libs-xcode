@@ -45,10 +45,15 @@
 
 - (void) awakeFromNib
 {
+    [self updateApplicationMenuName];
+    [self connectDocumentMenuActions];
 }
 
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif
 {
+    [self updateApplicationMenuName];
+    [self connectDocumentMenuActions];
+
     // Create and show the main window
     if (!windowController) {
         windowController = [[YCodeWindowController alloc] init];
@@ -75,8 +80,9 @@
         if (result == NSAlertThirdButtonReturn) {
             return NO; // Cancel
         } else if (result == NSAlertFirstButtonReturn) {
-            // Save before quitting
-            // TODO: Implement save functionality
+            if (![self saveActiveProjectShowingPanel:NO]) {
+                return NO;
+            }
         }
     }
     
@@ -110,6 +116,16 @@
             [self createNewProjectAtURL:selectedURL];
         }
     }
+}
+
+- (IBAction)newDocument:(id)sender
+{
+    [self newProject:sender];
+}
+
+- (IBAction)openDocument:(id)sender
+{
+    [self openProject:sender];
 }
 
 - (void) createNewProjectAtURL:(NSURL *)projectURL
@@ -151,8 +167,7 @@
         [windowController setProject:newProject];
         [windowController showWindow:self];
         
-        // Save the project immediately
-        [newProject saveProjectToPath:projectPath];
+        [[NSDocumentController sharedDocumentController] addDocument:newProject];
     } else {
         NSAlert *errorAlert = [[NSAlert alloc] init];
         [errorAlert setMessageText:@"Project Creation Failed"];
@@ -161,6 +176,69 @@
         [errorAlert runModal];
         RELEASE(errorAlert);
     }
+}
+
+- (IBAction)saveDocument:(id)sender
+{
+    [self saveActiveProjectShowingPanel:NO];
+}
+
+- (IBAction)saveDocumentAs:(id)sender
+{
+    [self saveActiveProjectShowingPanel:YES];
+}
+
+- (IBAction)saveDocumentTo:(id)sender
+{
+    [self saveActiveProjectShowingPanel:YES];
+}
+
+- (IBAction)saveAllDocuments:(id)sender
+{
+    [self saveActiveProjectShowingPanel:NO];
+}
+
+- (BOOL)saveActiveProjectShowingPanel:(BOOL)showPanel
+{
+    YCodeProject *project = [windowController project];
+    NSString *projectPath = [project projectPath];
+
+    if (project == nil) {
+        NSBeep();
+        return NO;
+    }
+
+    if (showPanel || projectPath == nil || [projectPath length] == 0) {
+        NSSavePanel *panel = [NSSavePanel savePanel];
+        NSString *name = @"Project.xcodeproj";
+
+        if (projectPath != nil && [projectPath length] > 0) {
+            name = [projectPath lastPathComponent];
+        }
+
+        [panel setTitle:@"Save Project"];
+        [panel setNameFieldStringValue:name];
+        [panel setAllowedFileTypes:[NSArray arrayWithObject:@"xcodeproj"]];
+
+        if ([panel runModal] != NSModalResponseOK) {
+            return NO;
+        }
+
+        projectPath = [[panel URL] path];
+    }
+
+    if (![project saveProjectToPath:projectPath]) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:@"Unable to save project"];
+        [alert setInformativeText:@"The project could not be saved to the selected location."];
+        [alert addButtonWithTitle:@"OK"];
+        [alert runModal];
+        RELEASE(alert);
+        return NO;
+    }
+
+    [[windowController window] setTitle:[[project projectPath] lastPathComponent]];
+    return YES;
 }
 
 - (NSString *) getProjectNameFromUser
@@ -210,6 +288,110 @@
     }
     
     return NO;
+}
+
+- (void)updateApplicationMenuName
+{
+    NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"ApplicationName"];
+    NSMenu *mainMenu = [NSApp mainMenu];
+    NSMenuItem *applicationItem = nil;
+    NSMenu *applicationMenu = nil;
+
+    if (applicationName == nil || [applicationName length] == 0) {
+        applicationName = [[NSProcessInfo processInfo] processName];
+    }
+
+    if (mainMenu == nil || [[mainMenu itemArray] count] == 0) {
+        return;
+    }
+
+    applicationItem = [[mainMenu itemArray] objectAtIndex:0];
+    applicationMenu = [applicationItem submenu];
+
+    [applicationItem setTitle:applicationName];
+    if (applicationMenu != nil) {
+        NSMenuItem *infoItem = nil;
+
+        [applicationMenu setTitle:applicationName];
+        if ([[applicationMenu itemArray] count] > 0) {
+            infoItem = [[applicationMenu itemArray] objectAtIndex:0];
+            if ([[infoItem title] isEqualToString:@"Info"]) {
+                [infoItem setTitle:applicationName];
+                [[infoItem submenu] setTitle:applicationName];
+            }
+        }
+
+        [self updateApplicationNameItemsInMenu:applicationMenu
+                                      appName:applicationName];
+    }
+}
+
+- (void)updateApplicationNameItemsInMenu:(NSMenu *)menu appName:(NSString *)applicationName
+{
+    NSEnumerator *enumerator = nil;
+    NSMenuItem *item = nil;
+
+    if (menu == nil) {
+        return;
+    }
+
+    enumerator = [[menu itemArray] objectEnumerator];
+    while ((item = [enumerator nextObject]) != nil) {
+        if ([[item title] isEqualToString:@"Hide"]) {
+            [item setTitle:[NSString stringWithFormat:@"Hide %@", applicationName]];
+        } else if ([[item title] isEqualToString:@"Quit"]) {
+            [item setTitle:[NSString stringWithFormat:@"Quit %@", applicationName]];
+        }
+
+        [self updateApplicationNameItemsInMenu:[item submenu]
+                                      appName:applicationName];
+    }
+}
+
+- (void)connectDocumentMenuActions
+{
+    NSMenu *mainMenu = [NSApp mainMenu];
+    NSEnumerator *enumerator = nil;
+    NSMenuItem *item = nil;
+
+    if (mainMenu == nil) {
+        return;
+    }
+
+    enumerator = [[mainMenu itemArray] objectEnumerator];
+    while ((item = [enumerator nextObject]) != nil) {
+        [self connectDocumentMenuActionsInMenu:[item submenu]];
+    }
+}
+
+- (void)connectDocumentMenuActionsInMenu:(NSMenu *)menu
+{
+    NSEnumerator *enumerator = nil;
+    NSMenuItem *item = nil;
+
+    if (menu == nil) {
+        return;
+    }
+
+    enumerator = [[menu itemArray] objectEnumerator];
+    while ((item = [enumerator nextObject]) != nil) {
+        SEL action = [item action];
+
+        if (action == @selector(newDocument:)) {
+            [item setTarget:self];
+            [item setAction:@selector(newProject:)];
+        } else if (action == @selector(openDocument:)) {
+            [item setTarget:self];
+            [item setAction:@selector(openProject:)];
+        } else if (action == @selector(saveDocument:) ||
+                   action == @selector(saveDocumentAs:) ||
+                   action == @selector(saveDocumentTo:) ||
+                   action == @selector(saveAllDocuments:)) {
+            [item setTarget:self];
+        }
+
+        [self connectDocumentMenuActionsInMenu:[item submenu]];
+    }
 }
 
 - (void) showPrefPanel: (id)sender

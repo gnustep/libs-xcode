@@ -90,9 +90,12 @@
         if ([project readFromURL:projectURL ofType:@"xcodeproj" error:&error]) {
             [self setProject:project];
         } else {
+            NSString *message = (error != nil)
+                ? [error localizedDescription]
+                : @"The selected project could not be opened.";
             NSAlert *alert = [[NSAlert alloc] init];
             [alert setMessageText:@"Unable to open project"];
-            [alert setInformativeText:[error localizedDescription]];
+            [alert setInformativeText:message];
             [alert runModal];
             RELEASE(alert);
         }
