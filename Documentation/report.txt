@@ -1,0 +1,24 @@
+Total commits: 621
+Number of raw identities: 9
+Number of consolidated identities: 6
+
+ Commits       %   Canonical Display
+------------------------------------------------------------
+     548  88.24%   Gregory John Casamento <greg.casamento@gmail.com>
+      65  10.47%   gcasa <gcasa@72102866-910b-0410-8b05-ffd578937521>
+       2   0.32%   Riccardo Mottola <rm@gnu.org>
+       2   0.32%   Graham Lee <graham@iamleeg.com>
+       2   0.32%   rfm <rfm@72102866-910b-0410-8b05-ffd578937521>
+       2   0.32%   fredkiefer <fredkiefer@72102866-910b-0410-8b05-ffd578937521>
+
+Major Merges (2+ raw identities merged):
+------------------------------------------------------------
+Canonical: Gregory John Casamento <greg.casamento@gmail.com> (Total: 548)
+  -   467: Gregory John Casamento <greg.casamento@gmail.com>
+  -    81: Gregory Casamento <greg.casamento@gmail.com>
+Canonical: rfm <rfm@72102866-910b-0410-8b05-ffd578937521> (Total: 2)
+  -     1: rfm <rfm@72102866-910b-0410-8b05-ffd578937521>
+  -     1: Richard Frith-MacDonald <rfm@gnu.org>
+Canonical: fredkiefer <fredkiefer@72102866-910b-0410-8b05-ffd578937521> (Total: 2)
+  -     1: fredkiefer <fredkiefer@72102866-910b-0410-8b05-ffd578937521>
+  -     1: Fred Kiefer <fredkiefer@gmx.de>

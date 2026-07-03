@@ -43,6 +43,18 @@
   while (0)
 #endif
 
+#ifndef ASSIGNCOPY
+#define ASSIGNCOPY(object, value) \
+  do \
+    { \
+      id gsxcNewValue = [(id)(value) copy]; \
+      id gsxcOldValue = (id)(object); \
+      (object) = gsxcNewValue; \
+      [gsxcOldValue release]; \
+    } \
+  while (0)
+#endif
+
 #ifndef RELEASE
 #define RELEASE(object) [(object) release]
 #endif

@@ -25,6 +25,7 @@
 #import <Foundation/NSObject.h>
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
+#import <objc/runtime.h>
 
 #import "NSObject+KeyExtraction.h"
 #import "NSString+PBXAdditions.h"

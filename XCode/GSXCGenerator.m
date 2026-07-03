@@ -1,7 +1,11 @@
 // Released under the terms of LGPLv2.1, please see COPYING.LIB
 
 #import <Foundation/NSObject.h>
+#import <Foundation/NSException.h>
+#import <Foundation/NSString.h>
+#ifdef GNUSTEP
 #import <GNUstepBase/NSObject+GNUstepBase.h>
+#endif
 
 #import "GSXCGenerator.h"
 #import "GSXCCommon.h"
@@ -37,7 +41,14 @@
 
 - (BOOL) generate
 {
+#ifdef GNUSTEP
   return ([self notImplemented: _cmd] != nil);
+#else
+  [NSException raise: NSInternalInconsistencyException
+	      format: @"%@ must be implemented by subclasses",
+		      NSStringFromSelector(_cmd)];
+  return NO;
+#endif
 }
 
 @end
