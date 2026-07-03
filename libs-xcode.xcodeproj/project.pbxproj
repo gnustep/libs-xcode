@@ -1,0 +1,498 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXFileReference section */
+		100000000000000000000001 /* GNUmakefile */ = {isa = PBXFileReference; lastKnownFileType = text; path = GNUmakefile; sourceTree = "<group>"; };
+		100000000000000000000002 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		100000000000000000000003 /* XCode.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; path = XCode.podspec; sourceTree = "<group>"; };
+		100000000000000000000004 /* Version */ = {isa = PBXFileReference; lastKnownFileType = text; path = Version; sourceTree = "<group>"; };
+		100000000000000000000005 /* ChangeLog */ = {isa = PBXFileReference; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
+		100000000000000000000006 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		100000000000000000000007 /* COPYING.LIB */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.LIB; sourceTree = "<group>"; };
+		100000000000000000000008 /* CODEOWNERS */ = {isa = PBXFileReference; lastKnownFileType = text; path = CODEOWNERS; sourceTree = "<group>"; };
+		100000000000000000000009 /* report.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = report.txt; sourceTree = "<group>"; };
+		10000000000000000000000A /* XCode */ = {isa = PBXFileReference; lastKnownFileType = folder; path = XCode; sourceTree = "<group>"; };
+		10000000000000000000000B /* Generators */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Generators; sourceTree = "<group>"; };
+		10000000000000000000000C /* Tools */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Tools; sourceTree = "<group>"; };
+		10000000000000000000000D /* Applications */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Applications; sourceTree = "<group>"; };
+		10000000000000000000000E /* Documentation */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Documentation; sourceTree = "<group>"; };
+		10000000000000000000000F /* Extensions */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Extensions; sourceTree = "<group>"; };
+		100000000000000000000020 /* XCode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = XCode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000021 /* Generators */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.bundle"; includeInIndex = 0; path = Generators; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000022 /* Tools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Tools; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000023 /* Ycode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ycode.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000024 /* buildtool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = buildtool; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000025 /* pc2xc */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pc2xc; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000026 /* pcpg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pcpg; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		200000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000002 /* Project */,
+				10000000000000000000000A /* XCode */,
+				10000000000000000000000B /* Generators */,
+				10000000000000000000000C /* Tools */,
+				10000000000000000000000D /* Applications */,
+				10000000000000000000000E /* Documentation */,
+				10000000000000000000000F /* Extensions */,
+				200000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		200000000000000000000002 /* Project */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000001 /* GNUmakefile */,
+				100000000000000000000002 /* README.md */,
+				100000000000000000000003 /* XCode.podspec */,
+				100000000000000000000004 /* Version */,
+				100000000000000000000005 /* ChangeLog */,
+				100000000000000000000006 /* LICENSE */,
+				100000000000000000000007 /* COPYING.LIB */,
+				100000000000000000000008 /* CODEOWNERS */,
+				100000000000000000000009 /* report.txt */,
+			);
+			name = Project;
+			sourceTree = "<group>";
+		};
+		200000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000020 /* XCode.framework */,
+				100000000000000000000021 /* Generators */,
+				100000000000000000000022 /* Tools */,
+				100000000000000000000023 /* Ycode.app */,
+				100000000000000000000024 /* buildtool */,
+				100000000000000000000025 /* pc2xc */,
+				100000000000000000000026 /* pcpg */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		300000000000000000000001 /* All */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake; else exec make; fi'";
+			buildConfigurationList = 400000000000000000000001 /* Build configuration list for PBXLegacyTarget "All" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = All;
+			passBuildSettingsInEnvironment = 1;
+			productName = libs-xcode;
+		};
+		300000000000000000000002 /* XCode */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C XCode; else exec make -C XCode; fi'";
+			buildConfigurationList = 400000000000000000000002 /* Build configuration list for PBXLegacyTarget "XCode" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = XCode;
+			passBuildSettingsInEnvironment = 1;
+			productName = XCode;
+		};
+		300000000000000000000003 /* Generators */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C Generators; else exec make -C Generators; fi'";
+			buildConfigurationList = 400000000000000000000003 /* Build configuration list for PBXLegacyTarget "Generators" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = Generators;
+			passBuildSettingsInEnvironment = 1;
+			productName = Generators;
+		};
+		300000000000000000000004 /* Tools */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C Tools; else exec make -C Tools; fi'";
+			buildConfigurationList = 400000000000000000000004 /* Build configuration list for PBXLegacyTarget "Tools" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = Tools;
+			passBuildSettingsInEnvironment = 1;
+			productName = Tools;
+		};
+		300000000000000000000005 /* Ycode */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C Applications/ycode; else exec make -C Applications/ycode; fi'";
+			buildConfigurationList = 400000000000000000000005 /* Build configuration list for PBXLegacyTarget "Ycode" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = Ycode;
+			passBuildSettingsInEnvironment = 1;
+			productName = Ycode;
+		};
+		300000000000000000000006 /* buildtool */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C Tools/buildtool; else exec make -C Tools/buildtool; fi'";
+			buildConfigurationList = 400000000000000000000006 /* Build configuration list for PBXLegacyTarget "buildtool" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = buildtool;
+			passBuildSettingsInEnvironment = 1;
+			productName = buildtool;
+		};
+		300000000000000000000007 /* pc2xc */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C Tools/pc2xc; else exec make -C Tools/pc2xc; fi'";
+			buildConfigurationList = 400000000000000000000007 /* Build configuration list for PBXLegacyTarget "pc2xc" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = pc2xc;
+			passBuildSettingsInEnvironment = 1;
+			productName = pc2xc;
+		};
+		300000000000000000000008 /* pcpg */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake -C Tools/pcpg; else exec make -C Tools/pcpg; fi'";
+			buildConfigurationList = 400000000000000000000008 /* Build configuration list for PBXLegacyTarget "pcpg" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = pcpg;
+			passBuildSettingsInEnvironment = 1;
+			productName = pcpg;
+		};
+		300000000000000000000009 /* Clean */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc 'if command -v gmake >/dev/null 2>&1; then exec gmake clean; else exec make clean; fi'";
+			buildConfigurationList = 400000000000000000000009 /* Build configuration list for PBXLegacyTarget "Clean" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = Clean;
+			passBuildSettingsInEnvironment = 1;
+			productName = clean;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXProject section */
+		500000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = 40000000000000000000000A /* Build configuration list for PBXProject "libs-xcode" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 200000000000000000000001;
+			productRefGroup = 200000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				300000000000000000000001 /* All */,
+				300000000000000000000002 /* XCode */,
+				300000000000000000000003 /* Generators */,
+				300000000000000000000004 /* Tools */,
+				300000000000000000000005 /* Ycode */,
+				300000000000000000000006 /* buildtool */,
+				300000000000000000000007 /* pc2xc */,
+				300000000000000000000008 /* pcpg */,
+				300000000000000000000009 /* Clean */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		600000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = libs-xcode;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = libs-xcode;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		600000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = XCode;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = XCode;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		600000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Generators;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Generators;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		600000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Tools;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Tools;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		600000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Ycode;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		60000000000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Ycode;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		60000000000000000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = buildtool;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		60000000000000000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = buildtool;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		60000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = pc2xc;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		60000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = pc2xc;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		60000000000000000000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = pcpg;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = pcpg;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		600000000000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = clean;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = clean;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		600000000000000000000013 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = libs-xcode;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		600000000000000000000014 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = libs-xcode;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		400000000000000000000001 /* Build configuration list for PBXLegacyTarget "All" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000001 /* Debug */,
+				600000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000002 /* Build configuration list for PBXLegacyTarget "XCode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000003 /* Debug */,
+				600000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000003 /* Build configuration list for PBXLegacyTarget "Generators" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000005 /* Debug */,
+				600000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000004 /* Build configuration list for PBXLegacyTarget "Tools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000007 /* Debug */,
+				600000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000005 /* Build configuration list for PBXLegacyTarget "Ycode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000009 /* Debug */,
+				60000000000000000000000A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000006 /* Build configuration list for PBXLegacyTarget "buildtool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				60000000000000000000000B /* Debug */,
+				60000000000000000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000007 /* Build configuration list for PBXLegacyTarget "pc2xc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				60000000000000000000000D /* Debug */,
+				60000000000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000008 /* Build configuration list for PBXLegacyTarget "pcpg" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				60000000000000000000000F /* Debug */,
+				600000000000000000000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		400000000000000000000009 /* Build configuration list for PBXLegacyTarget "Clean" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000011 /* Debug */,
+				600000000000000000000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		40000000000000000000000A /* Build configuration list for PBXProject "libs-xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600000000000000000000013 /* Debug */,
+				600000000000000000000014 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 500000000000000000000001 /* Project object */;
+}
