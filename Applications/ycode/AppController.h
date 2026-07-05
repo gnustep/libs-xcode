@@ -72,7 +72,7 @@
 /**
  * Determines whether the application should terminate.
  */
-- (BOOL) applicationShouldTerminate: (id)sender;
+- (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender;
 
 /**
  * Called when the application will terminate.

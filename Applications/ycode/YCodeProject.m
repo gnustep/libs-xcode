@@ -23,6 +23,7 @@
 */
 
 #import "YCodeProject.h"
+#import "YCodeWindowController.h"
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeEditorController.h"
 #import "YCodeBuildSystem.h"
@@ -122,6 +123,10 @@ YCodeBuildPhase(Class phaseClass, NSMutableArray *files, PBXNativeTarget *target
 static NSString *
 YCodeProjectFilePathForPath(NSString *path)
 {
+    if (path == nil || [path length] == 0) {
+        return nil;
+    }
+
     if ([[path pathExtension] isEqualToString:@"pbxproj"]) {
         return path;
     }
@@ -144,6 +149,10 @@ YCodeProjectFilePathForPath(NSString *path)
 static NSString *
 YCodeProjectPackagePathForPath(NSString *path)
 {
+    if (path == nil || [path length] == 0) {
+        return nil;
+    }
+
     if ([[path pathExtension] isEqualToString:@"pbxproj"]) {
         return [path stringByDeletingLastPathComponent];
     }
@@ -162,6 +171,24 @@ YCodeProjectPackagePathForPath(NSString *path)
 }
 
 @implementation YCodeProject
+
++ (NSArray *)readableTypes
+{
+    return [NSArray arrayWithObjects:@"YCodeXcodeProjectType",
+        @"YCodeProjectCenterProjectType", @"xcodeproj", @"pcproj", nil];
+}
+
++ (NSArray *)writableTypes
+{
+    return [NSArray arrayWithObjects:@"YCodeXcodeProjectType",
+        @"xcodeproj", nil];
+}
+
++ (BOOL)isNativeType:(NSString *)type
+{
+    return ([type isEqualToString:@"YCodeXcodeProjectType"] ||
+            [type isEqualToString:@"xcodeproj"]);
+}
 
 #pragma mark - Class Methods
 
@@ -429,10 +456,31 @@ YCodeProjectPackagePathForPath(NSString *path)
     return @"YCodeProject";
 }
 
+- (void)makeWindowControllers
+{
+    YCodeWindowController *controller = nil;
+
+    controller = [[YCodeWindowController alloc] init];
+    [controller setProject: self];
+    [self addWindowController:controller];
+    RELEASE(controller);
+}
+
 - (BOOL)readFromURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError
 {
     NSString *path = [url path];
     BOOL success = NO;
+
+    if (path == nil || [path length] == 0) {
+        if (outError) {
+            NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"The project URL does not contain a valid file path"
+                                                                 forKey:NSLocalizedDescriptionKey];
+            *outError = [NSError errorWithDomain:NSCocoaErrorDomain
+                                            code:NSFileReadInvalidFileNameError
+                                        userInfo:userInfo];
+        }
+        return NO;
+    }
     
     if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
         success = [self loadXcodeProjectAtPath:path];
@@ -450,6 +498,7 @@ YCodeProjectPackagePathForPath(NSString *path)
     }
 
     if (success) {
+        [self setFileURL:url];
         return YES;
     }
 
@@ -465,6 +514,19 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)writeToURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError
 {
+    NSString *path = [url path];
+
+    if (path == nil || [path length] == 0) {
+        if (outError) {
+            NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"The project URL does not contain a valid file path"
+                                                                 forKey:NSLocalizedDescriptionKey];
+            *outError = [NSError errorWithDomain:NSCocoaErrorDomain
+                                            code:NSFileWriteInvalidFileNameError
+                                        userInfo:userInfo];
+        }
+        return NO;
+    }
+
     if (_container == nil) {
         if (outError) {
             NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"No project container to save"
@@ -476,7 +538,7 @@ YCodeProjectPackagePathForPath(NSString *path)
         return NO;
     }
     
-    if (![self saveProjectToPath:[url path]]) {
+    if (![self saveProjectToPath:path]) {
         if (outError) {
             NSDictionary *userInfo = [NSDictionary dictionaryWithObject:@"The project could not be saved"
                                                                  forKey:NSLocalizedDescriptionKey];
@@ -494,8 +556,16 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)loadXcodeProjectAtPath:(NSString *)path
 {
+    if (path == nil || [path length] == 0) {
+        return NO;
+    }
+
     @try {
         NSString *projectFile = YCodeProjectFilePathForPath(path);
+        if (projectFile == nil) {
+            return NO;
+        }
+
         PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile:projectFile];
         if (coder) {
             PBXContainer *container = [coder unarchive];
@@ -521,6 +591,10 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)loadProjectCenterProjectAtPath:(NSString *)path
 {
+    if (path == nil || [path length] == 0) {
+        return NO;
+    }
+
     NSString *projectFile = [path stringByAppendingPathComponent:@"PC.project"];
     NSDictionary *projectDict = [NSDictionary dictionaryWithContentsOfFile:projectFile];
     
@@ -637,7 +711,7 @@ YCodeProjectPackagePathForPath(NSString *path)
     NSString *projectFile = nil;
     BOOL isDirectory = NO;
 
-    if (!_container) {
+    if (!_container || projectPath == nil) {
         return NO;
     }
 

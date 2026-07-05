@@ -7,10 +7,13 @@
 */
 
 #import <AppKit/AppKit.h>
+#import "YCodeDocumentController.h"
 
 int 
 main(int argc, const char *argv[])
 {
+  [YCodeDocumentController sharedDocumentController];
+
 // Uncomment if your application is Renaissance application
 /*  CREATE_AUTORELEASE_POOL (pool);
   [NSApplication sharedApplication];
@@ -27,4 +30,3 @@ main(int argc, const char *argv[])
 
   return NSApplicationMain (argc, argv);
 }
-

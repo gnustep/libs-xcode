@@ -23,7 +23,63 @@
 */
 
 #import "YCodeDocumentController.h"
+#import "YCodeProject.h"
 
 @implementation YCodeDocumentController
+
+- (NSString *)typeFromFileExtension:(NSString *)fileExtension
+{
+    if ([fileExtension isEqualToString:@"xcodeproj"]) {
+        return @"YCodeXcodeProjectType";
+    }
+
+    if ([fileExtension isEqualToString:@"pcproj"]) {
+        return @"YCodeProjectCenterProjectType";
+    }
+
+    return [super typeFromFileExtension:fileExtension];
+}
+
+- (Class)documentClassForType:(NSString *)type
+{
+    if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
+        [type isEqualToString:@"YCodeProjectCenterProjectType"] ||
+        [type isEqualToString:@"xcodeproj"] ||
+        [type isEqualToString:@"pcproj"]) {
+        return [YCodeProject class];
+    }
+
+    return [super documentClassForType:type];
+}
+
+- (NSArray *)fileExtensionsFromType:(NSString *)type
+{
+    if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
+        [type isEqualToString:@"xcodeproj"]) {
+        return [NSArray arrayWithObject:@"xcodeproj"];
+    }
+
+    if ([type isEqualToString:@"YCodeProjectCenterProjectType"] ||
+        [type isEqualToString:@"pcproj"]) {
+        return [NSArray arrayWithObject:@"pcproj"];
+    }
+
+    return [super fileExtensionsFromType:type];
+}
+
+- (NSString *)displayNameForType:(NSString *)type
+{
+    if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
+        [type isEqualToString:@"xcodeproj"]) {
+        return @"Xcode project";
+    }
+
+    if ([type isEqualToString:@"YCodeProjectCenterProjectType"] ||
+        [type isEqualToString:@"pcproj"]) {
+        return @"ProjectCenter project";
+    }
+
+    return [super displayNameForType:type];
+}
 
 @end

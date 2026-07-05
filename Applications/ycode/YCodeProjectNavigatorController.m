@@ -25,9 +25,36 @@
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeProjectNavigatorItem.h"
 #import "YCodeProject.h"
+#import <XCode/PBXFileReference.h>
 #import <XCode/PBXTarget.h>
 
 @implementation YCodeProjectNavigatorController
+
+- (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item
+{
+    PBXFileReference *fileReference = nil;
+    NSString *path = nil;
+
+    if (item == nil || ![item isFile]) {
+        return nil;
+    }
+
+    fileReference = [item representedObject];
+    if (![fileReference respondsToSelector:@selector(path)]) {
+        return nil;
+    }
+
+    path = [fileReference path];
+    if (path == nil || [path length] == 0) {
+        return nil;
+    }
+
+    if ([path isAbsolutePath]) {
+        return path;
+    }
+
+    return [[_project projectDirectoryPath] stringByAppendingPathComponent:path];
+}
 
 - (instancetype)init
 {
@@ -86,7 +113,9 @@
     [self reloadProjectTree];
     if (_outlineView) {
         [_outlineView reloadData];
-        [_outlineView expandItem:[_rootItems firstObject]];
+        if ([_rootItems count] > 0) {
+            [_outlineView expandItem:[_rootItems objectAtIndex:0]];
+        }
     }
 }
 
@@ -286,7 +315,7 @@
             
             if ([navItem isFile]) {
                 // Open file in editor
-                NSString *filePath = [navItem filePath];
+                NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
                 if (filePath) {
                     [[_project editorController] openFile:filePath];
                 }
@@ -305,7 +334,7 @@
             
             if ([navItem isFile]) {
                 // Open file in editor
-                NSString *filePath = [navItem filePath];
+                NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
                 if (filePath) {
                     [[_project editorController] openFile:filePath];
                 }

@@ -10,5 +10,23 @@
     NSIcon = "Ycode.tiff";
     NSMainNibFile = "Ycode.gorm";
     NSPrincipalClass = NSApplication;
-    NSRole = Application;
+    NSRole = Editor;
+    NSTypes = (
+        {
+            NSDocumentClass = YCodeProject;
+            NSHumanReadableName = "Xcode project";
+            NSIcon = "Ycode.tiff";
+            NSName = YCodeXcodeProjectType;
+            NSRole = Editor;
+            NSUnixExtensions = ( xcodeproj );
+        },
+        {
+            NSDocumentClass = YCodeProject;
+            NSHumanReadableName = "ProjectCenter project";
+            NSIcon = "Ycode.tiff";
+            NSName = YCodeProjectCenterProjectType;
+            NSRole = Editor;
+            NSUnixExtensions = ( pcproj );
+        }
+    );
 }

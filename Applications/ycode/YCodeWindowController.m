@@ -71,18 +71,35 @@
 - (void)setProject:(YCodeProject *)project
 {
     ASSIGN(_project, project);
-    
+
+    if (_project) {
+        ASSIGN(_navigatorController, [_project navigatorController]);
+        ASSIGN(_editorController, [_project editorController]);
+    }
+
     [_navigatorController setProject:_project];
     [_editorController setProject:_project];
-    
-    if (_project) {
-        [[self window] setTitle:[[_project projectPath] lastPathComponent]];
+
+    if (_navigatorOutlineView) {
+        [_navigatorController setOutlineView:_navigatorOutlineView];
     }
+
+    if (_editorTabView) {
+        [_editorController setTabView:_editorTabView];
+    }
+    
+    if (_project)
+      {
+	if ([_project projectPath])
+	  {
+	    [[self window] setTitle:[[_project projectPath] lastPathComponent]];
+	  }
+      }
 }
 
 - (void)openProject:(NSString *)projectPath
 {
-    if (projectPath) {
+    if (projectPath != nil && [projectPath length] > 0) {
         YCodeProject *project = [[YCodeProject alloc] init];
         NSError *error = nil;
         NSURL *projectURL = [NSURL fileURLWithPath:projectPath];

@@ -10,7 +10,18 @@
 
 #import "AppController.h"
 #import "YCodeWindowController.h"
+#import "YCodeDocumentController.h"
 #import "YCodeProject.h"
+
+static NSURL *
+YCodeFileURLFromPath(NSString *path)
+{
+    if (path == nil || [path length] == 0) {
+        return nil;
+    }
+
+    return [NSURL fileURLWithPath:path];
+}
 
 @implementation AppController
 
@@ -53,20 +64,12 @@
 {
     [self updateApplicationMenuName];
     [self connectDocumentMenuActions];
-
-    // Create and show the main window
-    if (!windowController) {
-        windowController = [[YCodeWindowController alloc] init];
-    }
-    
-    [windowController showWindow:self];
-    [[windowController window] makeKeyAndOrderFront:self];
 }
 
-- (BOOL) applicationShouldTerminate: (id)sender
+- (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender
 {
     // Check if there are unsaved changes in open projects
-    if (windowController && [windowController project]) {
+    if ([[NSDocumentController sharedDocumentController] hasEditedDocuments]) {
         // TODO: Check for unsaved changes
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setMessageText:@"Do you want to save your changes before closing?"];
@@ -78,15 +81,15 @@
         RELEASE(alert);
         
         if (result == NSAlertThirdButtonReturn) {
-            return NO; // Cancel
+            return NSTerminateCancel;
         } else if (result == NSAlertFirstButtonReturn) {
             if (![self saveActiveProjectShowingPanel:NO]) {
-                return NO;
+                return NSTerminateCancel;
             }
         }
     }
     
-    return YES;
+    return NSTerminateNow;
 }
 
 - (void) applicationWillTerminate: (NSNotification *)aNotif
@@ -111,7 +114,8 @@
     
     NSInteger result = [panel runModal];
     if (result == NSModalResponseOK) {
-        NSURL *selectedURL = [[panel URLs] firstObject];
+        NSArray *urls = [panel URLs];
+        NSURL *selectedURL = ([urls count] > 0) ? [urls objectAtIndex:0] : nil;
         if (selectedURL) {
             [self createNewProjectAtURL:selectedURL];
         }
@@ -160,14 +164,15 @@
                                                                type:isXcodeProject ? @"Xcode" : @"ProjectCenter"];
     
     if (newProject) {
-        // Open the new project
-        if (!windowController) {
-            windowController = [[YCodeWindowController alloc] init];
+        NSURL *fileURL = YCodeFileURLFromPath([newProject projectPath]);
+
+        if (fileURL != nil) {
+            [newProject setFileURL:fileURL];
         }
-        [windowController setProject:newProject];
-        [windowController showWindow:self];
-        
+
         [[NSDocumentController sharedDocumentController] addDocument:newProject];
+        [newProject makeWindowControllers];
+        [newProject showWindows];
     } else {
         NSAlert *errorAlert = [[NSAlert alloc] init];
         [errorAlert setMessageText:@"Project Creation Failed"];
@@ -200,13 +205,15 @@
 
 - (BOOL)saveActiveProjectShowingPanel:(BOOL)showPanel
 {
-    YCodeProject *project = [windowController project];
-    NSString *projectPath = [project projectPath];
+    YCodeProject *project = (YCodeProject *)[[NSDocumentController sharedDocumentController] currentDocument];
+    NSString *projectPath = nil;
 
-    if (project == nil) {
+    if (project == nil || ![project isKindOfClass:[YCodeProject class]]) {
         NSBeep();
         return NO;
     }
+
+    projectPath = [project projectPath];
 
     if (showPanel || projectPath == nil || [projectPath length] == 0) {
         NSSavePanel *panel = [NSSavePanel savePanel];
@@ -225,6 +232,9 @@
         }
 
         projectPath = [[panel URL] path];
+        if (projectPath == nil || [projectPath length] == 0) {
+            return NO;
+        }
     }
 
     if (![project saveProjectToPath:projectPath]) {
@@ -237,7 +247,7 @@
         return NO;
     }
 
-    [[windowController window] setTitle:[[project projectPath] lastPathComponent]];
+    [[project windowControllers] makeObjectsPerformSelector:@selector(synchronizeWindowTitleWithDocumentName)];
     return YES;
 }
 
@@ -275,16 +285,20 @@
 - (BOOL) application: (NSApplication *)application
 	    openFile: (NSString *)fileName
 {
-    if (!windowController) {
-        windowController = [[YCodeWindowController alloc] init];
-        [windowController showWindow:self];
-    }
-    
     // Check if it's a project file
     NSString *extension = [fileName pathExtension];
     if ([extension isEqualToString:@"xcodeproj"] || [extension isEqualToString:@"pcproj"]) {
-        [windowController openProject:fileName];
-        return YES;
+        NSError *error = nil;
+        NSURL *fileURL = YCodeFileURLFromPath(fileName);
+        if (fileURL == nil) {
+            return NO;
+        }
+
+        id document = [[NSDocumentController sharedDocumentController]
+            openDocumentWithContentsOfURL:fileURL
+                                  display:YES
+                                    error:&error];
+        return (document != nil && error == nil);
     }
     
     return NO;
@@ -407,6 +421,7 @@
 - (IBAction) openProject: (id)sender
 {
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
+    NSError *error = nil;
     [openPanel setCanChooseFiles:YES];
     [openPanel setCanChooseDirectories:YES];
     [openPanel setAllowsMultipleSelection:NO];
@@ -415,13 +430,26 @@
     
     if ([openPanel runModal] == NSModalResponseOK) {
         NSString *projectPath = [[openPanel URL] path];
-        
-        if (!windowController) {
-            windowController = [[YCodeWindowController alloc] init];
-            [windowController showWindow:self];
+        NSURL *projectURL = YCodeFileURLFromPath(projectPath);
+
+        if (projectURL == nil) {
+            NSBeep();
+            return;
         }
-        
-        [windowController openProject:projectPath];
+
+        [[NSDocumentController sharedDocumentController]
+            openDocumentWithContentsOfURL:projectURL
+                                  display:YES
+                                    error:&error];
+
+        if (error != nil) {
+            NSAlert *alert = [[NSAlert alloc] init];
+            [alert setMessageText:@"Unable to open project"];
+            [alert setInformativeText:[error localizedDescription]];
+            [alert addButtonWithTitle:@"OK"];
+            [alert runModal];
+            RELEASE(alert);
+        }
     }
 }
 
