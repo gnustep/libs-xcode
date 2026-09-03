@@ -19,7 +19,7 @@ xcode_tests_OBJC_FILES = \
 
 xcode_tests_TOOL_LIBS += -lXCode
 xcode_tests_LIB_DIRS += -L../XCode/XCode.framework/Versions/0
-xcode_tests_INCLUDE_DIRS += -I../Tools/buildtool
+xcode_tests_INCLUDE_DIRS += -I.. -I../Tools/buildtool
 
 check:: all
 	./$(GNUSTEP_OBJ_DIR)/xcode_tests -project Sample.xcodeproj -workspace Sample.xcworkspace -target SampleTarget -scheme SampleScheme -configuration Debug -alltargets build
