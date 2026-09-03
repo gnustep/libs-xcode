@@ -35,15 +35,13 @@ sub-commands above:
 * ```-project <path>``` - build an ```.xcodeproj```.
 * ```-workspace <path>``` - build an ```.xcworkspace```.
 * ```-target <name>``` - build only the named target.
-* ```-scheme <name>``` - accepted as a target-name alias when no
-  ```-target``` is supplied.
+* ```-scheme <name>``` - accepted as a target-name alias when no -target is supplied.
 * ```-configuration <name>``` - use the named build configuration.
-* ```-alltargets``` - build all targets, even when a target or scheme is
-  supplied.
+* ```-alltargets``` - build all targets, even when a target or scheme is supplied.
 * ```-sdk <sdk>```, ```-arch <arch>```, ```-destination <destination>```,
-  ```-derivedDataPath <path>```, ```-archivePath <path>```, ```-jobs <count>```,
-  ```-parallelizeTargets```, ```-quiet```, ```-verbose```, ```-list```, and
-  ```-showBuildSettings``` are accepted for command-line compatibility.
+* ```-derivedDataPath <path>```, ```-archivePath <path>```, ```-jobs <count>```,
+* ```-parallelizeTargets```, ```-quiet```, ```-verbose```, ```-list```, and
+* ```-showBuildSettings``` are accepted for command-line compatibility.
 
 Examples:
 
