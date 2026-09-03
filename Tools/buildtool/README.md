@@ -25,6 +25,35 @@ Other sub-commands for buildtool include:
 * generate - the purpose of generate is to translate the Xcode
   project file into a GNUmakefile
 * clean - this cleans the build directory
+* install - this installs the built targets
+* link - this links the built targets
+* save - this saves the parsed project into a new project directory
+
+buildtool accepts these xcodebuild-style options in addition to the
+sub-commands above:
+
+* ```-project <path>``` - build an ```.xcodeproj```.
+* ```-workspace <path>``` - build an ```.xcworkspace```.
+* ```-target <name>``` - build only the named target.
+* ```-scheme <name>``` - accepted as a target-name alias when no
+  ```-target``` is supplied.
+* ```-configuration <name>``` - use the named build configuration.
+* ```-alltargets``` - build all targets, even when a target or scheme is
+  supplied.
+* ```-sdk <sdk>```, ```-arch <arch>```, ```-destination <destination>```,
+  ```-derivedDataPath <path>```, ```-archivePath <path>```, ```-jobs <count>```,
+  ```-parallelizeTargets```, ```-quiet```, ```-verbose```, ```-list```, and
+  ```-showBuildSettings``` are accepted for command-line compatibility.
+
+Examples:
+
+```
+buildtool -project MyApp.xcodeproj
+buildtool -workspace MyWorkspace.xcworkspace
+buildtool -project MyApp.xcodeproj -target MyApp -configuration Debug
+buildtool -project MyApp.xcodeproj clean
+buildtool -project MyApp.xcodeproj generate make
+```
 
 XCode
 ----

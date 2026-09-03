@@ -8,7 +8,6 @@
     FullVersionID = "0.1";
     NSExecutable = Ycode;
     NSIcon = "Ycode.tiff";
-    NSMainNibFile = "Ycode.gorm";
     NSPrincipalClass = NSApplication;
     NSRole = Editor;
     NSTypes = (

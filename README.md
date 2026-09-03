@@ -29,6 +29,34 @@ and it should build the project.  If it doesn't then submit a bug.
 Currently GNUstep can only build projects for macOS.  Once support for UIKit and
 other frameworks are available, those will be added.
 
+buildtool also accepts xcodebuild-style options alongside its original
+sub-commands.  The default action is `build`; `clean`, `install`, `generate`,
+`link`, and `save` remain available.
+
+Common examples:
+
+```
+buildtool -project MyApp.xcodeproj
+buildtool -workspace MyWorkspace.xcworkspace
+buildtool -project MyApp.xcodeproj -target MyApp -configuration Debug
+buildtool -project MyApp.xcodeproj clean
+buildtool -project MyApp.xcodeproj generate make
+```
+
+Supported xcodebuild-style options:
+
+* `-project <path>` - build an `.xcodeproj`.
+* `-workspace <path>` - build an `.xcworkspace`.
+* `-target <name>` - build only the named target.
+* `-scheme <name>` - accepted as a target-name alias when no `-target` is
+  supplied.
+* `-configuration <name>` - use the named build configuration.
+* `-alltargets` - build all targets, even when a target or scheme is supplied.
+* `-sdk <sdk>`, `-arch <arch>`, `-destination <destination>`,
+  `-derivedDataPath <path>`, `-archivePath <path>`, `-jobs <count>`,
+  `-parallelizeTargets`, `-quiet`, `-verbose`, `-list`, and
+  `-showBuildSettings` are accepted for command-line compatibility.
+
 #### 1.2.1 CocoaPods
 
 The library can also be consumed from CocoaPods on macOS:

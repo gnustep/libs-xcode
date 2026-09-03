@@ -12,6 +12,17 @@
 #import "YCodeWindowController.h"
 #import "YCodeDocumentController.h"
 #import "YCodeProject.h"
+#import "YCodeEditorController.h"
+
+static NSMenuItem *
+YCodeMenuItem(NSString *title, SEL action, NSString *keyEquivalent, id target)
+{
+    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title
+                                                  action:action
+                                           keyEquivalent:keyEquivalent];
+    [item setTarget:target];
+    return AUTORELEASE(item);
+}
 
 static NSURL *
 YCodeFileURLFromPath(NSString *path)
@@ -56,14 +67,136 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void) awakeFromNib
 {
+    [self buildMainMenu];
     [self updateApplicationMenuName];
     [self connectDocumentMenuActions];
 }
 
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif
 {
+    [self buildMainMenu];
     [self updateApplicationMenuName];
     [self connectDocumentMenuActions];
+}
+
+- (void)buildMainMenu
+{
+    NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"ApplicationName"];
+    NSMenu *mainMenu = nil;
+    NSMenu *appMenu = nil;
+    NSMenu *fileMenu = nil;
+    NSMenu *editMenu = nil;
+    NSMenu *viewMenu = nil;
+    NSMenu *productMenu = nil;
+    NSMenu *windowMenu = nil;
+    NSMenu *helpMenu = nil;
+    NSMenuItem *menuItem = nil;
+
+    if ([NSApp mainMenu] != nil) {
+        return;
+    }
+
+    if (applicationName == nil || [applicationName length] == 0) {
+        applicationName = [[NSProcessInfo processInfo] processName];
+    }
+
+    mainMenu = [[NSMenu alloc] initWithTitle:@""];
+
+    appMenu = [[NSMenu alloc] initWithTitle:applicationName];
+    [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"About %@", applicationName],
+                                   @selector(orderFrontStandardAboutPanel:), @"", NSApp)];
+    [appMenu addItem:[NSMenuItem separatorItem]];
+    [appMenu addItem:YCodeMenuItem(@"Preferences...", @selector(showPrefPanel:), @",", self)];
+    [appMenu addItem:[NSMenuItem separatorItem]];
+    [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"Hide %@", applicationName],
+                                   @selector(hide:), @"h", NSApp)];
+    [appMenu addItem:YCodeMenuItem(@"Hide Others", @selector(hideOtherApplications:), @"h", NSApp)];
+    [appMenu addItem:YCodeMenuItem(@"Show All", @selector(unhideAllApplications:), @"", NSApp)];
+    [appMenu addItem:[NSMenuItem separatorItem]];
+    [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"Quit %@", applicationName],
+                                   @selector(terminate:), @"q", NSApp)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:applicationName action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:appMenu];
+    [mainMenu addItem:menuItem];
+    RELEASE(menuItem);
+    RELEASE(appMenu);
+
+    fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
+    [fileMenu addItem:YCodeMenuItem(@"New Project...", @selector(newProject:), @"n", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Open Project...", @selector(openProject:), @"o", self)];
+    [fileMenu addItem:[NSMenuItem separatorItem]];
+    [fileMenu addItem:YCodeMenuItem(@"New File", @selector(newFile:), @"", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Close File", @selector(closeCurrentFile:), @"w", self)];
+    [fileMenu addItem:[NSMenuItem separatorItem]];
+    [fileMenu addItem:YCodeMenuItem(@"Save", @selector(saveDocument:), @"s", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Save As...", @selector(saveDocumentAs:), @"S", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Save All", @selector(saveAllDocuments:), @"", self)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"File" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:fileMenu];
+    [mainMenu addItem:menuItem];
+    RELEASE(menuItem);
+    RELEASE(fileMenu);
+
+    editMenu = [[NSMenu alloc] initWithTitle:@"Edit"];
+    [editMenu addItem:YCodeMenuItem(@"Undo", @selector(undo:), @"z", nil)];
+    [editMenu addItem:YCodeMenuItem(@"Redo", @selector(redo:), @"Z", nil)];
+    [editMenu addItem:[NSMenuItem separatorItem]];
+    [editMenu addItem:YCodeMenuItem(@"Cut", @selector(cut:), @"x", nil)];
+    [editMenu addItem:YCodeMenuItem(@"Copy", @selector(copy:), @"c", nil)];
+    [editMenu addItem:YCodeMenuItem(@"Paste", @selector(paste:), @"v", nil)];
+    [editMenu addItem:YCodeMenuItem(@"Select All", @selector(selectAll:), @"a", nil)];
+    [editMenu addItem:[NSMenuItem separatorItem]];
+    [editMenu addItem:YCodeMenuItem(@"Find...", @selector(findInFile:), @"f", self)];
+    [editMenu addItem:YCodeMenuItem(@"Replace...", @selector(replaceInFile:), @"", self)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Edit" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:editMenu];
+    [mainMenu addItem:menuItem];
+    RELEASE(menuItem);
+    RELEASE(editMenu);
+
+    viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
+    [viewMenu addItem:YCodeMenuItem(@"Show Navigator", @selector(toggleNavigator:), @"0", self)];
+    [viewMenu addItem:YCodeMenuItem(@"Show Inspector", @selector(toggleInspector:), @"", self)];
+    [viewMenu addItem:YCodeMenuItem(@"Show Debug Area", @selector(toggleBottomPanel:), @"", self)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"View" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:viewMenu];
+    [mainMenu addItem:menuItem];
+    RELEASE(menuItem);
+    RELEASE(viewMenu);
+
+    productMenu = [[NSMenu alloc] initWithTitle:@"Product"];
+    [productMenu addItem:YCodeMenuItem(@"Build", @selector(buildProject:), @"b", self)];
+    [productMenu addItem:YCodeMenuItem(@"Clean", @selector(cleanProject:), @"k", self)];
+    [productMenu addItem:YCodeMenuItem(@"Run", @selector(runProject:), @"r", self)];
+    [productMenu addItem:YCodeMenuItem(@"Stop", @selector(stopProject:), @".", self)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Product" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:productMenu];
+    [mainMenu addItem:menuItem];
+    RELEASE(menuItem);
+    RELEASE(productMenu);
+
+    windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+    [windowMenu addItem:YCodeMenuItem(@"Minimize", @selector(performMiniaturize:), @"m", nil)];
+    [windowMenu addItem:YCodeMenuItem(@"Zoom", @selector(performZoom:), @"", nil)];
+    [windowMenu addItem:[NSMenuItem separatorItem]];
+    [windowMenu addItem:YCodeMenuItem(@"Bring All to Front", @selector(arrangeInFront:), @"", NSApp)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:windowMenu];
+    [mainMenu addItem:menuItem];
+    [NSApp setWindowsMenu:windowMenu];
+    RELEASE(menuItem);
+    RELEASE(windowMenu);
+
+    helpMenu = [[NSMenu alloc] initWithTitle:@"Help"];
+    [helpMenu addItem:YCodeMenuItem(@"Ycode Help", @selector(showHelp:), @"?", NSApp)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Help" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:helpMenu];
+    [mainMenu addItem:menuItem];
+    RELEASE(menuItem);
+    RELEASE(helpMenu);
+
+    [NSApp setMainMenu:mainMenu];
+    RELEASE(mainMenu);
 }
 
 - (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender
@@ -406,6 +539,124 @@ YCodeFileURLFromPath(NSString *path)
 
         [self connectDocumentMenuActionsInMenu:[item submenu]];
     }
+}
+
+- (YCodeProject *)currentProject
+{
+    id document = [[NSDocumentController sharedDocumentController] currentDocument];
+
+    if ([document isKindOfClass:[YCodeProject class]]) {
+        return document;
+    }
+
+    return nil;
+}
+
+- (YCodeWindowController *)currentProjectWindowController
+{
+    YCodeProject *project = [self currentProject];
+    NSWindow *keyWindow = [NSApp keyWindow];
+    NSEnumerator *enumerator = nil;
+    YCodeWindowController *controller = nil;
+
+    if (project == nil) {
+        return nil;
+    }
+
+    enumerator = [[project windowControllers] objectEnumerator];
+    while ((controller = [enumerator nextObject]) != nil) {
+        if ([controller window] == keyWindow) {
+            return controller;
+        }
+    }
+
+    return [[project windowControllers] count] > 0
+        ? [[project windowControllers] objectAtIndex:0]
+        : nil;
+}
+
+- (YCodeEditorController *)currentEditorController
+{
+    return [[self currentProject] editorController];
+}
+
+- (IBAction)newFile:(id)sender
+{
+    [[self currentEditorController] newFile:sender];
+}
+
+- (IBAction)closeCurrentFile:(id)sender
+{
+    [[self currentEditorController] closeCurrentFile:sender];
+}
+
+- (IBAction)findInFile:(id)sender
+{
+    [[self currentEditorController] findInFile:sender];
+}
+
+- (IBAction)replaceInFile:(id)sender
+{
+    [[self currentEditorController] replaceInFile:sender];
+}
+
+- (IBAction)buildProject:(id)sender
+{
+    YCodeWindowController *controller = [self currentProjectWindowController];
+
+    if (controller != nil) {
+        [controller buildProject:sender];
+    } else {
+        NSBeep();
+    }
+}
+
+- (IBAction)cleanProject:(id)sender
+{
+    YCodeProject *project = [self currentProject];
+
+    if (project != nil) {
+        [project cleanProject];
+    } else {
+        NSBeep();
+    }
+}
+
+- (IBAction)runProject:(id)sender
+{
+    YCodeWindowController *controller = [self currentProjectWindowController];
+
+    if (controller != nil) {
+        [controller runProject:sender];
+    } else {
+        NSBeep();
+    }
+}
+
+- (IBAction)stopProject:(id)sender
+{
+    YCodeWindowController *controller = [self currentProjectWindowController];
+
+    if (controller != nil) {
+        [controller stopProject:sender];
+    } else {
+        NSBeep();
+    }
+}
+
+- (IBAction)toggleNavigator:(id)sender
+{
+    [[self currentProjectWindowController] toggleNavigator:sender];
+}
+
+- (IBAction)toggleInspector:(id)sender
+{
+    [[self currentProjectWindowController] toggleInspector:sender];
+}
+
+- (IBAction)toggleBottomPanel:(id)sender
+{
+    [[self currentProjectWindowController] toggleBottomPanel:sender];
 }
 
 - (void) showPrefPanel: (id)sender

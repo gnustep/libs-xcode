@@ -27,9 +27,12 @@
 
 #import <XCode/PBXCoder.h>
 #import <XCode/PBXContainer.h>
+#import <XCode/PBXProject.h>
+#import <XCode/PBXTarget.h>
 #import <XCode/NSString+PBXAdditions.h>
 #import <XCode/XCWorkspaceParser.h>
 #import <XCode/XCWorkspace.h>
+#import <XCode/XCConfigurationList.h>
 
 #import "ToolDelegate.h"
 #import "ArgPair.h"
@@ -89,6 +92,58 @@ NSString *resolveProjectName(BOOL *isProject)
   return fileName;
 }
 
+static BOOL optionTakesValue(NSString *option)
+{
+  NSArray *options = [NSArray arrayWithObjects:
+    @"-project", @"-workspace", @"-target", @"-scheme",
+    @"-configuration", @"-sdk", @"-arch", @"-destination",
+    @"-derivedDataPath", @"-archivePath", @"-jobs", @"-write",
+    @"generate", @"save", nil];
+
+  return [options containsObject: option];
+}
+
+static BOOL optionTakesNoValue(NSString *option)
+{
+  NSArray *options = [NSArray arrayWithObjects:
+    @"-alltargets", @"-parallelizeTargets", @"-quiet", @"-verbose",
+    @"-list", @"-showBuildSettings", @"-license", @"build",
+    @"install", @"clean", @"link", nil];
+
+  return [options containsObject: option];
+}
+
+static NSString *projectFileForPath(NSString *path, BOOL *isProject)
+{
+  NSString *fileName = nil;
+  NSString *ext = [path pathExtension];
+
+  if ([ext isEqualToString: @"xcworkspace"])
+    {
+      *isProject = NO;
+      fileName = [path stringByAppendingPathComponent:
+			 @"contents.xcworkspacedata"];
+    }
+  else if ([ext isEqualToString: @"xcodeproj"])
+    {
+      *isProject = YES;
+      fileName = [path stringByAppendingPathComponent:
+			 @"project.pbxproj"];
+    }
+  else if ([[path lastPathComponent] isEqualToString: @"project.pbxproj"])
+    {
+      *isProject = YES;
+      fileName = path;
+    }
+  else if ([[path lastPathComponent] isEqualToString: @"contents.xcworkspacedata"])
+    {
+      *isProject = NO;
+      fileName = path;
+    }
+
+  return fileName;
+}
+
 // ToolDelegate...
 @implementation ToolDelegate
 
@@ -115,64 +170,16 @@ NSString *resolveProjectName(BOOL *isProject)
 	{
 	  pair = AUTORELEASE([[ArgPair alloc] init]);
 
-	  if ([obj isEqualToString: @"-project"])
+	  if (optionTakesValue(obj))
 	    {
 	      [pair setArgument: obj];
 	      parse_val = YES;	      
 	    }
 
-	  if ([obj isEqualToString: @"-target"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = YES;	      
-	    }
-
-	  if ([obj isEqualToString: @"-write"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = YES;	      
-	    }
-
-	  if ([obj isEqualToString: @"-license"])
+	  if (optionTakesNoValue(obj))
 	    {
 	      [pair setArgument: obj];
 	      parse_val = NO;	      
-	    }
-
-	  if ([obj isEqualToString: @"build"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = NO;
-	    }
-
-	  if ([obj isEqualToString: @"install"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = NO;
-	    }
-
-	  if ([obj isEqualToString: @"clean"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = NO;
-	    }
-
-	  if ([obj isEqualToString: @"generate"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = YES;
-	    }
-
-	  if ([obj isEqualToString: @"link"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = NO;
-	    }
-
-	  if ([obj isEqualToString: @"save"])
-	    {
-	      [pair setArgument: obj];
-	      parse_val = YES;
 	    }
 
 	  // If there is no parameter for the argument, set it anyway...
@@ -190,6 +197,45 @@ NSString *resolveProjectName(BOOL *isProject)
     }
 
   return result;
+}
+
+- (BOOL) applyTargetName: (NSString *)targetName
+	       toProject: (PBXProject *)project
+{
+  NSMutableArray *matchingTargets = [NSMutableArray array];
+  NSEnumerator *en = [[project targets] objectEnumerator];
+  PBXTarget *target = nil;
+
+  while ((target = [en nextObject]) != nil)
+    {
+      if ([[target name] isEqualToString: targetName])
+	{
+	  [matchingTargets addObject: target];
+	}
+    }
+
+  if ([matchingTargets count] == 0)
+    {
+      [self postMessage: @"# No target named \"%@\".", targetName];
+      return NO;
+    }
+
+  [project setTargets: matchingTargets];
+  return YES;
+}
+
+- (void) applyConfigurationName: (NSString *)configurationName
+		      toProject: (PBXProject *)project
+{
+  NSEnumerator *en = [[project targets] objectEnumerator];
+  PBXTarget *target = nil;
+
+  [[project buildConfigurationList] setDefaultConfigurationName: configurationName];
+
+  while ((target = [en nextObject]) != nil)
+    {
+      [[target buildConfigurationList] setDefaultConfigurationName: configurationName];
+    }
 }
 
 - (void) process
@@ -218,27 +264,16 @@ NSString *resolveProjectName(BOOL *isProject)
       file = [opt value];
     }
 
+  opt = [args objectForKey: @"-workspace"];
+  if (opt != nil)
+    {
+      file = [opt value];
+    }
+
   if (file != nil)
     {
-      NSString *ext = [file pathExtension];
-      
-      if ([ext isEqualToString: @"xcworkspace"])
-	{
-	  isProject = NO;
-	  fileName = file;
-	} 
-      else if ([ext isEqualToString: @"xcodeproj"])
-	{
-	  isProject = YES;
-	  fileName = file;
-	}
-      
-      if (fileName != nil)
-	{
-	  fileName = [fileName stringByAppendingPathComponent: 
-				 @"project.pbxproj"];
-	}
-      else
+      fileName = projectFileForPath(file, &isProject);
+      if (fileName == nil)
 	{
 	  fileName = resolveProjectName(&isProject);
 	}	  
@@ -327,6 +362,27 @@ NSString *resolveProjectName(BOOL *isProject)
 		  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
 		  container = [coder unarchive];
 		  [container setParameter: parameter];
+
+		  opt = [args objectForKey: @"-configuration"];
+		  if (opt != nil)
+		    {
+		      [self applyConfigurationName: [opt value]
+					 toProject: [container rootObject]];
+		    }
+
+		  opt = [args objectForKey: @"-target"];
+		  if (opt == nil)
+		    {
+		      opt = [args objectForKey: @"-scheme"];
+		    }
+		  if (opt != nil &&
+		      [args objectForKey: @"-alltargets"] == nil &&
+		      [self applyTargetName: [opt value]
+				  toProject: [container rootObject]] == NO)
+		    {
+		      RELEASE(coder);
+		      return;
+		    }
 		  		  
 		  [coder setDelegate: self];
 		  

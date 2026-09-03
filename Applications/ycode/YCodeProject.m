@@ -453,7 +453,7 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (NSString *)windowNibName
 {
-    return @"YCodeProject";
+    return nil;
 }
 
 - (void)makeWindowControllers

@@ -69,6 +69,18 @@
 
 - (void)dealloc
 {
+    if (_outlineView) {
+        if ([_outlineView dataSource] == self) {
+            [_outlineView setDataSource:nil];
+        }
+        if ([_outlineView delegate] == self) {
+            [_outlineView setDelegate:nil];
+        }
+        if ([_outlineView target] == self) {
+            [_outlineView setTarget:nil];
+        }
+    }
+
     RELEASE(_project);
     RELEASE(_outlineView);
     RELEASE(_rootItems);
@@ -99,6 +111,18 @@
 
 - (void)setOutlineView:(NSOutlineView *)outlineView
 {
+    if (_outlineView && _outlineView != outlineView) {
+        if ([_outlineView dataSource] == self) {
+            [_outlineView setDataSource:nil];
+        }
+        if ([_outlineView delegate] == self) {
+            [_outlineView setDelegate:nil];
+        }
+        if ([_outlineView target] == self) {
+            [_outlineView setTarget:nil];
+        }
+    }
+
     ASSIGN(_outlineView, outlineView);
     [_outlineView setDataSource:self];
     [_outlineView setDelegate:self];
@@ -524,6 +548,8 @@
 - (BOOL)outlineView:(NSOutlineView *)outlineView shouldSelectTableColumn:(NSTableColumn *)tableColumn { return YES; }
 
 - (NSCell *)outlineView:(NSOutlineView *)outlineView dataCellForTableColumn:(NSTableColumn *)tableColumn item:(id)item { return nil; }
+- (CGFloat)outlineView:(NSOutlineView *)outlineView heightOfRowByItem:(id)item { return [outlineView rowHeight]; }
+- (CGFloat)outlineView:(NSOutlineView *)outlineView sizeToFitWidthOfColumn:(NSInteger)column { return 0; }
 - (void)outlineView:(NSOutlineView *)outlineView willDisplayOutlineCell:(id)cell forTableColumn:(NSTableColumn *)tableColumn item:(id)item { }
 - (BOOL)selectionShouldChangeInOutlineView:(NSOutlineView *)outlineView { return YES; }
 - (void)outlineView:(NSOutlineView *)outlineView didClickTableColumn:(NSTableColumn *)tableColumn { }

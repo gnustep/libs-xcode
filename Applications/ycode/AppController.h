@@ -42,6 +42,11 @@
 - (void) awakeFromNib;
 
 /**
+ * Builds the application main menu without loading gorm resources.
+ */
+- (void) buildMainMenu;
+
+/**
  * Called when the application finishes launching.
  */
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif;
@@ -100,6 +105,17 @@
  */
 - (IBAction) newDocument: (id)sender;
 - (IBAction) openDocument: (id)sender;
+
+/**
+ * Project and view menu entry points.
+ */
+- (IBAction) buildProject: (id)sender;
+- (IBAction) cleanProject: (id)sender;
+- (IBAction) runProject: (id)sender;
+- (IBAction) stopProject: (id)sender;
+- (IBAction) toggleNavigator: (id)sender;
+- (IBAction) toggleInspector: (id)sender;
+- (IBAction) toggleBottomPanel: (id)sender;
 
 @end
 

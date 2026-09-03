@@ -30,11 +30,34 @@
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
 
+static NSScrollView *
+YCodeScrollViewWithDocumentView(NSView *documentView)
+{
+    NSScrollView *scrollView = [[NSScrollView alloc] initWithFrame:[documentView frame]];
+
+    [scrollView setHasVerticalScroller:YES];
+    [scrollView setHasHorizontalScroller:YES];
+    [scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [scrollView setDocumentView:documentView];
+
+    return AUTORELEASE(scrollView);
+}
+
 @implementation YCodeWindowController
 
 - (instancetype)init
 {
-    self = [super initWithWindowNibName:@"YCodeWindow"];
+    NSRect contentRect = NSMakeRect(100, 100, 980, 680);
+    NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask |
+        NSMiniaturizableWindowMask | NSResizableWindowMask;
+    NSWindow *window = [[NSWindow alloc] initWithContentRect:contentRect
+                                                   styleMask:styleMask
+                                                     backing:NSBackingStoreBuffered
+                                                       defer:NO];
+
+    self = [super initWithWindow:window];
+    RELEASE(window);
+
     if (self) {
         _navigatorVisible = YES;
         _inspectorVisible = YES;
@@ -43,6 +66,10 @@
         // Initialize controllers
         _navigatorController = [[YCodeProjectNavigatorController alloc] init];
         _editorController = [[YCodeEditorController alloc] init];
+
+        [[self window] setTitle:@"Ycode"];
+        [[self window] setMinSize:NSMakeSize(700, 420)];
+        [self setupInterface];
     }
     return self;
 }
@@ -131,6 +158,64 @@
 
 - (void)setupInterface
 {
+    NSView *contentView = [[self window] contentView];
+    NSRect bounds = [contentView bounds];
+    CGFloat width = MAX(NSWidth(bounds), 700);
+    CGFloat height = MAX(NSHeight(bounds), 420);
+    CGFloat navigatorWidth = MIN(220, width * 0.3);
+    CGFloat inspectorWidth = MIN(240, MAX(0, width - navigatorWidth - 240));
+    CGFloat editorWidth = MAX(0, width - navigatorWidth - inspectorWidth);
+    NSRect bottomFrame = NSMakeRect(0, 0, editorWidth, 170);
+    NSRect mainFrame = NSMakeRect(0, 0, width, height);
+    NSRect navigatorFrame = NSMakeRect(0, 0, navigatorWidth, NSHeight(mainFrame));
+    NSRect contentFrame = NSMakeRect(0, 0, width - navigatorWidth, NSHeight(mainFrame));
+    NSRect editorFrame = NSMakeRect(0, 0, editorWidth, NSHeight(contentFrame));
+    NSRect inspectorFrame = NSMakeRect(0, 0, inspectorWidth, NSHeight(contentFrame));
+
+    if (_mainSplitView == nil) {
+        _mainSplitView = [[NSSplitView alloc] initWithFrame:mainFrame];
+        [_mainSplitView setVertical:YES];
+        [_mainSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [contentView addSubview:_mainSplitView];
+        RELEASE(_mainSplitView);
+    }
+
+    if (_navigatorView == nil) {
+        _navigatorView = [[NSView alloc] initWithFrame:navigatorFrame];
+        [_navigatorView setAutoresizingMask:NSViewHeightSizable];
+        [_mainSplitView addSubview:_navigatorView];
+        RELEASE(_navigatorView);
+    }
+
+    if (_contentSplitView == nil) {
+        _contentSplitView = [[NSSplitView alloc] initWithFrame:contentFrame];
+        [_contentSplitView setVertical:YES];
+        [_contentSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_mainSplitView addSubview:_contentSplitView];
+        RELEASE(_contentSplitView);
+    }
+
+    if (_editorView == nil) {
+        _editorView = [[NSView alloc] initWithFrame:editorFrame];
+        [_editorView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_contentSplitView addSubview:_editorView];
+        RELEASE(_editorView);
+    }
+
+    if (_inspectorView == nil) {
+        _inspectorView = [[NSView alloc] initWithFrame:inspectorFrame];
+        [_inspectorView setAutoresizingMask:NSViewHeightSizable];
+        [_contentSplitView addSubview:_inspectorView];
+        RELEASE(_inspectorView);
+    }
+
+    if (_bottomView == nil) {
+        _bottomView = [[NSView alloc] initWithFrame:bottomFrame];
+        [_bottomView setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
+        [_editorView addSubview:_bottomView];
+        RELEASE(_bottomView);
+    }
+
     [self setupToolbar];
     [self setupNavigatorArea];
     [self setupEditorArea];
@@ -167,8 +252,38 @@
 
 - (void)setupNavigatorArea
 {
+    if (_navigatorSegmentControl == nil) {
+        _navigatorSegmentControl = [[NSSegmentedControl alloc] initWithFrame:NSMakeRect(8, NSHeight([_navigatorView bounds]) - 32, 204, 24)];
+        [_navigatorSegmentControl setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+        [_navigatorView addSubview:_navigatorSegmentControl];
+        RELEASE(_navigatorSegmentControl);
+    }
+
+    if (_navigatorOutlineView == nil) {
+        NSRect outlineFrame = NSMakeRect(0, 0, NSWidth([_navigatorView bounds]), NSHeight([_navigatorView bounds]) - 40);
+        NSScrollView *scrollView = nil;
+        NSTableColumn *column = nil;
+
+        _navigatorOutlineView = [[NSOutlineView alloc] initWithFrame:outlineFrame];
+        [_navigatorOutlineView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_navigatorOutlineView setHeaderView:nil];
+
+        column = [[NSTableColumn alloc] initWithIdentifier:@"name"];
+        [column setTitle:@"Project"];
+        [column setWidth:NSWidth(outlineFrame)];
+        [_navigatorOutlineView addTableColumn:column];
+        [_navigatorOutlineView setOutlineTableColumn:column];
+        RELEASE(column);
+
+        scrollView = YCodeScrollViewWithDocumentView(_navigatorOutlineView);
+        [scrollView setFrame:outlineFrame];
+        [_navigatorView addSubview:scrollView];
+        RELEASE(_navigatorOutlineView);
+    }
+
     if (_navigatorOutlineView) {
         [_navigatorController setOutlineView:_navigatorOutlineView];
+        [_navigatorOutlineView setMenu:[_navigatorController contextMenu]];
     }
     
     if (_navigatorSegmentControl) {
@@ -185,6 +300,20 @@
 
 - (void)setupEditorArea
 {
+    if (_editorTabView == nil) {
+        NSRect tabFrame = [_editorView bounds];
+
+        if (_bottomPanelVisible) {
+            tabFrame.size.height -= NSHeight([_bottomView frame]);
+            tabFrame.origin.y = NSHeight([_bottomView frame]);
+        }
+
+        _editorTabView = [[NSTabView alloc] initWithFrame:tabFrame];
+        [_editorTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_editorView addSubview:_editorTabView];
+        RELEASE(_editorTabView);
+    }
+
     if (_editorTabView) {
         [_editorController setTabView:_editorTabView];
         [_editorTabView setDelegate:_editorController];
@@ -193,6 +322,13 @@
 
 - (void)setupInspectorArea
 {
+    if (_inspectorTabView == nil) {
+        _inspectorTabView = [[NSTabView alloc] initWithFrame:[_inspectorView bounds]];
+        [_inspectorTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_inspectorView addSubview:_inspectorTabView];
+        RELEASE(_inspectorTabView);
+    }
+
     if (_inspectorTabView) {
         [_inspectorTabView setDelegate:self];
         
@@ -211,6 +347,25 @@
 
 - (void)setupBottomPanel
 {
+    if (_bottomTabView == nil) {
+        _bottomTabView = [[NSTabView alloc] initWithFrame:[_bottomView bounds]];
+        [_bottomTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_bottomView addSubview:_bottomTabView];
+        RELEASE(_bottomTabView);
+    }
+
+    if (_consoleTextView == nil) {
+        _consoleTextView = [[NSTextView alloc] initWithFrame:[_bottomView bounds]];
+        [_consoleTextView setEditable:NO];
+        [_consoleTextView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    }
+
+    if (_issuesTextView == nil) {
+        _issuesTextView = [[NSTextView alloc] initWithFrame:[_bottomView bounds]];
+        [_issuesTextView setEditable:NO];
+        [_issuesTextView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    }
+
     if (_bottomTabView) {
         [_bottomTabView setDelegate:self];
         
@@ -218,7 +373,7 @@
         NSTabViewItem *consoleTab = [[NSTabViewItem alloc] initWithIdentifier:@"console"];
         [consoleTab setLabel:@"Console"];
         if (_consoleTextView) {
-            [consoleTab setView:_consoleTextView];
+            [consoleTab setView:YCodeScrollViewWithDocumentView(_consoleTextView)];
         }
         [_bottomTabView addTabViewItem:consoleTab];
         RELEASE(consoleTab);
@@ -227,7 +382,7 @@
         NSTabViewItem *issuesTab = [[NSTabViewItem alloc] initWithIdentifier:@"issues"];
         [issuesTab setLabel:@"Issues"];
         if (_issuesTextView) {
-            [issuesTab setView:_issuesTextView];
+            [issuesTab setView:YCodeScrollViewWithDocumentView(_issuesTextView)];
         }
         [_bottomTabView addTabViewItem:issuesTab];
         RELEASE(issuesTab);

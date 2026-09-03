@@ -8,11 +8,22 @@
 
 #import <AppKit/AppKit.h>
 #import "YCodeDocumentController.h"
+#import "AppController.h"
 
 int 
 main(int argc, const char *argv[])
 {
+  CREATE_AUTORELEASE_POOL(pool);
+  AppController *delegate = nil;
+
   [YCodeDocumentController sharedDocumentController];
+  [NSApplication sharedApplication];
+
+  delegate = [[AppController alloc] init];
+  [NSApp setDelegate: delegate];
+  [delegate buildMainMenu];
+
+  RELEASE(pool);
 
 // Uncomment if your application is Renaissance application
 /*  CREATE_AUTORELEASE_POOL (pool);
