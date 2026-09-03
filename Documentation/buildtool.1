@@ -5,77 +5,421 @@
 .\"Process this file with
 .\"groff -man -Tascii buildtool.1
 .\"
-.TH BUILDTOOL 1 "June 2024" GNUstep "GNUstep System Manual"
+.TH BUILDTOOL 1 "September 2026" GNUstep "GNUstep System Manual"
 .SH NAME
-buildtool \- build macOS projects that use xcode
+buildtool \- build and translate Xcode projects with GNUstep
 .SH SYNOPSIS
 .B buildtool
-.RB [clean | generate
-.RB [makefile|cmake|projectbuilder|projectcenter]
-.RB | build]
-.RB [filename]
+.RI " [options] [build | clean | install | link]"
 .P
+.B buildtool
+.RI " [options] generate"
+.I generator
+.P
+.B buildtool
+.RI " [options] save"
+.I output_directory
 .SH DESCRIPTION
-The 
+The
 .B buildtool
-command allows you to build a project that was originally created with Xcode on macOS.
+utility is the command-line front end for the GNUstep XCode library. It reads
+Xcode project files and workspaces, interprets their targets, build
+configurations, dependencies, and build phases, and then performs a build-like
+operation on GNUstep systems.
 .PP
-You can specify the project name if you need to (for example, if there are several .xcodeproj
-files in one directory) if you don't it will use the first one it finds and build with that.
-.I filenames
-The filename for the .xcodeproj is assumed to be in the current working directory.
-.PP
-By default, 
+The default operation is
+.BR build .
+If no operation is specified,
 .B buildtool
-will open
-.I filename
-in the current working directory or, if no filename is specified, will build using the
-first one it finds.
+searches the current working directory for an
+.I .xcworkspace
+bundle first, then for an
+.I .xcodeproj
+bundle, and builds the first matching entry it finds. Hidden AppleDouble files
+whose names contain
+.I ._
+are ignored during this search.
 .PP
+For an Xcode project,
+.B buildtool
+loads
+.I project.pbxproj
+from the project bundle. For a workspace, it loads
+.I contents.xcworkspacedata
+from the workspace bundle and visits the referenced projects in reverse
+workspace order. Workspace builds collect library, link, and include paths from
+the referenced projects and pass them into each project build.
+.PP
+Build products are written below the current directory, normally as:
+.PP
+.RS
+.I build/TARGET_NAME/Products/PRODUCT_NAME
+.RE
+.PP
+Applications and bundles are laid out as product wrappers. Framework targets
+receive a framework directory structure with
+.I Versions
+and compatibility symlinks. Generated headers for frameworks and libraries may
+be placed below
+.IR derived_src .
+.SH OPERATIONS
+.TP
+.B build
+Build the selected project or workspace. This is the default operation. Project
+builds apply the selected configuration, plan target order, build target
+dependencies, create product directories, and execute each target's build
+phases.
+.TP
+.B clean
+Clean the selected project or workspace. Project targets remove their
+.I build/TARGET_NAME
+directory and remove
+.I derived_src
+when present.
+.TP
+.B install
+Install previously built products into GNUstep local installation directories.
+Tools are copied to the directory reported by
+.BR "gnustep-config --variable=GNUSTEP_LOCAL_TOOLS" .
+Applications are copied to
+.BR GNUSTEP_LOCAL_APPS .
+Frameworks are copied under
+.BR GNUSTEP_LOCAL_LIBRARY/Frameworks ,
+with Headers and Libraries symlinks created under the GNUstep local library
+tree. Static and dynamic libraries are copied to the corresponding GNUstep
+local library locations and generated headers are installed below
+.BR GNUSTEP_LOCAL_HEADERS .
+.TP
+.B link
+Run only the link stage for supported targets. This is mainly useful after
+object files have already been built or when debugging link behavior.
+.TP
+.BI "generate " generator
+Translate the selected project using a generator bundle. The generator name is
+lower-cased and loaded as
+.IB generator .generator
+from the user's, local, or system GNUstep
+.I Library/Bundles
+directories. The source tree includes generator bundles named
+.BR makefile ,
+.BR cmake ,
+.BR projectbuilder ,
+and
+.BR projectcenter .
+For example,
+.I buildtool generate makefile
+uses
+.IR makefile.generator .
+.TP
+.BI "save " output_directory
+Re-archive the parsed Xcode project into
+.I output_directory/project.pbxproj
+using the current libs-xcode object model. The output directory is created if
+needed. This operation is for inspecting or rewriting the parsed project, not
+for producing a complete
+.I .xcodeproj
+bundle by itself.
 .SH OPTIONS
-.IP "build"
-build the .xcodeproj file in the current directory
-.I filename
-if optionally specified
-.IP "clean"
-clean the current project directory
-.IP "generate"
-generate one of the following... cmake, makefile, projectbuilder, projectcenter types of files.
-if none is specified it will assume you are trying to generate a makefile.
-.PP
-.SH EXAMPLES
-Build the project in the current working directory
-.PP
-.I buildtool
-.PP
-.I buildtool build
-.PP
-.I buildtool build
-.B filename.xcodeproj
-.PP
-To clean the project directory
-.PP
-.I buildtool clean
-.PP
-To generate a gnumakefile, cmake, etc...
-.PP
-.I buildtool generate
-.PP
-You can optionally use any of the types mentioned above after the generate option.
-.SH BUGS
+.TP
+.BI "\-project " path
+Use the specified Xcode project. The path may name an
+.I .xcodeproj
+bundle or a
+.I project.pbxproj
+file. If the path is not recognized,
 .B buildtool
-can currently open most project types.  If you find any that it can't handle or get any
-build errors that are specific to buildtool, then please submit bugs to the tracker on
-github for libs-xcode.
-.P
+falls back to searching the current directory.
+.TP
+.BI "\-workspace " path
+Use the specified Xcode workspace. The path may name an
+.I .xcworkspace
+bundle or a
+.I contents.xcworkspacedata
+file. If the path is not recognized,
+.B buildtool
+falls back to searching the current directory.
+.TP
+.BI "\-target " name
+Restrict a project operation to targets whose name exactly matches
+.IR name .
+If no matching target exists, the operation is not run.
+.TP
+.BI "\-scheme " name
+Accepted as a target-name alias when
+.B \-target
+is not supplied. It does not currently interpret Xcode scheme files.
+.TP
+.BI "\-configuration " name
+Set the default build configuration name on the project and on every selected
+target before running the operation.
+.TP
+.B \-alltargets
+Build all targets even when
+.B \-target
+or
+.B \-scheme
+is supplied.
+.TP
+.BI "\-sdk " sdk
+Accepted for command-line compatibility with
+.BR xcodebuild .
+The current command-line front end parses the value but does not otherwise
+apply it.
+.TP
+.BI "\-arch " arch
+Accepted for
+.B xcodebuild
+compatibility. The current command-line front end parses the value but does not
+otherwise apply it.
+.TP
+.BI "\-destination " destination
+Accepted for
+.B xcodebuild
+compatibility. The current command-line front end parses the value but does not
+otherwise apply it.
+.TP
+.BI "\-derivedDataPath " path
+Accepted for
+.B xcodebuild
+compatibility. Build products still use the GNUstep build layout described
+above.
+.TP
+.BI "\-archivePath " path
+Accepted for
+.B xcodebuild
+compatibility. Archive creation is not currently implemented by this front end.
+.TP
+.BI "\-jobs " count
+Accepted for
+.B xcodebuild
+compatibility. Parallel source builds are controlled by
+.I buildtool.plist
+rather than this option.
+.TP
+.B \-parallelizeTargets
+Accepted for
+.B xcodebuild
+compatibility.
+.TP
+.B \-quiet
+Accepted for
+.B xcodebuild
+compatibility.
+.TP
+.B \-verbose
+Accepted for
+.B xcodebuild
+compatibility.
+.TP
+.B \-list
+Accepted for
+.B xcodebuild
+compatibility.
+.TP
+.B \-showBuildSettings
+Accepted for
+.B xcodebuild
+compatibility.
+.TP
+.B \-license
+Accepted for
+.B xcodebuild
+compatibility.
+.TP
+.BI "\-write " path
+Parsed as an option that takes a value. In the current implementation it records
+the requested path and suppresses normal build operations; no output writer is
+implemented.
+.SH PROJECT SELECTION
+When neither
+.B \-project
+nor
+.B \-workspace
+is supplied,
+.B buildtool
+examines only the current working directory. It does not recursively search
+parent or child directories.
+.PP
+If both
+.B \-project
+and
+.B \-workspace
+are supplied,
+.B \-workspace
+takes precedence. In normal use, specify only one.
+.PP
+Bare positional project filenames are not part of the current interface. Use
+.B \-project
+or
+.B \-workspace
+to select a project or workspace explicitly.
+.SH BUILDTOOL.PLIST
+If a file named
+.I buildtool.plist
+exists in the current directory, the XCode library reads it as an additional
+configuration file. Top-level keys apply globally. A dictionary whose key is a
+target name may override or extend the global settings for that target.
+.PP
+Recognized settings include:
+.TP
+.B target
+Select platform-specific behavior. Common values documented by the project are
+.BR msvc ,
+.BR linux ,
+and
+.BR msys2 .
+.TP
+.B setupScript
+Shell script used to prepare the command environment before compiler or shell
+commands are run.
+.TP
+.B buildType
+Select source build scheduling. Documented values are
+.B linear
+and
+.BR parallel .
+.TP
+.B cpus
+Number of CPUs to use for parallel source builds.
+.TP
+.B copylibs
+When set to
+.BR YES ,
+copy shared libraries into the application or bundle product when supported.
+.TP
+.B ignored
+Array of frameworks or libraries to omit from link commands.
+.TP
+.B headerPaths
+Array of additional include paths used while compiling source files.
+.TP
+.B remappedSource
+Dictionary mapping an Xcode source filename to an alternate source filename.
+This is useful for substituting GNUstep-specific source files.
+.TP
+.B skippedTarget
+Array of target names to skip during build or link operations.
+.TP
+.B linkerPaths
+Array of additional library search paths. These are emitted as
+.B \-L
+arguments during linking.
+.TP
+.B additionalCFlags
+Additional C or Objective-C compiler flags.
+.TP
+.B substitutions
+Dictionary of link argument replacements. Mapping a library to the empty string
+removes it from the link line.
+.TP
+.B additional
+Array of extra linker arguments to append.
+.TP
+.B searchReplace
+Dictionary of substitutions applied to shell-script build phases.
+.SH EXAMPLES
+Build the first workspace or project in the current directory:
+.PP
+.RS
+.I buildtool
+.RE
+.PP
+Build a specific project:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj
+.RE
+.PP
+Build a specific target and configuration:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj -target MyApp -configuration Debug
+.RE
+.PP
+Use a scheme name as a target-name alias:
+.PP
+.RS
+.I buildtool -workspace MyWorkspace.xcworkspace -scheme MyApp
+.RE
+.PP
+Clean a project:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj clean
+.RE
+.PP
+Generate a GNUmakefile-oriented project output with the makefile generator:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj generate makefile
+.RE
+.PP
+Generate CMake files:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj generate cmake
+.RE
+.PP
+Install built products into GNUstep local installation directories:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj install
+.RE
+.PP
+Save the parsed project representation:
+.PP
+.RS
+.I buildtool -project MyApp.xcodeproj save NewProject.xcodeproj
+.RE
+.SH EXIT STATUS
+The current
+.B buildtool
+main program returns 0 after argument processing completes. Operation failures
+are reported in the command output as failed build, clean, install, generate,
+link, or save operations rather than through distinct process exit codes.
+.SH FILES
+.TP
+.I project.pbxproj
+The Xcode project property list read from an
+.I .xcodeproj
+bundle.
+.TP
+.I contents.xcworkspacedata
+The workspace file read from an
+.I .xcworkspace
+bundle.
+.TP
+.I buildtool.plist
+Optional per-directory build customization file.
+.TP
+.I build/
+Default build product tree.
+.TP
+.I derived_src/
+Generated source and header tree used by some product types.
+.SH BUGS
+The command intentionally accepts several
+.B xcodebuild
+options for compatibility before all corresponding behavior is implemented.
+Bare positional project filenames are ignored by the current parser. The
+.B \-list
+and
+.B \-showBuildSettings
+options are accepted but do not currently display Xcode-style reports.
+.PP
+Please report issues on the libs-xcode tracker:
+.I https://github.com/gnustep/libs-xcode/issues
 .SH HISTORY
 .B buildtool
-was written in September of 2012 and is regularly updated.
-.P
-This manual page was first written in June 2023
-.P
+was originally written in August 2011 as part of the GNUstep XCode library
+effort and has been updated as libs-xcode gained project, workspace, build, and
+generator support.
+.PP
+This manual page was first written in June 2023 and expanded in September
+2026.
 .SH AUTHORS
-.B buildtool 
-was written by Gregory Casamento <greg.casamento@gmail.com>.
+.B buildtool
+was written by Gregory John Casamento <greg.casamento@gmail.com>.
 .P
-This man page was written by Gregory Casamento <greg.casamento@gmail.com>
+This man page was written by Gregory Casamento <greg.casamento@gmail.com> and
+expanded by contributors to the GNUstep libs-xcode project.
