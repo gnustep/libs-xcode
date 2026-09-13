@@ -712,10 +712,13 @@
   
   // Generate Info.plist with the discovered icon
   NSString *pl = [self generateInfoPlistOutput: outputPlist withIconFile: iconFile];
-  BOOL f = [pl writeToFile: outputPlist atomically: YES];
-  if (f == NO)
+  if (pl != nil)
     {
-      NSLog(@"ERROR: Issue writing out plist file");
+      BOOL f = [pl writeToFile: outputPlist atomically: YES];
+      if (f == NO)
+	{
+	  NSLog(@"ERROR: Issue writing out plist file");
+	}
     }
   
   xcputs("=== Resources Build Phase Completed");
@@ -847,10 +850,13 @@
   // Generate Info.plist with the discovered icon
   NSString *outputPlist = [NSString stringWithFormat: @"%@Info.plist",appName] ;
   NSString *pl = [self generateInfoPlistOutput: outputPlist withIconFile: iconFile];
-  BOOL f = [pl writeToFile: outputPlist atomically: YES];
-  if (f == NO)
+  if (pl != nil)
     {
-      NSLog(@"ERROR: Issue writing out plist file");
+      BOOL f = [pl writeToFile: outputPlist atomically: YES];
+      if (f == NO)
+	{
+	  NSLog(@"ERROR: Issue writing out plist file");
+	}
     }
   
 
