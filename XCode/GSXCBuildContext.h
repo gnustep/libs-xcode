@@ -41,7 +41,8 @@
 - (NSMutableDictionary *) currentContext;
 
 /**
- * Returns the context dictionary for the given name.
+ * Starts a fresh operation context for the given target name.
+ * The previous context is restored by popCurrentContext.
  */
 - (NSMutableDictionary *) contextDictionaryForName: (NSString *)name;
 

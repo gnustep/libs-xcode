@@ -22,6 +22,8 @@ xcode_tests_LIB_DIRS += -L../XCode/XCode.framework/Versions/0
 xcode_tests_INCLUDE_DIRS += -I.. -I../Tools/buildtool
 
 check:: all
+	LD_LIBRARY_PATH="$(CURDIR)/../XCode/XCode.framework/Versions/0:$$LD_LIBRARY_PATH" \
+	DYLD_LIBRARY_PATH="$(CURDIR)/../XCode/XCode.framework/Versions/0:$$DYLD_LIBRARY_PATH" \
 	./$(GNUSTEP_OBJ_DIR)/xcode_tests -project Sample.xcodeproj -workspace Sample.xcworkspace -target SampleTarget -scheme SampleScheme -configuration Debug -alltargets build
 
 -include GNUmakefile.preamble

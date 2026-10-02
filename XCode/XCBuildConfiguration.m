@@ -32,6 +32,57 @@
 #import "setenv.h"
 #endif
 
+/* Build settings may encode argument lists as arrays or quoted strings. */
+static NSArray *GSXCSettingWords(id value)
+{
+  if ([value isKindOfClass: [NSArray class]]) return value;
+  if (![value isKindOfClass: [NSString class]]) return [NSArray array];
+  NSMutableArray *words = [NSMutableArray array];
+  NSMutableString *word = [NSMutableString string];
+  unichar quote = 0;
+  BOOL escaped = NO, started = NO;
+  for (NSUInteger i = 0; i < [value length]; i++)
+    {
+      unichar c = [value characterAtIndex: i];
+      if (escaped) { [word appendFormat: @"%C", c]; escaped = NO; started = YES; }
+      else if (c == '\\' && quote != '\'') { escaped = YES; started = YES; }
+      else if (quote) { if (c == quote) quote = 0; else [word appendFormat: @"%C", c]; }
+      else if (c == '\'' || c == '"') { quote = c; started = YES; }
+      else if ([[NSCharacterSet whitespaceAndNewlineCharacterSet] characterIsMember: c])
+        {
+          if (started) { [words addObject: [[word copy] autorelease]]; [word setString: @""]; started = NO; }
+        }
+      else { [word appendFormat: @"%C", c]; started = YES; }
+    }
+  if (escaped) [word appendString: @"\\"];
+  if (started) [words addObject: word];
+  return words;
+}
+
+static id GSXCInheritedSetting(id value, id inherited)
+{
+  if ([value isKindOfClass: [NSArray class]])
+    {
+      NSMutableArray *result = [NSMutableArray array];
+      for (id argument in value)
+        {
+          if ([argument isEqual: @"$(inherited)"] || [argument isEqual: @"${inherited}"])
+            [result addObjectsFromArray: GSXCSettingWords(inherited)];
+          else [result addObject: argument];
+        }
+      return result;
+    }
+  if ([value isKindOfClass: [NSString class]])
+    {
+      NSString *parent = [inherited isKindOfClass: [NSArray class]] ?
+        [inherited componentsJoinedByString: @" "] : inherited;
+      if (![parent isKindOfClass: [NSString class]]) parent = @"";
+      value = [value stringByReplacingOccurrencesOfString: @"$(inherited)" withString: parent];
+      return [value stringByReplacingOccurrencesOfString: @"${inherited}" withString: parent];
+    }
+  return value;
+}
+
 @implementation XCBuildConfiguration
 
 - (id) initWithName: (NSString *)theName
@@ -100,9 +151,12 @@
   while ((key = [en nextObject]) != nil)
     {
       id value = [buildSettings objectForKey: key];
+      if ([key isEqual: @"OTHER_LDFLAGS"]) value = GSXCSettingWords(value);
+      value = GSXCInheritedSetting(value, [context objectForKey: key]);
       if ([value isKindOfClass: [NSString class]])
 	{
 	  setenv([key cString],[value cString],1);
+          [context setObject: value forKey: key];
 	}
       else if([value isKindOfClass: [NSArray class]])
 	{

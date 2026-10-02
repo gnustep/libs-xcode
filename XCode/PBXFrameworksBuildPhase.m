@@ -262,7 +262,15 @@
       if ([file isEqualToString: @"-framework"])
         {
           NSString *framework = [en nextObject];
+          if (framework == nil)
+            [NSException raise: NSInvalidArgumentException format: @"OTHER_LDFLAGS: -framework requires a name"];
           linkString = [linkString stringByAppendingString: [self frameworkLinkString: framework]];
+        }
+      else
+        {
+          // Keep ordinary linker arguments as well as framework declarations.
+          NSString *quoted = [file stringByReplacingOccurrencesOfString: @"'" withString: @"'\"'\"'"];
+          linkString = [linkString stringByAppendingFormat: @"'%@' ", quoted];
         }
     }
 

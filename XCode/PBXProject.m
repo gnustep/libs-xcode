@@ -396,6 +396,8 @@
     {
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
+      // Seed each fresh target context before applying target overrides.
+      [_buildConfigurationList applyDefaultConfiguration];
       [self buildString];
 
       if(YES == [fileManager fileExistsAtPath: [target name]])
@@ -453,6 +455,8 @@
 	}
 
       [context contextDictionaryForName: [target name]];
+      // Seed each fresh target context before applying target overrides.
+      [_buildConfigurationList applyDefaultConfiguration];
       [context setObject: _mainGroup
 		  forKey: @"MAIN_GROUP"];
       //      [context setObject: _container
@@ -487,6 +491,8 @@
     {
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
+      // Seed each fresh target context before applying target overrides.
+      [_buildConfigurationList applyDefaultConfiguration];
       [context setObject: _mainGroup
 		  forKey: @"MAIN_GROUP"];
       //      [context setObject: _container
@@ -528,6 +534,8 @@
     {
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
+      // Seed each fresh target context before applying target overrides.
+      [_buildConfigurationList applyDefaultConfiguration];
       [self buildString];
 
       if(YES == [fileManager fileExistsAtPath:[target name]])
@@ -585,6 +593,8 @@
     {
       [target setProject: self];
       [context contextDictionaryForName: [target name]];
+      // Seed each fresh target context before applying target overrides.
+      [_buildConfigurationList applyDefaultConfiguration];
       [self buildString];
 
       if(YES == [fileManager fileExistsAtPath: [target name]])

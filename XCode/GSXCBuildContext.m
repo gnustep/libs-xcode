@@ -81,20 +81,18 @@ id _sharedBuildContext = nil;
 
 - (NSMutableDictionary *) contextDictionaryForName: (NSString *)name
 {
-  currentContext = [contextDictionary objectForKey: name];
-  if(currentContext == nil)
-    {
-      currentContext = [NSMutableDictionary dictionary];
-      [contextDictionary setObject: currentContext forKey: name];
-      [contextDictionary setObject: name forKey: @"TARGET_NAME"];
-      [stack addObject: currentContext];
-    }
+  // A new operation must not inherit settings or outputs from an earlier
+  // invocation of this target (or another project with the same target name).
+  currentContext = [NSMutableDictionary dictionary];
+  [currentContext setObject: name forKey: @"TARGET_NAME"];
+  [contextDictionary setObject: currentContext forKey: name];
+  [stack addObject: currentContext];
   return currentContext;
 }
 
 - (NSMutableDictionary *) popCurrentContext
 {
-  NSMutableDictionary *popped = [stack lastObject];
+  NSMutableDictionary *popped = [[[stack lastObject] retain] autorelease];
   [stack removeLastObject];
   currentContext = [stack lastObject];
   return popped;
