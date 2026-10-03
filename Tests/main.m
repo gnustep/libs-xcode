@@ -102,6 +102,38 @@ static void testBuildSettingInheritance(void)
   unsetenv("GSXC_TEST_SETTING");
 }
 
+static void testHeaderSearchPaths(void)
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  NSString *key = @"HEADER_SEARCH_PATHS";
+  [context contextDictionaryForName: @"HeaderSearchPaths"];
+  [configuration([NSDictionary dictionaryWithObject: @"$(SRCROOT)/UIKitTest" forKey: key]) apply];
+  testAssert([[context objectForKey: key] isEqual:
+    [NSArray arrayWithObject: @"$(SRCROOT)/UIKitTest"]],
+    @"single string header path becomes an array for source compilation");
+
+  NSArray *parent = [NSArray arrayWithObjects: @"Parent Headers", @"Other", nil];
+  [configuration([NSDictionary dictionaryWithObject: parent forKey: key]) apply];
+  testAssert([[context objectForKey: key] isEqual: parent],
+    @"array header paths preserve spaces");
+  [configuration([NSDictionary dictionaryWithObject:
+    @"$(inherited) \"$(SRCROOT)/Quoted Headers\" 'Single Quoted' Escaped\\ Path" forKey: key]) apply];
+  NSArray *expected = [parent arrayByAddingObjectsFromArray:
+    [NSArray arrayWithObjects: @"$(SRCROOT)/Quoted Headers", @"Single Quoted", @"Escaped Path", nil]];
+  testAssert([[context objectForKey: key] isEqual: expected],
+    @"string paths preserve quotes, escapes, and inherited array boundaries");
+  [configuration([NSDictionary dictionaryWithObject: @"${inherited} Extra" forKey: key]) apply];
+  testAssert([[context objectForKey: key] isEqual: [expected arrayByAddingObject: @"Extra"]],
+    @"brace inheritance works for header paths");
+  [configuration([NSDictionary dictionaryWithObject: @"Replacement" forKey: key]) apply];
+  testAssert([[context objectForKey: key] isEqual: [NSArray arrayWithObject: @"Replacement"]],
+    @"header paths without inherited replace parent paths");
+  [configuration([NSDictionary dictionaryWithObject: @"" forKey: key]) apply];
+  testAssert([[context objectForKey: key] isEqual: [NSArray array]],
+    @"empty string header paths become an empty array");
+  [context popCurrentContext];
+}
+
 static void testBuildtoolArgumentParsing(void)
 {
   ToolDelegate *delegate = AUTORELEASE([[ToolDelegate alloc] init]);
@@ -161,6 +193,7 @@ int main(int argc, const char **argv, char **env)
   testBuildtoolArgumentParsing();
   testProjectUnarchive();
   testBuildSettingInheritance();
+  testHeaderSearchPaths();
 
   if (failures == 0)
     {

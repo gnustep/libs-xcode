@@ -151,7 +151,11 @@ static id GSXCInheritedSetting(id value, id inherited)
   while ((key = [en nextObject]) != nil)
     {
       id value = [buildSettings objectForKey: key];
-      if ([key isEqual: @"OTHER_LDFLAGS"]) value = GSXCSettingWords(value);
+      /* Normalize list settings before inheritance so quoted paths and
+         inherited array elements retain their boundaries. */
+      if ([key isEqual: @"OTHER_LDFLAGS"] ||
+          [key isEqual: @"HEADER_SEARCH_PATHS"])
+        value = GSXCSettingWords(value);
       value = GSXCInheritedSetting(value, [context objectForKey: key]);
       if ([value isKindOfClass: [NSString class]])
 	{
