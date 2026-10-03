@@ -98,6 +98,15 @@ static void testBuildSettingInheritance(void)
   [phase setTarget: first];
   testAssert([[phase linkString] rangeOfString: @"-lOnlyTarget"].location != NSNotFound,
     @"ordinary linker flags are emitted");
+  [context setObject: @"com.apple.product-type.bundle.unit-test" forKey: @"PRODUCT_TYPE"];
+  NSString *testLink = [phase linkString];
+  testAssert([testLink rangeOfString: @"-lXCTest"].location != NSNotFound &&
+    [testLink rangeOfString: @"-framework XCTest"].location == NSNotFound,
+    @"test bundles link XCTest through the GNUstep framework mapping");
+  [configuration([NSDictionary dictionaryWithObject:
+    @"-framework XCTest" forKey: @"OTHER_LDFLAGS"]) apply];
+  testAssert([[[phase linkString] componentsSeparatedByString: @"-lXCTest"] count] == 2,
+    @"explicit XCTest linkage is not duplicated");
   [context popCurrentContext];
   unsetenv("GSXC_TEST_SETTING");
 }

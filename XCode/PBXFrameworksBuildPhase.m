@@ -274,6 +274,15 @@
         }
     }
 
+  /* Test bundles need XCTest even when it is not explicitly listed in the
+     project. Use the same GNUstep/configured mapping as other frameworks. */
+  if ([[context objectForKey: @"PRODUCT_TYPE"] isEqualToString: TEST_TYPE])
+    {
+      NSString *testLibrary = [self frameworkLinkString: @"XCTest"];
+      if ([testLibrary length] && [linkString rangeOfString: testLibrary].location == NSNotFound)
+        linkString = [linkString stringByAppendingString: testLibrary];
+    }
+
   // linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
   linkString = [linkString stringByAppendingString: @" -lobjc "];
   
@@ -786,11 +795,6 @@
   NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-
-  if ([linkString rangeOfString: @"-framework XCTest"].location == NSNotFound)
-    {
-      linkString = [linkString stringByAppendingString: @" -framework XCTest"];
-    }
 
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
