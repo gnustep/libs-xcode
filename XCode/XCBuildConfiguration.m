@@ -41,7 +41,8 @@ static NSArray *GSXCSettingWords(id value)
   NSMutableString *word = [NSMutableString string];
   unichar quote = 0;
   BOOL escaped = NO, started = NO;
-  for (NSUInteger i = 0; i < [value length]; i++)
+  NSUInteger i;
+  for (i = 0; i < [value length]; i++)
     {
       unichar c = [value characterAtIndex: i];
       if (escaped) { [word appendFormat: @"%C", c]; escaped = NO; started = YES; }
