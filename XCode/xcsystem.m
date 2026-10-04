@@ -91,7 +91,7 @@ NSInteger xcsystem(NSString *cmd)
     {
       NSString *scriptFormat = @"#!/bin/bash\n"
 	@"set -eo pipefail\n"
-	@"shopt -s inherit_errexit\n\n"
+	@"shopt -s inherit_errexit 2>/dev/null || true\n\n"
 	@"%@\n\n"
 	@"exit $?\n";
       NSString *body = @"";

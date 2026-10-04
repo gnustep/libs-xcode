@@ -229,6 +229,22 @@
       linkString = [linkString stringByAppendingString: [NSString stringWithFormat: @"-L%@ ", lpath]];
     }
   
+  // Other targets' products (e.g. static libraries) live in build/<target>/Products.
+  NSArray *buildSubdirs = [manager contentsOfDirectoryAtPath: @"build" error: NULL];
+  en = [[buildSubdirs sortedArrayUsingSelector: @selector(compare:)] objectEnumerator];
+  while((lpath = [en nextObject]) != nil)
+    {
+      NSString *productsDir = [[@"build" stringByAppendingPathComponent: lpath]
+				stringByAppendingPathComponent: @"Products"];
+      BOOL isDir = NO;
+      if ([manager fileExistsAtPath: productsDir isDirectory: &isDir] && isDir
+	  && [productsDir isEqualToString: uninstalledProductsDir] == NO)
+	{
+	  linkString = [linkString stringByAppendingFormat: @"-L%@ ",
+				   [productsDir stringByEscapingSpecialCharacters]];
+	}
+    }
+
   en = [_files objectEnumerator];
   while((file = [en nextObject]) != nil)
     {

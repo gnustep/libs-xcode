@@ -152,7 +152,7 @@ extern char **environ;
   NSString *k = nil;
 
   result = [result stringByAppendingString: @"set -eo pipefail\n"
-		   @"shopt -s inherit_errexit\n\n"];
+		   @"shopt -s inherit_errexit 2>/dev/null || true\n\n"];
 
   while ((k = [en nextObject]) != nil)
     {
