@@ -122,6 +122,9 @@
               forKey: @"TARGET_BUILD_DIR"];
   [context setObject: aname
               forKey: @"TARGET_NAME"];
+  [context setObject: @"derived_src"
+              forKey: @"PROJECT_DERIVED_FILE_DIR"];
+  setenv("PROJECT_DERIVED_FILE_DIR","derived_src",1);
   [context setObject: uninstalledProductsDir
               forKey: @"BUILT_PRODUCTS_DIR"];
   
