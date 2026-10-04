@@ -740,6 +740,15 @@ static NSLock *lock = nil;
           objCflags = @"";
 	}
 
+      // Plain C/C++ sources don't get TRUE/FALSE from GNUstep headers; ask
+      // ICU (which no longer defines them by default) to provide them.
+      if ([ft isEqualToString: @"sourcecode.c.c"] ||
+          [ft isEqualToString: @"sourcecode.cpp.cpp"])
+        {
+          objCflags = [objCflags stringByAppendingString:
+                                   @" -DU_DEFINE_FALSE_AND_TRUE=1"];
+        }
+
       NSString *std = [NSString stringForEnvironmentVariable: @"GCC_C_LANGUAGE_STANDARD"
                                                 defaultValue: @""];
       if ([std length] > 0)
