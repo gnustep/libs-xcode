@@ -60,6 +60,7 @@ static XCConfigurationList *configurationList(NSDictionary *settings)
 
 static void testBuildSettingInheritance(void)
 {
+  NSUInteger i;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSArray *projectFlags = [NSArray arrayWithObjects: @"-framework", @"UIKit", nil];
   PBXCoder *coder = AUTORELEASE([[PBXCoder alloc] initWithContentsOfFile: @"../libs-xcode.xcodeproj/project.pbxproj"]);
@@ -77,7 +78,7 @@ static void testBuildSettingInheritance(void)
   [project setTargets: [NSMutableArray arrayWithObjects: first, second, nil]];
   NSArray *expected = [projectFlags arrayByAddingObjectsFromArray:
     [NSArray arrayWithObjects: @"-framework", @"Foundation", nil]];
-  for (NSUInteger i = 0; i < 2; i++) {
+  for (i = 0; i < 2; i++) {
     testAssert([project build], @"settings-only project builds");
     testAssert([first->observed isEqual: expected], @"target inherits project flags exactly once");
     testAssert([second->observed isEqual: projectFlags], @"sibling target retains project flags without sibling overrides");
