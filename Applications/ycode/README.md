@@ -12,7 +12,7 @@ make -C XCode
 make -C Applications/ycode
 ```
 
-The repository's top-level `make install` does not install Ycode. Install it
+The repository's top-level build and install include Ycode. You can also install it
 separately, choosing the domain containing the application you launch. For an
 existing System-domain installation, run this from the repository root after
 building:
@@ -34,8 +34,19 @@ installation to load the updated executable.
 Use **File > Open Project...** to select an `.xcodeproj` package. Ycode loads
 its `project.pbxproj` through libs-xcode and displays its groups, files, and
 targets in the project navigator. Missing or invalid project contents produce
-an error instead of opening an empty project. ProjectCenter `.pcproj` packages
-remain supported. Each project remembers its last selected source file and
+an error instead of opening an empty project.
+
+The same **Open Project...** dialog imports ProjectCenter `.pcproj` packages
+containing `PC.project`. Application, Tool, Library, StaticLibrary, Framework,
+and Bundle targets retain their source files, headers, resources, frameworks,
+libraries, search paths, compiler/linker options, and referenced Info.plist.
+Files remain in their original source directory. **Save Project** asks for an
+`.xcodeproj` destination, initially beside the `.pcproj`; the original
+ProjectCenter package is left unchanged. Custom GNUmakefile rules and subproject
+build dependencies are not translated; subproject entries remain navigator references.
+Aggregate and other unsupported target types are rejected.
+
+Each project remembers its last selected source file and
 reopens it next time. Closing the last source tab clears that saved selection;
 missing files are skipped when reopening the project.
 

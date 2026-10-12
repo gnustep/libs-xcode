@@ -161,9 +161,7 @@ YCodeProjectFilePathForPath(NSString *path)
     }
 
     if ([[path pathExtension] isEqualToString:@"pcproj"]) {
-        NSString *name = [[path lastPathComponent] stringByDeletingPathExtension];
-        return [[path stringByAppendingPathComponent:
-            [NSString stringWithFormat:@"%@.xcodeproj", name]]
+        return [[[path stringByDeletingPathExtension] stringByAppendingPathExtension:@"xcodeproj"]
                 stringByAppendingPathComponent:@"project.pbxproj"];
     }
 
@@ -187,9 +185,7 @@ YCodeProjectPackagePathForPath(NSString *path)
     }
 
     if ([[path pathExtension] isEqualToString:@"pcproj"]) {
-        NSString *name = [[path lastPathComponent] stringByDeletingPathExtension];
-        return [path stringByAppendingPathComponent:
-            [NSString stringWithFormat:@"%@.xcodeproj", name]];
+        return [[path stringByDeletingPathExtension] stringByAppendingPathExtension:@"xcodeproj"];
     }
 
     if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
@@ -430,15 +426,7 @@ YCodeProjectPackagePathForPath(NSString *path)
 - (PBXContainer *)loadProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path
 {
     PBXContainer *container = [self convertProjectCenterProject:projectDict];
-    NSString *projectName = [projectDict objectForKey:@"PROJECT_NAME"];
-    NSString *projectPath = nil;
-
-    if (projectName == nil) {
-        projectName = [path lastPathComponent];
-    }
-
-    projectPath = [path stringByAppendingPathComponent:
-        [NSString stringWithFormat:@"%@.xcodeproj", projectName]];
+    NSString *projectPath = YCodeProjectPackagePathForPath(path);
     [container setFilename:[projectPath stringByAppendingPathComponent:@"project.pbxproj"]];
     [container setParameter:projectPath];
 
@@ -641,30 +629,53 @@ YCodeProjectPackagePathForPath(NSString *path)
         return NO;
     }
 
-    NSString *projectFile = [path stringByAppendingPathComponent:@"PC.project"];
-    NSDictionary *projectDict = [NSDictionary dictionaryWithContentsOfFile:projectFile];
-    
-    if (projectDict) {
-        // Convert ProjectCenter project to Xcode format
-        PBXContainer *container = [self convertProjectCenterProject:projectDict];
-        if (container) {
-            [self setContainer:container];
-            [self setProject:[container rootObject]];
-            [self setProjectPath:path];
-            
-            // Start watching files
-            [self startWatchingFiles];
-            
-            return YES;
+    @try {
+        NSString *projectFile = [path stringByAppendingPathComponent:@"PC.project"];
+        NSDictionary *projectDict = [NSDictionary dictionaryWithContentsOfFile:projectFile];
+        if (projectDict) {
+            PBXContainer *container = [self loadProjectCenterProject:projectDict fromPath:path];
+            if (container) {
+                [self setContainer:container];
+                [self setProjectPath:path];
+                [self setProject:[container rootObject]];
+                [self startWatchingFiles];
+                return YES;
+            }
         }
+    }
+    @catch (NSException *exception) {
+        NSLog(@"Error importing ProjectCenter project: %@", [exception reason]);
     }
     return NO;
 }
 
 - (PBXContainer *)convertProjectCenterProject:(NSDictionary *)projectDict
 {
-    // This is a simplified conversion - you might want to use the pc2xc logic
+    if (![projectDict isKindOfClass:[NSDictionary class]]) return nil;
     NSString *projectName = [projectDict objectForKey:@"PROJECT_NAME"];
+    NSString *projectType = [projectDict objectForKey:@"PROJECT_TYPE"];
+    NSDictionary *productTypes = [NSDictionary dictionaryWithObjectsAndKeys:
+        @"application", @"Application", @"tool", @"Tool",
+        @"library.dynamic", @"Library", @"library.static", @"StaticLibrary",
+        @"framework", @"Framework", @"bundle", @"Bundle", nil];
+    if (![projectName isKindOfClass:[NSString class]] || ![projectName length]
+        || ![projectType isKindOfClass:[NSString class]] || ![productTypes objectForKey:projectType])
+        return nil;
+    NSArray *fileKeys = [NSArray arrayWithObjects:@"CLASS_FILES", @"OTHER_SOURCES",
+        @"HEADER_FILES", @"PUBLIC_HEADERS", @"IMAGES", @"INTERFACES", @"LOCALIZED_RESOURCES",
+        @"OTHER_RESOURCES", @"SUPPORTING_FILES", @"DOCU_FILES", @"FRAMEWORKS",
+        @"LIBRARIES", @"SEARCH_HEADER_DIRS", @"SEARCH_LIB_DIRS", @"SUBPROJECTS", nil];
+    for (NSString *key in fileKeys) {
+        id values = [projectDict objectForKey:key];
+        if (values && ![values isKindOfClass:[NSArray class]]) return nil;
+        for (id value in values)
+            if (![value isKindOfClass:[NSString class]] || ![value length]) return nil;
+    }
+    for (NSString *key in [NSArray arrayWithObjects:@"COMPILEROPTIONS", @"CPPOPTIONS",
+        @"OBJC_COMPILEROPTIONS", @"LINKEROPTIONS", @"BUNDLE_IDENTIFIER", nil]) {
+        id value = [projectDict objectForKey:key];
+        if (value && ![value isKindOfClass:[NSString class]]) return nil;
+    }
     PBXNativeTarget *target = nil;
     PBXGroup *mainGroup = nil;
     PBXGroup *productsGroup = nil;
@@ -678,10 +689,6 @@ YCodeProjectPackagePathForPath(NSString *path)
     PBXFrameworksBuildPhase *frameworksPhase = nil;
     NSString *productPath = nil;
 
-    if (projectName == nil) {
-        projectName = [[self projectDirectoryPath] lastPathComponent];
-    }
-    
     // Create project structure
     PBXProject *project = [[PBXProject alloc] init];
     [project setProjectDirPath:@""];
@@ -705,14 +712,28 @@ YCodeProjectPackagePathForPath(NSString *path)
     target = [[PBXNativeTarget alloc] init];
     [target setName:projectName];
     [target setProductName:projectName];
-    [target setProductType:@"com.apple.product-type.application"];
+    [target setProductType:[@"com.apple.product-type." stringByAppendingString:
+        [productTypes objectForKey:projectType]]];
     [target setBuildConfigurationList:YCodeConfigurationList(projectName)];
     [target setDependencies:[NSMutableArray array]];
     [target setBuildRules:[NSMutableArray array]];
 
     productPath = [NSString stringWithFormat:@"%@.app", projectName];
+    NSString *productFileType = @"wrapper.application";
+    if ([projectType isEqual:@"Tool"]) {
+        productPath = projectName;
+        productFileType = @"compiled.mach-o.executable";
+    } else if ([projectType isEqual:@"Framework"] || [projectType isEqual:@"Bundle"]) {
+        NSString *extension = [projectType lowercaseString];
+        productPath = [projectName stringByAppendingPathExtension:extension];
+        productFileType = [@"wrapper." stringByAppendingString:extension];
+    } else if ([projectType isEqual:@"Library"] || [projectType isEqual:@"StaticLibrary"]) {
+        BOOL isStatic = [projectType isEqual:@"StaticLibrary"];
+        productPath = [NSString stringWithFormat:@"lib%@.%@", projectName, isStatic ? @"a" : @"dylib"];
+        productFileType = isStatic ? @"archive.ar" : @"compiled.mach-o.dylib";
+    }
     productReference = YCodeFileReference(productPath);
-    [productReference setExplicitFileType:@"wrapper.application"];
+    [productReference setExplicitFileType:productFileType];
     [productReference setSourceTree:@"BUILT_PRODUCTS_DIR"];
     [target setProductReference:productReference];
 
@@ -734,8 +755,82 @@ YCodeProjectPackagePathForPath(NSString *path)
     targets = [NSMutableArray arrayWithObject:target];
     [project setTargets:targets];
     
-    // Add files to groups
-    // ... (implementation details for file organization)
+    PBXBuildPhase *headersPhase = YCodeBuildPhase([PBXHeadersBuildPhase class],
+        [NSMutableArray array], target, @"Headers");
+    [buildPhases addObject:headersPhase];
+    NSMutableDictionary *references = [NSMutableDictionary dictionary];
+    NSArray *categories = [NSArray arrayWithObjects:
+        [NSArray arrayWithObjects:@"Sources", @"CLASS_FILES", @"OTHER_SOURCES", nil],
+        [NSArray arrayWithObjects:@"Headers", @"HEADER_FILES", @"PUBLIC_HEADERS", nil],
+        [NSArray arrayWithObjects:@"Resources", @"IMAGES", @"INTERFACES", @"LOCALIZED_RESOURCES", @"OTHER_RESOURCES", nil],
+        [NSArray arrayWithObjects:@"Supporting Files", @"SUPPORTING_FILES", @"DOCU_FILES", @"SUBPROJECTS", nil],
+        [NSArray arrayWithObjects:@"Frameworks", @"FRAMEWORKS", nil], nil];
+    NSArray *phases = [NSArray arrayWithObjects:sourcesPhase, headersPhase,
+        resourcesPhase, [NSNull null], frameworksPhase, nil];
+    NSUInteger categoryIndex = 0;
+    for (NSArray *category in categories) {
+        PBXGroup *group = AUTORELEASE([[PBXGroup alloc] init]);
+        [group setName:[category objectAtIndex:0]];
+        [group setSourceTree:@"<group>"];
+        [group setChildren:[NSMutableArray array]];
+        id phase = [phases objectAtIndex:categoryIndex++];
+        for (NSUInteger index = 1; index < [category count]; index++) {
+            NSString *key = [category objectAtIndex:index];
+            for (NSString *entry in [projectDict objectForKey:key]) {
+                NSString *file = entry;
+                if ([key isEqual:@"FRAMEWORKS"] && ![[file pathExtension] length])
+                    file = [file stringByAppendingPathExtension:@"framework"];
+                PBXFileReference *reference = [references objectForKey:file];
+                if (!reference) {
+                    reference = YCodeFileReference(file);
+                    if ([key isEqual:@"FRAMEWORKS"] && [[entry lastPathComponent] isEqual:entry]) {
+                        [reference setPath:[@"System/Library/Frameworks" stringByAppendingPathComponent:file]];
+                        [reference setSourceTree:@"SDKROOT"];
+                    }
+                    [references setObject:reference forKey:file];
+                    [[group children] addObject:reference];
+                }
+                if (phase != [NSNull null]) {
+                    PBXBuildFile *buildFile = nil;
+                    for (PBXBuildFile *existing in [phase files])
+                        if ([existing fileRef] == reference) buildFile = existing;
+                    if (!buildFile) {
+                        buildFile = YCodeBuildFile(reference);
+                        [[phase files] addObject:buildFile];
+                    }
+                    if ([key isEqual:@"PUBLIC_HEADERS"])
+                        [buildFile setSettings:[NSMutableDictionary dictionaryWithObject:
+                            [NSArray arrayWithObject:@"Public"] forKey:@"ATTRIBUTES"]];
+                }
+            }
+        }
+        if ([[group children] count]) [children addObject:group];
+    }
+    for (XCBuildConfiguration *configuration in [[target buildConfigurationList] buildConfigurations]) {
+        NSMutableDictionary *settings = [configuration buildSettings];
+        NSDictionary *mapping = [NSDictionary dictionaryWithObjectsAndKeys:
+            @"HEADER_SEARCH_PATHS", @"SEARCH_HEADER_DIRS", @"LIBRARY_SEARCH_PATHS", @"SEARCH_LIB_DIRS",
+            @"PRODUCT_BUNDLE_IDENTIFIER", @"BUNDLE_IDENTIFIER", nil];
+        for (NSString *key in mapping) {
+            id value = [projectDict objectForKey:key];
+            if (([value isKindOfClass:[NSArray class]] && [value count] > 0)
+                || ([value isKindOfClass:[NSString class]] && [value length] > 0))
+                [settings setObject:value forKey:[mapping objectForKey:key]];
+        }
+        NSMutableArray *cflags = [NSMutableArray array];
+        for (NSString *key in [NSArray arrayWithObjects:@"CPPOPTIONS", @"COMPILEROPTIONS", @"OBJC_COMPILEROPTIONS", nil])
+            if ([[projectDict objectForKey:key] length]) [cflags addObject:[projectDict objectForKey:key]];
+        if ([cflags count]) [settings setObject:[cflags componentsJoinedByString:@" "] forKey:@"OTHER_CFLAGS"];
+        NSMutableArray *ldflags = [NSMutableArray array];
+        if ([[projectDict objectForKey:@"LINKEROPTIONS"] length])
+            [ldflags addObject:[projectDict objectForKey:@"LINKEROPTIONS"]];
+        for (NSString *library in [projectDict objectForKey:@"LIBRARIES"])
+            [ldflags addObject:[library hasPrefix:@"-l"] ? library : [@"-l" stringByAppendingString:library]];
+        if ([ldflags count]) [settings setObject:[ldflags componentsJoinedByString:@" "] forKey:@"OTHER_LDFLAGS"];
+        for (NSString *file in [projectDict objectForKey:@"SUPPORTING_FILES"])
+            if ([file hasSuffix:@"Info.plist"] || [[file lastPathComponent] isEqual:@"Info.plist"])
+                [settings setObject:file forKey:@"INFOPLIST_FILE"];
+    }
     
     PBXContainer *container = [[PBXContainer alloc] initWithRootObject:project];
     [project setContainer:container];
@@ -752,16 +847,22 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)saveProjectToPath:(NSString *)path
 {
-    NSString *originalPath = path;
     NSString *projectPath = YCodeProjectPackagePathForPath(path);
     NSString *projectFile = nil;
     BOOL isDirectory = NO;
+    BOOL saved = NO;
+    BOOL relocatedImport = [[_projectPath pathExtension] isEqual:@"pcproj"]
+        && ![[projectPath stringByDeletingLastPathComponent] isEqual:[self projectDirectoryPath]];
+    NSString *originalGroupPath = [[[_project mainGroup] path] copy];
+    NSMutableArray *originalSettings = [NSMutableArray array];
 
     if (!_container || projectPath == nil) {
+        RELEASE(originalGroupPath);
         return NO;
     }
 
     if ([[NSFileManager defaultManager] fileExistsAtPath:projectPath isDirectory:&isDirectory] && !isDirectory) {
+        RELEASE(originalGroupPath);
         return NO;
     }
 
@@ -770,11 +871,35 @@ YCodeProjectPackagePathForPath(NSString *path)
                                        withIntermediateDirectories:YES
                                                         attributes:nil
                                                              error:nil]) {
+            RELEASE(originalGroupPath);
             return NO;
         }
     }
     
     @try {
+        if (relocatedImport) {
+            NSString *sourceRoot = [self projectDirectoryPath];
+            [[_project mainGroup] setPath:sourceRoot];
+            for (PBXNativeTarget *target in [_project targets]) {
+                for (XCBuildConfiguration *configuration in [[target buildConfigurationList] buildConfigurations]) {
+                    NSMutableDictionary *settings = [configuration buildSettings];
+                    [originalSettings addObject:[NSArray arrayWithObjects:configuration,
+                        [NSDictionary dictionaryWithDictionary:settings], nil]];
+                    for (NSString *key in [NSArray arrayWithObjects:@"HEADER_SEARCH_PATHS", @"LIBRARY_SEARCH_PATHS", nil]) {
+                        id paths = [settings objectForKey:key];
+                        if (![paths isKindOfClass:[NSArray class]]) continue;
+                        NSMutableArray *resolved = [NSMutableArray array];
+                        for (NSString *entry in paths)
+                            [resolved addObject:([entry isAbsolutePath] || [entry hasPrefix:@"$"])
+                                ? entry : [sourceRoot stringByAppendingPathComponent:entry]];
+                        [settings setObject:resolved forKey:key];
+                    }
+                    NSString *info = [settings objectForKey:@"INFOPLIST_FILE"];
+                    if ([info length] && ![info isAbsolutePath] && ![info hasPrefix:@"$"])
+                        [settings setObject:[sourceRoot stringByAppendingPathComponent:info] forKey:@"INFOPLIST_FILE"];
+                }
+            }
+        }
         projectFile = [projectPath stringByAppendingPathComponent:@"project.pbxproj"];
         [_container setParameter:projectPath];
         [_container setFilename:projectFile];
@@ -784,14 +909,13 @@ YCodeProjectPackagePathForPath(NSString *path)
         }
 
         BOOL success = [_container save];
+        saved = success;
         
         if (success) {
             [self updateChangeCount:NSChangeCleared];
-            if ([[originalPath pathExtension] isEqualToString:@"pcproj"]) {
-                [self setProjectPath:originalPath];
-            } else {
-                [self setProjectPath:projectPath];
-            }
+            [self setProjectPath:projectPath];
+            [self setFileURL:[NSURL fileURLWithPath:projectPath]];
+            [self setFileType:@"YCodeXcodeProjectType"];
         }
         
         return success;
@@ -799,6 +923,15 @@ YCodeProjectPackagePathForPath(NSString *path)
     @catch (NSException *exception) {
         NSLog(@"Error saving project: %@", [exception reason]);
         return NO;
+    }
+    @finally {
+        if (relocatedImport && !saved) {
+            [[_project mainGroup] setPath:originalGroupPath];
+            for (NSArray *entry in originalSettings)
+                [[entry objectAtIndex:0] setBuildSettings:
+                    [NSMutableDictionary dictionaryWithDictionary:[entry objectAtIndex:1]]];
+        }
+        RELEASE(originalGroupPath);
     }
 }
 

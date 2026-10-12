@@ -426,12 +426,16 @@ YCodeFileURLFromPath(NSString *path)
 
     projectPath = [project projectPath];
 
-    if (showPanel || projectPath == nil || [projectPath length] == 0) {
+    BOOL importedProject = [[projectPath pathExtension] isEqualToString:@"pcproj"];
+    if (showPanel || importedProject || projectPath == nil || [projectPath length] == 0) {
         NSSavePanel *panel = [NSSavePanel savePanel];
         NSString *name = @"Project.xcodeproj";
 
         if (projectPath != nil && [projectPath length] > 0) {
             name = [projectPath lastPathComponent];
+            if (importedProject)
+                name = [[name stringByDeletingPathExtension] stringByAppendingPathExtension:@"xcodeproj"];
+            [panel setDirectoryURL:[NSURL fileURLWithPath:[project projectDirectoryPath]]];
         }
 
         [panel setTitle:@"Save Project"];

@@ -32,6 +32,10 @@
 #import <XCode/PBXBuildPhase.h>
 #import <XCode/PBXSourcesBuildPhase.h>
 #import <XCode/PBXResourcesBuildPhase.h>
+#import <XCode/PBXHeadersBuildPhase.h>
+#import <XCode/PBXFrameworksBuildPhase.h>
+#import <XCode/XCBuildConfiguration.h>
+#import <XCode/XCConfigurationList.h>
 #import "YCodeBuildSystem.h"
 #import "YCodeWindowController.h"
 #import "YCodeProject.h"
@@ -1079,6 +1083,129 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
   [project release];
 }
 
+static void testProjectCenterImport(NSString *directory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *package = [directory stringByAppendingPathComponent:@"Imported Project.pcproj"];
+  [manager createDirectoryAtPath:package withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *projectFile = [package stringByAppendingPathComponent:@"PC.project"];
+  NSString *sourcePath = [directory stringByAppendingPathComponent:@"Imported Source.m"];
+  [@"int main(void) { return 0; }\n" writeToFile:sourcePath atomically:YES
+    encoding:NSUTF8StringEncoding error:NULL];
+  NSMutableDictionary *contents = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+    @"Imported Tool", @"PROJECT_NAME", @"Tool", @"PROJECT_TYPE",
+    [NSArray arrayWithObject:@"Imported Source.m"], @"CLASS_FILES",
+    [NSArray arrayWithObject:@"Imported Source.m"], @"OTHER_SOURCES",
+    [NSArray arrayWithObject:@"Public.h"], @"HEADER_FILES",
+    [NSArray arrayWithObject:@"Public.h"], @"PUBLIC_HEADERS",
+    [NSArray arrayWithObject:@"Images/Icon.png"], @"IMAGES",
+    [NSArray arrayWithObject:@"English.lproj/Main.gorm"], @"INTERFACES",
+    [NSArray arrayWithObject:@"English.lproj/Localizable.strings"], @"LOCALIZED_RESOURCES",
+    [NSArray arrayWithObject:@"data.txt"], @"OTHER_RESOURCES",
+    [NSArray arrayWithObject:@"ImportedInfo.plist"], @"SUPPORTING_FILES",
+    [NSArray arrayWithObject:@"README"], @"DOCU_FILES",
+    [NSArray arrayWithObject:@"Foundation"], @"FRAMEWORKS",
+    [NSArray arrayWithObject:@"gnustep-base"], @"LIBRARIES",
+    [NSArray arrayWithObject:@"Include Files"], @"SEARCH_HEADER_DIRS",
+    [NSArray arrayWithObject:@"Library Files"], @"SEARCH_LIB_DIRS",
+    @"-DIMPORT_TEST=1", @"COMPILEROPTIONS", @"-Wl,--as-needed", @"LINKEROPTIONS", nil];
+  [contents writeToFile:projectFile atomically:YES];
+  NSData *original = [NSData dataWithContentsOfFile:projectFile];
+  YCodeProject *document = [[YCodeProject alloc] init];
+  NSError *error = nil;
+  testAssert([document readFromURL:[NSURL fileURLWithPath:package]
+    ofType:@"YCodeProjectCenterProjectType" error:&error], @"Import a ProjectCenter package");
+  PBXProject *project = [document project];
+  PBXNativeTarget *target = [[project targets] lastObject];
+  testAssert([[target productType] isEqual:@"com.apple.product-type.tool"]
+    && [[[target productReference] path] isEqual:@"Imported Tool"],
+    @"Import preserves the ProjectCenter product type and name");
+  PBXFileReference *source = nil;
+  NSUInteger sources = 0, headers = 0, resources = 0, frameworks = 0;
+  for (PBXBuildPhase *phase in [target buildPhases]) {
+    if ([phase isKindOfClass:[PBXSourcesBuildPhase class]]) {
+      sources = [[phase files] count];
+      source = [[[phase files] lastObject] fileRef];
+    } else if ([phase isKindOfClass:[PBXHeadersBuildPhase class]]) {
+      headers = [[phase files] count];
+      testAssert([[[[[phase files] lastObject] settings] objectForKey:@"ATTRIBUTES"]
+        containsObject:@"Public"], @"Imported public headers retain their visibility");
+    } else if ([phase isKindOfClass:[PBXResourcesBuildPhase class]]) resources = [[phase files] count];
+    else if ([phase isKindOfClass:[PBXFrameworksBuildPhase class]]) frameworks = [[phase files] count];
+  }
+  testAssert(sources == 1 && headers == 1 && resources == 4 && frameworks == 1,
+    @"Import separates build phases and removes duplicate entries");
+  [document makeWindowControllers];
+  YCodeProjectNavigatorController *navigator = [document navigatorController];
+  YCodeProjectNavigatorItem *item = [navigator itemForObject:source];
+  testAssert(item != nil && [[navigator resolvedFilePathForNavigatorItem:item] isEqual:sourcePath],
+    @"Imported navigator references resolve outside the pcproj package, including spaces");
+  testAssert([[document editorController] openFile:[navigator resolvedFilePathForNavigatorItem:item]],
+    @"Imported source opens in the editor");
+  NSDictionary *settings = [[[target buildConfigurationList] defaultConfiguration] buildSettings];
+  testAssert([[settings objectForKey:@"HEADER_SEARCH_PATHS"] isEqual:[contents objectForKey:@"SEARCH_HEADER_DIRS"]]
+    && [[settings objectForKey:@"OTHER_CFLAGS"] isEqual:@"-DIMPORT_TEST=1"]
+    && [[settings objectForKey:@"OTHER_LDFLAGS"] isEqual:@"-Wl,--as-needed -lgnustep-base"]
+    && [[settings objectForKey:@"INFOPLIST_FILE"] isEqual:@"ImportedInfo.plist"],
+    @"Import retains search paths, compiler and linker flags, libraries, and Info.plist");
+  testAssert([document saveProjectToPath:package], @"Save imported project as Xcode format");
+  NSString *converted = [[package stringByDeletingPathExtension] stringByAppendingPathExtension:@"xcodeproj"];
+  testAssert([[document projectPath] isEqual:converted]
+    && [[[document fileURL] path] isEqual:converted]
+    && [[NSData dataWithContentsOfFile:projectFile] isEqual:original]
+    && [[manager contentsOfDirectoryAtPath:package error:NULL] count] == 1,
+    @"Conversion saves beside the original package without changing PC.project");
+  YCodeProject *reopened = [[YCodeProject alloc] init];
+  testAssert([reopened readFromURL:[NSURL fileURLWithPath:converted]
+    ofType:@"YCodeXcodeProjectType" error:NULL]
+    && [[reopened projectDirectoryPath] isEqual:directory], @"Reopen the saved import with the same source root");
+  PBXNativeTarget *reopenedTarget = [[[reopened project] targets] lastObject];
+  testAssert([[reopenedTarget productType] isEqual:[target productType]]
+    && [[reopenedTarget buildPhases] count] == 4, @"Imported target survives serialization");
+  [reopened close]; [reopened release];
+  YCodeProject *relocated = [[YCodeProject alloc] init];
+  [relocated readFromURL:[NSURL fileURLWithPath:package] ofType:@"YCodeProjectCenterProjectType" error:NULL];
+  NSString *relocatedPath = [directory stringByAppendingPathComponent:@"Elsewhere/Imported.xcodeproj"];
+  testAssert([relocated saveProjectToPath:relocatedPath], @"Save an import in another directory");
+  [relocated close]; [relocated release];
+  relocated = [[YCodeProject alloc] init];
+  testAssert([relocated readFromURL:[NSURL fileURLWithPath:relocatedPath]
+    ofType:@"YCodeXcodeProjectType" error:NULL], @"Reopen a relocated import");
+  [relocated makeWindowControllers];
+  PBXNativeTarget *relocatedTarget = [[[relocated project] targets] lastObject];
+  PBXFileReference *relocatedSource = [[[[[relocatedTarget buildPhases] objectAtIndex:0] files] lastObject] fileRef];
+  YCodeProjectNavigatorController *relocatedNavigator = [relocated navigatorController];
+  testAssert([[relocatedNavigator resolvedFilePathForNavigatorItem:
+    [relocatedNavigator itemForObject:relocatedSource]] isEqual:sourcePath],
+    @"Relocated import still points to its original source files");
+  testAssert([[[[[relocatedTarget buildConfigurationList] defaultConfiguration] buildSettings]
+    objectForKey:@"HEADER_SEARCH_PATHS"] isEqual:[NSArray arrayWithObject:
+        [directory stringByAppendingPathComponent:@"Include Files"]]],
+    @"Relocated import retains its header search directory");
+  [relocated close]; [relocated release];
+  NSArray *types = [NSArray arrayWithObjects:@"Application", @"Framework", @"Library", @"Bundle", nil];
+  for (NSString *type in types) {
+    [contents setObject:type forKey:@"PROJECT_TYPE"];
+    [contents writeToFile:projectFile atomically:YES];
+    YCodeProject *variant = [[YCodeProject alloc] init];
+    testAssert([variant readFromURL:[NSURL fileURLWithPath:package]
+      ofType:@"YCodeProjectCenterProjectType" error:NULL],
+      [NSString stringWithFormat:@"Import ProjectCenter %@ target", type]);
+    [variant close]; [variant release];
+  }
+  for (id invalid in [NSArray arrayWithObjects:[NSDictionary dictionary],
+      [NSDictionary dictionaryWithObjectsAndKeys:@"Bad", @"PROJECT_NAME", @"Tool", @"PROJECT_TYPE",
+        @"not an array", @"CLASS_FILES", nil], nil]) {
+    [invalid writeToFile:projectFile atomically:YES];
+    error = nil;
+    testAssert(![document readFromURL:[NSURL fileURLWithPath:package]
+      ofType:@"YCodeProjectCenterProjectType" error:&error] && error != nil
+      && [document project] == project && [[[document fileURL] path] isEqual:converted],
+      @"Malformed imports fail without replacing the loaded project");
+  }
+  [document close]; [document release];
+}
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -1320,6 +1447,7 @@ int main(void)
   [document close];
   testEditorEditing(temporaryDirectory);
   testEditorFiles(temporaryDirectory);
+  testProjectCenterImport(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
