@@ -27,6 +27,12 @@
 #import "YCodeProject.h"
 #import "YCodeSyntaxHighlighter.h"
 
+@interface YCodeEditorController (Session)
+- (NSString *)lastSourceFileDefaultsKey;
+- (void)rememberCurrentSourceFile;
+- (void)restoreLastSourceFile;
+@end
+
 @implementation YCodeEditorController
 
 - (instancetype)init
@@ -69,6 +75,7 @@
 - (void)setProject:(YCodeProject *)project
 {
     ASSIGN(_project, project);
+    [self restoreLastSourceFile];
 }
 
 #pragma mark - Tab View Association
@@ -83,6 +90,7 @@
     ASSIGN(_tabView, tabView);
     [_tabView setDelegate:self];
     [_tabView setTabViewType:NSTopTabsBezelBorder];
+    [self restoreLastSourceFile];
 }
 
 #pragma mark - Document Management
@@ -101,6 +109,7 @@
 {
     if (_currentDocument != document) {
         ASSIGN(_currentDocument, document);
+        [self rememberCurrentSourceFile];
         
         // Update tab view selection
         if (document && _tabView) {
@@ -109,6 +118,58 @@
                 [_tabView selectTabViewItem:tab];
             }
         }
+    }
+}
+
+#pragma mark - Project Editor Session
+
+- (NSString *)lastSourceFileDefaultsKey
+{
+    NSString *path = [_project projectPath];
+    if (![path length]) return nil;
+    if (![path isAbsolutePath]) {
+        path = [[[NSFileManager defaultManager] currentDirectoryPath]
+            stringByAppendingPathComponent:path];
+    }
+    path = [[path stringByStandardizingPath] stringByResolvingSymlinksInPath];
+    return [@"YCodeLastSourceFile:" stringByAppendingString:path];
+}
+
+- (void)rememberCurrentSourceFile
+{
+    NSString *key = [self lastSourceFileDefaultsKey];
+    if (!key) return;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *path = [_currentDocument filePath];
+    BOOL isDirectory = NO;
+    if (!_currentDocument) {
+        [defaults removeObjectForKey:key];
+    } else if ([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory]
+               && !isDirectory) {
+        if (![path isAbsolutePath]) {
+            path = [[[NSFileManager defaultManager] currentDirectoryPath]
+                stringByAppendingPathComponent:path];
+        }
+        [defaults setObject:[path stringByStandardizingPath] forKey:key];
+    }
+    [defaults synchronize];
+}
+
+- (void)restoreLastSourceFile
+{
+    if (!_tabView || _currentDocument) return;
+    NSString *key = [self lastSourceFileDefaultsKey];
+    if (!key) return;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    id path = [defaults objectForKey:key];
+    if (!path) return;
+    BOOL isDirectory = NO;
+    if (![path isKindOfClass:[NSString class]] ||
+        ![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory] ||
+        isDirectory || ![self openFile:path]) {
+        // Deleted or unreadable files must not interfere with opening the project.
+        [defaults removeObjectForKey:key];
+        [defaults synchronize];
     }
 }
 

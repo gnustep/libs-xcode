@@ -16,13 +16,22 @@ Use **File > Open Project...** to select an `.xcodeproj` package. Ycode loads
 its `project.pbxproj` through libs-xcode and displays its groups, files, and
 targets in the project navigator. Missing or invalid project contents produce
 an error instead of opening an empty project. ProjectCenter `.pcproj` packages
-remain supported.
+remain supported. Each project remembers its last selected source file and
+reopens it next time. Closing the last source tab clears that saved selection;
+missing files are skipped when reopening the project.
 
 Ycode starts without creating an untitled project. On GNUstep, the main menu
 uses Info for About, Preferences, and Help, with Services, Hide, and Quit at
 the top level. Build and run commands are in Project; window commands are in
 Windows. The editor rulers show character columns across the top and source
 line numbers down the side, following the font size and scroll position.
+The editable area fills the window as it grows while long lines remain
+horizontally scrollable. Editing follows ProjectCenter: Return indents new
+lines, Tab reindents the current line or shifts selected lines, Shift-Tab
+unindents selected lines, and closing delimiters align with their opening
+line. Shift-arrow keys extend or contract the selection from its anchor.
+Indentation defaults to two spaces and reads `IndentWidth`, `TabWidth`, and
+`UseTab` from the nearest parent `.clang-format` file.
 
 Run the application regression checks with a working GUI display (or under
 `xvfb-run -a` on a headless GNUstep system):

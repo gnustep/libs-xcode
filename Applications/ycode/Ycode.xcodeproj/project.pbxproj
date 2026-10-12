@@ -4,6 +4,9 @@
     };
     objectVersion = 56;
     objects = {
+        YCODE_TEXT_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTextView.m"; sourceTree = "<group>"; };
+        YCODE_TEXT_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTextView.h"; sourceTree = "<group>"; };
+        YCODE_TEXT_BUILD = { isa = PBXBuildFile; fileRef = YCODE_TEXT_SOURCE; };
         YCODE_ICONS_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeControlIcons.m"; sourceTree = "<group>"; };
         YCODE_ICONS_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeControlIcons.h"; sourceTree = "<group>"; };
         YCODE_ICONS_BUILD = { isa = PBXBuildFile; fileRef = YCODE_ICONS_SOURCE; };
@@ -49,7 +52,9 @@
 	};
 	"2994E397-21FD-F606-46C8-BF292D2FC134" = {
 	    children = (
-		YCODE_ICONS_SOURCE,
+		YCODE_TEXT_SOURCE,
+        YCODE_TEXT_HEADER,
+        YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
         YCODE_DEBUGGER_SOURCE,
         YCODE_DEBUGGER_HEADER,
@@ -80,7 +85,8 @@
 	};
 	"3EFFAD06-3C2F-A000-447C-11BA1E695B29" = {
 	    files = (
-		YCODE_ICONS_BUILD,
+		YCODE_TEXT_BUILD,
+        YCODE_ICONS_BUILD,
         YCODE_DEBUGGER_BUILD,
         "60D3A5A8-4695-CB0B-5738-AEC068B0253F",
 		"38118205-AC17-F000-48CB-7D0B67582EA2",

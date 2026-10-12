@@ -24,6 +24,7 @@
 
 #import "YCodeEditorDocument.h"
 #import "YCEditorView.h"
+#import "YCodeTextView.h"
 #import "YCodeEditorController.h"
 #import "YCodeSyntaxHighlighter.h"
 
@@ -77,7 +78,7 @@
     
     // Create text view
     NSRect textFrame = NSMakeRect(0, 0, [_scrollView contentSize].width, [_scrollView contentSize].height);
-    _textView = [[NSTextView alloc] initWithFrame:textFrame];
+    _textView = [[YCodeTextView alloc] initWithFrame:textFrame];
     [_textView setFont:[NSFont userFixedPitchFontOfSize:12.0]];
     [_textView setDelegate:self];
     [_textView setRichText:NO];
@@ -96,6 +97,8 @@
     [textContainer setHeightTracksTextView:NO];
     [textContainer setContainerSize:NSMakeSize(1e7, 1e7)];
     
+    [(YCodeTextView *)_textView setFilePath:_filePath];
+
     // Set up scroll view
     [_scrollView setDocumentView:_textView];
     
@@ -138,6 +141,7 @@
 - (void)setFilePath:(NSString *)filePath
 {
     ASSIGN(_filePath, filePath);
+    [(YCodeTextView *)_textView setFilePath:filePath];
     [self setupSyntaxHighlighter];
 }
 

@@ -38,6 +38,7 @@
 #import "YCodeEditorDocument.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "YCEditorView.h"
+#import "YCodeTextView.h"
 #import "AppController.h"
 #include <math.h>
 
@@ -128,6 +129,128 @@ static void testEditorColors(void)
   [editor setBackgroundColor:[NSColor blackColor]];
   testAssert(colorMatches([[editor textView] textColor], 1, 1, 1),
     @"Editor without a highlighter refreshes foreground when background changes");
+  [editor release];
+}
+
+static void testEditorEditing(NSString *directory)
+{
+  NSString *root = [directory stringByAppendingPathComponent:@"Editing Rules"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:NULL];
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:[root stringByAppendingPathComponent:@"Example.m"] content:@""];
+  YCodeTextView *view = (YCodeTextView *)[document textView];
+  NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 400, 300)
+    styleMask:NSTitledWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [window setReleasedWhenClosed:NO];
+  [window setContentView:[document editorView]];
+  [window makeKeyAndOrderFront:nil];
+  [window makeFirstResponder:view];
+  testAssert([view isKindOfClass:[YCodeTextView class]], @"Documents use ProjectCenter editing rules");
+  testAssert([view editorIndentWidth] == 2 && [view editorTabWidth] == 2 && ![view editorUsesTabs],
+    @"Default to ProjectCenter's two-space indentation");
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"  "], @"Tab in an empty document inserts one tab stop");
+
+  [document setContent:@"if (ready)"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"if (ready)\n  "], @"Return indents control statement bodies");
+  [view insertText:@"{"];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"if (ready)\n  {\n    "], @"Return indents inside an opening delimiter");
+  [view insertText:@"}"];
+  testAssert([[view string] isEqual:@"if (ready)\n  {\n  }"], @"Closing delimiter aligns with its opening line");
+  [document setContent:@"{\n      value;\n}"];
+  [view setSelectedRange:NSMakeRange(8, 0)];
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"{\n  value;\n}"], @"Tab reindents the current line");
+  [document setContent:@"{\n"];
+  [view setSelectedRange:NSMakeRange(2, 0)];
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"{\n  "], @"Tab handles the empty line at end of file");
+
+  [document setContent:@"one\ntwo\nthree\n"];
+  [document setModified:NO];
+  [view setSelectedRange:NSMakeRange(0, 8)];
+  NSUndoManager *undo = [view undoManager];
+  [undo removeAllActions];
+  [undo beginUndoGrouping];
+  [view insertTab:nil];
+  [undo endUndoGrouping];
+  testAssert([[view string] isEqual:@"  one\n  two\nthree\n"],
+    @"Tab shifts selected lines without touching the following line");
+  testAssert([document isModified], @"Block indentation marks the document modified");
+  [undo undo];
+  testAssert([[view string] isEqual:@"one\ntwo\nthree\n"], @"Block indentation is undoable");
+  [view setSelectedRange:NSMakeRange(0, 8)];
+  [view insertTab:nil];
+  [view insertBacktab:nil];
+  testAssert([[view string] isEqual:@"one\ntwo\nthree\n"], @"Shift-Tab reverses block indentation");
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  [view moveDownAndModifySelection:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(1, 4)), @"Shift-Down preserves the column and selection anchor");
+  [view moveUpAndModifySelection:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(1, 0)), @"Reversing Shift-arrow contracts the selection");
+  [view moveLeftAndModifySelection:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(0, 1)), @"Shift-Left extends backwards");
+  [view moveRightAndModifySelection:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(1, 0)), @"Shift-Right contracts a backward selection");
+  [document setContent:@"last\n"];
+  [view setSelectedRange:NSMakeRange(2, 0)];
+  [view moveDownAndModifySelection:nil];
+  testAssert(NSMaxRange([view selectedRange]) == 5, @"Shift-Down can reach a trailing empty line");
+
+  NSString *config = [root stringByAppendingPathComponent:@".clang-format"];
+  [@"IndentWidth: 4\nTabWidth: 8\nUseTab: Never\n" writeToFile:config atomically:YES
+    encoding:NSUTF8StringEncoding error:NULL];
+  [document setFilePath:[root stringByAppendingPathComponent:@"Nested/Other.m"]];
+  testAssert([view editorIndentWidth] == 4 && [view editorTabWidth] == 8 && ![view editorUsesTabs],
+    @"Read indentation settings from the nearest parent .clang-format");
+  [document setContent:@"{"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"{\n    "], @"Return uses the file's configured indent width");
+  CGFloat cellWidth = [[view font] widthOfString:@"8"];
+  testAssert(fabs([[view defaultParagraphStyle] defaultTabInterval] - 8 * cellWidth) < 0.01,
+    @"Displayed tabs use the configured tab width");
+  [@"IndentWidth: 4\nTabWidth: 4\nUseTab: Always\n" writeToFile:config atomically:YES
+    encoding:NSUTF8StringEncoding error:NULL];
+  [document setFilePath:[root stringByAppendingPathComponent:@"Tabs.m"]];
+  [document setContent:@"{"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"{\n\t"], @"UseTab emits literal tabs");
+  [view insertText:@"{"];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"{\n\t{\n\t\t"], @"Nested literal-tab indentation uses visual columns");
+  [view insertText:@"}"];
+  testAssert([[view string] isEqual:@"{\n\t{\n\t}"], @"Closing delimiters preserve literal-tab indentation");
+  [document setFilePath:[directory stringByAppendingPathComponent:@"Unconfigured.m"]];
+  testAssert([view editorIndentWidth] == 2 && ![view editorUsesTabs], @"Changing files resets indentation settings");
+
+  [document setContent:@""];
+  [window setContentSize:NSMakeSize(900, 650)];
+  NSClipView *clip = [[document scrollView] contentView];
+  testAssert(NSWidth([view frame]) >= NSWidth([clip bounds]) &&
+    NSHeight([view frame]) >= NSHeight([clip bounds]), @"Empty editable area grows with the window");
+  [window setContentSize:NSMakeSize(350, 250)];
+  testAssert(fabs(NSWidth([view frame]) - NSWidth([clip bounds])) < 1 &&
+    fabs(NSHeight([view frame]) - NSHeight([clip bounds])) < 1, @"Empty editor shrinks without stale scrollable space");
+  [document setContent:@"short"];
+  [window setContentSize:NSMakeSize(1000, 700)];
+  testAssert(NSWidth([view frame]) >= NSWidth([clip bounds]) &&
+    NSHeight([view frame]) >= NSHeight([clip bounds]), @"Short source files fill the enlarged editable area");
+  [window close];
+  [window release];
+  [document release];
+
+  YCEditorView *editor = [[YCEditorView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)];
+  [editor setFrameSize:NSMakeSize(850, 600)];
+  testAssert(NSWidth([[editor textView] frame]) >= NSWidth([[[editor scrollView] contentView] bounds]),
+    @"Standalone editor uses the same viewport resizing");
+  [[editor textView] insertTab:nil];
+  testAssert([[editor text] isEqual:@"  "], @"Standalone editor uses the same editing rules");
   [editor release];
 }
 
@@ -228,6 +351,21 @@ static void testEditorFiles(NSString *directory)
   [editor setEditorFont:[NSFont userFixedPitchFontOfSize:18.0]];
   [[editor currentDocument] setContent:@"0123456789012345678901234567890123456789\r\n\r\nUnicode: é 漢字\nLast line\n"];
   [editorWindow display];
+  [[editor currentDocument] setContent:@"short source\n"];
+  [editorWindow setContentSize:NSMakeSize(1500, 900)];
+  [editorWindow display];
+  NSClipView *editorClip = [editorScroll contentView];
+  testAssert(NSWidth([scrollingText frame]) >= NSWidth([editorClip bounds]) &&
+    NSHeight([scrollingText frame]) >= NSHeight([editorClip bounds]),
+    @"Actual project editor fills the viewport after enlarging the window");
+  testAssert(NSEqualRects([editorScroll frame], [[editor tabView] contentRect]),
+    @"Actual project scroll view fills the enlarged tab");
+  // Switching away and back must size the formerly hidden editor as well.
+  [editor openFile:second];
+  [editorWindow setContentSize:NSMakeSize(1700, 1000)];
+  [editor openFile:first];
+  testAssert(NSWidth([scrollingText frame]) >= NSWidth([editorClip bounds]),
+    @"Reselected source tab fills the window's new width");
   [[editor currentDocument] setContent:@"int ordinary = 42;"];
   [editor setBackgroundColor:[NSColor colorWithDeviceRed:0.2 green:0.4 blue:0.7 alpha:1.0]];
   NSTextView *textView = [[editor currentDocument] textView];
@@ -243,6 +381,56 @@ static void testEditorFiles(NSString *directory)
   [[editor currentDocument] setModified:NO];
   testAssert([editor closeFile:first] && [editor closeFile:second], @"Close source tabs");
   testAssert([editor openFile:first], @"Reopen source after closing tabs");
+  [document close];
+  [document release];
+
+  // New project/document instances exercise restoration, not existing tabs.
+  document = [[YCodeProject alloc] init];
+  [document readFromURL:[NSURL fileURLWithPath:package] ofType:@"YCodeXcodeProjectType" error:NULL];
+  [document makeWindowControllers];
+  editor = [document editorController];
+  testAssert([[[editor currentDocument] filePath] isEqual:first] && [[editor openDocuments] count] == 1,
+    @"Reopening a project restores its last source file");
+  [editor openFile:second];
+  [[editor tabView] selectTabViewItem:[editor tabForDocument:[editor documentForFilePath:first]]];
+  [document close];
+  [document release];
+
+  NSString *otherPackage = [directory stringByAppendingPathComponent:@"Other.xcodeproj"];
+  [manager copyItemAtPath:package toPath:otherPackage error:NULL];
+  document = [[YCodeProject alloc] init];
+  [document readFromURL:[NSURL fileURLWithPath:otherPackage] ofType:@"YCodeXcodeProjectType" error:NULL];
+  [document makeWindowControllers];
+  testAssert([[[document editorController] openDocuments] count] == 0,
+    @"Source restoration is isolated to each project");
+  [document close];
+  [document release];
+
+  document = [[YCodeProject alloc] init];
+  [document readFromURL:[NSURL fileURLWithPath:package] ofType:@"YCodeXcodeProjectType" error:NULL];
+  [document makeWindowControllers];
+  editor = [document editorController];
+  testAssert([[[editor currentDocument] filePath] isEqual:first],
+    @"Restoration follows the selected tab rather than the last file opened");
+  [editor closeFile:first];
+  [document close];
+  [document release];
+
+  document = [[YCodeProject alloc] init];
+  [document readFromURL:[NSURL fileURLWithPath:package] ofType:@"YCodeXcodeProjectType" error:NULL];
+  [document makeWindowControllers];
+  testAssert([[[document editorController] openDocuments] count] == 0,
+    @"Explicitly closing the last source tab clears restoration");
+  [[document editorController] openFile:first];
+  [document close];
+  [document release];
+  [manager removeItemAtPath:first error:NULL];
+
+  document = [[YCodeProject alloc] init];
+  [document readFromURL:[NSURL fileURLWithPath:package] ofType:@"YCodeXcodeProjectType" error:NULL];
+  [document makeWindowControllers];
+  testAssert([[[document editorController] openDocuments] count] == 0,
+    @"A deleted remembered source file does not create an empty tab or block project loading");
   [document close];
   [document release];
 }
@@ -684,9 +872,17 @@ int main(void)
                  @"Keep loaded document intact after failed read");
     }
   [document close];
+  testEditorEditing(temporaryDirectory);
   testEditorFiles(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  for (NSString *key in [[defaults dictionaryRepresentation] allKeys]) {
+    if ([key hasPrefix:@"YCodeLastSourceFile:"] &&
+        [key rangeOfString:temporaryDirectory].location != NSNotFound)
+      [defaults removeObjectForKey:key];
+  }
+  [defaults synchronize];
   [manager removeItemAtPath:temporaryDirectory error:NULL];
   NSLog(@"Ycode project loading checks: %lu failures", (unsigned long)failures);
   [pool drain];

@@ -23,6 +23,7 @@
 */
 
 #import "YCEditorView.h"
+#import "YCodeTextView.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeSyntaxHighlighter.h"
 
@@ -67,7 +68,7 @@
     
     // Create text view
     NSRect textFrame = [_scrollView documentVisibleRect];
-    _textView = [[NSTextView alloc] initWithFrame:textFrame];
+    _textView = [[YCodeTextView alloc] initWithFrame:textFrame];
     [_textView setDelegate:self];
     [_textView setRichText:NO];
     [_textView setUsesFontPanel:YES];
@@ -123,7 +124,7 @@
     _highlightCurrentLine = YES;
     _autoIndent = YES;
     _syntaxHighlighting = YES;
-    _tabWidth = 4;
+    _tabWidth = 2;
     _useSpacesForTabs = YES;
     
     _caseSensitive = NO;
@@ -161,6 +162,7 @@
 - (void)setDocument:(YCodeEditorDocument *)document
 {
     ASSIGN(_document, document);
+    [(YCodeTextView *)_textView setFilePath:[document filePath]];
     
     if (_document) {
         [self setText:[_document content]];
@@ -297,24 +299,24 @@
 
 - (NSInteger)tabWidth
 {
-    return _tabWidth;
+    return [(YCodeTextView *)_textView editorTabWidth];
 }
 
 - (void)setTabWidth:(NSInteger)width
 {
     _tabWidth = width;
-    // TODO: Update tab settings in text view
+    [(YCodeTextView *)_textView setEditorTabWidth:MAX(1, width)];
 }
 
 - (BOOL)useSpacesForTabs
 {
-    return _useSpacesForTabs;
+    return ![(YCodeTextView *)_textView editorUsesTabs];
 }
 
 - (void)setUseSpacesForTabs:(BOOL)useSpaces
 {
     _useSpacesForTabs = useSpaces;
-    // TODO: Update tab behavior
+    [(YCodeTextView *)_textView setEditorUsesTabs:!useSpaces];
 }
 
 #pragma mark - Syntax Highlighting
@@ -525,12 +527,12 @@
 
 - (void)indentSelectedLines
 {
-    // TODO: Implement line indentation
+    [_textView insertTab:self];
 }
 
 - (void)unindentSelectedLines
 {
-    // TODO: Implement line unindentation
+    [_textView insertBacktab:self];
 }
 
 - (void)commentSelectedLines
