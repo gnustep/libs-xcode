@@ -49,6 +49,7 @@
 
 @interface YCodeProjectNavigatorController (Testing)
 - (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item;
+- (void)updateThumbnailForItem:(YCodeProjectNavigatorItem *)item;
 @end
 
 static NSUInteger failures = 0;
@@ -1143,6 +1144,44 @@ int main(void)
   testAssert([imageDocument isImageDocument] && [imageDocument textView] == nil
     && [[[imageDocument scrollView] documentView] isKindOfClass:[NSImageView class]]
     && ![[imageDocument scrollView] rulersVisible], @"Image editor displays a preview without text or rulers");
+  NSClipView *imageClip = [[imageDocument scrollView] contentView];
+  NSRect imageFrame = [[[imageDocument scrollView] documentView] frame];
+  testAssert(fabs(NSMidX([imageClip bounds]) - NSMidX(imageFrame)) < 1
+    && fabs(NSMidY([imageClip bounds]) - NSMidY(imageFrame)) < 1,
+    @"Small image is centered in both axes");
+  NSSize originalClipSize = [imageClip frame].size;
+  [imageClip setFrameSize:NSMakeSize(180, 140)];
+  testAssert(fabs(NSMidX([imageClip bounds]) - NSMidX(imageFrame)) < 1
+    && fabs(NSMidY([imageClip bounds]) - NSMidY(imageFrame)) < 1,
+    @"Image stays centered when the viewport resizes");
+  [[imageClip documentView] setFrameSize:NSMakeSize(10000, 10000)];
+  [imageClip scrollToPoint:NSMakePoint(100, 100)];
+  testAssert(NSMinX([imageClip bounds]) == 100 && NSMinY([imageClip bounds]) == 100,
+    @"Images larger than the viewport remain scrollable");
+  [[imageClip documentView] setFrameSize:imageFrame.size];
+  [imageClip setFrameSize:originalClipSize];
+  PBXFileReference *previewFile = [[PBXFileReference alloc] init];
+  [previewFile setPath:imagePath];
+  YCodeProjectNavigatorItem *previewItem = [[YCodeProjectNavigatorItem alloc]
+    initWithRepresentedObject:previewFile type:YCodeNavigatorItemTypeFile];
+  NSImage *fallbackIcon = [[previewItem icon] retain];
+  [navigator updateThumbnailForItem:previewItem];
+  testAssert([previewItem icon] != fallbackIcon
+    && NSEqualSizes([[previewItem icon] size], NSMakeSize(16, 12)),
+    @"Readable image gets a miniature navigator thumbnail");
+  NSBitmapImageRep *thumbnailPixels = [NSBitmapImageRep imageRepWithData:
+    [[previewItem icon] TIFFRepresentation]];
+  testAssert([[thumbnailPixels colorAtX:8 y:8] alphaComponent] > 0,
+    @"Thumbnail retains decoded image pixels");
+  navigatorCell = [[[navigator outlineView] outlineTableColumn] dataCell];
+  [navigatorCell setImage:[previewItem icon]];
+  NSRect thumbnailRect = [navigatorCell imageRectForBounds:NSMakeRect(0, 0, 100, 20)];
+  testAssert(NSEqualSizes(thumbnailRect.size, NSMakeSize(16, 12))
+    && NSMidY(thumbnailRect) == 10,
+    @"Navigator centers the thumbnail without stretching its proportions");
+  [fallbackIcon release];
+  [previewItem release];
+  [previewFile release];
   testAssert([[[inspectorTabs selectedTabViewItem] identifier] isEqual:@"image"],
     @"Selecting an image shows its inspector");
   NSTextView *imageDetails = [[[inspectorTabs selectedTabViewItem] view] valueForKey:@"_details"];
@@ -1166,6 +1205,16 @@ int main(void)
     @"Switching back to source restores text editing and clears image details");
   NSString *invalidImage = [temporaryDirectory stringByAppendingPathComponent:@"Broken.png"];
   [@"not an image" writeToFile:invalidImage atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  PBXFileReference *brokenFile = [[PBXFileReference alloc] init];
+  [brokenFile setPath:invalidImage];
+  YCodeProjectNavigatorItem *brokenItem = [[YCodeProjectNavigatorItem alloc]
+    initWithRepresentedObject:brokenFile type:YCodeNavigatorItemTypeFile];
+  NSImage *brokenIcon = [brokenItem icon];
+  [navigator updateThumbnailForItem:brokenItem];
+  testAssert([brokenItem icon] == brokenIcon,
+    @"Unreadable image retains the normal navigator file icon");
+  [brokenItem release];
+  [brokenFile release];
   testAssert(![editor openFile:invalidImage] && [[editor openDocuments] count] == openCount,
     @"Invalid images do not open as editable text");
   for (YCodeEditorDocument *openDocument in [NSArray arrayWithArray:[editor openDocuments]])

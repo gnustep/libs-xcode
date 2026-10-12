@@ -53,7 +53,9 @@
 - (NSImage *)image { return _navigatorImage; }
 - (NSRect)imageRectForBounds:(NSRect)bounds
 {
-    return NSMakeRect(NSMinX(bounds) + 2, NSMidY(bounds) - 8, 16, 16);
+    NSSize size = [_navigatorImage size];
+    return NSMakeRect(NSMinX(bounds) + 2 + (16 - size.width) / 2,
+        NSMidY(bounds) - size.height / 2, size.width, size.height);
 }
 - (void)drawInteriorWithFrame:(NSRect)frame inView:(NSView *)view
 {
@@ -122,6 +124,22 @@
         return nil;
     }
     return [self resolvedPathForNavigatorItem:item];
+}
+
+- (void)updateThumbnailForItem:(YCodeProjectNavigatorItem *)item
+{
+    NSString *path = [self resolvedFilePathForNavigatorItem:item];
+    NSString *extension = [[path pathExtension] lowercaseString];
+    if (!path || (![[NSImage imageFileTypes] containsObject:extension] &&
+        ![[NSArray arrayWithObjects:@"png", @"jpg", @"jpeg", @"gif", @"tif",
+            @"tiff", @"bmp", @"ico", @"icns", @"webp", nil] containsObject:extension]))
+        return;
+    NSImage *image = [[NSImage alloc] initWithContentsOfFile:path];
+    NSSize size = [image size];
+    if ([image isValid] && size.width > 0 && size.height > 0) {
+        [item setIcon:image];
+    }
+    RELEASE(image);
 }
 
 - (instancetype)init
@@ -291,6 +309,7 @@
                 [[YCodeProjectNavigatorItem alloc] initWithRepresentedObject:child 
                                                                        type:YCodeNavigatorItemTypeFile];
             [groupItem addChild:fileItem];
+            [self updateThumbnailForItem:fileItem];
             [_itemCache setObject:fileItem forKey:[NSValue valueWithPointer:child]];
             RELEASE(fileItem);
         }

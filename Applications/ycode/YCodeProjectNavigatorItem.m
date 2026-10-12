@@ -174,7 +174,11 @@ static NSImage *YCodeProjectCenterIcon(NSString *name)
 {
     // Workspace images are shared; resize only our own copy.
     NSImage *smallIcon = [icon copy];
-    [smallIcon setSize:NSMakeSize(16, 16)];
+    NSSize size = [smallIcon size];
+    if (size.width > 0 && size.height > 0) {
+        CGFloat scale = MIN(16 / size.width, 16 / size.height);
+        [smallIcon setSize:NSMakeSize(size.width * scale, size.height * scale)];
+    }
     RELEASE(_icon);
     _icon = smallIcon;
 }

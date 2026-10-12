@@ -28,6 +28,23 @@
 #import "YCodeEditorController.h"
 #import "YCodeSyntaxHighlighter.h"
 
+@interface YCodeImageClipView : NSClipView
+@end
+
+@implementation YCodeImageClipView
+- (NSPoint)constrainScrollPoint:(NSPoint)point
+{
+    point = [super constrainScrollPoint:point];
+    NSRect document = [[self documentView] frame];
+    NSSize viewport = [self bounds].size;
+    if (document.size.width < viewport.width)
+        point.x = NSMidX(document) - viewport.width / 2;
+    if (document.size.height < viewport.height)
+        point.y = NSMidY(document) - viewport.height / 2;
+    return point;
+}
+@end
+
 @implementation YCodeEditorDocument
 
 - (instancetype)initWithFilePath:(NSString *)filePath
@@ -245,12 +262,17 @@
         [_scrollView setVerticalRulerView:nil];
         [_scrollView setHorizontalRulerView:nil];
         DESTROY(_lineNumberRuler);
+        YCodeImageClipView *clip = [[YCodeImageClipView alloc]
+            initWithFrame:[[_scrollView contentView] frame]];
+        [_scrollView setContentView:clip];
+        RELEASE(clip);
         NSImageView *preview = [[NSImageView alloc] initWithFrame:
             NSMakeRect(0, 0, [_image size].width, [_image size].height)];
         [preview setImage:_image];
         [preview setImageScaling:NSImageScaleNone];
         [preview setEditable:NO];
         [_scrollView setDocumentView:preview];
+        [[_scrollView contentView] scrollToPoint:NSZeroPoint];
         RELEASE(preview);
         DESTROY(_textView);
         [self setModified:NO];
