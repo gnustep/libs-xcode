@@ -32,6 +32,7 @@
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
 #import "YCFileInspectorView.h"
+#import "YCImageInspectorView.h"
 
 static NSScrollView *
 YCodeScrollViewWithDocumentView(NSView *documentView)
@@ -380,6 +381,10 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             initWithFrame:[_inspectorTabView contentRect]];
         [self registerInspectorView:inspector];
         RELEASE(inspector);
+        YCImageInspectorView *imageInspector = [[YCImageInspectorView alloc]
+            initWithFrame:[_inspectorTabView contentRect]];
+        [self registerInspectorView:imageInspector];
+        RELEASE(imageInspector);
     }
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     [center removeObserver:self name:YCodeCurrentDocumentDidChangeNotification object:nil];
@@ -406,6 +411,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 {
     if (notification && [notification object] != _editorController) return;
     [self updateDebuggerViews];
+    NSString *identifier = [[_editorController currentDocument] isImageDocument] ? @"image" : @"file";
+    [_inspectorTabView selectTabViewItemWithIdentifier:identifier];
     for (NSTabViewItem *item in [_inspectorTabView tabViewItems])
         [(YCInspectorView *)[item view] inspectDocument:
             _project ? [_editorController currentDocument] : nil];

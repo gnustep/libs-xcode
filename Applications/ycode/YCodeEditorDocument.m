@@ -56,6 +56,7 @@
 
 - (void)dealloc
 {
+    RELEASE(_image);
     RELEASE(_filePath);
     RELEASE(_content);
     RELEASE(_lastModified);
@@ -167,7 +168,7 @@
 
 - (void)setContent:(NSString *)content
 {
-    if (content) {
+    if (content && !_image) {
         ASSIGN(_content, content);
         if (_textView) {
             [_textView setString:content];
@@ -186,7 +187,7 @@
 
 - (void)setModified:(BOOL)modified
 {
-    _modified = modified;
+    _modified = _image ? NO : modified;
     // TODO: Update tab title to show modification state
 }
 
@@ -196,6 +197,16 @@
 }
 
 #pragma mark - UI Components
+
+- (BOOL)isImageDocument
+{
+    return _image != nil;
+}
+
+- (NSImage *)image
+{
+    return _image;
+}
 
 - (NSView *)editorView
 {
@@ -216,6 +227,40 @@
 
 - (BOOL)loadFromFile
 {
+    NSString *extension = [[self fileExtension] lowercaseString];
+    if (_image || [[NSImage imageFileTypes] containsObject:extension] ||
+        [[NSArray arrayWithObjects:@"png", @"jpg", @"jpeg", @"gif", @"tif",
+          @"tiff", @"bmp", @"ico", @"icns", @"webp", nil] containsObject:extension]) {
+        NSImage *image = [[NSImage alloc] initWithContentsOfFile:_filePath];
+        if (!image || ![image isValid]) {
+            RELEASE(image);
+            return NO;
+        }
+        ASSIGN(_image, image);
+        RELEASE(image);
+        [NSObject cancelPreviousPerformRequestsWithTarget:self];
+        [_textView setDelegate:nil];
+        DESTROY(_syntaxHighlighter);
+        [_scrollView setRulersVisible:NO];
+        [_scrollView setVerticalRulerView:nil];
+        [_scrollView setHorizontalRulerView:nil];
+        DESTROY(_lineNumberRuler);
+        NSImageView *preview = [[NSImageView alloc] initWithFrame:
+            NSMakeRect(0, 0, [_image size].width, [_image size].height)];
+        [preview setImage:_image];
+        [preview setImageScaling:NSImageScaleNone];
+        [preview setEditable:NO];
+        [_scrollView setDocumentView:preview];
+        RELEASE(preview);
+        DESTROY(_textView);
+        [self setModified:NO];
+        NSDictionary *attributes = [[NSFileManager defaultManager]
+            attributesOfItemAtPath:_filePath error:NULL];
+        ASSIGN(_lastModified, [attributes fileModificationDate]);
+        [[NSNotificationCenter defaultCenter] postNotificationName:
+            YCodeCurrentDocumentDidChangeNotification object:_editorController];
+        return YES;
+    }
     NSError *error = nil;
     NSString *content = [NSString stringWithContentsOfFile:_filePath
                                                    encoding:NSUTF8StringEncoding
@@ -240,6 +285,8 @@
 
 - (BOOL)saveToFile
 {
+    // Previewing an image must never overwrite its bytes with text.
+    if (_image) return YES;
     NSString *content = [self content];
     NSError *error = nil;
     

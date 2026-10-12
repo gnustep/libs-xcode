@@ -42,6 +42,7 @@
     NSScrollView *_scrollView;
     NSTextView *_textView;
     NSRulerView *_lineNumberRuler;
+    NSImage *_image;
     
     // Syntax highlighting
     YCodeSyntaxHighlighter *_syntaxHighlighter;
@@ -76,6 +77,9 @@
 /**
  * UI Components
  */
+/** Image previews are read-only; textView is nil for image documents. */
+- (BOOL)isImageDocument;
+- (NSImage *)image;
 - (NSView *)editorView;
 - (NSTextView *)textView;
 - (NSScrollView *)scrollView;

@@ -15,7 +15,7 @@ behavior; some README roadmap statements predate current functionality.
 - `Generators/`: Makefile, CMake, ProjectCenter, and ProjectBuilder generator
   bundles. CMake here is an output format, not the repository build system.
 - `Tests/main.m`: regression test executable and its fixtures/helpers.
-- `Applications/ycode/`: AppKit IDE, built separately from the root aggregate.
+- `Applications/ycode/`: AppKit IDE, included in the root aggregate.
 - `Documentation/`: gsdoc manual, generated API documentation, and man pages.
 
 ## Build and verification
@@ -28,7 +28,7 @@ unset. If necessary, source the installed `GNUstep.sh` before building.
 Run from the repository root:
 
 ```sh
-make                       # XCode, generators, tools, and tests
+make                       # XCode, generators, tools, Ycode, and tests
 make check                 # aggregate test entry point used by CI
 ```
 
@@ -44,9 +44,9 @@ and supplies the arguments expected by the parser tests. Use this target
 instead of invoking the test binary from an arbitrary directory: tests read
 `../libs-xcode.xcodeproj/project.pbxproj` relative to `Tests/`.
 
-- Build Ycode changes with `make -C Applications/ycode`; the root build does
-  not validate them. Check affected UI behavior when changing controllers or
-  interface resources.
+- Build Ycode changes with `make -C Applications/ycode` for a focused build;
+  the root build also includes it. Check affected UI behavior when changing
+  controllers or interface resources.
 - Build documentation with `make -C Documentation` when changing gsdoc.
 - On macOS with full Xcode, use `sh Tests/run-macos.sh` to build the native
   framework and tools and run the shared tests without GNUstep. Set

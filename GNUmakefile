@@ -21,6 +21,7 @@ SUBPROJECTS = \
 	XCode \
 	Generators \
 	Tools \
+	Applications \
 	Tests
 
 #

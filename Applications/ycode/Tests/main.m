@@ -1111,12 +1111,12 @@ int main(void)
   [navigatorTabs selectTabViewItemWithIdentifier:@"project"];
   [windowController setupInspectorArea];
   [windowController setupNavigatorArea];
-  testAssert([inspectorTabs numberOfTabViewItems] == 1,
-    @"Repeated setup keeps a single File inspector without Quick Help");
+  testAssert([inspectorTabs numberOfTabViewItems] == 2,
+    @"Repeated setup keeps File and Image inspectors without duplicates");
   YCInspectorView *extra = [[YCInspectorView alloc] initWithFrame:NSZeroRect];
   [windowController registerInspectorView:extra];
   [windowController registerInspectorView:extra];
-  testAssert([inspectorTabs numberOfTabViewItems] == 2, @"Inspectors register uniquely");
+  testAssert([inspectorTabs numberOfTabViewItems] == 3, @"Inspectors register uniquely");
   [extra release];
   NSString *inspectedPath = [temporaryDirectory stringByAppendingPathComponent:@"Inspector.m"];
   [@"int main(void) { return 0; }" writeToFile:inspectedPath atomically:YES
@@ -1128,6 +1128,46 @@ int main(void)
   testAssert([[details string] rangeOfString:inspectedPath].location != NSNotFound
     && [[details string] rangeOfString:@"Objective-C source"].location != NSNotFound,
     @"File inspector follows the active source file");
+  NSString *imagePath = [temporaryDirectory stringByAppendingPathComponent:@"Preview.PNG"];
+  NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
+    initWithBitmapDataPlanes:NULL pixelsWide:32 pixelsHigh:24 bitsPerSample:8
+    samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace
+    bytesPerRow:0 bitsPerPixel:0];
+  memset([bitmap bitmapData], 128, [bitmap bytesPerRow] * [bitmap pixelsHigh]);
+  NSData *imageData = [bitmap representationUsingType:NSPNGFileType
+    properties:[NSDictionary dictionary]];
+  [imageData writeToFile:imagePath atomically:YES];
+  [bitmap release];
+  testAssert([editor openFile:imagePath], @"Open image through the ordinary file selection path");
+  YCodeEditorDocument *imageDocument = [editor currentDocument];
+  testAssert([imageDocument isImageDocument] && [imageDocument textView] == nil
+    && [[[imageDocument scrollView] documentView] isKindOfClass:[NSImageView class]]
+    && ![[imageDocument scrollView] rulersVisible], @"Image editor displays a preview without text or rulers");
+  testAssert([[[inspectorTabs selectedTabViewItem] identifier] isEqual:@"image"],
+    @"Selecting an image shows its inspector");
+  NSTextView *imageDetails = [[[inspectorTabs selectedTabViewItem] view] valueForKey:@"_details"];
+  testAssert([[imageDetails string] rangeOfString:@"32 × 24 pixels"].location != NSNotFound
+    && [[imageDetails string] rangeOfString:@"Transparency\nYes"].location != NSNotFound,
+    @"Image inspector reports decoded dimensions and transparency");
+  [imageDocument setContent:@"Do not overwrite image bytes"];
+  [imageDocument insertText:@"text" atLocation:0];
+  testAssert(![imageDocument isModified] && [editor saveCurrentFile]
+    && [[NSData dataWithContentsOfFile:imagePath] isEqual:imageData],
+    @"Text editing and saving cannot corrupt an image");
+  NSUInteger openCount = [[editor openDocuments] count];
+  testAssert([editor openFile:imagePath] && [[editor openDocuments] count] == openCount,
+    @"Repeated image selection reuses its tab");
+  testAssert([imageDocument reloadFromFile], @"Reload image preview");
+  [editor openFile:inspectedPath];
+  testAssert(![[editor currentDocument] isImageDocument]
+    && [[editor currentDocument] textView] != nil
+    && [[[inspectorTabs selectedTabViewItem] identifier] isEqual:@"file"]
+    && [[imageDetails string] isEqual:@"No image selected."],
+    @"Switching back to source restores text editing and clears image details");
+  NSString *invalidImage = [temporaryDirectory stringByAppendingPathComponent:@"Broken.png"];
+  [@"not an image" writeToFile:invalidImage atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert(![editor openFile:invalidImage] && [[editor openDocuments] count] == openCount,
+    @"Invalid images do not open as editable text");
   for (YCodeEditorDocument *openDocument in [NSArray arrayWithArray:[editor openDocuments]])
     [editor closeFile:[openDocument filePath]];
   testAssert([[details string] isEqual:@"No source file selected."],

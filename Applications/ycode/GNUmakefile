@@ -56,6 +56,7 @@ YCEditorView.h \
 YCodeTextView.h \
 YCInspectorView.h \
 YCFileInspectorView.h \
+YCImageInspectorView.h \
 YCodeWindowController.h \
 YCodeProject.h \
 YCodeProjectNavigatorController.h \
@@ -78,6 +79,7 @@ YCEditorView.m \
 YCodeTextView.m \
 YCInspectorView.m \
 YCFileInspectorView.m \
+YCImageInspectorView.m \
 YCodeWindowController.m \
 YCodeProject.m \
 YCodeProjectNavigatorController.m \
