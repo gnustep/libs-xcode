@@ -4,6 +4,9 @@
     };
     objectVersion = 56;
     objects = {
+        YCODE_FILE_INSPECTOR_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCFileInspectorView.m"; sourceTree = "<group>"; };
+        YCODE_FILE_INSPECTOR_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCFileInspectorView.h"; sourceTree = "<group>"; };
+        YCODE_FILE_INSPECTOR_BUILD = { isa = PBXBuildFile; fileRef = YCODE_FILE_INSPECTOR_SOURCE; };
         YCODE_TEXT_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTextView.m"; sourceTree = "<group>"; };
         YCODE_TEXT_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTextView.h"; sourceTree = "<group>"; };
         YCODE_TEXT_BUILD = { isa = PBXBuildFile; fileRef = YCODE_TEXT_SOURCE; };
@@ -54,6 +57,8 @@
 	    children = (
 		YCODE_TEXT_SOURCE,
         YCODE_TEXT_HEADER,
+        YCODE_FILE_INSPECTOR_SOURCE,
+        YCODE_FILE_INSPECTOR_HEADER,
         YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
         YCODE_DEBUGGER_SOURCE,
@@ -87,6 +92,7 @@
 	    files = (
 		YCODE_TEXT_BUILD,
         YCODE_ICONS_BUILD,
+        YCODE_FILE_INSPECTOR_BUILD,
         YCODE_DEBUGGER_BUILD,
         "60D3A5A8-4695-CB0B-5738-AEC068B0253F",
 		"38118205-AC17-F000-48CB-7D0B67582EA2",

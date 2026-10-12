@@ -47,7 +47,7 @@
     
     // Navigator area
     IBOutlet NSView *_navigatorView;
-    IBOutlet NSSegmentedControl *_navigatorSegmentControl;
+    IBOutlet NSTabView *_navigatorTabView;
     IBOutlet YCTreeView *_treeView;
     IBOutlet NSOutlineView *_navigatorOutlineView;
     
@@ -122,7 +122,8 @@
 - (IBAction)toggleNavigator:(id)sender;
 - (IBAction)toggleInspector:(id)sender;
 - (IBAction)toggleBottomPanel:(id)sender;
-- (IBAction)selectNavigatorMode:(id)sender;
+/** Register an inspector once per identifier; subsequent calls are ignored. */
+- (void)registerInspectorView:(YCInspectorView *)inspector;
 - (IBAction)runProject:(id)sender;
 - (BOOL)validateDebuggerAction:(SEL)action tag:(NSInteger)tag;
 - (IBAction)debugProject:(id)sender;

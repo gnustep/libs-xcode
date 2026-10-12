@@ -33,6 +33,8 @@
 - (void)restoreLastSourceFile;
 @end
 
+NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocumentDidChangeNotification";
+
 @implementation YCodeEditorController
 
 - (instancetype)init
@@ -110,6 +112,8 @@
     if (_currentDocument != document) {
         ASSIGN(_currentDocument, document);
         [self rememberCurrentSourceFile];
+        [[NSNotificationCenter defaultCenter] postNotificationName:
+            YCodeCurrentDocumentDidChangeNotification object:self];
         
         // Update tab view selection
         if (document && _tabView) {

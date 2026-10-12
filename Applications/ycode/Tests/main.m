@@ -38,6 +38,7 @@
 #import "YCodeEditorDocument.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "YCEditorView.h"
+#import "YCInspectorView.h"
 #import "YCodeTextView.h"
 #import "AppController.h"
 #include <math.h>
@@ -845,10 +846,45 @@ int main(void)
     @"Navigator column follows the viewport after resizing");
   testAssert(NSContainsRect([[navigatorScroll superview] bounds], [navigatorScroll frame]),
     @"Resized navigator stays inside its section");
-  NSSplitView *navigatorSplit = (NSSplitView *)[[navigatorScroll superview] superview];
+  YCodeWindowController *windowController = [[document windowControllers] objectAtIndex:0];
+  NSSplitView *navigatorSplit = [windowController valueForKey:@"_mainSplitView"];
   [navigatorSplit setPosition:300 ofDividerAtIndex:0];
   testAssert(fabs([[outline outlineTableColumn] width] - [navigatorScroll contentSize].width) < 3
     && NSMinX([outline frame]) == 0, @"Navigator remains fully visible after moving the divider");
+
+  NSTabView *navigatorTabs = [windowController valueForKey:@"_navigatorTabView"];
+  NSTabView *inspectorTabs = [windowController valueForKey:@"_inspectorTabView"];
+  testAssert([navigatorTabs isKindOfClass:[NSTabView class]]
+    && [navigatorTabs numberOfTabViewItems] == 3, @"Navigator uses three native tabs");
+  for (NSTabViewItem *item in [navigatorTabs tabViewItems])
+    testAssert(![[item label] isEqual:@"Issues"], @"No Issues navigator tab");
+  [navigatorTabs selectTabViewItemWithIdentifier:@"search"];
+  testAssert([[[navigatorTabs selectedTabViewItem] identifier] isEqual:@"search"],
+    @"Native navigator switches pages");
+  [navigatorTabs selectTabViewItemWithIdentifier:@"project"];
+  [windowController setupInspectorArea];
+  [windowController setupNavigatorArea];
+  testAssert([inspectorTabs numberOfTabViewItems] == 1,
+    @"Repeated setup keeps a single File inspector without Quick Help");
+  YCInspectorView *extra = [[YCInspectorView alloc] initWithFrame:NSZeroRect];
+  [windowController registerInspectorView:extra];
+  [windowController registerInspectorView:extra];
+  testAssert([inspectorTabs numberOfTabViewItems] == 2, @"Inspectors register uniquely");
+  [extra release];
+  NSString *inspectedPath = [temporaryDirectory stringByAppendingPathComponent:@"Inspector.m"];
+  [@"int main(void) { return 0; }" writeToFile:inspectedPath atomically:YES
+    encoding:NSUTF8StringEncoding error:NULL];
+  YCodeEditorController *editor = [windowController editorController];
+  [editor openFile:inspectedPath];
+  NSView *fileInspector = [[inspectorTabs tabViewItemAtIndex:0] view];
+  NSTextView *details = [fileInspector valueForKey:@"_details"];
+  testAssert([[details string] rangeOfString:inspectedPath].location != NSNotFound
+    && [[details string] rangeOfString:@"Objective-C source"].location != NSNotFound,
+    @"File inspector follows the active source file");
+  for (YCodeEditorDocument *openDocument in [NSArray arrayWithArray:[editor openDocuments]])
+    [editor closeFile:[openDocument filePath]];
+  testAssert([[details string] isEqual:@"No source file selected."],
+    @"Closing the final editor clears File inspector");
 
   // A failed read must report an error and preserve an already loaded project.
   PBXProject *originalProject = [document project];

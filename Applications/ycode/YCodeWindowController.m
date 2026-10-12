@@ -31,6 +31,7 @@
 #import "YCTreeView.h"
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
+#import "YCFileInspectorView.h"
 
 static NSScrollView *
 YCodeScrollViewWithDocumentView(NSView *documentView)
@@ -148,6 +149,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (_editorTabView) {
         [_editorController setTabView:_editorTabView];
     }
+    [self updateInspectors:nil];
     
     if (_project)
       {
@@ -285,15 +287,25 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)setupNavigatorArea
 {
-    if (_navigatorSegmentControl == nil) {
-        _navigatorSegmentControl = [[NSSegmentedControl alloc] initWithFrame:NSMakeRect(8, NSHeight([_navigatorView bounds]) - 32, 204, 24)];
-        [_navigatorSegmentControl setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
-        [_navigatorView addSubview:_navigatorSegmentControl];
-        RELEASE(_navigatorSegmentControl);
+    if (_navigatorTabView == nil) {
+        _navigatorTabView = [[NSTabView alloc] initWithFrame:[_navigatorView bounds]];
+        [_navigatorTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_navigatorView addSubview:_navigatorTabView];
+        RELEASE(_navigatorTabView);
+        for (NSString *title in [NSArray arrayWithObjects:@"Project", @"Search", @"Test", nil]) {
+            NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:[title lowercaseString]];
+            [item setLabel:title];
+            NSView *content = [[NSView alloc] initWithFrame:[_navigatorTabView contentRect]];
+            [item setView:content];
+            RELEASE(content);
+            [_navigatorTabView addTabViewItem:item];
+            RELEASE(item);
+        }
     }
 
     if (_navigatorOutlineView == nil) {
-        NSRect outlineFrame = NSMakeRect(0, 0, NSWidth([_navigatorView bounds]), NSHeight([_navigatorView bounds]) - 40);
+        NSView *projectView = [[_navigatorTabView tabViewItemAtIndex:0] view];
+        NSRect outlineFrame = [projectView bounds];
         NSScrollView *scrollView = nil;
         NSTableColumn *column = nil;
 
@@ -319,7 +331,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [scrollView setBorderType:NSNoBorder];
         [scrollView setHasHorizontalScroller:NO];
         [scrollView setDocumentView:_navigatorOutlineView];
-        [_navigatorView addSubview:scrollView];
+        [projectView addSubview:scrollView];
         [_navigatorOutlineView sizeToFit];
         RELEASE(_navigatorOutlineView);
     }
@@ -329,16 +341,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_navigatorOutlineView setMenu:[_navigatorController contextMenu]];
     }
     
-    if (_navigatorSegmentControl) {
-        [_navigatorSegmentControl setTarget:self];
-        [_navigatorSegmentControl setAction:@selector(selectNavigatorMode:)];
-        [_navigatorSegmentControl setSegmentCount:4];
-        [_navigatorSegmentControl setLabel:@"Project" forSegment:0];
-        [_navigatorSegmentControl setLabel:@"Search" forSegment:1];
-        [_navigatorSegmentControl setLabel:@"Issues" forSegment:2];
-        [_navigatorSegmentControl setLabel:@"Test" forSegment:3];
-        [_navigatorSegmentControl setSelectedSegment:0];
-    }
+
 }
 
 - (void)setupEditorArea
@@ -370,20 +373,39 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         RELEASE(_inspectorTabView);
     }
 
-    if (_inspectorTabView) {
-        [_inspectorTabView setDelegate:self];
-        
-        // Add inspector tabs
-        NSTabViewItem *fileInspectorTab = [[NSTabViewItem alloc] initWithIdentifier:@"file"];
-        [fileInspectorTab setLabel:@"File"];
-        [_inspectorTabView addTabViewItem:fileInspectorTab];
-        RELEASE(fileInspectorTab);
-        
-        NSTabViewItem *quickHelpTab = [[NSTabViewItem alloc] initWithIdentifier:@"quickhelp"];
-        [quickHelpTab setLabel:@"Quick Help"];
-        [_inspectorTabView addTabViewItem:quickHelpTab];
-        RELEASE(quickHelpTab);
+    if ([_inspectorTabView numberOfTabViewItems] == 0) {
+        YCFileInspectorView *inspector = [[YCFileInspectorView alloc]
+            initWithFrame:[_inspectorTabView contentRect]];
+        [self registerInspectorView:inspector];
+        RELEASE(inspector);
     }
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    [center removeObserver:self name:YCodeCurrentDocumentDidChangeNotification object:nil];
+    [center addObserver:self selector:@selector(updateInspectors:)
+        name:YCodeCurrentDocumentDidChangeNotification object:nil];
+    [self updateInspectors:nil];
+}
+
+- (void)registerInspectorView:(YCInspectorView *)inspector
+{
+    for (NSTabViewItem *item in [_inspectorTabView tabViewItems])
+        if ([[item identifier] isEqual:[inspector inspectorIdentifier]]) return;
+    NSTabViewItem *item = [[NSTabViewItem alloc]
+        initWithIdentifier:[inspector inspectorIdentifier]];
+    [item setLabel:[inspector inspectorTitle]];
+    [inspector setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [item setView:inspector];
+    [_inspectorTabView addTabViewItem:item];
+    RELEASE(item);
+    [inspector inspectDocument:[_editorController currentDocument]];
+}
+
+- (void)updateInspectors:(NSNotification *)notification
+{
+    if (notification && [notification object] != _editorController) return;
+    for (NSTabViewItem *item in [_inspectorTabView tabViewItems])
+        [(YCInspectorView *)[item view] inspectDocument:
+            _project ? [_editorController currentDocument] : nil];
 }
 
 - (void)setupBottomPanel
@@ -571,27 +593,6 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (IBAction)toggleBottomPanel:(id)sender
 {
     [self setBottomPanelVisible:!_bottomPanelVisible];
-}
-
-- (IBAction)selectNavigatorMode:(id)sender
-{
-    NSInteger selectedSegment = [_navigatorSegmentControl selectedSegment];
-    
-    switch (selectedSegment) {
-        case 0: // Project
-            // Show project navigator
-            break;
-        case 1: // Search
-            // Show search navigator
-            break;
-        case 2: // Issues
-            [self setBottomPanelVisible:YES];
-            [_bottomTabView selectTabViewItemWithIdentifier:@"issues"];
-            break;
-        case 3: // Test
-            // Show test navigator
-            break;
-    }
 }
 
 - (void)appendConsoleOutput:(NSString *)output

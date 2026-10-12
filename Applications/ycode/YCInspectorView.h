@@ -28,10 +28,19 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 
+@class YCodeEditorDocument;
+
+/** Subclass and register with the window to add an inspector.
+ * Identifiers must be unique within a window. Views receive nil on close.
+ */
 @interface YCInspectorView : NSView
 {
 
 }
+
+- (NSString *)inspectorIdentifier;
+- (NSString *)inspectorTitle;
+- (void)inspectDocument:(YCodeEditorDocument *)document;
 
 @end
 

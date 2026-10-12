@@ -54,6 +54,7 @@ YCTreeView.h \
 YCEditorView.h \
 YCodeTextView.h \
 YCInspectorView.h \
+YCFileInspectorView.h \
 YCodeWindowController.h \
 YCodeProject.h \
 YCodeProjectNavigatorController.h \
@@ -75,6 +76,7 @@ YCTreeView.m \
 YCEditorView.m \
 YCodeTextView.m \
 YCInspectorView.m \
+YCFileInspectorView.m \
 YCodeWindowController.m \
 YCodeProject.m \
 YCodeProjectNavigatorController.m \

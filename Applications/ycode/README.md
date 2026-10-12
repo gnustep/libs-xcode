@@ -12,6 +12,25 @@ make -C XCode
 make -C Applications/ycode
 ```
 
+The repository's top-level `make install` does not install Ycode. Install it
+separately, choosing the domain containing the application you launch. For an
+existing System-domain installation, run this from the repository root after
+building:
+
+```sh
+sudo make -C Applications/ycode install GNUSTEP_INSTALLATION_DOMAIN=SYSTEM \
+  GNUSTEP_MAKEFILES="$(gnustep-config --variable=GNUSTEP_MAKEFILES)"
+```
+
+The makefiles path is expanded before `sudo`, so installation also works when
+root's PATH does not include `gnustep-config`. If using `su` instead, source
+the installed GNUstep environment in the root shell first (for example,
+`. /usr/GNUstep/System/Library/Makefiles/GNUstep.sh`), then run
+`make -C Applications/ycode install GNUSTEP_INSTALLATION_DOMAIN=SYSTEM` from
+the repository root. The default installation domain is Local; installing
+there does not replace an existing System copy. Quit and reopen Ycode after
+installation to load the updated executable.
+
 Use **File > Open Project...** to select an `.xcodeproj` package. Ycode loads
 its `project.pbxproj` through libs-xcode and displays its groups, files, and
 targets in the project navigator. Missing or invalid project contents produce

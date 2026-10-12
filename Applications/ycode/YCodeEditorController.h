@@ -28,6 +28,8 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 
+extern NSString * const YCodeCurrentDocumentDidChangeNotification;
+
 @class YCodeProject;
 @class YCodeEditorDocument;
 

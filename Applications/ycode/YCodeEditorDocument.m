@@ -251,6 +251,8 @@
     if (success) {
         [self setModified:NO];
         ASSIGN(_lastModified, [NSDate date]);
+        [[NSNotificationCenter defaultCenter] postNotificationName:
+            YCodeCurrentDocumentDidChangeNotification object:_editorController];
     } else {
         NSLog(@"Error saving file %@: %@", _filePath, [error localizedDescription]);
     }
