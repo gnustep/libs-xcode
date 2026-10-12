@@ -149,6 +149,10 @@ YCodeFileURLFromPath(NSString *path)
     fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
     [fileMenu addItem:YCodeMenuItem(@"New Project...", @selector(newProject:), @"n", self)];
     [fileMenu addItem:YCodeMenuItem(@"Open Project...", @selector(openProject:), @"o", self)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Recent Documents" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:[(YCodeDocumentController *)[NSDocumentController sharedDocumentController] recentDocumentsMenu]];
+    [fileMenu addItem:menuItem];
+    RELEASE(menuItem);
     [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItem:YCodeMenuItem(@"New File", @selector(newFile:), @"", self)];
     [fileMenu addItem:YCodeMenuItem(@"Close File", @selector(closeCurrentFile:), @"w", self)];

@@ -27,6 +27,65 @@
 
 @implementation YCodeDocumentController
 
+- (NSMenu *)recentDocumentsMenu
+{
+    NSMenu *menu = AUTORELEASE([[NSMenu alloc] initWithTitle:@"Recent Documents"]);
+    [menu setDelegate:self];
+    [menu setAutoenablesItems:NO];
+    [self menuNeedsUpdate:menu];
+    return menu;
+}
+
+- (void)menuNeedsUpdate:(NSMenu *)menu
+{
+    while ([menu numberOfItems]) [menu removeItemAtIndex:0];
+    NSArray *urls = [self recentDocumentURLs];
+#ifdef GNUSTEP
+    // GNUstep stores the most recently opened URL at the end.
+    urls = [[urls reverseObjectEnumerator] allObjects];
+#endif
+    for (NSURL *url in urls) {
+        NSString *path = [url path];
+        NSString *title = [path lastPathComponent];
+        if (![title length]) title = [url absoluteString];
+        NSUInteger matches = 0;
+        for (NSURL *other in urls)
+            if ([[[other path] lastPathComponent] isEqual:title]) matches++;
+        if (matches > 1)
+            title = [NSString stringWithFormat:@"%@ — %@", title, [path stringByDeletingLastPathComponent]];
+        NSMenuItem *item = AUTORELEASE([[NSMenuItem alloc] initWithTitle:title
+            action:@selector(openRecentProject:) keyEquivalent:@""]);
+        [item setTarget:self];
+        [item setRepresentedObject:url];
+        [item setToolTip:path];
+        [item setEnabled:[url isFileURL] && [[NSFileManager defaultManager] fileExistsAtPath:path]];
+        [menu addItem:item];
+    }
+    if ([urls count]) [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *clear = AUTORELEASE([[NSMenuItem alloc] initWithTitle:@"Clear Menu"
+        action:@selector(clearRecentProjects:) keyEquivalent:@""]);
+    [clear setTarget:self];
+    [clear setEnabled:[urls count] > 0];
+    [menu addItem:clear];
+}
+
+- (IBAction)openRecentProject:(id)sender
+{
+    NSURL *url = [sender representedObject];
+    if (![url isKindOfClass:[NSURL class]] || ![url isFileURL]) return;
+    NSError *error = nil;
+    [self openDocumentWithContentsOfURL:url display:YES error:&error];
+    if (error) [self presentError:error];
+}
+
+- (IBAction)clearRecentProjects:(id)sender
+{
+    AUTORELEASE(RETAIN(sender));
+    [self clearRecentDocuments:sender];
+    if ([sender respondsToSelector:@selector(menu)] && [sender menu])
+        [self menuNeedsUpdate:[sender menu]];
+}
+
 - (NSString *)typeFromFileExtension:(NSString *)fileExtension
 {
     if ([fileExtension isEqualToString:@"xcodeproj"]) {

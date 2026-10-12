@@ -60,6 +60,10 @@ Each project remembers its last selected source file and
 reopens it next time. Closing the last source tab clears that saved selection;
 missing files are skipped when reopening the project.
 
+**File > Recent Documents** lists recently opened projects, newest first.
+Choose an entry to reopen it, or **Clear Menu** to clear the saved history.
+Missing projects remain listed but disabled.
+
 **File > Save** and its keyboard shortcut save the active source tab. With no
 source tab open, Save saves the project.
 

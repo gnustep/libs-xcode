@@ -143,6 +143,45 @@ static void testApplicationStartup(void)
   [delegate autorelease];
 }
 
+static void testRecentDocuments(YCodeProject *project, NSString *directory)
+{
+  YCodeDocumentController *controller = [YCodeDocumentController sharedDocumentController];
+  NSArray *saved = [[controller recentDocumentURLs] copy];
+  NSMenu *menu = [[[[[NSApp mainMenu] itemWithTitle:@"File"] submenu]
+    itemWithTitle:@"Recent Documents"] submenu];
+  testAssert(menu != nil, @"File menu exposes Recent Documents");
+  [controller clearRecentDocuments:nil];
+  NSURL *missing = [NSURL fileURLWithPath:[directory stringByAppendingPathComponent:@"Missing.xcodeproj"]];
+  [controller noteNewRecentDocumentURL:missing];
+  [controller noteNewRecentDocumentURL:[project fileURL]];
+  [menu update];
+  NSMenuItem *first = [menu itemAtIndex:0];
+  testAssert([[first representedObject] isEqual:[project fileURL]] && [first isEnabled],
+    @"Recent Documents shows the latest project first");
+  testAssert(![[menu itemAtIndex:1] isEnabled], @"Missing recent projects are disabled");
+  NSUInteger count = [[controller documents] count];
+  [NSApp sendAction:[first action] to:[first target] from:first];
+  testAssert([[controller documents] count] == count
+    && [controller documentForURL:[project fileURL]] == project,
+    @"Opening a recent project reuses its existing document");
+  [menu update];
+  NSUInteger occurrences = 0;
+  for (NSMenuItem *item in [menu itemArray])
+    if ([[item representedObject] isEqual:[project fileURL]]) occurrences++;
+  testAssert(occurrences == 1, @"Reopening does not duplicate recent entries");
+  NSMenuItem *clear = [menu itemWithTitle:@"Clear Menu"];
+  [NSApp sendAction:[clear action] to:[clear target] from:clear];
+  testAssert([[controller recentDocumentURLs] count] == 0 && [menu numberOfItems] == 1
+    && ![[menu itemAtIndex:0] isEnabled], @"Clear Menu clears recent history and disables itself");
+#ifdef GNUSTEP
+  for (NSURL *url in saved) [controller noteNewRecentDocumentURL:url];
+#else
+  for (NSURL *url in [saved reverseObjectEnumerator]) [controller noteNewRecentDocumentURL:url];
+#endif
+  [menu update];
+  [saved release];
+}
+
 static void testSaveActiveFile(YCodeProject *project, NSString *directory)
 {
   YCodeEditorController *editor = [project editorController];
@@ -1327,6 +1366,7 @@ int main(void)
 
   [document makeWindowControllers];
   [document showWindows];
+  testRecentDocuments(document, temporaryDirectory);
   YCodeProjectNavigatorController *navigator = [document navigatorController];
   testAssert([[navigator rootItems] count] == 1, @"Populate project navigator");
   testAssert([[navigator outlineView] numberOfRows] > 1, @"Display and expand project in window");

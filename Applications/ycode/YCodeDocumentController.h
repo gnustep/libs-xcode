@@ -29,9 +29,17 @@
 #import <AppKit/AppKit.h>
 
 @interface YCodeDocumentController : NSDocumentController
+#ifndef GNUSTEP
+    <NSMenuDelegate>
+#endif
 {
 
 }
+
+/** A menu backed by the document controller's persistent recent-project history. */
+- (NSMenu *)recentDocumentsMenu;
+- (IBAction)openRecentProject:(id)sender;
+- (IBAction)clearRecentProjects:(id)sender;
 
 @end
 
