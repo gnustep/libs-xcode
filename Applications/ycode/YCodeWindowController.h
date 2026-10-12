@@ -46,6 +46,16 @@
     IBOutlet NSSplitView *_contentSplitView;
     
     // Navigator area
+    NSSearchField *_projectSearchField;
+    NSTableView *_searchResultsTable;
+    NSTableView *_testResultsTable;
+    NSTextField *_searchStatus;
+    NSTextField *_testStatus;
+    NSMutableArray *_searchResults;
+    NSMutableArray *_testResults;
+    NSMutableString *_testOutput;
+    NSMutableString *_testErrors;
+    BOOL _collectingTests;
     IBOutlet NSView *_navigatorView;
     IBOutlet NSTabView *_navigatorTabView;
     IBOutlet YCTreeView *_treeView;
@@ -133,6 +143,8 @@
 - (IBAction)debugAction:(id)sender;
 - (IBAction)toggleBreakpoint:(id)sender;
 - (IBAction)debugConsoleCommand:(id)sender;
+- (IBAction)searchProject:(id)sender;
+- (IBAction)testProject:(id)sender;
 - (IBAction)buildProject:(id)sender;
 - (IBAction)stopProject:(id)sender;
 

@@ -29,6 +29,7 @@
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
 #import "YCTreeView.h"
+#import "YCodeProjectNavigatorItem.h"
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
 #import "YCFileInspectorView.h"
@@ -54,6 +55,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)finishDiagnostics;
 - (void)parseDiagnosticLine:(NSString *)line;
 - (void)openBuildIssue:(id)sender;
+- (void)setupResultNavigators;
+- (void)consumeTestOutput:(NSString *)output buffer:(NSMutableString *)buffer;
 @end
 
 @implementation YCodeWindowController
@@ -117,6 +120,14 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [_issuesTableView setTarget:nil];
     [_issuesTableView setDelegate:nil];
     [_issuesTableView setDataSource:nil];
+    [_searchResultsTable setDataSource:nil];
+    [_searchResultsTable setDelegate:nil];
+    [_testResultsTable setDataSource:nil];
+    [_testResultsTable setDelegate:nil];
+    RELEASE(_searchResults);
+    RELEASE(_testResults);
+    RELEASE(_testOutput);
+    RELEASE(_testErrors);
     RELEASE(_bottomView);
     RELEASE(_buildIssues);
     RELEASE(_diagnosticOutput);
@@ -147,6 +158,16 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (_project != project) {
         [[_project buildSystem] setDelegate:nil];
         [[_project buildSystem] stop];
+        _collectingTests = NO;
+        [_searchResults removeAllObjects];
+        [_testResults removeAllObjects];
+        [_testOutput setString:@""];
+        [_testErrors setString:@""];
+        [_searchResultsTable reloadData];
+        [_testResultsTable reloadData];
+        [_projectSearchField setStringValue:@""];
+        [_searchStatus setStringValue:@"Enter text and press Return."];
+        [_testStatus setStringValue:@"No tests run yet."];
         _collectingBuildIssues = NO;
         [_issuesTableView deselectAll:nil];
         [_buildIssues removeAllObjects];
@@ -328,6 +349,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             }
         }
     }
+
+    [self setupResultNavigators];
 
     if (_navigatorOutlineView == nil) {
         NSView *projectView = [[_navigatorTabView tabViewItemAtIndex:0] view];
@@ -880,6 +903,10 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidCancel:(id)buildSystem
 {
+    if (_collectingTests) {
+        _collectingTests = NO;
+        [_testStatus setStringValue:@"Tests cancelled."];
+    }
     [self finishDiagnostics];
     [self appendConsoleOutput:@"Project stopped.\n"];
 }
@@ -887,6 +914,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)buildSystem:(id)buildSystem didReceiveOutput:(NSString *)output
 {
     [self appendConsoleOutput:output];
+    if (_collectingTests) [self consumeTestOutput:output buffer:_testOutput];
     if (_collectingBuildIssues) [self consumeDiagnostics:output buffer:_diagnosticOutput];
 }
 
@@ -894,7 +922,223 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 {
     if ([buildSystem isDebugging]) [self buildSystem:buildSystem didReceiveDebuggerOutput:error];
     else [self appendConsoleOutput:error];
+    if (_collectingTests) [self consumeTestOutput:error buffer:_testErrors];
     if (_collectingBuildIssues) [self consumeDiagnostics:error buffer:_diagnosticErrors];
+}
+
+#pragma mark - Search and Tests
+
+- (void)setupResultNavigators
+{
+    if (_searchResults) return;
+    _searchResults = [NSMutableArray new];
+    _testResults = [NSMutableArray new];
+    _testOutput = [NSMutableString new];
+    _testErrors = [NSMutableString new];
+    NSUInteger index;
+    for (index = 1; index <= 2; index++) {
+        NSView *view = [[_navigatorTabView tabViewItemAtIndex:index] view];
+        NSRect bounds = [view bounds];
+        NSControl *control;
+        if (index == 1) {
+            _projectSearchField = AUTORELEASE([[NSSearchField alloc] initWithFrame:
+                NSMakeRect(4, NSHeight(bounds) - 30, MAX(0, NSWidth(bounds) - 8), 24)]);
+            [[_projectSearchField cell] setPlaceholderString:@"Search project"];
+            [[_projectSearchField cell] setSendsWholeSearchString:YES];
+            control = _projectSearchField;
+            [control setAction:@selector(searchProject:)];
+        } else {
+            NSButton *button = AUTORELEASE([[NSButton alloc] initWithFrame:
+                NSMakeRect(4, NSHeight(bounds) - 30, MAX(0, NSWidth(bounds) - 8), 24)]);
+            [button setTitle:@"Run Tests"];
+            [button setBezelStyle:NSRoundedBezelStyle];
+            control = button;
+            [control setAction:@selector(testProject:)];
+        }
+        [control setTarget:self];
+        [control setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+        [view addSubview:control];
+        NSTextField *status = AUTORELEASE([[NSTextField alloc] initWithFrame:
+            NSMakeRect(4, NSHeight(bounds) - 58, MAX(0, NSWidth(bounds) - 8), 24)]);
+        [status setEditable:NO];
+        [status setBezeled:NO];
+        [status setDrawsBackground:NO];
+        [status setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+        [status setStringValue:index == 1 ? @"Enter text and press Return." : @"No tests run yet."];
+        [view addSubview:status];
+        NSTableView *table = AUTORELEASE([[NSTableView alloc] initWithFrame:
+            NSMakeRect(0, 0, NSWidth(bounds), MAX(0, NSHeight(bounds) - 62))]);
+        NSTableColumn *column = AUTORELEASE([[NSTableColumn alloc] initWithIdentifier:@"result"]);
+        [column setWidth:600];
+        [column setEditable:NO];
+        [table addTableColumn:column];
+        [table setHeaderView:nil];
+        [table setRowHeight:38];
+        [[column dataCell] setWraps:YES];
+        [table setDataSource:(id)self];
+        [table setDelegate:(id)self];
+        [view addSubview:YCodeScrollViewWithDocumentView(table)];
+        if (index == 1) { _searchResultsTable = table; _searchStatus = status; }
+        else { _testResultsTable = table; _testStatus = status; }
+    }
+}
+
+- (IBAction)searchProject:(id)sender
+{
+    [_searchResultsTable deselectAll:nil];
+    [_searchResults removeAllObjects];
+    NSString *query = [_projectSearchField stringValue];
+    if ([query length] && _project) {
+        [_navigatorController reloadProjectTree];
+        NSMutableArray *pending = [NSMutableArray arrayWithArray:[_navigatorController rootItems]];
+        NSMutableSet *paths = [NSMutableSet set];
+        while ([pending count]) {
+            YCodeProjectNavigatorItem *item = [[[pending lastObject] retain] autorelease];
+            [pending removeLastObject];
+            [pending addObjectsFromArray:[item children]];
+            NSString *path = [_navigatorController resolvedFilePathForNavigatorItem:item];
+            if (path) {
+                BOOL directory = NO;
+                if ([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&directory] && directory) {
+                    NSDirectoryEnumerator *files = [[NSFileManager defaultManager] enumeratorAtPath:path];
+                    NSString *relative;
+                    while ((relative = [files nextObject]) != nil) {
+                        NSString *child = [path stringByAppendingPathComponent:relative];
+                        BOOL childDirectory = NO;
+                        if ([[NSFileManager defaultManager] fileExistsAtPath:child isDirectory:&childDirectory]
+                            && !childDirectory) [paths addObject:child];
+                    }
+                } else [paths addObject:path];
+            }
+        }
+        NSEnumerator *enumerator = [[[paths allObjects] sortedArrayUsingSelector:@selector(compare:)] objectEnumerator];
+        NSString *path;
+        while ((path = [enumerator nextObject]) != nil) {
+            NSString *text = nil;
+            NSEnumerator *documents = [[_editorController openDocuments] objectEnumerator];
+            YCodeEditorDocument *document;
+            while ((document = [documents nextObject]) != nil)
+                if ([[document filePath] isEqual:path] && ![document isImageDocument]) text = [document content];
+            NSStringEncoding encoding;
+            if (!text) text = [NSString stringWithContentsOfFile:path usedEncoding:&encoding error:NULL];
+            if (!text || [text rangeOfString:[NSString stringWithFormat:@"%C", (unichar)0]].location != NSNotFound) continue;
+            NSString *displayPath = path;
+            NSString *prefix = [[_project projectDirectoryPath] stringByAppendingString:@"/"];
+            if ([path hasPrefix:prefix]) displayPath = [path substringFromIndex:[prefix length]];
+            NSUInteger offset = 0, line = 1;
+            while (offset < [text length]) {
+                NSUInteger end, contentsEnd;
+                [text getLineStart:NULL end:&end contentsEnd:&contentsEnd forRange:NSMakeRange(offset, 0)];
+                NSRange remaining = NSMakeRange(offset, contentsEnd - offset);
+                while (remaining.length) {
+                    NSRange match = [text rangeOfString:query options:NSCaseInsensitiveSearch range:remaining];
+                    if (match.location == NSNotFound) break;
+                    [_searchResults addObject:[NSDictionary dictionaryWithObjectsAndKeys:
+                        path, @"path", [NSValue valueWithRange:match], @"range",
+                        [NSString stringWithFormat:@"%@:%lu\n%@", displayPath, (unsigned long)line,
+                            [text substringWithRange:NSMakeRange(offset, contentsEnd - offset)]], @"display", nil]];
+                    remaining = NSMakeRange(NSMaxRange(match), contentsEnd - NSMaxRange(match));
+                }
+                offset = end;
+                line++;
+            }
+        }
+    }
+    [_searchResultsTable reloadData];
+    [_searchStatus setStringValue:[NSString stringWithFormat:@"%lu matches", (unsigned long)[_searchResults count]]];
+}
+
+- (void)openSearchResult:(id)sender
+{
+    NSInteger row = [_searchResultsTable selectedRow];
+    if (row < 0 || row >= (NSInteger)[_searchResults count]) return;
+    NSDictionary *result = [_searchResults objectAtIndex:row];
+    if (![_editorController openFile:[result objectForKey:@"path"]]) return;
+    YCodeEditorDocument *document = [_editorController currentDocument];
+    NSRange range = [[result objectForKey:@"range"] rangeValue];
+    if (NSMaxRange(range) <= [[document content] length]) [document setSelectedRange:range];
+    [[self window] makeFirstResponder:[document textView]];
+}
+
+- (IBAction)testProject:(id)sender
+{
+    if ([self prepareBuild]) [[_project buildSystem] test];
+}
+
+- (void)buildSystemDidStartTests:(id)buildSystem
+{
+    [_testResults removeAllObjects];
+    [_testOutput setString:@""];
+    [_testErrors setString:@""];
+    [_testResultsTable reloadData];
+    _collectingTests = YES;
+    [_testStatus setStringValue:@"Running tests…"];
+    [_navigatorTabView selectTabViewItemWithIdentifier:@"test"];
+    [self setBottomPanelVisible:YES];
+}
+
+- (void)consumeTestOutput:(NSString *)output buffer:(NSMutableString *)buffer
+{
+    [buffer appendString:output];
+    NSRange newline;
+    while ((newline = [buffer rangeOfString:@"\n"]).location != NSNotFound) {
+        NSString *line = [buffer substringToIndex:newline.location];
+        [buffer deleteCharactersInRange:NSMakeRange(0, NSMaxRange(newline))];
+        NSString *name = nil;
+        NSString *status = nil;
+        NSRange start = [line rangeOfString:@"Test Case '"];
+        if (start.location != NSNotFound) {
+            NSString *tail = [line substringFromIndex:NSMaxRange(start)];
+            NSRange quote = [tail rangeOfString:@"'"];
+            if (quote.location == NSNotFound) continue;
+            name = [tail substringToIndex:quote.location];
+            NSString *state = [tail substringFromIndex:NSMaxRange(quote)];
+            if ([state rangeOfString:@"passed"].location != NSNotFound) status = @"Passed";
+            else if ([state rangeOfString:@"failed"].location != NSNotFound) status = @"Failed";
+            else if ([state rangeOfString:@"skipped"].location != NSNotFound) status = @"Skipped";
+            else if ([state rangeOfString:@"started"].location != NSNotFound) status = @"Running";
+        } else {
+            start = [line rangeOfString:@"XCTest:"];
+            if (start.location == NSNotFound) continue;
+            NSString *tail = [[line substringFromIndex:NSMaxRange(start)]
+                stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            if ([tail hasSuffix:@" PASSED"]) status = @"Passed";
+            else if ([tail hasSuffix:@" FAILED"]) status = @"Failed";
+            if (status) name = [tail substringToIndex:[tail length] - 7];
+        }
+        if (!status) continue;
+        NSDictionary *result = [NSDictionary dictionaryWithObjectsAndKeys:name, @"name", status, @"status",
+            [NSString stringWithFormat:@"%@: %@", status, name], @"display", nil];
+        NSUInteger index;
+        for (index = 0; index < [_testResults count]; index++)
+            if ([[[_testResults objectAtIndex:index] objectForKey:@"name"] isEqual:name]) break;
+        if (index == [_testResults count]) [_testResults addObject:result];
+        else [_testResults replaceObjectAtIndex:index withObject:result];
+    }
+    [_testResultsTable reloadData];
+}
+
+- (void)buildSystemDidFinishTests:(id)buildSystem success:(BOOL)success
+{
+    [self consumeTestOutput:@"\n" buffer:_testOutput];
+    [self consumeTestOutput:@"\n" buffer:_testErrors];
+    _collectingTests = NO;
+    NSUInteger passed = 0, failed = 0, skipped = 0;
+    NSEnumerator *enumerator = [_testResults objectEnumerator];
+    NSDictionary *result;
+    while ((result = [enumerator nextObject]) != nil) {
+        NSString *status = [result objectForKey:@"status"];
+        if ([status isEqual:@"Passed"]) passed++;
+        else if ([status isEqual:@"Failed"]) failed++;
+        else if ([status isEqual:@"Skipped"]) skipped++;
+    }
+    NSString *summary = success
+        ? [NSString stringWithFormat:@"%lu passed, %lu failed, %lu skipped",
+            (unsigned long)passed, (unsigned long)failed, (unsigned long)skipped]
+        : @"Tests failed. See console.";
+    if (success && ![_testResults count]) summary = @"No XCTest results. See console.";
+    [_testStatus setStringValue:summary];
+    [_testStatus setToolTip:summary];
 }
 
 #pragma mark - Build Issues
@@ -996,11 +1240,18 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
 {
+    if (tableView == _searchResultsTable) return [_searchResults count];
+    if (tableView == _testResultsTable) return [_testResults count];
     return [_buildIssues count];
 }
 
 - (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row
 {
+    if (tableView == _searchResultsTable || tableView == _testResultsTable) {
+        NSArray *results = tableView == _searchResultsTable ? _searchResults : _testResults;
+        if (row < 0 || row >= (NSInteger)[results count]) return nil;
+        return [[results objectAtIndex:row] objectForKey:@"display"];
+    }
     if (row < 0 || row >= (NSInteger)[_buildIssues count]) return nil;
     NSDictionary *issue = [_buildIssues objectAtIndex:row];
     return [NSString stringWithFormat:@"%@: %@\n%@", [issue objectForKey:@"severity"],
@@ -1011,6 +1262,11 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
                   rect:(NSRectPointer)rect tableColumn:(NSTableColumn *)column
                    row:(NSInteger)row mouseLocation:(NSPoint)point
 {
+    if (tableView == _searchResultsTable || tableView == _testResultsTable) {
+        NSArray *results = tableView == _searchResultsTable ? _searchResults : _testResults;
+        if (row < 0 || row >= (NSInteger)[results count]) return nil;
+        return [[results objectAtIndex:row] objectForKey:@"display"];
+    }
     if (row < 0 || row >= (NSInteger)[_buildIssues count]) return nil;
     NSDictionary *issue = [_buildIssues objectAtIndex:row];
     if (![issue objectForKey:@"path"]) return [issue objectForKey:@"message"];
@@ -1020,6 +1276,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
+    if ([notification object] == _searchResultsTable) [self openSearchResult:nil];
     if ([notification object] == _issuesTableView) [self openBuildIssue:nil];
 }
 

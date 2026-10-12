@@ -35,6 +35,7 @@ typedef enum {
     YCodeBuildStatusBuilding,
     YCodeBuildStatusRunning,
     YCodeBuildStatusCleaning,
+    YCodeBuildStatusTesting,
     YCodeBuildStatusSuccess,
     YCodeBuildStatusFailed,
     YCodeBuildStatusCancelled
@@ -51,6 +52,8 @@ typedef enum {
 - (void)buildSystemDidFinishBuild:(id)buildSystem success:(BOOL)success;
 - (void)buildSystemDidStartRun:(id)buildSystem;
 - (void)buildSystemDidFinishRun:(id)buildSystem;
+- (void)buildSystemDidStartTests:(id)buildSystem;
+- (void)buildSystemDidFinishTests:(id)buildSystem success:(BOOL)success;
 - (void)buildSystemDidStartClean:(id)buildSystem;
 - (void)buildSystemDidFinishClean:(id)buildSystem;
 - (void)buildSystemDidCancel:(id)buildSystem;
@@ -68,6 +71,9 @@ typedef enum {
     NSPipe *_outputPipe;
     NSPipe *_errorPipe;
     BOOL _runAfterBuild;
+    BOOL _testAfterBuild;
+    BOOL _testFailed;
+    NSMutableArray *_testBundles;
     BOOL _debugAfterBuild;
     BOOL _debugging;
     NSPipe *_inputPipe;

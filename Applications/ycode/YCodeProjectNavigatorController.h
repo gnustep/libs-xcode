@@ -61,6 +61,7 @@
 - (void)projectDidChange;
 - (void)reloadProjectTree;
 - (NSArray *)rootItems;
+- (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item;
 
 /**
  * Item management

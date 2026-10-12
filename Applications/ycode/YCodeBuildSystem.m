@@ -29,6 +29,7 @@
 @interface YCodeBuildSystem (Private)
 - (BOOL)runCommand:(NSString *)command withArguments:(NSArray *)arguments;
 - (BOOL)launchProduct;
+- (BOOL)launchNextTestBundle;
 - (NSString *)findExecutable;
 - (PBXNativeTarget *)runnableTarget;
 - (void)releaseTask;
@@ -64,6 +65,7 @@
     RELEASE(_buildConfiguration);
     RELEASE(_targetName);
     RELEASE(_scheme);
+    RELEASE(_testBundles);
     RELEASE(_buildOutput);
     RELEASE(_buildErrors);
     RELEASE(_buildEnvironment);
@@ -149,7 +151,7 @@
 {
     return _currentTask != nil || _status == YCodeBuildStatusBuilding ||
            _status == YCodeBuildStatusRunning || 
-           _status == YCodeBuildStatusCleaning;
+           _status == YCodeBuildStatusCleaning || _status == YCodeBuildStatusTesting;
 }
 
 #pragma mark - Build Configuration
@@ -360,17 +362,50 @@
 
 - (BOOL)test
 {
-    if ([self isBusy]) {
-        return NO;
-    }
-    
-    NSString *buildSystem = [self detectedBuildSystem];
-    
-    if ([buildSystem isEqualToString:@"xcode"]) {
+    if ([self isBusy] || ![[_project projectDirectoryPath] length]) return NO;
+    [self clearOutput];
+    _testFailed = NO;
+    _status = YCodeBuildStatusTesting;
+    if ([_delegate respondsToSelector:@selector(buildSystemDidStartTests:)])
+        [(id)_delegate buildSystemDidStartTests:self];
+    if ([[self detectedBuildSystem] isEqualToString:@"xcode"]) {
+#ifdef GNUSTEP
+        RELEASE(_testBundles);
+        _testBundles = [NSMutableArray new];
+        NSEnumerator *enumerator = [[[_project project] targets] objectEnumerator];
+        PBXTarget *target;
+        while ((target = [enumerator nextObject]) != nil) {
+            if (_targetName && ![[target name] isEqual:_targetName]) continue;
+            if (![target isKindOfClass:[PBXNativeTarget class]] ||
+                ![[target productType] isEqual:@"com.apple.product-type.bundle.unit-test"]) continue;
+            NSString *product = [[(PBXNativeTarget *)target productReference] path];
+            if (![product length]) continue;
+            [_testBundles addObject:[[[_project projectDirectoryPath]
+                stringByAppendingPathComponent:[NSString stringWithFormat:@"build/%@/Products", [target name]]]
+                stringByAppendingPathComponent:product]];
+        }
+        if (![_testBundles count]) {
+            _status = YCodeBuildStatusFailed;
+            [self reportError:@"No XCTest targets are available.\n"];
+            if ([_delegate respondsToSelector:@selector(buildSystemDidFinishTests:success:)])
+                [(id)_delegate buildSystemDidFinishTests:self success:NO];
+            return NO;
+        }
+        _testAfterBuild = YES;
+        return [self buildWithXcode];
+#else
         return [self testWithXcode];
-    } else {
-        return [self testWithMake];
+#endif
     }
+    return [self testWithMake];
+}
+
+- (BOOL)launchNextTestBundle
+{
+    if (![_testBundles count]) return NO;
+    NSString *path = [[[_testBundles objectAtIndex:0] retain] autorelease];
+    [_testBundles removeObjectAtIndex:0];
+    return [self runCommand:@"xctest" withArguments:[NSArray arrayWithObject:path]];
 }
 
 - (BOOL)archive
@@ -390,6 +425,8 @@
 
 - (void)stop
 {
+    _testAfterBuild = NO;
+    [_testBundles removeAllObjects];
     _debugAfterBuild = NO;
     if (_debugging) {
         [_debugger command:@"-gdb-exit"];
@@ -523,6 +560,8 @@
     [arguments addObject:projectPath];
     [arguments addObject:@"-configuration"];
     [arguments addObject:_buildConfiguration];
+    if (_scheme) [arguments addObjectsFromArray:[NSArray arrayWithObjects:@"-scheme", _scheme, nil]];
+    if (_targetName) [arguments addObjectsFromArray:[NSArray arrayWithObjects:@"-target", _targetName, nil]];
     [arguments addObject:@"test"];
     
     return [self runCommand:[self xcodeCommand] withArguments:arguments];
@@ -530,7 +569,8 @@
 
 - (BOOL)testWithMake
 {
-    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"test"]];
+    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:
+        [self hasGNUmakefile] ? @"check" : @"test"]];
 }
 
 - (BOOL)archiveWithXcode
@@ -738,7 +778,20 @@
     if (!launch) _debugAfterBuild = NO;
     if (operation == YCodeBuildStatusCancelled) return;
     _status = success ? YCodeBuildStatusSuccess : YCodeBuildStatusFailed;
-    if (operation == YCodeBuildStatusBuilding) {
+    if (operation == YCodeBuildStatusTesting) {
+        BOOL built = _testAfterBuild;
+        _testAfterBuild = NO;
+        if (!success) _testFailed = YES;
+        if ((!built || success) && [_testBundles count]) {
+            _status = YCodeBuildStatusTesting;
+            [self launchNextTestBundle];
+            return;
+        }
+        [_testBundles removeAllObjects];
+        _status = _testFailed ? YCodeBuildStatusFailed : YCodeBuildStatusSuccess;
+        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishTests:success:)])
+            [(id)_delegate buildSystemDidFinishTests:self success:!_testFailed];
+    } else if (operation == YCodeBuildStatusBuilding) {
         if ([_delegate respondsToSelector:@selector(buildSystemDidFinishBuild:success:)])
             [(id)_delegate buildSystemDidFinishBuild:self success:success];
         if (launch) [self launchProduct];

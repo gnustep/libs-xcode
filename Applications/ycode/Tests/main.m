@@ -969,6 +969,90 @@ static void waitForDebugger(YCodeBuildSystem *build)
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
 }
 
+static void testSearchAndTestNavigator(NSString *temporaryDirectory)
+{
+  NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Search And Tests"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:NULL];
+  YCodeProject *document = [YCodeProject new];
+  PBXProject *project = AUTORELEASE([PBXProject new]);
+  PBXGroup *group = AUTORELEASE([PBXGroup new]);
+  [group setSourceTree:@"<group>"];
+  [project setMainGroup:group];
+  [document setProject:project];
+  [document setProjectPath:[root stringByAppendingPathComponent:@"Search.xcodeproj"]];
+  NSString *first = [root stringByAppendingPathComponent:@"First File.m"];
+  NSString *second = [root stringByAppendingPathComponent:@"Second.txt"];
+  [@"one\r\nneedle NEEDLE\n" writeToFile:first atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [@"needle" writeToFile:second atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [document addFilesToProject:[NSArray arrayWithObjects:first, second, nil]];
+  YCodeWindowController *window = [YCodeWindowController new];
+  [window setProject:document];
+  [window showWindow:nil];
+  NSSearchField *field = [window valueForKey:@"_projectSearchField"];
+  [field setStringValue:@"needle"];
+  [window searchProject:nil];
+  NSArray *results = [window valueForKey:@"_searchResults"];
+  testAssert([results count] == 3, @"Search includes every occurrence in all project text files");
+  NSTableView *table = [window valueForKey:@"_searchResultsTable"];
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+  YCodeEditorDocument *editorDocument = [[window editorController] currentDocument];
+  testAssert([[editorDocument filePath] isEqual:first] &&
+    NSEqualRanges([editorDocument selectedRange], NSMakeRange(5, 6)),
+    @"Search selection opens the matching source range across CRLF lines");
+  [editorDocument setContent:@"unsaved needle"];
+  [window searchProject:nil];
+  testAssert([results count] == 2, @"Search uses unsaved editor contents");
+  [field setStringValue:@""];
+  [window searchProject:nil];
+  testAssert([results count] == 0, @"Clearing search removes previous matches");
+
+  YCodeBuildSystem *build = [document buildSystem];
+  [window buildSystemDidStartTests:build];
+  [window buildSystem:build didReceiveOutput:@"Test Case '-[Example testOne]' sta"];
+  [window buildSystem:build didReceiveOutput:@"rted.\nTest Case '-[Example testOne]' passed (0.1 seconds).\n"];
+  [window buildSystem:build didReceiveError:@"Test Case '-[Example testTwo]' failed (0.2 seconds)."];
+  [window buildSystemDidFinishTests:build success:NO];
+  NSArray *tests = [window valueForKey:@"_testResults"];
+  testAssert([tests count] == 2 && [[[tests objectAtIndex:0] objectForKey:@"status"] isEqual:@"Passed"]
+    && [[[tests objectAtIndex:1] objectForKey:@"status"] isEqual:@"Failed"],
+    @"XCTest results merge start/finish and drain split output and unterminated stderr");
+
+#ifdef GNUSTEP
+  PBXNativeTarget *target = AUTORELEASE([PBXNativeTarget new]);
+  [target setName:@"Unit Tests"];
+  [target setProductType:@"com.apple.product-type.bundle.unit-test"];
+  [target setProductReference:AUTORELEASE([[PBXFileReference alloc] initWithPath:@"Unit Tests.xctest"])];
+  [project setTargets:[NSMutableArray arrayWithObject:target]];
+  [build setEnvironmentVariable:[root stringByAppendingString:@":/usr/bin:/bin"] forKey:@"PATH"];
+  writeExecutable([root stringByAppendingPathComponent:@"buildtool"],
+    @"#!/bin/sh\nif [ \"$MODE\" = buildfail ]; then exit 1; fi\nexit 0\n");
+  writeExecutable([root stringByAppendingPathComponent:@"xctest"],
+    @"#!/bin/sh\nprintf '%s\n' \"$@\"\necho \"XCTest:     Example.testRun PASSED\" >&2\n"
+    @"if [ \"$MODE\" = testfail ]; then exit 1; fi\n");
+  testAssert([build test] && ![build test], @"Test runner rejects concurrent runs");
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusSuccess && [tests count] == 1,
+    @"Test operation builds then runs XCTest and replaces previous results");
+  testAssert([[build buildOutput] rangeOfString:[NSString stringWithFormat:@"build/%@/Products/Unit Tests.xctest", [target name]]].location != NSNotFound,
+    @"XCTest receives the bundle path including spaces");
+  [build setEnvironmentVariable:@"testfail" forKey:@"MODE"];
+  [build test];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusFailed, @"Runner exit failure is preserved");
+  [build setEnvironmentVariable:@"buildfail" forKey:@"MODE"];
+  [build test];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusFailed && [tests count] == 0,
+    @"Build failure prevents test execution and clears stale results");
+#endif
+  [window setProject:nil];
+  testAssert([tests count] == 0 && [results count] == 0, @"Project changes clear navigator results");
+  [window close];
+  [window release];
+  [document release];
+}
+
 static void testBuildAndRun(NSString *temporaryDirectory)
 {
   NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Build With Spaces"];
@@ -1852,6 +1936,7 @@ int main(void)
   testEditorFiles(temporaryDirectory);
   testProjectCenterImport(temporaryDirectory);
   testProjectCenterExport(temporaryDirectory);
+  testSearchAndTestNavigator(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];

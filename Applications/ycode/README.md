@@ -56,6 +56,21 @@ from an imported ProjectCenter project. Paths are adjusted for the export
 destination; source files stay where they are. Export leaves the active
 document and its unsaved state unchanged.
 
+The navigator's **Search** tab searches the contents of project file references,
+including referenced folders and files outside the project directory. Enter text
+and press Return for case-insensitive literal matches. Results show the file,
+line, and matching text; select a result to open and select the occurrence.
+Search includes unsaved changes in open editors and skips unreadable or binary
+files. Run the search again after editing to refresh the results.
+
+In the **Test** tab, choose **Run Tests** to save edits and run the project's
+tests. Results update with each XCTest case and show passed, failed, and skipped
+states. On GNUstep, Xcode projects are built with `buildtool`, then their unit-test
+bundles run with `xctest`; both tools must be on `PATH`. Native macOS uses
+`xcodebuild test`. GNUmakefile projects use `make check`, and other make projects
+use `make test`. Full output and build/runner errors appear in Console.
+**Project > Stop** cancels the operation. Each run replaces the previous results.
+
 Each project remembers its last selected source file and
 reopens it next time. Closing the last source tab clears that saved selection;
 missing files are skipped when reopening the project.
