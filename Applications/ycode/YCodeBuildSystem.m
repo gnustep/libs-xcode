@@ -24,6 +24,17 @@
 
 #import "YCodeBuildSystem.h"
 #import "YCodeProject.h"
+#import <XCode/XCode.h>
+
+@interface YCodeBuildSystem (Private)
+- (BOOL)runCommand:(NSString *)command withArguments:(NSArray *)arguments;
+- (BOOL)launchProduct;
+- (NSString *)findExecutable;
+- (PBXNativeTarget *)runnableTarget;
+- (void)releaseTask;
+- (void)finishTaskIfReady;
+- (void)reportError:(NSString *)message;
+@end
 
 @implementation YCodeBuildSystem
 
@@ -31,7 +42,7 @@
 {
     self = [super init];
     if (self) {
-        _project = [project retain];
+        _project = project; // Owned by the project.
         _status = YCodeBuildStatusIdle;
         _buildOutput = [[NSMutableString alloc] init];
         _buildErrors = [[NSMutableString alloc] init];
@@ -47,11 +58,9 @@
 
 - (void)dealloc
 {
+    _delegate = nil;
     [self stop];
-    RELEASE(_project);
-    RELEASE(_currentTask);
-    RELEASE(_outputPipe);
-    RELEASE(_errorPipe);
+    [self releaseTask];
     RELEASE(_buildConfiguration);
     RELEASE(_targetName);
     RELEASE(_scheme);
@@ -68,7 +77,7 @@
     NSMutableDictionary *environment = [[processInfo environment] mutableCopy];
     
     // Add common build tools to PATH if needed
-    NSString *path = [environment objectForKey:@"PATH"];
+    NSString *path = [environment objectForKey:@"PATH"] ?: @"";
     NSArray *additionalPaths = [NSArray arrayWithObjects:
         @"/usr/local/bin", @"/opt/local/bin", @"/usr/bin", @"/bin", nil];
     
@@ -92,7 +101,7 @@
 
 - (void)setProject:(YCodeProject *)project
 {
-    ASSIGN(_project, project);
+    _project = project;
 }
 
 #pragma mark - Delegate
@@ -126,7 +135,7 @@
 
 - (BOOL)isBusy
 {
-    return _status == YCodeBuildStatusBuilding || 
+    return _currentTask != nil || _status == YCodeBuildStatusBuilding ||
            _status == YCodeBuildStatusRunning || 
            _status == YCodeBuildStatusCleaning;
 }
@@ -171,6 +180,11 @@
         return NO;
     }
     
+    if (![[_project projectDirectoryPath] length]) {
+        _status = YCodeBuildStatusFailed;
+        [self reportError:@"No project directory is available.\n"];
+        return NO;
+    }
     NSString *buildSystem = [self detectedBuildSystem];
     BOOL success = NO;
     
@@ -203,6 +217,11 @@
         return NO;
     }
     
+    if (![[_project projectDirectoryPath] length]) {
+        _status = YCodeBuildStatusFailed;
+        [self reportError:@"No project directory is available.\n"];
+        return NO;
+    }
     NSString *buildSystem = [self detectedBuildSystem];
     BOOL success = NO;
     
@@ -230,27 +249,35 @@
 
 - (BOOL)run
 {
-    if ([self isBusy]) {
+    if ([self isBusy]) return NO;
+    if (![self runnableTarget]) {
+        [self clearOutput];
+        _status = YCodeBuildStatusFailed;
+        [self reportError:@"The project has no runnable application or command-line target.\n"];
         return NO;
     }
-    
-    _status = YCodeBuildStatusRunning;
-    
-    if ([_delegate respondsToSelector:@selector(buildSystemDidStartRun:)]) {
-        [_delegate buildSystemDidStartRun:self];
+    _runAfterBuild = YES;
+    if (![self build]) {
+        _runAfterBuild = NO;
+        return NO;
     }
-    
-    // Find executable to run
+    return YES;
+}
+
+- (BOOL)launchProduct
+{
     NSString *executablePath = [self findExecutable];
     if (!executablePath) {
         _status = YCodeBuildStatusFailed;
-        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)]) {
+        [self reportError:@"Build succeeded, but the target executable could not be found.\n"];
+        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)])
             [_delegate buildSystemDidFinishRun:self];
-        }
         return NO;
     }
-    
-    return [self runExecutable:executablePath];
+    _status = YCodeBuildStatusRunning;
+    if ([_delegate respondsToSelector:@selector(buildSystemDidStartRun:)])
+        [_delegate buildSystemDidStartRun:self];
+    return [self runCommand:executablePath withArguments:[NSArray array]];
 }
 
 - (BOOL)test
@@ -285,14 +312,23 @@
 
 - (void)stop
 {
-    if (_currentTask && [_currentTask isRunning]) {
-        [_currentTask terminate];
+    _runAfterBuild = NO;
+    _configureBeforeBuild = NO;
+    if (_currentTask && _status != YCodeBuildStatusCancelled) {
         _status = YCodeBuildStatusCancelled;
-        
-        if ([_delegate respondsToSelector:@selector(buildSystemDidCancel:)]) {
+        if ([_currentTask isRunning]) [_currentTask terminate];
+        if ([_delegate respondsToSelector:@selector(buildSystemDidCancel:)])
             [_delegate buildSystemDidCancel:self];
-        }
     }
+}
+
+- (NSString *)xcodeCommand
+{
+#ifdef GNUSTEP
+    return @"buildtool";
+#else
+    return @"xcodebuild";
+#endif
 }
 
 #pragma mark - Build System Specific Methods
@@ -310,6 +346,12 @@
     [arguments addObject:@"-configuration"];
     [arguments addObject:_buildConfiguration];
     
+    NSString *target = _targetName;
+    if (_runAfterBuild && !target && !_scheme) target = [[self runnableTarget] name];
+    if (target) {
+        [arguments addObject:@"-target"];
+        [arguments addObject:target];
+    }
     if (_scheme) {
         [arguments addObject:@"-scheme"];
         [arguments addObject:_scheme];
@@ -317,7 +359,7 @@
     
     [arguments addObject:@"build"];
     
-    return [self runCommand:@"xcodebuild" withArguments:arguments];
+    return [self runCommand:[self xcodeCommand] withArguments:arguments];
 }
 
 - (BOOL)buildWithMake
@@ -342,24 +384,15 @@
 
 - (BOOL)buildWithCMake
 {
-    // First, configure if needed
-    NSString *projectDir = [_project projectDirectoryPath];
-    NSString *buildDir = [projectDir stringByAppendingPathComponent:@"build"];
-    
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if (![fileManager fileExistsAtPath:buildDir]) {
-        [fileManager createDirectoryAtPath:buildDir withIntermediateDirectories:YES attributes:nil error:nil];
-        
-        // Configure
-        NSArray *configureArgs = [NSArray arrayWithObjects:@"-S", @".", @"-B", @"build", nil];
-        if (![self runCommand:@"cmake" withArguments:configureArgs]) {
-            return NO;
-        }
+    NSString *cache = [[_project projectDirectoryPath]
+        stringByAppendingPathComponent:@"build/CMakeCache.txt"];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:cache]) {
+        _configureBeforeBuild = YES;
+        return [self runCommand:@"cmake" withArguments:
+            [NSArray arrayWithObjects:@"-S", @".", @"-B", @"build", nil]];
     }
-    
-    // Build
-    NSArray *buildArgs = [NSArray arrayWithObjects:@"--build", @"build", nil];
-    return [self runCommand:@"cmake" withArguments:buildArgs];
+    return [self runCommand:@"cmake" withArguments:
+        [NSArray arrayWithObjects:@"--build", @"build", nil]];
 }
 
 - (BOOL)cleanWithXcode
@@ -376,7 +409,7 @@
     [arguments addObject:_buildConfiguration];
     [arguments addObject:@"clean"];
     
-    return [self runCommand:@"xcodebuild" withArguments:arguments];
+    return [self runCommand:[self xcodeCommand] withArguments:arguments];
 }
 
 - (BOOL)cleanWithMake
@@ -409,7 +442,7 @@
     [arguments addObject:_buildConfiguration];
     [arguments addObject:@"test"];
     
-    return [self runCommand:@"xcodebuild" withArguments:arguments];
+    return [self runCommand:[self xcodeCommand] withArguments:arguments];
 }
 
 - (BOOL)testWithMake
@@ -431,7 +464,7 @@
     [arguments addObject:@"Release"];
     [arguments addObject:@"archive"];
     
-    return [self runCommand:@"xcodebuild" withArguments:arguments];
+    return [self runCommand:[self xcodeCommand] withArguments:arguments];
 }
 
 - (BOOL)archiveWithMake
@@ -447,11 +480,25 @@
         return NO;
     }
     
-    [self stop]; // Stop any current task
+    if (_currentTask) return NO;
+    _taskTerminated = _outputClosed = _errorClosed = NO;
     
     _currentTask = [[NSTask alloc] init];
+#ifdef _WIN32
     [_currentTask setLaunchPath:command];
     [_currentTask setArguments:arguments];
+#else
+    // env resolves tool names using the same PATH as the child environment.
+    if ([command isAbsolutePath]) {
+        [_currentTask setLaunchPath:command];
+        [_currentTask setArguments:arguments];
+    } else {
+        [_currentTask setLaunchPath:@"/usr/bin/env"];
+        NSMutableArray *resolvedArguments = [NSMutableArray arrayWithObject:command];
+        [resolvedArguments addObjectsFromArray:arguments];
+        [_currentTask setArguments:resolvedArguments];
+    }
+#endif
     [_currentTask setEnvironment:_buildEnvironment];
     
     if (_project) {
@@ -490,126 +537,152 @@
         return YES;
     }
     @catch (NSException *exception) {
-        NSLog(@"Failed to launch task: %@", exception);
-        _status = YCodeBuildStatusFailed;
+        [self reportError:[NSString stringWithFormat:@"Failed to launch %@: %@\n",
+            command, [exception reason]]];
+        _taskTerminated = _outputClosed = _errorClosed = YES;
+        _terminationStatus = 1;
+        [self finishTaskIfReady];
         return NO;
     }
 }
 
-- (NSString *)findExecutable
+- (PBXNativeTarget *)runnableTarget
 {
-    // Look for built executable in common locations
-    NSString *projectDir = [_project projectDirectoryPath];
-    NSArray *searchPaths = [NSArray arrayWithObjects:
-        [projectDir stringByAppendingPathComponent:@"build/Debug"],
-        [projectDir stringByAppendingPathComponent:@"build/Release"],
-        [projectDir stringByAppendingPathComponent:@"build"],
-        [projectDir stringByAppendingPathComponent:@"obj"],
-        projectDir, nil];
-    
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    
-    for (NSString *searchPath in searchPaths) {
-        NSArray *contents = [fileManager contentsOfDirectoryAtPath:searchPath error:nil];
-        for (NSString *item in contents) {
-            NSString *itemPath = [searchPath stringByAppendingPathComponent:item];
-            BOOL isDirectory;
-            
-            if ([fileManager fileExistsAtPath:itemPath isDirectory:&isDirectory] && !isDirectory) {
-                // Check if it's executable
-                if ([fileManager isExecutableFileAtPath:itemPath]) {
-                    // Skip certain file types
-                    NSString *extension = [itemPath pathExtension];
-                    if (![extension isEqualToString:@"o"] && 
-                        ![extension isEqualToString:@"a"] && 
-                        ![extension isEqualToString:@"dylib"]) {
-                        return itemPath;
-                    }
-                }
-            }
-        }
+    NSString *selection = _targetName ?: _scheme;
+    for (PBXTarget *target in [[_project project] targets]) {
+        if (selection && ![[target name] isEqualToString:selection]) continue;
+        if ([target isKindOfClass:[PBXNativeTarget class]] &&
+            ([[target productType] isEqualToString:@"com.apple.product-type.application"] ||
+             [[target productType] isEqualToString:@"com.apple.product-type.tool"]))
+            return (PBXNativeTarget *)target;
     }
-    
     return nil;
 }
 
-- (BOOL)runExecutable:(NSString *)executablePath
+- (NSString *)findExecutable
 {
-    return [self runCommand:executablePath withArguments:[NSArray array]];
+    PBXNativeTarget *target = [self runnableTarget];
+    NSString *product = [[target productReference] path];
+    NSString *directory = [_project projectDirectoryPath];
+    if (!target || !product || !directory) return nil;
+    NSArray *roots = [NSArray arrayWithObjects:
+        [directory stringByAppendingPathComponent:[NSString stringWithFormat:
+            @"build/%@/Products", [target name]]],
+        [directory stringByAppendingPathComponent:[@"build" stringByAppendingPathComponent:_buildConfiguration]],
+        [directory stringByAppendingPathComponent:@"build"],
+        [directory stringByAppendingPathComponent:@"obj"], directory, nil];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    for (NSString *root in roots) {
+        NSString *path = [root stringByAppendingPathComponent:product];
+        if ([[product pathExtension] isEqualToString:@"app"]) {
+            NSString *executable = [[NSBundle bundleWithPath:path] executablePath];
+            if (executable && [manager isExecutableFileAtPath:executable]) return executable;
+            NSString *name = [[product lastPathComponent] stringByDeletingPathExtension];
+            NSArray *relativePaths = [NSArray arrayWithObjects:
+                [@"Contents/MacOS" stringByAppendingPathComponent:name], name, nil];
+            for (NSString *relative in relativePaths) {
+                executable = [path stringByAppendingPathComponent:relative];
+                if ([manager isExecutableFileAtPath:executable]) return executable;
+            }
+        } else {
+            BOOL directoryFlag = NO;
+            if ([manager fileExistsAtPath:path isDirectory:&directoryFlag] &&
+                !directoryFlag && [manager isExecutableFileAtPath:path]) return path;
+        }
+    }
+    return nil;
 }
 
 #pragma mark - Task Notifications
 
+- (void)releaseTask
+{
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    if (_currentTask) [center removeObserver:self name:nil object:_currentTask];
+    if (_outputPipe) [center removeObserver:self name:nil object:[_outputPipe fileHandleForReading]];
+    if (_errorPipe) [center removeObserver:self name:nil object:[_errorPipe fileHandleForReading]];
+    RELEASE(_currentTask); _currentTask = nil;
+    RELEASE(_outputPipe); _outputPipe = nil;
+    RELEASE(_errorPipe); _errorPipe = nil;
+}
+
 - (void)taskDidTerminate:(NSNotification *)notification
 {
-    NSTask *task = [notification object];
-    int terminationStatus = [task terminationStatus];
-    
-    [[NSNotificationCenter defaultCenter] removeObserver:self
-                                                     name:NSTaskDidTerminateNotification
-                                                   object:task];
-    
-    BOOL success = (terminationStatus == 0);
-    
-    if (_status == YCodeBuildStatusBuilding) {
-        _status = success ? YCodeBuildStatusSuccess : YCodeBuildStatusFailed;
-        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishBuild:success:)]) {
-            [_delegate buildSystemDidFinishBuild:self success:success];
-        }
-    } else if (_status == YCodeBuildStatusRunning) {
-        _status = YCodeBuildStatusIdle;
-        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)]) {
-            [_delegate buildSystemDidFinishRun:self];
-        }
-    } else if (_status == YCodeBuildStatusCleaning) {
-        _status = success ? YCodeBuildStatusIdle : YCodeBuildStatusFailed;
-        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishClean:)]) {
-            [_delegate buildSystemDidFinishClean:self];
-        }
+    if ([notification object] != _currentTask) return;
+    _terminationStatus = [_currentTask terminationStatus];
+    _taskTerminated = YES;
+    [self finishTaskIfReady];
+}
+
+- (void)finishTaskIfReady
+{
+    if (!_taskTerminated || !_outputClosed || !_errorClosed) return;
+    BOOL success = (_terminationStatus == 0);
+    YCodeBuildStatus operation = _status;
+    BOOL launch = _runAfterBuild && success && operation == YCodeBuildStatusBuilding;
+    [self releaseTask];
+    if (_configureBeforeBuild && success && operation == YCodeBuildStatusBuilding) {
+        _configureBeforeBuild = NO;
+        [self runCommand:@"cmake" withArguments:
+            [NSArray arrayWithObjects:@"--build", @"build", nil]];
+        return;
     }
-    
-    RELEASE(_currentTask);
-    _currentTask = nil;
-    RELEASE(_outputPipe);
-    _outputPipe = nil;
-    RELEASE(_errorPipe);
-    _errorPipe = nil;
+    _configureBeforeBuild = NO;
+    _runAfterBuild = NO;
+    if (operation == YCodeBuildStatusCancelled) return;
+    _status = success ? YCodeBuildStatusSuccess : YCodeBuildStatusFailed;
+    if (operation == YCodeBuildStatusBuilding) {
+        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishBuild:success:)])
+            [_delegate buildSystemDidFinishBuild:self success:success];
+        if (launch) [self launchProduct];
+    } else if (operation == YCodeBuildStatusRunning) {
+        if (success) _status = YCodeBuildStatusIdle;
+        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)])
+            [_delegate buildSystemDidFinishRun:self];
+    } else if (operation == YCodeBuildStatusCleaning) {
+        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishClean:)])
+            [_delegate buildSystemDidFinishClean:self];
+    }
+}
+
+- (void)reportError:(NSString *)message
+{
+    [_buildErrors appendString:message];
+    if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveError:)])
+        [_delegate buildSystem:self didReceiveError:message];
+}
+
+- (void)receiveData:(NSNotification *)notification error:(BOOL)isError
+{
+    NSFileHandle *handle = [notification object];
+    NSFileHandle *expected = isError ? [_errorPipe fileHandleForReading] : [_outputPipe fileHandleForReading];
+    if (handle != expected) return;
+    NSData *data = [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem];
+    if ([data length] == 0) {
+        if (isError) _errorClosed = YES; else _outputClosed = YES;
+        [self finishTaskIfReady];
+        return;
+    }
+    NSString *output = AUTORELEASE([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+    if (!output) output = AUTORELEASE([[NSString alloc] initWithData:data encoding:NSISOLatin1StringEncoding]);
+    if (isError) {
+        [self reportError:output];
+    } else {
+        [_buildOutput appendString:output];
+        if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
+            [_delegate buildSystem:self didReceiveOutput:output];
+    }
+    [handle readInBackgroundAndNotify];
 }
 
 - (void)outputDataAvailable:(NSNotification *)notification
 {
-    NSFileHandle *fileHandle = [notification object];
-    NSData *data = [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem];
-    
-    if ([data length] > 0) {
-        NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        [_buildOutput appendString:output];
-        
-        if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)]) {
-            [_delegate buildSystem:self didReceiveOutput:output];
-        }
-        
-        RELEASE(output);
-        [fileHandle readInBackgroundAndNotify];
-    }
+    [self receiveData:notification error:NO];
 }
 
 - (void)errorDataAvailable:(NSNotification *)notification
 {
-    NSFileHandle *fileHandle = [notification object];
-    NSData *data = [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem];
-    
-    if ([data length] > 0) {
-        NSString *error = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        [_buildErrors appendString:error];
-        
-        if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveError:)]) {
-            [_delegate buildSystem:self didReceiveError:error];
-        }
-        
-        RELEASE(error);
-        [fileHandle readInBackgroundAndNotify];
-    }
+    [self receiveData:notification error:YES];
 }
 
 #pragma mark - Build Output

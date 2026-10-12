@@ -27,6 +27,7 @@
 
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
+#import "YCodeBuildSystem.h"
 
 @class YCodeProject;
 @class YCodeProjectNavigatorController;
@@ -35,7 +36,7 @@
 @class YCEditorView;
 @class YCInspectorView;
 
-@interface YCodeWindowController : NSWindowController
+@interface YCodeWindowController : NSWindowController <YCodeBuildSystemDelegate>
 {
     YCodeProject *_project;
     
@@ -52,6 +53,8 @@
     
     // Editor area
     IBOutlet NSView *_editorView;
+    NSSplitView *_editorSplitView;
+    CGFloat _buildPanelWidth;
     IBOutlet NSTabView *_editorTabView;
     IBOutlet YCEditorView *_editorTextView;
     
@@ -60,11 +63,20 @@
     IBOutlet NSTabView *_inspectorTabView;
     IBOutlet YCInspectorView *_inspectorContentView;
     
-    // Bottom panel (console, issues, etc.)
+    // Build results pane (console and navigable diagnostics)
     IBOutlet NSView *_bottomView;
     IBOutlet NSTabView *_bottomTabView;
     IBOutlet NSTextView *_consoleTextView;
-    IBOutlet NSTextView *_issuesTextView;
+    NSTableView *_issuesTableView;
+    NSMutableArray *_buildIssues;
+    NSMutableString *_diagnosticOutput;
+    NSMutableString *_diagnosticErrors;
+    NSMutableArray *_buildDirectories;
+    NSRegularExpression *_diagnosticPattern;
+    NSRegularExpression *_ansiPattern;
+    NSRegularExpression *_toolDiagnosticPattern;
+    NSRegularExpression *_directoryPattern;
+    BOOL _collectingBuildIssues;
     
     // Controllers
     YCodeProjectNavigatorController *_navigatorController;

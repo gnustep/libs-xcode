@@ -451,6 +451,14 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 #pragma mark - NSDocument overrides
 
+- (void)close
+{
+    [_buildSystem stop];
+    [_buildSystem setDelegate:nil];
+    [super close];
+}
+
+
 - (NSString *)windowNibName
 {
     return nil;

@@ -26,6 +26,10 @@
 #import <XCode/PBXContainer.h>
 #import <XCode/PBXProject.h>
 #import <XCode/PBXGroup.h>
+#import <XCode/PBXNativeTarget.h>
+#import <XCode/PBXFileReference.h>
+#import "YCodeBuildSystem.h"
+#import "YCodeWindowController.h"
 #import "YCodeProject.h"
 #import "YCodeDocumentController.h"
 #import "YCodeProjectNavigatorController.h"
@@ -243,6 +247,224 @@ static void testEditorFiles(NSString *directory)
   [document release];
 }
 
+static void waitForBuild(YCodeBuildSystem *build, BOOL running)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:10];
+  while ([deadline timeIntervalSinceNow] > 0 && [build isBusy])
+    {
+      if (running && [build isRunning] &&
+          [[build buildOutput] rangeOfString:@"application output"].location != NSNotFound &&
+          [[build buildErrors] rangeOfString:@"application-output"].location != NSNotFound) break;
+      [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+    }
+}
+
+static void writeExecutable(NSString *path, NSString *contents)
+{
+  [contents writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [[NSFileManager defaultManager] setAttributes:
+    [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:0755] forKey:NSFilePosixPermissions]
+    ofItemAtPath:path error:NULL];
+}
+
+static void testBuildAndRun(NSString *temporaryDirectory)
+{
+  NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Build With Spaces"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:NULL];
+  YCodeProject *document = [[YCodeProject alloc] init];
+  PBXProject *project = AUTORELEASE([[PBXProject alloc] init]);
+  PBXNativeTarget *target = AUTORELEASE([[PBXNativeTarget alloc] init]);
+  [target setName:@"RunTarget"];
+  [target setProductType:@"com.apple.product-type.application"];
+  [target setProductReference:AUTORELEASE([[PBXFileReference alloc] initWithPath:@"Run Product.app"])];
+  [project setTargets:[NSMutableArray arrayWithObject:target]];
+  [document setProject:project];
+  [document setProjectPath:[root stringByAppendingPathComponent:@"Run Project.xcodeproj"]];
+  YCodeBuildSystem *build = [document buildSystem];
+  [build setEnvironmentVariable:[root stringByAppendingString:@":/usr/bin:/bin"] forKey:@"PATH"];
+#ifdef GNUSTEP
+  NSString *tool = [root stringByAppendingPathComponent:@"buildtool"];
+#else
+  NSString *tool = [root stringByAppendingPathComponent:@"xcodebuild"];
+#endif
+  writeExecutable(tool, @"#!/bin/sh\nprintf '%s\\n' \"$@\"\necho build-error >&2\n"
+    @"if [ \"$MODE\" = fail ]; then exit 3; fi\n"
+    @"if [ \"$MODE\" = slow ]; then echo waiting; sleep 30; touch unwanted; fi\n"
+    @"mkdir -p 'build/RunTarget/Products/Run Product.app'\n"
+    @"cp runner 'build/RunTarget/Products/Run Product.app/Run Product'\n");
+  writeExecutable([root stringByAppendingPathComponent:@"runner"],
+    @"#!/bin/sh\necho application-output >&2\necho 'application output'\n"
+    @"if [ \"$MODE\" = exit ]; then exit 0; fi\nexec sleep 30\n");
+  // An executable in the source directory must never be mistaken for the product.
+  writeExecutable([root stringByAppendingPathComponent:@"unrelated"], @"#!/bin/sh\ntouch unwanted\n");
+  YCodeWindowController *window = [[YCodeWindowController alloc] init];
+  [window setProject:document];
+  [window showWindow:nil];
+  [window runProject:nil];
+  testAssert([build isBuilding], @"Play starts an asynchronous build");
+  testAssert(![build run] && ![build build], @"Reject duplicate operations while busy");
+  waitForBuild(build, YES);
+  testAssert([build isRunning], @"Successful build launches the named application product");
+  testAssert([[build buildOutput] rangeOfString:[document projectPath]].location != NSNotFound,
+    @"Build arguments preserve project paths containing spaces");
+  testAssert([[build buildOutput] rangeOfString:@"RunTarget"].location != NSNotFound,
+    @"Build selects the runnable target");
+  testAssert([[build buildErrors] rangeOfString:@"build-error"].location != NSNotFound &&
+    [[build buildErrors] rangeOfString:@"application-output"].location != NSNotFound,
+    @"Drain stderr from both the build and application");
+  NSTextView *console = [window valueForKey:@"_consoleTextView"];
+  testAssert([[console string] rangeOfString:@"application output"].location != NSNotFound,
+    @"Window console receives live process output");
+  [window stopProject:nil];
+  waitForBuild(build, NO);
+  testAssert(![build isBusy] && [build status] == YCodeBuildStatusCancelled,
+    @"Stop terminates the application and preserves cancelled status");
+  [build setEnvironmentVariable:@"fail" forKey:@"MODE"];
+  [window runProject:nil];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusFailed &&
+    [[build buildOutput] rangeOfString:@"application output"].location == NSNotFound,
+    @"Failed build never launches a stale product");
+  [build setEnvironmentVariable:@"slow" forKey:@"MODE"];
+  [window runProject:nil];
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5];
+  while ([deadline timeIntervalSinceNow] > 0 &&
+    [[build buildOutput] rangeOfString:@"waiting"].location == NSNotFound)
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+  [window stopProject:nil];
+  waitForBuild(build, NO);
+  testAssert(![build isBusy] && [build status] == YCodeBuildStatusCancelled,
+    @"Stop cancels an active build including its child process");
+  testAssert(![manager fileExistsAtPath:[root stringByAppendingPathComponent:@"unwanted"]],
+    @"Cancellation prevents remaining build steps and unrelated scripts never run");
+  [build setEnvironmentVariable:@"exit" forKey:@"MODE"];
+  [window runProject:nil];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusIdle &&
+    [[build buildOutput] rangeOfString:@"application output"].location != NSNotFound,
+    @"Play works again after cancellation and drains output before finishing");
+  [window buildProject:nil];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusSuccess &&
+    [[build buildOutput] rangeOfString:@"application output"].location == NSNotFound,
+    @"Build alone does not run the application");
+  [build setEnvironmentVariable:@"/nonexistent" forKey:@"PATH"];
+  [window runProject:nil];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusFailed && [[build buildErrors] length] > 0,
+    @"Missing build tools fail with console diagnostics");
+  [build setEnvironmentVariable:[root stringByAppendingString:@":/usr/bin:/bin"] forKey:@"PATH"];
+  [document setProjectPath:[root stringByAppendingPathComponent:@"Run Project.pcproj"]];
+  [@"# fixture" writeToFile:[root stringByAppendingPathComponent:@"CMakeLists.txt"]
+    atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  writeExecutable([root stringByAppendingPathComponent:@"cmake"],
+    @"#!/bin/sh\nif [ \"$1\" = -S ]; then sleep 0.1; touch build/CMakeCache.txt; echo configured; "
+    @"else test -f build/CMakeCache.txt || exit 4; echo compiled; fi\n");
+  [window runProject:nil];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusIdle &&
+    [[build buildOutput] rangeOfString:@"configured"].location != NSNotFound &&
+    [[build buildOutput] rangeOfString:@"compiled"].location != NSNotFound,
+    @"CMake configuration finishes before building and running");
+  [build setTargetName:@"MissingTarget"];
+  testAssert(![build run] && ![build isBusy], @"Missing runnable targets fail without launching another product");
+  [build setTargetName:nil];
+  [document setProjectPath:nil];
+  testAssert(![build build] && ![build isBusy], @"Missing project paths do not leave the build busy");
+  [window setProject:nil];
+  [window close];
+  [window release];
+  [document close];
+  [document release];
+}
+
+static void testBuildIssuesPane(NSString *temporaryDirectory)
+{
+  YCodeProject *project = [[YCodeProject alloc] init];
+  [project setProjectPath:[temporaryDirectory stringByAppendingPathComponent:@"Issues.xcodeproj"]];
+  YCodeWindowController *controller = [[YCodeWindowController alloc] init];
+  [controller setProject:project];
+  [controller showWindow:nil];
+  [controller setBottomPanelVisible:YES];
+  NSSplitView *split = [controller valueForKey:@"_editorSplitView"];
+  NSTabView *editor = [controller valueForKey:@"_editorTabView"];
+  NSView *results = [controller valueForKey:@"_bottomView"];
+  NSTabView *tabs = [controller valueForKey:@"_bottomTabView"];
+  NSTableView *table = [controller valueForKey:@"_issuesTableView"];
+  testAssert([split isVertical] && [editor superview] == split && [results superview] == split,
+    @"Source and build results share a vertical split view");
+  testAssert(!NSIntersectsRect([editor frame], [results frame]) &&
+    NSWidth([editor frame]) > 0 && NSWidth([results frame]) > 0,
+    @"Build results resize the source instead of covering it");
+  [split setPosition:NSWidth([split bounds]) * 0.4 ofDividerAtIndex:0];
+  [[controller window] setContentSize:NSMakeSize(1200, 780)];
+  testAssert(!NSIntersectsRect([editor frame], [results frame]) &&
+    NSContainsRect([split bounds], [results frame]), @"Dragging and resizing keeps panes separate");
+  [controller setBottomPanelVisible:NO];
+  testAssert([results superview] == nil && fabs(NSWidth([editor frame]) - NSWidth([split bounds])) < 1,
+    @"Hiding build results restores the editor's full width");
+  [controller setBottomPanelVisible:YES];
+  testAssert([[split subviews] count] == 2 && !NSIntersectsRect([editor frame], [results frame]),
+    @"Showing results restores the split without duplicate panes");
+
+  NSString *source = [temporaryDirectory stringByAppendingPathComponent:@"Issue Source.m"];
+  NSString *text = @"first line\n  invalidSymbol();\nlast line\n";
+  [text writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  YCodeBuildSystem *build = [project buildSystem];
+  [controller buildSystemDidStartBuild:build];
+  [controller buildSystem:build didReceiveOutput:@"ordinary build progress\n"];
+  [controller buildSystem:build didReceiveError:@"\033[1mIssue Source.m:2:"];
+  testAssert([table numberOfRows] == 0, @"Incomplete diagnostic waits for its remaining output");
+  [controller buildSystem:build didReceiveError:@"3: \033[31merror: unknown symbol\033[0m\n"];
+  [controller buildSystem:build didReceiveOutput:[NSString stringWithFormat:
+    @"%@:3: warning: unused expression\n", source]];
+  [controller buildSystem:build didReceiveError:@"Issue Source.m:1: note: declared here"];
+  [controller buildSystemDidFinishBuild:build success:NO];
+  testAssert([table numberOfRows] == 3, @"Collect chunked, colored, stdout and unterminated diagnostics");
+  testAssert([[[tabs selectedTabViewItem] identifier] isEqual:@"issues"],
+    @"Build completion selects issues when diagnostics exist");
+  testAssert(fabs([[[table tableColumns] objectAtIndex:0] width] -
+    [[table enclosingScrollView] contentSize].width) < 4,
+    @"Issues column fills the results pane");
+  NSArray *issues = [controller valueForKey:@"_buildIssues"];
+  testAssert([[[issues objectAtIndex:0] objectForKey:@"message"] isEqual:@"unknown symbol"] &&
+    [[[issues objectAtIndex:0] objectForKey:@"path"] isEqual:source],
+    @"Remove ANSI colors and resolve relative diagnostic paths");
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+  YCodeEditorDocument *document = [[controller editorController] currentDocument];
+  testAssert([[document filePath] isEqual:source] && [document selectedRange].location == 13,
+    @"Selecting an issue opens the source at its reported line and column");
+  [document setSelectedRange:NSMakeRange(0, 0)];
+  [table sendAction:[table action] to:[table target]];
+  testAssert([document selectedRange].location == 13,
+    @"Clicking the already selected issue returns to its location");
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:1] byExtendingSelection:NO];
+  testAssert([[document selectedText] isEqual:@"last line"],
+    @"Diagnostics without columns select their source line");
+  testAssert([[controller editorController] openDocuments].count == 1,
+    @"Navigating another issue reuses the open source tab");
+
+  [controller buildSystemDidStartBuild:build];
+  testAssert([table numberOfRows] == 0, @"A new build clears stale issues");
+  [controller buildSystem:build didReceiveOutput:[NSString stringWithFormat:
+    @"make[1]: Entering directory '%@'\n", temporaryDirectory]];
+  [controller buildSystem:build didReceiveError:@"Issue Source.m:999:999: warning: stale location\n"];
+  [controller buildSystem:build didReceiveError:@"clang: error: linker command failed\n"];
+  [controller buildSystemDidFinishBuild:build success:YES];
+  testAssert([table numberOfRows] == 2, @"Include tool errors without a source location");
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+  testAssert(NSMaxRange([document selectedRange]) <= [[document content] length],
+    @"Outdated diagnostic positions are clamped to the source");
+  [controller buildSystem:build didReceiveOutput:@"Issue Source.m:2:3: error: runtime text\n"];
+  testAssert([table numberOfRows] == 2, @"Runtime output does not become a build issue");
+  [controller setProject:nil];
+  [controller close];
+  [controller release];
+  [project close];
+  [project release];
+}
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -327,6 +549,8 @@ int main(void)
     }
   [document close];
   testEditorFiles(temporaryDirectory);
+  testBuildAndRun(temporaryDirectory);
+  testBuildIssuesPane(temporaryDirectory);
   [manager removeItemAtPath:temporaryDirectory error:NULL];
   NSLog(@"Ycode project loading checks: %lu failures", (unsigned long)failures);
   [pool drain];

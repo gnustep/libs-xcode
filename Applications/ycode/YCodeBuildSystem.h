@@ -62,6 +62,12 @@ typedef enum {
     NSTask *_currentTask;
     NSPipe *_outputPipe;
     NSPipe *_errorPipe;
+    BOOL _runAfterBuild;
+    BOOL _configureBeforeBuild;
+    BOOL _taskTerminated;
+    BOOL _outputClosed;
+    BOOL _errorClosed;
+    int _terminationStatus;
     
     id<YCodeBuildSystemDelegate> _delegate;
     
@@ -118,6 +124,7 @@ typedef enum {
  */
 - (BOOL)build;
 - (BOOL)clean;
+/** Build the runnable target, then launch it only if the build succeeds. */
 - (BOOL)run;
 - (BOOL)test;
 - (BOOL)archive;

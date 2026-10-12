@@ -228,18 +228,25 @@
         return;
     }
     
-    // Restore the default foreground before applying token colors.
-    [self applyPlainTextColorInRange:range];
-    
-    // Apply syntax highlighting based on language
-    NSString *language = [self language];
-    
-    if ([language isEqualToString:@"objc"] || [language isEqualToString:@"c"] || [language isEqualToString:@"cpp"]) {
-        [self highlightCStyleLanguage:text inRange:range textStorage:textStorage];
-    } else if ([language isEqualToString:@"javascript"]) {
-        [self highlightJavaScript:text inRange:range textStorage:textStorage];
-    } else if ([language isEqualToString:@"python"]) {
-        [self highlightPython:text inRange:range textStorage:textStorage];
+    // Commit all token colors together so layout and observers run once per pass.
+    [textStorage beginEditing];
+    @try {
+        // Restore the default foreground before applying token colors.
+        [self applyPlainTextColorInRange:range];
+
+        // Apply syntax highlighting based on language
+        NSString *language = [self language];
+
+        if ([language isEqualToString:@"objc"] || [language isEqualToString:@"c"] || [language isEqualToString:@"cpp"]) {
+            [self highlightCStyleLanguage:text inRange:range textStorage:textStorage];
+        } else if ([language isEqualToString:@"javascript"]) {
+            [self highlightJavaScript:text inRange:range textStorage:textStorage];
+        } else if ([language isEqualToString:@"python"]) {
+            [self highlightPython:text inRange:range textStorage:textStorage];
+        }
+    }
+    @finally {
+        [textStorage endEditing];
     }
 }
 

@@ -26,6 +26,7 @@
 #import "YCodeProject.h"
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeEditorController.h"
+#import "YCodeEditorDocument.h"
 #import "YCTreeView.h"
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
@@ -42,6 +43,14 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
     return AUTORELEASE(scrollView);
 }
+
+@interface YCodeWindowController (BuildIssues)
+- (void)appendConsoleOutput:(NSString *)output;
+- (void)consumeDiagnostics:(NSString *)output buffer:(NSMutableString *)buffer;
+- (void)finishDiagnostics;
+- (void)parseDiagnosticLine:(NSString *)line;
+- (void)openBuildIssue:(id)sender;
+@end
 
 @implementation YCodeWindowController
 
@@ -76,9 +85,24 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)dealloc
 {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[_project buildSystem] setDelegate:nil];
+    [[_project buildSystem] stop];
     RELEASE(_project);
     RELEASE(_navigatorController);
     RELEASE(_editorController);
+    [_issuesTableView setTarget:nil];
+    [_issuesTableView setDelegate:nil];
+    [_issuesTableView setDataSource:nil];
+    RELEASE(_bottomView);
+    RELEASE(_buildIssues);
+    RELEASE(_diagnosticOutput);
+    RELEASE(_diagnosticErrors);
+    RELEASE(_buildDirectories);
+    RELEASE(_diagnosticPattern);
+    RELEASE(_ansiPattern);
+    RELEASE(_toolDiagnosticPattern);
+    RELEASE(_directoryPattern);
     [super dealloc];
 }
 
@@ -97,7 +121,16 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)setProject:(YCodeProject *)project
 {
+    if (_project != project) {
+        [[_project buildSystem] setDelegate:nil];
+        [[_project buildSystem] stop];
+        _collectingBuildIssues = NO;
+        [_issuesTableView deselectAll:nil];
+        [_buildIssues removeAllObjects];
+        [_issuesTableView reloadData];
+    }
     ASSIGN(_project, project);
+    [[_project buildSystem] setDelegate:self];
 
     if (_project) {
         ASSIGN(_navigatorController, [_project navigatorController]);
@@ -212,8 +245,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (_bottomView == nil) {
         _bottomView = [[NSView alloc] initWithFrame:bottomFrame];
         [_bottomView setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
-        [_editorView addSubview:_bottomView];
-        RELEASE(_bottomView);
+        // Retained while hidden and detached from the editor split view.
     }
 
     [self setupToolbar];
@@ -310,24 +342,22 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)setupEditorArea
 {
+    if (_editorSplitView == nil) {
+        _editorSplitView = [[NSSplitView alloc] initWithFrame:[_editorView bounds]];
+        [_editorSplitView setVertical:YES];
+        [_editorSplitView setDividerStyle:NSSplitViewDividerStyleThin];
+        [_editorSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_editorView addSubview:_editorSplitView];
+        RELEASE(_editorSplitView);
+    }
     if (_editorTabView == nil) {
-        NSRect tabFrame = [_editorView bounds];
-
-        if (_bottomPanelVisible) {
-            tabFrame.size.height -= NSHeight([_bottomView frame]);
-            tabFrame.origin.y = NSHeight([_bottomView frame]);
-        }
-
-        _editorTabView = [[NSTabView alloc] initWithFrame:tabFrame];
+        _editorTabView = [[NSTabView alloc] initWithFrame:[_editorSplitView bounds]];
         [_editorTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-        [_editorView addSubview:_editorTabView];
+        [_editorSplitView addSubview:_editorTabView];
         RELEASE(_editorTabView);
     }
-
-    if (_editorTabView) {
-        [_editorController setTabView:_editorTabView];
-        [_editorTabView setDelegate:_editorController];
-    }
+    [_editorController setTabView:_editorTabView];
+    [_editorTabView setDelegate:_editorController];
 }
 
 - (void)setupInspectorArea
@@ -357,6 +387,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)setupBottomPanel
 {
+    // Reusing the text view in a second scroll view leaves stale clip observers.
+    if ([_bottomTabView numberOfTabViewItems] > 0) return;
     if (_bottomTabView == nil) {
         _bottomTabView = [[NSTabView alloc] initWithFrame:[_bottomView bounds]];
         [_bottomTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
@@ -370,10 +402,41 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_consoleTextView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     }
 
-    if (_issuesTextView == nil) {
-        _issuesTextView = [[NSTextView alloc] initWithFrame:[_bottomView bounds]];
-        [_issuesTextView setEditable:NO];
-        [_issuesTextView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    if (_issuesTableView == nil) {
+        _buildIssues = [[NSMutableArray alloc] init];
+        _diagnosticOutput = [[NSMutableString alloc] init];
+        _diagnosticErrors = [[NSMutableString alloc] init];
+        _buildDirectories = [[NSMutableArray alloc] init];
+        _diagnosticPattern = [[NSRegularExpression alloc] initWithPattern:
+            @"^(.+?):([0-9]+):(?:([0-9]+):)?\\s*(fatal error|error|warning|note|remark):\\s*(.*)$"
+            options:0 error:NULL];
+        _toolDiagnosticPattern = [[NSRegularExpression alloc] initWithPattern:
+            @"^(?:([^:]+):\\s*)?(fatal error|error|warning|note):\\s*(.*)$"
+            options:0 error:NULL];
+        _ansiPattern = [[NSRegularExpression alloc] initWithPattern:@"\033\\[[0-?]*[ -/]*[@-~]"
+            options:0 error:NULL];
+        _directoryPattern = [[NSRegularExpression alloc] initWithPattern:
+            @"(?:g?make)(?:\\[[0-9]+\\])?: (Entering|Leaving) directory [\\x60'‘](.*)['’]$"
+            options:0 error:NULL];
+        _issuesTableView = [[NSTableView alloc] initWithFrame:[_bottomView bounds]];
+        [_issuesTableView setAllowsMultipleSelection:NO];
+        [_issuesTableView setAllowsEmptySelection:YES];
+        [_issuesTableView setDataSource:self];
+        [_issuesTableView setDelegate:self];
+        [_issuesTableView setTarget:self];
+        [_issuesTableView setAction:@selector(openBuildIssue:)];
+        [_issuesTableView setAutoresizingMask:NSViewNotSizable];
+        [_issuesTableView setColumnAutoresizingStyle:NSTableViewLastColumnOnlyAutoresizingStyle];
+        [_issuesTableView setRowHeight:58];
+        NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:@"issue"];
+        [[column headerCell] setStringValue:@"Build Issues"];
+        [column setEditable:NO];
+        [column setMinWidth:80];
+        [column setWidth:250];
+        [[column dataCell] setWraps:YES];
+        [[column dataCell] setLineBreakMode:NSLineBreakByWordWrapping];
+        [_issuesTableView addTableColumn:column];
+        RELEASE(column);
     }
 
     if (_bottomTabView) {
@@ -391,9 +454,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         // Add issues tab
         NSTabViewItem *issuesTab = [[NSTabViewItem alloc] initWithIdentifier:@"issues"];
         [issuesTab setLabel:@"Issues"];
-        if (_issuesTextView) {
-            [issuesTab setView:YCodeScrollViewWithDocumentView(_issuesTextView)];
-        }
+        NSScrollView *issuesScroll = YCodeScrollViewWithDocumentView(_issuesTableView);
+        [issuesScroll setHasHorizontalScroller:NO];
+        [[issuesScroll contentView] setPostsFrameChangedNotifications:YES];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sizeIssuesColumn:)
+            name:NSViewFrameDidChangeNotification object:[issuesScroll contentView]];
+        [issuesTab setView:issuesScroll];
+        RELEASE(_issuesTableView);
         [_bottomTabView addTabViewItem:issuesTab];
         RELEASE(issuesTab);
     }
@@ -457,15 +524,21 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)setBottomPanelVisible:(BOOL)visible
 {
     _bottomPanelVisible = visible;
-    if (_bottomView) {
-        [_bottomView setHidden:!visible];
-        
-        // Adjust layout
-        if (visible) {
-            [_bottomView setFrame:NSMakeRect(0, 0, NSWidth([_bottomView frame]), 200)];
-        } else {
-            [_bottomView setFrame:NSMakeRect(0, 0, NSWidth([_bottomView frame]), 0)];
-        }
+    if (!_editorSplitView || !_bottomView) return;
+    if (visible && [_bottomView superview] == nil) {
+        CGFloat width = NSWidth([_editorSplitView bounds]);
+        CGFloat panelWidth = _buildPanelWidth > 0 ? _buildPanelWidth : 300;
+        panelWidth = MIN(panelWidth, width * 0.5);
+        [_bottomView setFrame:NSMakeRect(0, 0, panelWidth, NSHeight([_editorSplitView bounds]))];
+        [_bottomView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_editorSplitView addSubview:_bottomView];
+        [_editorSplitView adjustSubviews];
+        [_editorSplitView setPosition:MAX(0, width - panelWidth - [_editorSplitView dividerThickness])
+                    ofDividerAtIndex:0];
+    } else if (!visible && [_bottomView superview]) {
+        _buildPanelWidth = NSWidth([_bottomView frame]);
+        [_bottomView removeFromSuperview];
+        [_editorSplitView adjustSubviews];
     }
 }
 
@@ -498,7 +571,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             // Show search navigator
             break;
         case 2: // Issues
-            // Show issues navigator
+            [self setBottomPanelVisible:YES];
+            [_bottomTabView selectTabViewItemWithIdentifier:@"issues"];
             break;
         case 3: // Test
             // Show test navigator
@@ -506,52 +580,263 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     }
 }
 
+- (void)appendConsoleOutput:(NSString *)output
+{
+    if (!_consoleTextView || !output) return;
+    NSTextStorage *storage = [_consoleTextView textStorage];
+    NSAttributedString *text = [[NSAttributedString alloc] initWithString:output];
+    [storage appendAttributedString:text];
+    RELEASE(text);
+    [_consoleTextView scrollRangeToVisible:NSMakeRange([storage length], 0)];
+}
+
+- (BOOL)prepareBuild
+{
+    if (!_project || [[_project buildSystem] isBusy]) return NO;
+    [self setBottomPanelVisible:YES];
+    [_bottomTabView selectTabViewItemWithIdentifier:@"console"];
+    if (![_editorController saveAllFiles]) {
+        [self appendConsoleOutput:@"Build cancelled: unable to save edited files.\n"];
+        return NO;
+    }
+    if ([_project isDocumentEdited] && ![_project saveProjectToPath:[_project projectPath]]) {
+        [self appendConsoleOutput:@"Build cancelled: unable to save the project.\n"];
+        return NO;
+    }
+    return YES;
+}
+
 - (IBAction)runProject:(id)sender
 {
-    if (_project) {
-        [self setBottomPanelVisible:YES];
-        
-        // Switch to console tab
-        if (_bottomTabView) {
-            [_bottomTabView selectTabViewItemWithIdentifier:@"console"];
-        }
-        
-        // Add console output
-        if (_consoleTextView) {
-            NSString *message = @"Running project...\n";
-            [_consoleTextView insertText:message];
-        }
-        
-        [_project runProject];
-    }
+    if ([self prepareBuild]) [_project runProject];
 }
 
 - (IBAction)buildProject:(id)sender
 {
-    if (_project) {
-        [self setBottomPanelVisible:YES];
-        
-        // Switch to console tab
-        if (_bottomTabView) {
-            [_bottomTabView selectTabViewItemWithIdentifier:@"console"];
-        }
-        
-        // Add console output
-        if (_consoleTextView) {
-            NSString *message = @"Building project...\n";
-            [_consoleTextView insertText:message];
-        }
-        
-        [_project buildProject];
-    }
+    if ([self prepareBuild]) [_project buildProject];
 }
 
 - (IBAction)stopProject:(id)sender
 {
-    if (_consoleTextView) {
-        NSString *message = @"Project stopped.\n";
-        [_consoleTextView insertText:message];
+    [[_project buildSystem] stop];
+}
+
+- (BOOL)validateToolbarItem:(NSToolbarItem *)item
+{
+    if ([item action] == @selector(stopProject:))
+        return [[_project buildSystem] isBusy];
+    if ([item action] == @selector(runProject:) || [item action] == @selector(buildProject:))
+        return _project != nil && ![[_project buildSystem] isBusy];
+    return YES;
+}
+
+- (void)buildSystemDidStartBuild:(id)buildSystem
+{
+    [_issuesTableView deselectAll:nil];
+    [_buildIssues removeAllObjects];
+    [_issuesTableView reloadData];
+    [_diagnosticOutput setString:@""];
+    [_diagnosticErrors setString:@""];
+    [_buildDirectories removeAllObjects];
+    _collectingBuildIssues = YES;
+    [[_bottomTabView tabViewItemAtIndex:1] setLabel:@"Issues"];
+    [self appendConsoleOutput:@"Building project...\n"];
+}
+
+- (void)buildSystemDidFinishBuild:(id)buildSystem success:(BOOL)success
+{
+    [self finishDiagnostics];
+    [self appendConsoleOutput:success ? @"Build succeeded.\n" : @"Build failed.\n"];
+    [self setBottomPanelVisible:YES];
+    if ([_buildIssues count] > 0)
+        [_bottomTabView selectTabViewItemWithIdentifier:@"issues"];
+}
+
+- (void)buildSystemDidStartRun:(id)buildSystem
+{
+    [self appendConsoleOutput:@"Running project...\n"];
+}
+
+- (void)buildSystemDidFinishRun:(id)buildSystem
+{
+    [self appendConsoleOutput:[(YCodeBuildSystem *)buildSystem status] == YCodeBuildStatusFailed
+        ? @"Run failed.\n" : @"Project exited.\n"];
+}
+
+- (void)buildSystemDidCancel:(id)buildSystem
+{
+    [self finishDiagnostics];
+    [self appendConsoleOutput:@"Project stopped.\n"];
+}
+
+- (void)buildSystem:(id)buildSystem didReceiveOutput:(NSString *)output
+{
+    [self appendConsoleOutput:output];
+    if (_collectingBuildIssues) [self consumeDiagnostics:output buffer:_diagnosticOutput];
+}
+
+- (void)buildSystem:(id)buildSystem didReceiveError:(NSString *)error
+{
+    [self appendConsoleOutput:error];
+    if (_collectingBuildIssues) [self consumeDiagnostics:error buffer:_diagnosticErrors];
+}
+
+#pragma mark - Build Issues
+
+- (void)sizeIssuesColumn:(NSNotification *)notification
+{
+    CGFloat width = [[_issuesTableView enclosingScrollView] contentSize].width;
+    if (width <= 0) return;
+    NSTableColumn *column = [[_issuesTableView tableColumns] objectAtIndex:0];
+    if (fabs([column width] - MAX(80, width - 3)) > 0.5)
+        [column setWidth:MAX(80, width - 3)];
+}
+
+- (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)item
+{
+    if (tabView == _bottomTabView) [self sizeIssuesColumn:nil];
+}
+
+
+- (void)consumeDiagnostics:(NSString *)output buffer:(NSMutableString *)buffer
+{
+    NSUInteger previousCount = [_buildIssues count];
+    [buffer appendString:output];
+    NSRange newline;
+    while ((newline = [buffer rangeOfString:@"\n"]).location != NSNotFound) {
+        NSString *line = [buffer substringToIndex:newline.location];
+        [self parseDiagnosticLine:line];
+        [buffer deleteCharactersInRange:NSMakeRange(0, NSMaxRange(newline))];
     }
+    if (previousCount == [_buildIssues count]) return;
+    [_issuesTableView reloadData];
+    [[_bottomTabView tabViewItemAtIndex:1] setLabel:
+        [NSString stringWithFormat:@"Issues (%lu)", (unsigned long)[_buildIssues count]]];
+}
+
+- (void)finishDiagnostics
+{
+    if (!_collectingBuildIssues) return;
+    // stdout and stderr can each end with an unterminated diagnostic.
+    [self consumeDiagnostics:@"\n" buffer:_diagnosticOutput];
+    [self consumeDiagnostics:@"\n" buffer:_diagnosticErrors];
+    _collectingBuildIssues = NO;
+}
+
+- (void)parseDiagnosticLine:(NSString *)line
+{
+    line = [_ansiPattern stringByReplacingMatchesInString:line options:0
+        range:NSMakeRange(0, [line length]) withTemplate:@""];
+    line = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    NSTextCheckingResult *directory = [_directoryPattern firstMatchInString:line
+        options:0 range:NSMakeRange(0, [line length])];
+    if (directory) {
+        NSString *path = [line substringWithRange:[directory rangeAtIndex:2]];
+        if ([[line substringWithRange:[directory rangeAtIndex:1]] isEqualToString:@"Entering"]) {
+            if (![path isAbsolutePath]) {
+                NSString *base = [_buildDirectories lastObject] ?: [_project projectDirectoryPath];
+                path = [base stringByAppendingPathComponent:path];
+            }
+            [_buildDirectories addObject:[path stringByStandardizingPath]];
+        } else if ([_buildDirectories count]) {
+            [_buildDirectories removeLastObject];
+        }
+        return;
+    }
+    NSTextCheckingResult *match = [_diagnosticPattern firstMatchInString:line
+        options:0 range:NSMakeRange(0, [line length])];
+    if (!match) {
+        NSTextCheckingResult *tool = [_toolDiagnosticPattern firstMatchInString:line
+            options:0 range:NSMakeRange(0, [line length])];
+        if (tool) {
+            NSRange name = [tool rangeAtIndex:1];
+            [_buildIssues addObject:[NSDictionary dictionaryWithObjectsAndKeys:
+                [line substringWithRange:[tool rangeAtIndex:2]], @"severity",
+                [line substringWithRange:[tool rangeAtIndex:3]], @"message",
+                name.location == NSNotFound ? @"Build" : [line substringWithRange:name], @"location", nil]];
+        }
+        return;
+    }
+    NSString *path = [line substringWithRange:[match rangeAtIndex:1]];
+    if (![path isAbsolutePath]) {
+        NSString *base = [_buildDirectories lastObject] ?: [_project projectDirectoryPath];
+        path = [base stringByAppendingPathComponent:path];
+    }
+    if (!path) return;
+    path = [path stringByStandardizingPath];
+    NSInteger lineNumber = [[line substringWithRange:[match rangeAtIndex:2]] integerValue];
+    NSRange columnRange = [match rangeAtIndex:3];
+    NSInteger column = columnRange.location == NSNotFound ? 0 :
+        [[line substringWithRange:columnRange] integerValue];
+    NSString *location = [NSString stringWithFormat:@"%@:%ld", [path lastPathComponent], (long)lineNumber];
+    if (column > 0) location = [location stringByAppendingFormat:@":%ld", (long)column];
+    NSDictionary *issue = [NSDictionary dictionaryWithObjectsAndKeys:
+        path, @"path", [NSNumber numberWithInteger:lineNumber], @"line",
+        [NSNumber numberWithInteger:column], @"column", location, @"location",
+        [line substringWithRange:[match rangeAtIndex:4]], @"severity",
+        [line substringWithRange:[match rangeAtIndex:5]], @"message", nil];
+    [_buildIssues addObject:issue];
+}
+
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
+{
+    return [_buildIssues count];
+}
+
+- (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row
+{
+    if (row < 0 || row >= (NSInteger)[_buildIssues count]) return nil;
+    NSDictionary *issue = [_buildIssues objectAtIndex:row];
+    return [NSString stringWithFormat:@"%@: %@\n%@", [issue objectForKey:@"severity"],
+        [issue objectForKey:@"location"], [issue objectForKey:@"message"]];
+}
+
+- (NSString *)tableView:(NSTableView *)tableView toolTipForCell:(NSCell *)cell
+                  rect:(NSRectPointer)rect tableColumn:(NSTableColumn *)column
+                   row:(NSInteger)row mouseLocation:(NSPoint)point
+{
+    if (row < 0 || row >= (NSInteger)[_buildIssues count]) return nil;
+    NSDictionary *issue = [_buildIssues objectAtIndex:row];
+    if (![issue objectForKey:@"path"]) return [issue objectForKey:@"message"];
+    return [NSString stringWithFormat:@"%@:%@:%@\n%@", [issue objectForKey:@"path"],
+        [issue objectForKey:@"line"], [issue objectForKey:@"column"], [issue objectForKey:@"message"]];
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)notification
+{
+    if ([notification object] == _issuesTableView) [self openBuildIssue:nil];
+}
+
+- (void)openBuildIssue:(id)sender
+{
+    NSInteger row = [_issuesTableView selectedRow];
+    if (row < 0 || row >= (NSInteger)[_buildIssues count]) return;
+    NSDictionary *issue = [_buildIssues objectAtIndex:row];
+    NSString *path = [issue objectForKey:@"path"];
+    if (!path) return;
+    if (![_editorController openFile:path]) {
+        [self appendConsoleOutput:[NSString stringWithFormat:@"Unable to open issue source: %@\n", path]];
+        return;
+    }
+    YCodeEditorDocument *document = [_editorController currentDocument];
+    NSString *text = [document content];
+    NSUInteger index = 0, lineNumber = 1, end = 0, contentsEnd = 0;
+    NSUInteger requestedLine = MAX(1, [[issue objectForKey:@"line"] integerValue]);
+    while (index < [text length] && lineNumber < requestedLine) {
+        [text getLineStart:NULL end:&end contentsEnd:NULL forRange:NSMakeRange(index, 0)];
+        if (end <= index) break;
+        index = end;
+        lineNumber++;
+    }
+    [text getLineStart:NULL end:&end contentsEnd:&contentsEnd forRange:NSMakeRange(index, 0)];
+    NSUInteger column = [[issue objectForKey:@"column"] unsignedIntegerValue];
+    NSRange selection = NSMakeRange(index, contentsEnd - index);
+    if (column > 0) {
+        selection.location += MIN(column - 1, contentsEnd - index);
+        selection.length = selection.location < contentsEnd ? 1 : 0;
+    }
+    [document setSelectedRange:selection];
+    [[self window] makeFirstResponder:[document textView]];
 }
 
 #pragma mark - Controllers
@@ -587,7 +872,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if ([itemIdentifier isEqualToString:@"run"]) {
         [item setLabel:@"Run"];
         [item setPaletteLabel:@"Run"];
-        [item setToolTip:@"Run the current scheme"];
+        [item setToolTip:@"Build and run the current project"];
         [item setTarget:self];
         [item setAction:@selector(runProject:)];
         [item setImage:[NSImage imageNamed:@"play"]];
