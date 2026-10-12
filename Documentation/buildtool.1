@@ -372,11 +372,10 @@ Save the parsed project representation:
 .I buildtool -project MyApp.xcodeproj save NewProject.xcodeproj
 .RE
 .SH EXIT STATUS
-The current
-.B buildtool
-main program returns 0 after argument processing completes. Operation failures
-are reported in the command output as failed build, clean, install, generate,
-link, or save operations rather than through distinct process exit codes.
+Returns 0 when the requested operation succeeds and 1 when it fails, including
+invalid project paths and caught exceptions. An explicit project path never
+falls back to another project in the current directory.
+
 .SH FILES
 .TP
 .I project.pbxproj

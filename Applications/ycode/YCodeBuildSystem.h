@@ -26,6 +26,7 @@
 #define _YCODEBUILDSYSTEM_H_
 
 #import <Foundation/Foundation.h>
+#import "YCodeDebugger.h"
 
 @class YCodeProject;
 
@@ -42,6 +43,7 @@ typedef enum {
 @protocol YCodeBuildSystemDelegate <NSObject>
 
 @optional
+- (void)buildSystem:(id)buildSystem stoppedAtFile:(NSString *)file line:(NSUInteger)line;
 - (void)buildSystemDidStartBuild:(id)buildSystem;
 - (void)buildSystemDidFinishBuild:(id)buildSystem success:(BOOL)success;
 - (void)buildSystemDidStartRun:(id)buildSystem;
@@ -54,7 +56,7 @@ typedef enum {
 
 @end
 
-@interface YCodeBuildSystem : NSObject
+@interface YCodeBuildSystem : NSObject <YCodeDebuggerDelegate>
 {
     YCodeProject *_project;
     YCodeBuildStatus _status;
@@ -63,6 +65,10 @@ typedef enum {
     NSPipe *_outputPipe;
     NSPipe *_errorPipe;
     BOOL _runAfterBuild;
+    BOOL _debugAfterBuild;
+    BOOL _debugging;
+    NSPipe *_inputPipe;
+    YCodeDebugger *_debugger;
     BOOL _configureBeforeBuild;
     BOOL _taskTerminated;
     BOOL _outputClosed;
@@ -126,6 +132,10 @@ typedef enum {
 - (BOOL)clean;
 /** Build the runnable target, then launch it only if the build succeeds. */
 - (BOOL)run;
+/** Build then open a GDB/MI session for the selected executable. */
+- (BOOL)debug;
+- (YCodeDebugger *)debugger;
+- (BOOL)isDebugging;
 - (BOOL)test;
 - (BOOL)archive;
 - (void)stop;

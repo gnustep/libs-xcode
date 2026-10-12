@@ -283,6 +283,11 @@
     }
   
   xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, _name, RESET] cString]);
+  if (_buildConfigurationList == nil)
+    {
+      NSLog(@"error: Target '%@' has no build configuration list", _name);
+      return NO;
+    }
   [_buildConfigurationList applyDefaultConfiguration];
   [context setObject: _buildConfigurationList
               forKey: @"buildConfig"];
@@ -703,6 +708,11 @@
   id o = nil;
 
   xcputs([[NSString stringWithFormat: @"=== Generating Target: %@", _name] cString]);
+  if (_buildConfigurationList == nil)
+    {
+      NSLog(@"error: Target '%@' has no build configuration list", _name);
+      return NO;
+    }
   [[self buildConfigurationList] applyDefaultConfiguration];
   [context setObject: _productType
 	      forKey: @"PRODUCT_TYPE"];
@@ -768,6 +778,11 @@
     }
   
   xcputs([[NSString stringWithFormat: @"=== Building Target %s%@%s", GREEN, _name, RESET] cString]);
+  if (_buildConfigurationList == nil)
+    {
+      NSLog(@"error: Target '%@' has no build configuration list", _name);
+      return NO;
+    }
   [_buildConfigurationList applyDefaultConfiguration];
   [context setObject: _buildConfigurationList
               forKey: @"buildConfig"];

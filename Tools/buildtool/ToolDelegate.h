@@ -53,8 +53,8 @@ NSString *resolveProjectName(BOOL *isProject);
 - (NSDictionary *) parseArguments;
 
 /**
- * Processes the tool operation.
+ * Processes the tool operation and returns whether it succeeded.
  */
-- (void) process;
+- (BOOL) process;
 
 @end

@@ -60,7 +60,9 @@ YCodeProjectNavigatorItem.h \
 YCodeEditorController.h \
 YCodeEditorDocument.h \
 YCodeSyntaxHighlighter.h \
-YCodeBuildSystem.h
+YCodeBuildSystem.h \
+YCodeDebugger.h \
+YCodeControlIcons.h
 
 #
 # Objective-C Class files
@@ -78,7 +80,9 @@ YCodeProjectNavigatorItem.m \
 YCodeEditorController.m \
 YCodeEditorDocument.m \
 YCodeSyntaxHighlighter.m \
-YCodeBuildSystem.m
+YCodeBuildSystem.m \
+YCodeDebugger.m \
+YCodeControlIcons.m
 
 #
 # Other sources

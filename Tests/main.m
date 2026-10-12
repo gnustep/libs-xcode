@@ -181,6 +181,85 @@ static void testBuildtoolArgumentParsing(void)
 	     @"build should remain an accepted sub-command");
 }
 
+@interface ThrowingBuildProject : PBXProject
+@end
+
+@implementation ThrowingBuildProject
+- (BOOL) build
+{
+  [NSException raise: NSInvalidArgumentException format: @"Simulated build exception"];
+  return NO;
+}
+@end
+
+@interface OperationToolDelegate : ToolDelegate
+{
+@public
+  NSDictionary *arguments;
+}
+@end
+
+@implementation OperationToolDelegate
+- (NSDictionary *) parseArguments
+{
+  return arguments;
+}
+@end
+
+static NSDictionary *operationArguments(NSString *path)
+{
+  ArgPair *pair = AUTORELEASE([[ArgPair alloc] init]);
+  [pair setArgument: @"-project"];
+  [pair setValue: path];
+  return [NSDictionary dictionaryWithObject: pair forKey: @"-project"];
+}
+
+static void testBuildtoolOperationResults(void)
+{
+  OperationToolDelegate *delegate = AUTORELEASE([[OperationToolDelegate alloc] init]);
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *directory = [NSTemporaryDirectory() stringByAppendingPathComponent:
+    [[NSProcessInfo processInfo] globallyUniqueString]];
+  NSString *path = [directory stringByAppendingPathComponent: @"project.pbxproj"];
+  [manager createDirectoryAtPath: directory withIntermediateDirectories: YES
+    attributes: nil error: NULL];
+
+  delegate->arguments = nil;
+  testAssert(![delegate process], @"invalid arguments fail the operation");
+  delegate->arguments = operationArguments(@"unsupported.project");
+  testAssert(![delegate process], @"explicit unsupported paths do not build another project");
+  delegate->arguments = operationArguments(path);
+  testAssert(![delegate process], @"missing project files fail the operation");
+
+  NSMutableDictionary *fixture = [NSMutableDictionary dictionaryWithContentsOfFile:
+    @"../libs-xcode.xcodeproj/project.pbxproj"];
+  NSMutableDictionary *objects = [NSMutableDictionary dictionaryWithDictionary:
+    [fixture objectForKey: @"objects"]];
+  NSString *rootKey = [fixture objectForKey: @"rootObject"];
+  NSMutableDictionary *root = [NSMutableDictionary dictionaryWithDictionary:
+    [objects objectForKey: rootKey]];
+  [root setObject: [NSArray array] forKey: @"targets"];
+  [objects setObject: root forKey: rootKey];
+  [fixture setObject: objects forKey: @"objects"];
+  [fixture writeToFile: path atomically: YES];
+  testAssert([delegate process], @"successful project operations return success");
+
+  // A native target without configurations must fail before creating products.
+  [objects setObject: [NSDictionary dictionaryWithObjectsAndKeys:
+    @"PBXNativeTarget", @"isa", @"MissingConfiguration", @"name", nil]
+    forKey: @"TEST_TARGET"];
+  [root setObject: [NSArray arrayWithObject: @"TEST_TARGET"] forKey: @"targets"];
+  [fixture writeToFile: path atomically: YES];
+  testAssert(![delegate process], @"missing target configuration fails without an exception");
+  testAssert([[GSXCBuildContext sharedBuildContext] currentContext] == nil,
+    @"a rejected target leaves no build context behind");
+
+  [root setObject: @"ThrowingBuildProject" forKey: @"isa"];
+  [fixture writeToFile: path atomically: YES];
+  testAssert(![delegate process], @"caught build exceptions return failure");
+  [manager removeItemAtPath: directory error: NULL];
+}
+
 static void testFrameworkResourcesAndEnvironment(void)
 {
   NSBundle *bundle = [NSBundle bundleForClass: [PBXFrameworksBuildPhase class]];
@@ -231,6 +310,7 @@ int main(int argc, const char **argv, char **env)
   testBuildSettingInheritance();
   testHeaderSearchPaths();
   testFrameworkResourcesAndEnvironment();
+  testBuildtoolOperationResults();
 
   if (failures == 0)
     {

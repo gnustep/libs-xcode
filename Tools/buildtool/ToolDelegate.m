@@ -238,13 +238,14 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
     }
 }
 
-- (void) process
+- (BOOL) process
 {
   NSString *file = nil;
   NSString *fileName = nil;
   NSDictionary *args = [self parseArguments];
   ArgPair *opt = nil;
   BOOL isProject = NO;
+  BOOL success = NO;
   NSString *parameter = nil; //  @"cmake";
   
   // NSLog(@"args = %@", args);
@@ -255,7 +256,7 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
 
   if (args == nil)
     {
-      return;
+      return NO;
     }
   
   opt = [args objectForKey: @"-project"];
@@ -275,12 +276,20 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
       fileName = projectFileForPath(file, &isProject);
       if (fileName == nil)
 	{
-	  fileName = resolveProjectName(&isProject);
+	  [self postMessage: @"# Unsupported project path: %@", file];
+	  return NO;
 	}	  
     }
   else
     {
       fileName = resolveProjectName(&isProject);
+    }
+
+  if (fileName == nil ||
+      ![[NSFileManager defaultManager] fileExistsAtPath: fileName])
+    {
+      [self postMessage: @"# Project or workspace file not found: %@", fileName];
+      return NO;
     }
 
   // If any of these other options is defined, then don't build because we are transforming data...
@@ -381,7 +390,7 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
 				  toProject: [container rootObject]] == NO)
 		    {
 		      RELEASE(coder);
-		      return;
+		      return NO;
 		    }
 		  		  
 		  [coder setDelegate: self];
@@ -391,7 +400,10 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
 		    {        
 		      // build...
 		      [self postMessage: @"\033[1;32m**\033[0m Start operation %@", display]; 
-		      if ([container performSelector: operation])
+		      BOOL (*invoke)(id, SEL) = (BOOL (*)(id, SEL))
+                        [container methodForSelector: operation];
+                      success = invoke(container, operation);
+		      if (success)
 			{
 			  [self postMessage: @"\033[1;32m**\033[0m %@ Succeeded", display];
 			}
@@ -412,17 +424,21 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
 		  
 		  if ([w respondsToSelector: operation])
 		    {
-		      [w performSelector: operation];
+		      BOOL (*invoke)(id, SEL) = (BOOL (*)(id, SEL))
+                        [w methodForSelector: operation];
+                      success = invoke(w, operation);
 		    }
 		}
 	    }
 	  NS_HANDLER
 	    {
 	      NSLog(@"%@", localException);
+              success = NO;
 	    }
 	  NS_ENDHANDLER;
 	}
     }
+  return success;
 }
 
 @end

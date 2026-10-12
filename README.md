@@ -57,6 +57,10 @@ Supported xcodebuild-style options:
   `-parallelizeTargets`, `-quiet`, `-verbose`, `-list`, and
   `-showBuildSettings` are accepted for command-line compatibility.
 
+Buildtool exits with status 0 on success and nonzero on a failed operation,
+invalid project path, or exception. An explicit project path never falls back
+to another project in the current directory.
+
 #### 1.2.1 Native macOS build
 
 With full Xcode installed and selected as the active developer directory,

@@ -43,6 +43,10 @@ sub-commands above:
 * ```-parallelizeTargets```, ```-quiet```, ```-verbose```, ```-list```, and
 * ```-showBuildSettings``` are accepted for command-line compatibility.
 
+Buildtool exits with status 0 on success and nonzero on a failed operation,
+invalid project path, or exception. An explicit project path never falls back
+to another project in the current directory.
+
 Examples:
 
 ```

@@ -124,6 +124,11 @@
 - (IBAction)toggleBottomPanel:(id)sender;
 - (IBAction)selectNavigatorMode:(id)sender;
 - (IBAction)runProject:(id)sender;
+- (BOOL)validateDebuggerAction:(SEL)action tag:(NSInteger)tag;
+- (IBAction)debugProject:(id)sender;
+- (IBAction)debugAction:(id)sender;
+- (IBAction)toggleBreakpoint:(id)sender;
+- (IBAction)debugConsoleCommand:(id)sender;
 - (IBAction)buildProject:(id)sender;
 - (IBAction)stopProject:(id)sender;
 

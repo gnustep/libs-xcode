@@ -8,6 +8,7 @@
    Application Controller
 */
 
+#import "YCodeControlIcons.h"
 #import "AppController.h"
 #import "YCodeWindowController.h"
 #import "YCodeDocumentController.h"
@@ -190,8 +191,28 @@ YCodeFileURLFromPath(NSString *path)
     productMenu = [[NSMenu alloc] initWithTitle:projectMenuTitle];
     [productMenu addItem:YCodeMenuItem(@"Build", @selector(buildProject:), @"b", self)];
     [productMenu addItem:YCodeMenuItem(@"Clean", @selector(cleanProject:), @"k", self)];
+    [productMenu addItem:YCodeMenuItem(@"Debug", @selector(debugProject:), @"", self)];
+    NSMenu *debugMenu = AUTORELEASE([[NSMenu alloc] initWithTitle:@"Debugger"]);
+    NSMenuItem *debugItem = YCodeMenuItem(@"Debugger", NULL, @"", nil);
+    [debugItem setSubmenu:debugMenu];
+    [debugItem setImage:YCodeControlIcon(@"debug", 16)];
+    [productMenu addItem:debugItem];
+    NSArray *debugLabels = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
+        @"Next", @"Step Into", @"Step Out", @"Up", @"Down", nil];
+    NSArray *debugIcons = @[@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down"];
+    for (NSUInteger i = 0; i < [debugLabels count]; i++) {
+        NSMenuItem *item = YCodeMenuItem([debugLabels objectAtIndex:i], @selector(debugAction:), @"", self);
+        [item setTag:i];
+        [item setImage:YCodeControlIcon([debugIcons objectAtIndex:i], 16)];
+        [debugMenu addItem:item];
+    }
+    [debugMenu addItem:YCodeMenuItem(@"Toggle Breakpoint at Selection", @selector(toggleBreakpoint:), @"", self)];
     [productMenu addItem:YCodeMenuItem(@"Run", @selector(runProject:), @"r", self)];
     [productMenu addItem:YCodeMenuItem(@"Stop", @selector(stopProject:), @".", self)];
+    NSArray *controlTitles = @[@"Build", @"Clean", @"Debug", @"Run", @"Stop"];
+    for (NSString *title in controlTitles)
+        [[productMenu itemWithTitle:title] setImage:YCodeControlIcon([title lowercaseString], 16)];
+    [[debugMenu itemWithTitle:@"Toggle Breakpoint at Selection"] setImage:YCodeControlIcon(@"breakpoint", 16)];
     menuItem = [[NSMenuItem alloc] initWithTitle:projectMenuTitle action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:productMenu];
     [mainMenu addItem:menuItem];
@@ -661,6 +682,28 @@ YCodeFileURLFromPath(NSString *path)
     } else {
         NSBeep();
     }
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item
+{
+    SEL action = [item action];
+    if (action == @selector(debugProject:) || action == @selector(debugAction:) ||
+        action == @selector(toggleBreakpoint:))
+        return [[self currentProjectWindowController] validateDebuggerAction:action tag:[item tag]];
+    return YES;
+}
+
+- (IBAction)debugProject:(id)sender
+{
+    [[self currentProjectWindowController] debugProject:sender];
+}
+- (IBAction)debugAction:(id)sender
+{
+    [[self currentProjectWindowController] debugAction:sender];
+}
+- (IBAction)toggleBreakpoint:(id)sender
+{
+    [[self currentProjectWindowController] toggleBreakpoint:sender];
 }
 
 - (IBAction)runProject:(id)sender

@@ -51,8 +51,8 @@ int main(int argc, const char *argv[])
 #endif
 
   // Process the arguments...
-  [delegate process];
+  BOOL success = [delegate process];
   RELEASE(pool);
 
-  return 0;
+  return success ? 0 : 1;
 }

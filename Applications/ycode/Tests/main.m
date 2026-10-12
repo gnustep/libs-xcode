@@ -267,6 +267,89 @@ static void writeExecutable(NSString *path, NSString *contents)
     ofItemAtPath:path error:NULL];
 }
 
+@interface YCodeDebuggerProbe : NSObject <YCodeDebuggerDelegate>
+{
+@public
+  NSMutableString *commands;
+  NSMutableString *output;
+  NSString *file;
+  NSUInteger line;
+}
+@end
+@implementation YCodeDebuggerProbe
+- (id)init
+{
+  if ((self = [super init])) { commands = [NSMutableString new]; output = [NSMutableString new]; }
+  return self;
+}
+- (void)dealloc { [commands release]; [output release]; [file release]; [super dealloc]; }
+- (void)debugger:(YCodeDebugger *)debugger sendCommand:(NSString *)command { [commands appendString:command]; }
+- (void)debugger:(YCodeDebugger *)debugger output:(NSString *)text { [output appendString:text]; }
+- (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)path line:(NSUInteger)number
+{ ASSIGN(file, path); line = number; }
+@end
+
+static void testDebuggerRecords(void)
+{
+  YCodeDebugger *debugger = [YCodeDebugger new];
+  YCodeDebuggerProbe *probe = [YCodeDebuggerProbe new];
+  [debugger setDelegate:probe];
+  NSString *storage = [@"YCodeDebuggerTest:" stringByAppendingString:[[NSProcessInfo processInfo] globallyUniqueString]];
+  [debugger setBreakpointStorageKey:storage];
+  [debugger toggleBreakpointAtFile:@"/tmp/A \"quoted\".m" line:4];
+  YCodeDebugger *restored = [YCodeDebugger new];
+  [restored setBreakpointStorageKey:storage];
+  [restored setDelegate:probe];
+  [restored receiveData:[@"(gdb) \n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([probe->commands rangeOfString:@"-break-insert"].location != NSNotFound,
+    @"A new session restores project source breakpoints from preferences");
+  [restored release];
+  [probe->commands setString:@""];
+  NSString *records = @"(gdb) \r\n12^done,bkpt={number=\"3\",fullname=\"/tmp/A \\\"quoted\\\".m\",line=\"4\"}\n"
+    @"*running,thread-id=\"all\"\n~\"café\\n\"\n"
+    @"*stopped,reason=\"breakpoint-hit\",frame={fullname=\"/tmp/A \\\"quoted\\\".m\",line=\"4\",args=[{name=\"argc\",value=\"1\"}]}\n";
+  NSData *bytes = [records dataUsingEncoding:NSUTF8StringEncoding];
+  for (NSUInteger i = 0; i < [bytes length]; i++)
+    [debugger receiveData:[bytes subdataWithRange:NSMakeRange(i, 1)]];
+  testAssert([debugger isReady] && ![debugger isRunning], @"Chunked MI records update ready/running/stopped state");
+  testAssert([probe->file isEqual:@"/tmp/A \"quoted\".m"] && probe->line == 4,
+    @"Escaped source paths and nested frames navigate correctly");
+  testAssert([probe->output rangeOfString:@"café\n"].location != NSNotFound &&
+    [probe->output rangeOfString:@"thread-id"].location == NSNotFound,
+    @"Keep split UTF-8 stream output and hide MI bookkeeping");
+  testAssert([probe->commands rangeOfString:@"-break-insert -f \"/tmp/A \\\"quoted\\\".m:4\"\n"].location != NSNotFound,
+    @"Restore prelaunch breakpoints with MI quoting");
+  [debugger toggleBreakpointAtFile:probe->file line:4];
+  testAssert([probe->commands hasSuffix:@"-break-delete 3\n"], @"Delete breakpoint using debugger-assigned number");
+  [debugger toggleBreakpointAtFile:@"/tmp/blank.m" line:1];
+  [debugger receiveData:[@"^done,bkpt={number=\"4\",fullname=\"/tmp/blank.m\",line=\"2\",original-location=\"/tmp/blank.m:1\"}\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  [debugger toggleBreakpointAtFile:@"/tmp/blank.m" line:1];
+  testAssert([probe->commands hasSuffix:@"-break-delete 4\n"],
+    @"Toggling the requested line removes a breakpoint relocated by GDB");
+  [debugger receiveData:[@"*running,thread-id=\"all\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  [debugger restart];
+  testAssert([probe->commands hasSuffix:@"-exec-interrupt --all\n"], @"Restart interrupts a running inferior first");
+  [debugger receiveData:[@"*stopped,reason=\"signal-received\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([probe->commands hasSuffix:@"-exec-run\n"], @"Restart waits for the stopped event before running");
+  [debugger receiveData:[@"9^error,msg=\"No symbol\\n\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([probe->output rangeOfString:@"Debugger error: No symbol"].location != NSNotFound,
+    @"Display MI command failures in the console");
+  NSDictionary *parsed = [YCodeDebugger parseRecord:@"24^done,stack=[frame={level=\"0\"},frame={level=\"1\"}]"];
+  testAssert([[parsed objectForKey:@"stack"] count] == 2, @"Parse MI result lists as well as value lists");
+  [YCodeDebugger parseRecord:@"^done,bad=[garbage"];
+  [debugger reset];
+  testAssert(![debugger isReady] && ![debugger isRunning], @"Reset session state after termination");
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:storage];
+  [debugger release]; [probe release];
+}
+
+static void waitForDebugger(YCodeBuildSystem *build)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:10];
+  while ([deadline timeIntervalSinceNow] > 0 && [build isBusy] && ![[build debugger] isReady])
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+}
+
 static void testBuildAndRun(NSString *temporaryDirectory)
 {
   NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Build With Spaces"];
@@ -367,6 +450,46 @@ static void testBuildAndRun(NSString *temporaryDirectory)
     [[build buildOutput] rangeOfString:@"configured"].location != NSNotFound &&
     [[build buildOutput] rangeOfString:@"compiled"].location != NSNotFound,
     @"CMake configuration finishes before building and running");
+  // Exercise the actual asynchronous build/MI transport without requiring GDB on CI.
+  id savedDebuggerPath = [[[NSUserDefaults standardUserDefaults] objectForKey:@"DebuggerPath"] retain];
+  NSString *fakeGDB = [root stringByAppendingPathComponent:@"fake gdb"];
+  writeExecutable(fakeGDB, @"#!/bin/sh\nprintf '%s\\n' \"$@\" > debugger-arguments\n"
+    @"printf '(gdb) \\n'\nwhile IFS= read -r command; do\n"
+    @"printf '%s\\n' \"$command\" >> debugger-commands\n"
+    @"case \"$command\" in\n-exec-run) printf '*running,thread-id=\"all\"\\n*stopped,reason=\"exited-normally\"\\n';;\n"
+    @"-gdb-exit) exit 0;;\n*) printf '^done\\n';;\nesac\ndone\n");
+  [[NSUserDefaults standardUserDefaults] setObject:fakeGDB forKey:@"DebuggerPath"];
+  for (NSUInteger session = 0; session < 2; session++) {
+    [window debugProject:nil];
+    waitForDebugger(build);
+    testAssert([build isDebugging] && [[build debugger] isReady], @"Build and start a fresh debugger session");
+    testAssert(![build debug] && ![build run], @"Debug session excludes competing builds and runs");
+    [[build debugger] command:@"-exec-run"];
+    [[build debugger] command:@"-gdb-exit"];
+    waitForBuild(build, NO);
+    testAssert(![build isBusy] && ![build isDebugging] && ![[build debugger] isReady],
+      @"Debugger exit drains pipes and permits another session");
+    testAssert([[build buildOutput] rangeOfString:@"exited-normally"].location != NSNotFound,
+      @"MI transport reports inferior exit");
+  }
+  NSString *arguments = [NSString stringWithContentsOfFile:[root stringByAppendingPathComponent:@"debugger-arguments"]
+    encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([arguments rangeOfString:@"--interpreter=mi2\n"].location != NSNotFound &&
+    [arguments rangeOfString:@"Run Product.app/Run Product\n"].location != NSNotFound,
+    @"Launch GDB in MI mode with the resolved bundle executable as one argument");
+  [window debugProject:nil];
+  waitForDebugger(build);
+  [window stopProject:nil];
+  waitForBuild(build, NO);
+  testAssert(![build isBusy] && [build status] == YCodeBuildStatusCancelled, @"Stop closes a debugger session");
+  [[NSUserDefaults standardUserDefaults] setObject:@"/missing/ycode-gdb" forKey:@"DebuggerPath"];
+  [window debugProject:nil];
+  waitForBuild(build, NO);
+  testAssert(![build isDebugging] && [build status] == YCodeBuildStatusFailed,
+    @"Missing debugger reports failure and releases session resources");
+  if (savedDebuggerPath) [[NSUserDefaults standardUserDefaults] setObject:savedDebuggerPath forKey:@"DebuggerPath"];
+  else [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"DebuggerPath"];
+  [savedDebuggerPath release];
   [build setTargetName:@"MissingTarget"];
   testAssert(![build run] && ![build isBusy], @"Missing runnable targets fail without launching another product");
   [build setTargetName:nil];
@@ -409,6 +532,14 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
   testAssert([[split subviews] count] == 2 && !NSIntersectsRect([editor frame], [results frame]),
     @"Showing results restores the split without duplicate panes");
 
+  NSView *consolePane = [[tabs tabViewItemAtIndex:0] view];
+  NSTextField *commandField = [[consolePane subviews] lastObject];
+  NSView *consoleScroll = [[consolePane subviews] objectAtIndex:0];
+  testAssert([commandField isKindOfClass:[NSTextField class]] &&
+    [commandField action] == @selector(debugConsoleCommand:) &&
+    !NSIntersectsRect([commandField frame], [consoleScroll frame]) &&
+    NSContainsRect([consolePane bounds], [commandField frame]),
+    @"Debugger input remains visible below console output after resizing");
   NSString *source = [temporaryDirectory stringByAppendingPathComponent:@"Issue Source.m"];
   NSString *text = @"first line\n  invalidSymbol();\nlast line\n";
   [text writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
@@ -459,6 +590,9 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
     @"Outdated diagnostic positions are clamped to the source");
   [controller buildSystem:build didReceiveOutput:@"Issue Source.m:2:3: error: runtime text\n"];
   testAssert([table numberOfRows] == 2, @"Runtime output does not become a build issue");
+  [controller buildSystem:build stoppedAtFile:source line:2];
+  testAssert([[document selectedText] isEqual:@"  invalidSymbol();"],
+    @"Debugger stop selects the source line in the existing editor tab");
   [controller setProject:nil];
   [controller close];
   [controller release];
@@ -481,6 +615,7 @@ int main(void)
   [NSApplication sharedApplication];
   testApplicationStartup();
   testEditorColors();
+  testDebuggerRecords();
   testAssert([manager createDirectoryAtPath:temporaryDirectory
               withIntermediateDirectories:YES attributes:nil error:&error],
              @"Create test directory");

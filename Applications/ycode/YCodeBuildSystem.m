@@ -67,6 +67,8 @@
     RELEASE(_buildOutput);
     RELEASE(_buildErrors);
     RELEASE(_buildEnvironment);
+    [_debugger setDelegate:nil];
+    RELEASE(_debugger);
     [super dealloc];
 }
 
@@ -101,6 +103,11 @@
 
 - (void)setProject:(YCodeProject *)project
 {
+    if (_project != project) {
+        [self stop];
+        [_debugger setDelegate:nil];
+        RELEASE(_debugger); _debugger = nil;
+    }
     _project = project;
 }
 
@@ -247,6 +254,51 @@
     return success;
 }
 
+- (YCodeDebugger *)debugger
+{
+    if (!_debugger) {
+        _debugger = [YCodeDebugger new];
+        [_debugger setDelegate:self];
+        if ([_project projectPath]) [_debugger setBreakpointStorageKey:
+            [@"YCodeBreakpoints:" stringByAppendingString:[[_project projectPath] stringByStandardizingPath]]];
+    }
+    return _debugger;
+}
+
+- (BOOL)isDebugging { return _debugging; }
+
+- (BOOL)debug
+{
+    if ([self isBusy]) return NO;
+    _debugAfterBuild = YES;
+    if (![self run]) { _debugAfterBuild = NO; return NO; }
+    return YES;
+}
+
+- (void)debugger:(YCodeDebugger *)debugger sendCommand:(NSString *)command
+{
+    if (!_debugging || !_inputPipe || ![_currentTask isRunning]) return;
+    @try {
+        [[_inputPipe fileHandleForWriting] writeData:[command dataUsingEncoding:NSUTF8StringEncoding]];
+    } @catch (NSException *exception) {
+        [self reportError:[NSString stringWithFormat:@"Debugger input failed: %@\n", [exception reason]]];
+    }
+}
+
+- (void)debugger:(YCodeDebugger *)debugger output:(NSString *)output
+{
+    [_buildOutput appendString:output];
+    if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
+        [_delegate buildSystem:self didReceiveOutput:output];
+}
+
+- (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)file line:(NSUInteger)line
+{
+    if (![file isAbsolutePath]) file = [[_project projectDirectoryPath] stringByAppendingPathComponent:file];
+    if ([_delegate respondsToSelector:@selector(buildSystem:stoppedAtFile:line:)])
+        [_delegate buildSystem:self stoppedAtFile:file line:line];
+}
+
 - (BOOL)run
 {
     if ([self isBusy]) return NO;
@@ -266,6 +318,8 @@
 
 - (BOOL)launchProduct
 {
+    BOOL debug = _debugAfterBuild;
+    _debugAfterBuild = NO;
     NSString *executablePath = [self findExecutable];
     if (!executablePath) {
         _status = YCodeBuildStatusFailed;
@@ -277,6 +331,14 @@
     _status = YCodeBuildStatusRunning;
     if ([_delegate respondsToSelector:@selector(buildSystemDidStartRun:)])
         [_delegate buildSystemDidStartRun:self];
+    if (debug) {
+        _debugging = YES;
+        [[self debugger] reset];
+        NSString *path = [[NSUserDefaults standardUserDefaults] stringForKey:@"DebuggerPath"];
+        if (![path length]) path = @"gdb";
+        return [self runCommand:path withArguments:[NSArray arrayWithObjects:
+            @"--interpreter=mi2", @"--quiet", @"--nx", @"-f", executablePath, nil]];
+    }
     return [self runCommand:executablePath withArguments:[NSArray array]];
 }
 
@@ -312,6 +374,11 @@
 
 - (void)stop
 {
+    _debugAfterBuild = NO;
+    if (_debugging) {
+        [_debugger command:@"-gdb-exit"];
+        [_debugger reset];
+    }
     _runAfterBuild = NO;
     _configureBeforeBuild = NO;
     if (_currentTask && _status != YCodeBuildStatusCancelled) {
@@ -505,6 +572,11 @@
         [_currentTask setCurrentDirectoryPath:[_project projectDirectoryPath]];
     }
     
+    if (_debugging) {
+        _inputPipe = [NSPipe new];
+        [_currentTask setStandardInput:_inputPipe];
+    }
+
     // Set up pipes for output
     _outputPipe = [[NSPipe alloc] init];
     _errorPipe = [[NSPipe alloc] init];
@@ -601,6 +673,9 @@
     if (_currentTask) [center removeObserver:self name:nil object:_currentTask];
     if (_outputPipe) [center removeObserver:self name:nil object:[_outputPipe fileHandleForReading]];
     if (_errorPipe) [center removeObserver:self name:nil object:[_errorPipe fileHandleForReading]];
+    RELEASE(_inputPipe); _inputPipe = nil;
+    _debugging = NO;
+    [_debugger reset];
     RELEASE(_currentTask); _currentTask = nil;
     RELEASE(_outputPipe); _outputPipe = nil;
     RELEASE(_errorPipe); _errorPipe = nil;
@@ -629,6 +704,7 @@
     }
     _configureBeforeBuild = NO;
     _runAfterBuild = NO;
+    if (!launch) _debugAfterBuild = NO;
     if (operation == YCodeBuildStatusCancelled) return;
     _status = success ? YCodeBuildStatusSuccess : YCodeBuildStatusFailed;
     if (operation == YCodeBuildStatusBuilding) {
@@ -661,6 +737,11 @@
     if ([data length] == 0) {
         if (isError) _errorClosed = YES; else _outputClosed = YES;
         [self finishTaskIfReady];
+        return;
+    }
+    if (_debugging && !isError) {
+        [_debugger receiveData:data];
+        [handle readInBackgroundAndNotify];
         return;
     }
     NSString *output = AUTORELEASE([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);

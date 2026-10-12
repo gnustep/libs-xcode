@@ -22,6 +22,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */
 
+#import "YCodeControlIcons.h"
 #import "YCodeWindowController.h"
 #import "YCodeProject.h"
 #import "YCodeProjectNavigatorController.h"
@@ -446,7 +447,20 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         NSTabViewItem *consoleTab = [[NSTabViewItem alloc] initWithIdentifier:@"console"];
         [consoleTab setLabel:@"Console"];
         if (_consoleTextView) {
-            [consoleTab setView:YCodeScrollViewWithDocumentView(_consoleTextView)];
+            NSView *console = AUTORELEASE([[NSView alloc] initWithFrame:[_bottomView bounds]]);
+            NSRect bounds = [console bounds];
+            NSScrollView *scroll = YCodeScrollViewWithDocumentView(_consoleTextView);
+            [scroll setFrame:NSMakeRect(0, 28, NSWidth(bounds), MAX(0, NSHeight(bounds) - 28))];
+            [scroll setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+            [console addSubview:scroll];
+            NSTextField *command = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(4, 2, MAX(0, NSWidth(bounds) - 8), 24)]);
+            [command setAutoresizingMask:NSViewWidthSizable];
+            [[command cell] setPlaceholderString:@"GDB command"];
+            [command setToolTip:@"GDB command (for example: print variable, backtrace, break main)"];
+            [command setTarget:self];
+            [command setAction:@selector(debugConsoleCommand:)];
+            [console addSubview:command];
+            [consoleTab setView:console];
         }
         [_bottomTabView addTabViewItem:consoleTab];
         RELEASE(consoleTab);
@@ -606,6 +620,74 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     return YES;
 }
 
+- (BOOL)validateDebuggerAction:(SEL)action tag:(NSInteger)tag
+{
+    YCodeBuildSystem *build = [_project buildSystem];
+    if (action == @selector(debugProject:)) return _project && ![build isBusy];
+    YCodeDebugger *debugger = [build debugger];
+    if (action == @selector(toggleBreakpoint:))
+        return [_editorController currentDocument] != nil && ![debugger isRunning];
+    if (![build isDebugging] || ![debugger isReady]) return NO;
+    if (tag == 1) return [debugger isRunning];
+    if (tag == 3) return YES;
+    return ![debugger isRunning];
+}
+
+- (IBAction)debugProject:(id)sender
+{
+    if ([self prepareBuild]) [[_project buildSystem] debug];
+}
+
+- (IBAction)debugAction:(id)sender
+{
+    NSArray *commands = [NSArray arrayWithObjects:@"-exec-run", @"-exec-interrupt --all",
+        @"-exec-continue", @"-exec-run", @"-exec-next", @"-exec-step", @"-exec-finish",
+        @"-interpreter-exec console \"up\"", @"-interpreter-exec console \"down\"", nil];
+    if (![[_project buildSystem] isDebugging]) return;
+    NSInteger index = [sender tag];
+    if (index == 3) { [[[_project buildSystem] debugger] restart]; return; }
+    if (index >= 0 && index < (NSInteger)[commands count])
+        [[[_project buildSystem] debugger] command:[commands objectAtIndex:index]];
+}
+
+- (IBAction)debugConsoleCommand:(id)sender
+{
+    [[[_project buildSystem] debugger] consoleCommand:[sender stringValue]];
+    [sender setStringValue:@""];
+}
+
+- (IBAction)toggleBreakpoint:(id)sender
+{
+    YCodeEditorDocument *document = [_editorController currentDocument];
+    if (!document) return;
+    NSString *text = [document content];
+    NSUInteger position = [[document textView] selectedRange].location;
+    NSUInteger offset = 0, line = 1;
+    while (offset < position && offset < [text length]) {
+        NSUInteger end;
+        [text getLineStart:NULL end:&end contentsEnd:NULL forRange:NSMakeRange(offset, 0)];
+        if (end > position || end <= offset) break;
+        offset = end; line++;
+    }
+    [[[_project buildSystem] debugger] toggleBreakpointAtFile:[document filePath] line:line];
+    [self setBottomPanelVisible:YES];
+}
+
+- (void)buildSystem:(id)buildSystem stoppedAtFile:(NSString *)file line:(NSUInteger)line
+{
+    if (![_editorController openFile:file]) return;
+    YCodeEditorDocument *document = [_editorController currentDocument];
+    NSString *text = [document content];
+    NSUInteger offset = 0, current = 1, end = 0;
+    while (offset < [text length] && current < line) {
+        [text getLineStart:NULL end:&end contentsEnd:NULL forRange:NSMakeRange(offset, 0)];
+        if (end <= offset) break;
+        offset = end; current++;
+    }
+    [text getLineStart:NULL end:NULL contentsEnd:&end forRange:NSMakeRange(offset, 0)];
+    [document setSelectedRange:NSMakeRange(offset, end - offset)];
+}
+
 - (IBAction)runProject:(id)sender
 {
     if ([self prepareBuild]) [_project runProject];
@@ -623,6 +705,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (BOOL)validateToolbarItem:(NSToolbarItem *)item
 {
+    if ([item action] == @selector(debugProject:) || [item action] == @selector(debugAction:))
+        return [self validateDebuggerAction:[item action] tag:[item tag]];
     if ([item action] == @selector(stopProject:))
         return [[_project buildSystem] isBusy];
     if ([item action] == @selector(runProject:) || [item action] == @selector(buildProject:))
@@ -654,7 +738,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartRun:(id)buildSystem
 {
-    [self appendConsoleOutput:@"Running project...\n"];
+    [_bottomTabView selectTabViewItemWithIdentifier:@"console"];
+    [self appendConsoleOutput:@"Starting project session...\n"];
 }
 
 - (void)buildSystemDidFinishRun:(id)buildSystem
@@ -855,13 +940,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return @[@"run", @"stop", @"scheme", NSToolbarSeparatorItemIdentifier,
+    return @[@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", @"scheme", NSToolbarSeparatorItemIdentifier,
              @"navigator", @"inspector", NSToolbarFlexibleSpaceItemIdentifier];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return @[@"run", @"stop", @"scheme", NSToolbarSeparatorItemIdentifier,
+    return @[@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"scheme", NSToolbarSeparatorItemIdentifier,
              NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"inspector"];
 }
 
@@ -869,34 +954,52 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 {
     NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
     
-    if ([itemIdentifier isEqualToString:@"run"]) {
+    NSArray *debugIdentifiers = @[@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down"];
+    NSUInteger debugIndex = [debugIdentifiers indexOfObject:itemIdentifier];
+    if (debugIndex != NSNotFound) {
+        NSArray *labels = @[@"Go", @"Pause", @"Continue", @"Restart", @"Next", @"Step Into", @"Step Out", @"Up", @"Down"];
+        [item setLabel:[labels objectAtIndex:debugIndex]];
+        [item setPaletteLabel:[labels objectAtIndex:debugIndex]];
+        [item setToolTip:[@"Debugger: " stringByAppendingString:[labels objectAtIndex:debugIndex]]];
+        [item setTarget:self];
+        [item setAction:@selector(debugAction:)];
+        [item setTag:debugIndex];
+        [item setImage:YCodeControlIcon(itemIdentifier, 24)];
+    } else if ([itemIdentifier isEqualToString:@"debug"]) {
+        [item setLabel:@"Debug"];
+        [item setPaletteLabel:@"Debug"];
+        [item setToolTip:@"Build and open the debugger"];
+        [item setTarget:self];
+        [item setAction:@selector(debugProject:)];
+        [item setImage:YCodeControlIcon(@"debug", 24)];
+    } else if ([itemIdentifier isEqualToString:@"run"]) {
         [item setLabel:@"Run"];
         [item setPaletteLabel:@"Run"];
         [item setToolTip:@"Build and run the current project"];
         [item setTarget:self];
         [item setAction:@selector(runProject:)];
-        [item setImage:[NSImage imageNamed:@"play"]];
+        [item setImage:YCodeControlIcon(@"run", 24)];
     } else if ([itemIdentifier isEqualToString:@"stop"]) {
         [item setLabel:@"Stop"];
         [item setPaletteLabel:@"Stop"];
         [item setToolTip:@"Stop the running project"];
         [item setTarget:self];
         [item setAction:@selector(stopProject:)];
-        [item setImage:[NSImage imageNamed:@"stop"]];
+        [item setImage:YCodeControlIcon(@"stop", 24)];
     } else if ([itemIdentifier isEqualToString:@"navigator"]) {
         [item setLabel:@"Navigator"];
         [item setPaletteLabel:@"Navigator"];
         [item setToolTip:@"Toggle navigator visibility"];
         [item setTarget:self];
         [item setAction:@selector(toggleNavigator:)];
-        [item setImage:[NSImage imageNamed:@"navigator"]];
+        [item setImage:YCodeControlIcon(@"navigator", 24)];
     } else if ([itemIdentifier isEqualToString:@"inspector"]) {
         [item setLabel:@"Inspector"];
         [item setPaletteLabel:@"Inspector"];
         [item setToolTip:@"Toggle inspector visibility"];
         [item setTarget:self];
         [item setAction:@selector(toggleInspector:)];
-        [item setImage:[NSImage imageNamed:@"inspector"]];
+        [item setImage:YCodeControlIcon(@"inspector", 24)];
     }
     
     return AUTORELEASE(item);
