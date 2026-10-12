@@ -54,7 +54,7 @@
     // Editor area
     IBOutlet NSView *_editorView;
     NSSplitView *_editorSplitView;
-    CGFloat _buildPanelWidth;
+    CGFloat _buildPanelHeight;
     IBOutlet NSTabView *_editorTabView;
     IBOutlet YCEditorView *_editorTextView;
     

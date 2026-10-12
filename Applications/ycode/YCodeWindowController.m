@@ -344,7 +344,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 {
     if (_editorSplitView == nil) {
         _editorSplitView = [[NSSplitView alloc] initWithFrame:[_editorView bounds]];
-        [_editorSplitView setVertical:YES];
+        [_editorSplitView setVertical:NO];
         [_editorSplitView setDividerStyle:NSSplitViewDividerStyleThin];
         [_editorSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
         [_editorView addSubview:_editorSplitView];
@@ -526,17 +526,17 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     _bottomPanelVisible = visible;
     if (!_editorSplitView || !_bottomView) return;
     if (visible && [_bottomView superview] == nil) {
-        CGFloat width = NSWidth([_editorSplitView bounds]);
-        CGFloat panelWidth = _buildPanelWidth > 0 ? _buildPanelWidth : 300;
-        panelWidth = MIN(panelWidth, width * 0.5);
-        [_bottomView setFrame:NSMakeRect(0, 0, panelWidth, NSHeight([_editorSplitView bounds]))];
+        CGFloat height = NSHeight([_editorSplitView bounds]);
+        CGFloat panelHeight = _buildPanelHeight > 0 ? _buildPanelHeight : 220;
+        panelHeight = MIN(panelHeight, height * 0.5);
+        [_bottomView setFrame:NSMakeRect(0, 0, NSWidth([_editorSplitView bounds]), panelHeight)];
         [_bottomView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
         [_editorSplitView addSubview:_bottomView];
         [_editorSplitView adjustSubviews];
-        [_editorSplitView setPosition:MAX(0, width - panelWidth - [_editorSplitView dividerThickness])
+        [_editorSplitView setPosition:MAX(0, height - panelHeight - [_editorSplitView dividerThickness])
                     ofDividerAtIndex:0];
     } else if (!visible && [_bottomView superview]) {
-        _buildPanelWidth = NSWidth([_bottomView frame]);
+        _buildPanelHeight = NSHeight([_bottomView frame]);
         [_bottomView removeFromSuperview];
         [_editorSplitView adjustSubviews];
     }

@@ -392,18 +392,19 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
   NSView *results = [controller valueForKey:@"_bottomView"];
   NSTabView *tabs = [controller valueForKey:@"_bottomTabView"];
   NSTableView *table = [controller valueForKey:@"_issuesTableView"];
-  testAssert([split isVertical] && [editor superview] == split && [results superview] == split,
-    @"Source and build results share a vertical split view");
+  testAssert(![split isVertical] && [editor superview] == split && [results superview] == split,
+    @"Source and build results share a horizontal split view");
   testAssert(!NSIntersectsRect([editor frame], [results frame]) &&
-    NSWidth([editor frame]) > 0 && NSWidth([results frame]) > 0,
+    NSHeight([editor frame]) > 0 && NSHeight([results frame]) > 0 &&
+    NSMaxY([editor frame]) <= NSMinY([results frame]),
     @"Build results resize the source instead of covering it");
-  [split setPosition:NSWidth([split bounds]) * 0.4 ofDividerAtIndex:0];
+  [split setPosition:NSHeight([split bounds]) * 0.6 ofDividerAtIndex:0];
   [[controller window] setContentSize:NSMakeSize(1200, 780)];
   testAssert(!NSIntersectsRect([editor frame], [results frame]) &&
     NSContainsRect([split bounds], [results frame]), @"Dragging and resizing keeps panes separate");
   [controller setBottomPanelVisible:NO];
-  testAssert([results superview] == nil && fabs(NSWidth([editor frame]) - NSWidth([split bounds])) < 1,
-    @"Hiding build results restores the editor's full width");
+  testAssert([results superview] == nil && fabs(NSHeight([editor frame]) - NSHeight([split bounds])) < 1,
+    @"Hiding build results restores the editor's full height");
   [controller setBottomPanelVisible:YES];
   testAssert([[split subviews] count] == 2 && !NSIntersectsRect([editor frame], [results frame]),
     @"Showing results restores the split without duplicate panes");
