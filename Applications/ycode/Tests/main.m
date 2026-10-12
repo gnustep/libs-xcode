@@ -52,6 +52,44 @@
 - (void)updateThumbnailForItem:(YCodeProjectNavigatorItem *)item;
 @end
 
+@interface NSTabViewItem (CloseButtonTesting)
+- (NSButton *)closeButton;
+@end
+
+@interface YCodeTabCloseTest : NSObject
++ (void)answerAlert:(NSTimer *)timer;
+@end
+@implementation YCodeTabCloseTest
++ (void)answerAlert:(NSTimer *)timer
+{
+  if (![NSApp modalWindow]) return;
+  NSMutableArray *views = [NSMutableArray arrayWithObject:[[NSApp modalWindow] contentView]];
+  while ([views count] > 0) {
+    NSView *view = AUTORELEASE(RETAIN([views lastObject]));
+    [views removeLastObject];
+    if ([view isKindOfClass:[NSButton class]]
+      && [(NSButton *)view tag] == [[timer userInfo] integerValue]) {
+      [timer invalidate];
+      [(NSButton *)view sendAction:[(NSButton *)view action] to:[(NSButton *)view target]];
+      // Wake the modal event wait after the timer delivers the button action.
+      [NSApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
+        location:NSZeroPoint modifierFlags:0 timestamp:0
+        windowNumber:[[NSApp modalWindow] windowNumber] context:nil
+        subtype:0 data1:0 data2:0] atStart:NO];
+      return;
+    }
+    [views addObjectsFromArray:[view subviews]];
+  }
+}
+@end
+
+static void answerCloseAlert(NSInteger response)
+{
+  NSTimer *timer = [NSTimer timerWithTimeInterval:0.1 target:[YCodeTabCloseTest class]
+    selector:@selector(answerAlert:) userInfo:[NSNumber numberWithInteger:response] repeats:YES];
+  [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSModalPanelRunLoopMode];
+}
+
 static NSUInteger failures = 0;
 
 static void testAssert(BOOL condition, NSString *message)
@@ -517,8 +555,39 @@ static void testEditorFiles(NSString *directory)
     atIndex:15 effectiveRange:NULL] isEqual:[[[editor currentDocument] syntaxHighlighter] numberColor]],
     @"Enabling syntax restores token colors");
   [[editor currentDocument] setModified:NO];
-  testAssert([editor closeFile:first] && [editor closeFile:second], @"Close source tabs");
+  [[editor tabView] display];
+  YCodeEditorDocument *selectedDocument = [editor currentDocument];
+  NSString *backgroundPath = [[selectedDocument filePath] isEqual:first] ? second : first;
+  NSTabViewItem *backgroundTab = [editor tabForDocument:[editor documentForFilePath:backgroundPath]];
+  NSButton *closeButton = [backgroundTab closeButton];
+  testAssert([closeButton superview] == [editor tabView] && ![closeButton isHidden],
+    @"File tabs display a close button beside the label");
+  [closeButton performClick:nil];
+  testAssert([[editor openDocuments] count] == 1 && [editor currentDocument] == selectedDocument
+    && [editor documentForFilePath:backgroundPath] == nil,
+    @"Closing a background tab preserves the selected document");
+  NSTabViewItem *selectedTab = [editor tabForDocument:selectedDocument];
+  [selectedDocument setModified:YES];
+  answerCloseAlert(NSAlertThirdButtonReturn);
+  [[selectedTab closeButton] performClick:nil];
+  testAssert([[editor openDocuments] count] == 1 && [selectedDocument isModified],
+    @"Cancel keeps the modified tab open");
+  answerCloseAlert(NSAlertSecondButtonReturn);
+  [[selectedTab closeButton] performClick:nil];
+  testAssert([[editor openDocuments] count] == 0 && [editor currentDocument] == nil
+    && [[editor tabView] numberOfTabViewItems] == 0,
+    @"Discard closes the last tab and clears the active editor");
   testAssert([editor openFile:first], @"Reopen source after closing tabs");
+  [editor openFile:second];
+  [editor openFile:first];
+  [[editor currentDocument] setModified:YES];
+  answerCloseAlert(NSAlertFirstButtonReturn);
+  [[[editor tabForDocument:[editor currentDocument]] closeButton] performClick:nil];
+  testAssert([editor documentForFilePath:first] == nil
+    && [[[editor currentDocument] filePath] isEqual:second],
+    @"Save closes the selected tab and activates a remaining file");
+  [editor closeFile:second];
+  [editor openFile:first];
   [document close];
   [document release];
 
@@ -1218,7 +1287,9 @@ int main(void)
   testAssert(![editor openFile:invalidImage] && [[editor openDocuments] count] == openCount,
     @"Invalid images do not open as editable text");
   for (YCodeEditorDocument *openDocument in [NSArray arrayWithArray:[editor openDocuments]])
-    [editor closeFile:[openDocument filePath]];
+    [[[editor tabForDocument:openDocument] closeButton] performClick:nil];
+  testAssert([[editor openDocuments] count] == 0,
+    @"Close buttons remove both source and image tabs");
   testAssert([[details string] isEqual:@"No source file selected."],
     @"Closing the final editor clears File inspector");
 

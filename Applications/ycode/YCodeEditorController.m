@@ -27,6 +27,92 @@
 #import "YCodeProject.h"
 #import "YCodeSyntaxHighlighter.h"
 
+@interface YCodeEditorTabItem : NSTabViewItem
+{
+    NSButton *_closeButton;
+    BOOL _labelDrawn;
+}
+- (NSButton *)closeButton;
+- (void)closeTab:(id)sender;
+- (void)prepareToDrawLabel;
+- (void)updateCloseButtonVisibility;
+@end
+
+@implementation YCodeEditorTabItem
+- (id)initWithIdentifier:(id)identifier
+{
+    self = [super initWithIdentifier:identifier];
+    if (self) {
+        _closeButton = [[NSButton alloc] initWithFrame:NSZeroRect];
+        [_closeButton setTitle:@"×"];
+        [_closeButton setFont:[NSFont systemFontOfSize:14]];
+        [_closeButton setBordered:NO];
+        [_closeButton setButtonType:NSMomentaryChangeButton];
+        [_closeButton setToolTip:@"Close file"];
+        [_closeButton setTarget:self];
+        [_closeButton setAction:@selector(closeTab:)];
+    }
+    return self;
+}
+- (void)dealloc
+{
+    [_closeButton removeFromSuperview];
+    RELEASE(_closeButton);
+    [super dealloc];
+}
+- (NSButton *)closeButton { return _closeButton; }
+- (void)prepareToDrawLabel { _labelDrawn = NO; }
+- (void)updateCloseButtonVisibility { [_closeButton setHidden:!_labelDrawn]; }
+- (NSSize)sizeOfLabel:(BOOL)truncate
+{
+    NSSize size = [super sizeOfLabel:truncate];
+    size.width += 22;
+    size.height = MAX(size.height, 16);
+    return size;
+}
+- (void)drawLabel:(BOOL)truncate inRect:(NSRect)rect
+{
+    NSRect labelRect = rect;
+    labelRect.size.width = MAX(0, rect.size.width - 22);
+    [super drawLabel:truncate inRect:labelRect];
+    if (rect.size.width >= 22) {
+        if ([_closeButton superview] != [self tabView])
+            [[self tabView] addSubview:_closeButton];
+        [_closeButton setFrame:NSMakeRect(NSMaxX(rect) - 18,
+            NSMidY(rect) - 8, 16, 16)];
+        _labelDrawn = YES;
+    }
+}
+- (void)closeTab:(id)sender
+{
+    // Closing may release this item and its button during the action.
+    AUTORELEASE(RETAIN(self));
+    id controller = [[self tabView] delegate];
+    if ([controller respondsToSelector:@selector(closeFile:)])
+        [controller closeFile:[self identifier]];
+}
+@end
+
+@implementation YCodeEditorTabView
+- (void)drawRect:(NSRect)rect
+{
+    // A theme may omit tabs that no longer fit after resizing.
+    for (NSTabViewItem *item in [self tabViewItems])
+        if ([item isKindOfClass:[YCodeEditorTabItem class]])
+            [(YCodeEditorTabItem *)item prepareToDrawLabel];
+    [super drawRect:rect];
+    for (NSTabViewItem *item in [self tabViewItems])
+        if ([item isKindOfClass:[YCodeEditorTabItem class]])
+            [(YCodeEditorTabItem *)item updateCloseButtonVisibility];
+}
+- (void)removeTabViewItem:(NSTabViewItem *)item
+{
+    if ([item isKindOfClass:[YCodeEditorTabItem class]])
+        [[(YCodeEditorTabItem *)item closeButton] removeFromSuperview];
+    [super removeTabViewItem:item];
+}
+@end
+
 @interface YCodeEditorController (Session)
 - (NSString *)lastSourceFileDefaultsKey;
 - (void)rememberCurrentSourceFile;
@@ -209,7 +295,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
         [_openDocuments addObject:document];
         
         // Create tab
-        NSTabViewItem *tabItem = [[NSTabViewItem alloc] initWithIdentifier:filePath];
+        NSTabViewItem *tabItem = [[YCodeEditorTabItem alloc] initWithIdentifier:filePath];
         [tabItem setLabel:[filePath lastPathComponent]];
         [tabItem setView:[document editorView]];
         [tabItem setToolTip:filePath];
@@ -435,7 +521,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     [_openDocuments addObject:document];
     
     // Create tab
-    NSTabViewItem *tabItem = [[NSTabViewItem alloc] initWithIdentifier:fileName];
+    NSTabViewItem *tabItem = [[YCodeEditorTabItem alloc] initWithIdentifier:fileName];
     [tabItem setLabel:fileName];
     [tabItem setView:[document editorView]];
     

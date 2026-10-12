@@ -358,7 +358,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         RELEASE(_editorSplitView);
     }
     if (_editorTabView == nil) {
-        _editorTabView = [[NSTabView alloc] initWithFrame:[_editorSplitView bounds]];
+        _editorTabView = [[YCodeEditorTabView alloc] initWithFrame:[_editorSplitView bounds]];
         [_editorTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
         [_editorSplitView addSubview:_editorTabView];
         RELEASE(_editorTabView);

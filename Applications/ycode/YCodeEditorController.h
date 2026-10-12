@@ -33,6 +33,10 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
 @class YCodeProject;
 @class YCodeEditorDocument;
 
+/** Editor tabs with close buttons alongside their labels. */
+@interface YCodeEditorTabView : NSTabView
+@end
+
 @interface YCodeEditorController : NSObject <NSTabViewDelegate>
 {
     YCodeProject *_project;
