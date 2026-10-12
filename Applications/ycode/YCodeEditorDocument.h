@@ -54,8 +54,8 @@
 /**
  * Initialization
  */
-- (instancetype)initWithFilePath:(NSString *)filePath;
-- (instancetype)initWithFilePath:(NSString *)filePath content:(NSString *)content;
+- (id)initWithFilePath:(NSString *)filePath;
+- (id)initWithFilePath:(NSString *)filePath content:(NSString *)content;
 
 /**
  * File properties

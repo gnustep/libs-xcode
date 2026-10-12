@@ -142,7 +142,7 @@
     RELEASE(image);
 }
 
-- (instancetype)init
+- (id)init
 {
     self = [super init];
     if (self) {

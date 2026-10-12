@@ -65,12 +65,16 @@ static id GSXCInheritedSetting(id value, id inherited)
   if ([value isKindOfClass: [NSArray class]])
     {
       NSMutableArray *result = [NSMutableArray array];
-      for (id argument in value)
-        {
-          if ([argument isEqual: @"$(inherited)"] || [argument isEqual: @"${inherited}"])
-            [result addObjectsFromArray: GSXCSettingWords(inherited)];
-          else [result addObject: argument];
-        }
+      {
+        NSEnumerator *argumentEnumerator = [value objectEnumerator];
+        id argument;
+        while ((argument = [argumentEnumerator nextObject]) != nil)
+          {
+            if ([argument isEqual: @"$(inherited)"] || [argument isEqual: @"${inherited}"])
+              [result addObjectsFromArray: GSXCSettingWords(inherited)];
+            else [result addObject: argument];
+          }
+      }
       return result;
     }
   if ([value isKindOfClass: [NSString class]])

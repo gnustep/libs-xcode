@@ -41,8 +41,10 @@ typedef enum {
 } YCodeBuildStatus;
 
 @protocol YCodeBuildSystemDelegate <NSObject>
+@end
 
-@optional
+/* Informal delegate methods are dispatched only when implemented. */
+@interface NSObject (YCodeBuildSystemDelegate)
 - (void)buildSystem:(id)buildSystem didReceiveDebuggerOutput:(NSString *)output;
 - (void)buildSystem:(id)buildSystem stoppedAtFile:(NSString *)file line:(NSUInteger)line;
 - (void)buildSystemDidStartBuild:(id)buildSystem;

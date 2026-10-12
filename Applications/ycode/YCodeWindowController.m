@@ -57,7 +57,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 @implementation YCodeWindowController
 
-- (instancetype)init
+- (id)init
 {
     NSRect contentRect = NSMakeRect(100, 100, 980, 680);
     NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask |
@@ -295,14 +295,19 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_navigatorTabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
         [_navigatorView addSubview:_navigatorTabView];
         RELEASE(_navigatorTabView);
-        for (NSString *title in [NSArray arrayWithObjects:@"Project", @"Search", @"Test", nil]) {
-            NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:[title lowercaseString]];
-            [item setLabel:title];
-            NSView *content = [[NSView alloc] initWithFrame:[_navigatorTabView contentRect]];
-            [item setView:content];
-            RELEASE(content);
-            [_navigatorTabView addTabViewItem:item];
-            RELEASE(item);
+        {
+          NSEnumerator *titleEnumerator = [[NSArray arrayWithObjects:@"Project", @"Search", @"Test", nil] objectEnumerator];
+          NSString *title;
+          while ((title = [titleEnumerator nextObject]) != nil)
+            {
+              NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:[title lowercaseString]];
+              [item setLabel:title];
+              NSView *content = [[NSView alloc] initWithFrame:[_navigatorTabView contentRect]];
+              [item setView:content];
+              RELEASE(content);
+              [_navigatorTabView addTabViewItem:item];
+              RELEASE(item);
+            }
         }
     }
 
@@ -395,8 +400,12 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)registerInspectorView:(YCInspectorView *)inspector
 {
-    for (NSTabViewItem *item in [_inspectorTabView tabViewItems])
+    {
+      NSEnumerator *itemEnumerator = [[_inspectorTabView tabViewItems] objectEnumerator];
+      NSTabViewItem *item;
+      while ((item = [itemEnumerator nextObject]) != nil)
         if ([[item identifier] isEqual:[inspector inspectorIdentifier]]) return;
+    }
     NSTabViewItem *item = [[NSTabViewItem alloc]
         initWithIdentifier:[inspector inspectorIdentifier]];
     [item setLabel:[inspector inspectorTitle]];
@@ -413,9 +422,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [self updateDebuggerViews];
     NSString *identifier = [[_editorController currentDocument] isImageDocument] ? @"image" : @"file";
     [_inspectorTabView selectTabViewItemWithIdentifier:identifier];
-    for (NSTabViewItem *item in [_inspectorTabView tabViewItems])
+    {
+      NSEnumerator *itemEnumerator = [[_inspectorTabView tabViewItems] objectEnumerator];
+      NSTabViewItem *item;
+      while ((item = [itemEnumerator nextObject]) != nil)
         [(YCInspectorView *)[item view] inspectDocument:
-            _project ? [_editorController currentDocument] : nil];
+              _project ? [_editorController currentDocument] : nil];
+    }
 }
 
 - (void)setupBottomPanel
@@ -671,13 +684,22 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)updateDebuggerViews
 {
     YCodeDebugger *debugger = _project ? [[_project buildSystem] debugger] : nil;
-    for (YCodeEditorDocument *document in [_editorController openDocuments]) {
-        YCEditorRulerView *ruler = (YCEditorRulerView *)[[document scrollView] verticalRulerView];
-        [ruler setDebugger:debugger file:[document filePath] active:[debugger isReady]];
+    {
+      NSEnumerator *documentEnumerator = [[_editorController openDocuments] objectEnumerator];
+      YCodeEditorDocument *document;
+      while ((document = [documentEnumerator nextObject]) != nil)
+        {
+          YCEditorRulerView *ruler = (YCEditorRulerView *)[[document scrollView] verticalRulerView];
+          [ruler setDebugger:debugger file:[document filePath] active:[debugger isReady]];
+        }
     }
     [_debuggerCommandField setEnabled:[debugger isReady] && ![debugger isRunning]];
-    for (NSButton *button in [_debuggerControls subviews])
+    {
+      NSEnumerator *buttonEnumerator = [[_debuggerControls subviews] objectEnumerator];
+      NSButton *button;
+      while ((button = [buttonEnumerator nextObject]) != nil)
         [button setEnabled:[self validateDebuggerAction:@selector(debugAction:) tag:[button tag]]];
+    }
     [_toolbar validateVisibleItems];
 }
 
@@ -1030,24 +1052,24 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return @[@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", @"scheme", NSToolbarSeparatorItemIdentifier,
-             @"navigator", @"inspector", NSToolbarFlexibleSpaceItemIdentifier];
+    return [NSArray arrayWithObjects:@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", @"scheme", NSToolbarSeparatorItemIdentifier,
+             @"navigator", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return @[@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"scheme", NSToolbarSeparatorItemIdentifier,
-             NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"inspector"];
+    return [NSArray arrayWithObjects:@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"scheme", NSToolbarSeparatorItemIdentifier,
+             NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"inspector", nil];
 }
 
 - (NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSString *)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag
 {
     NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
     
-    NSArray *debugIdentifiers = @[@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down"];
+    NSArray *debugIdentifiers = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
     NSUInteger debugIndex = [debugIdentifiers indexOfObject:itemIdentifier];
     if (debugIndex != NSNotFound) {
-        NSArray *labels = @[@"Go", @"Pause", @"Continue", @"Restart", @"Next", @"Step Into", @"Step Out", @"Up", @"Down"];
+        NSArray *labels = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart", @"Next", @"Step Into", @"Step Out", @"Up", @"Down", nil];
         [item setLabel:[labels objectAtIndex:debugIndex]];
         [item setPaletteLabel:[labels objectAtIndex:debugIndex]];
         [item setToolTip:[@"Debugger: " stringByAppendingString:[labels objectAtIndex:debugIndex]]];

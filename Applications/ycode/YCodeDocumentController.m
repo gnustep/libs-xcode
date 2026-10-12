@@ -44,22 +44,31 @@
     // GNUstep stores the most recently opened URL at the end.
     urls = [[urls reverseObjectEnumerator] allObjects];
 #endif
-    for (NSURL *url in urls) {
-        NSString *path = [url path];
-        NSString *title = [path lastPathComponent];
-        if (![title length]) title = [url absoluteString];
-        NSUInteger matches = 0;
-        for (NSURL *other in urls)
-            if ([[[other path] lastPathComponent] isEqual:title]) matches++;
-        if (matches > 1)
-            title = [NSString stringWithFormat:@"%@ — %@", title, [path stringByDeletingLastPathComponent]];
-        NSMenuItem *item = AUTORELEASE([[NSMenuItem alloc] initWithTitle:title
-            action:@selector(openRecentProject:) keyEquivalent:@""]);
-        [item setTarget:self];
-        [item setRepresentedObject:url];
-        [item setToolTip:path];
-        [item setEnabled:[url isFileURL] && [[NSFileManager defaultManager] fileExistsAtPath:path]];
-        [menu addItem:item];
+    {
+      NSEnumerator *urlEnumerator = [urls objectEnumerator];
+      NSURL *url;
+      while ((url = [urlEnumerator nextObject]) != nil)
+        {
+          NSString *path = [url path];
+          NSString *title = [path lastPathComponent];
+          if (![title length]) title = [url absoluteString];
+          NSUInteger matches = 0;
+          {
+            NSEnumerator *otherEnumerator = [urls objectEnumerator];
+            NSURL *other;
+            while ((other = [otherEnumerator nextObject]) != nil)
+              if ([[[other path] lastPathComponent] isEqual:title]) matches++;
+          }
+          if (matches > 1)
+              title = [NSString stringWithFormat:@"%@ — %@", title, [path stringByDeletingLastPathComponent]];
+          NSMenuItem *item = AUTORELEASE([[NSMenuItem alloc] initWithTitle:title
+              action:@selector(openRecentProject:) keyEquivalent:@""]);
+          [item setTarget:self];
+          [item setRepresentedObject:url];
+          [item setToolTip:path];
+          [item setEnabled:[url isFileURL] && [[NSFileManager defaultManager] fileExistsAtPath:path]];
+          [menu addItem:item];
+        }
     }
     if ([urls count]) [menu addItem:[NSMenuItem separatorItem]];
     NSMenuItem *clear = AUTORELEASE([[NSMenuItem alloc] initWithTitle:@"Clear Menu"

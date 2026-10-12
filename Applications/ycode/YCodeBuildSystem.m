@@ -83,9 +83,14 @@
     NSArray *additionalPaths = [NSArray arrayWithObjects:
         @"/usr/local/bin", @"/opt/local/bin", @"/usr/bin", @"/bin", nil];
     
-    for (NSString *additionalPath in additionalPaths) {
-        if (![path containsString:additionalPath]) {
-            path = [path stringByAppendingFormat:@":%@", additionalPath];
+    {
+      NSEnumerator *additionalPathEnumerator = [additionalPaths objectEnumerator];
+      NSString *additionalPath;
+      while ((additionalPath = [additionalPathEnumerator nextObject]) != nil)
+        {
+          if (![path containsString:additionalPath]) {
+              path = [path stringByAppendingFormat:@":%@", additionalPath];
+          }
         }
     }
     
@@ -199,7 +204,7 @@
     [self clearOutput];
     
     if ([_delegate respondsToSelector:@selector(buildSystemDidStartBuild:)]) {
-        [_delegate buildSystemDidStartBuild:self];
+        [(id)_delegate buildSystemDidStartBuild:self];
     }
     
     if ([buildSystem isEqualToString:@"xcode"]) {
@@ -236,7 +241,7 @@
     [self clearOutput];
     
     if ([_delegate respondsToSelector:@selector(buildSystemDidStartClean:)]) {
-        [_delegate buildSystemDidStartClean:self];
+        [(id)_delegate buildSystemDidStartClean:self];
     }
     
     if ([buildSystem isEqualToString:@"xcode"]) {
@@ -290,23 +295,23 @@
 {
     [_buildOutput appendString:output];
     if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveDebuggerOutput:)])
-        [_delegate buildSystem:self didReceiveDebuggerOutput:output];
+        [(id)_delegate buildSystem:self didReceiveDebuggerOutput:output];
     else if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
-        [_delegate buildSystem:self didReceiveOutput:output];
+        [(id)_delegate buildSystem:self didReceiveOutput:output];
 }
 
 - (void)debugger:(YCodeDebugger *)debugger targetOutput:(NSString *)output
 {
     [_buildOutput appendString:output];
     if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
-        [_delegate buildSystem:self didReceiveOutput:output];
+        [(id)_delegate buildSystem:self didReceiveOutput:output];
 }
 
 - (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)file line:(NSUInteger)line
 {
     if (![file isAbsolutePath]) file = [[_project projectDirectoryPath] stringByAppendingPathComponent:file];
     if ([_delegate respondsToSelector:@selector(buildSystem:stoppedAtFile:line:)])
-        [_delegate buildSystem:self stoppedAtFile:file line:line];
+        [(id)_delegate buildSystem:self stoppedAtFile:file line:line];
 }
 
 - (BOOL)run
@@ -335,13 +340,13 @@
         _status = YCodeBuildStatusFailed;
         [self reportError:@"Build succeeded, but the target executable could not be found.\n"];
         if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)])
-            [_delegate buildSystemDidFinishRun:self];
+            [(id)_delegate buildSystemDidFinishRun:self];
         return NO;
     }
     _status = YCodeBuildStatusRunning;
     _debugging = debug;
     if ([_delegate respondsToSelector:@selector(buildSystemDidStartRun:)])
-        [_delegate buildSystemDidStartRun:self];
+        [(id)_delegate buildSystemDidStartRun:self];
     if (debug) {
         _debugging = YES;
         [[self debugger] reset];
@@ -396,7 +401,7 @@
         _status = YCodeBuildStatusCancelled;
         if ([_currentTask isRunning]) [_currentTask terminate];
         if ([_delegate respondsToSelector:@selector(buildSystemDidCancel:)])
-            [_delegate buildSystemDidCancel:self];
+            [(id)_delegate buildSystemDidCancel:self];
     }
 }
 
@@ -632,12 +637,17 @@
 - (PBXNativeTarget *)runnableTarget
 {
     NSString *selection = _targetName ?: _scheme;
-    for (PBXTarget *target in [[_project project] targets]) {
-        if (selection && ![[target name] isEqualToString:selection]) continue;
-        if ([target isKindOfClass:[PBXNativeTarget class]] &&
-            ([[target productType] isEqualToString:@"com.apple.product-type.application"] ||
-             [[target productType] isEqualToString:@"com.apple.product-type.tool"]))
-            return (PBXNativeTarget *)target;
+    {
+      NSEnumerator *targetEnumerator = [[[_project project] targets] objectEnumerator];
+      PBXTarget *target;
+      while ((target = [targetEnumerator nextObject]) != nil)
+        {
+          if (selection && ![[target name] isEqualToString:selection]) continue;
+          if ([target isKindOfClass:[PBXNativeTarget class]] &&
+              ([[target productType] isEqualToString:@"com.apple.product-type.application"] ||
+               [[target productType] isEqualToString:@"com.apple.product-type.tool"]))
+              return (PBXNativeTarget *)target;
+        }
     }
     return nil;
 }
@@ -655,22 +665,32 @@
         [directory stringByAppendingPathComponent:@"build"],
         [directory stringByAppendingPathComponent:@"obj"], directory, nil];
     NSFileManager *manager = [NSFileManager defaultManager];
-    for (NSString *root in roots) {
-        NSString *path = [root stringByAppendingPathComponent:product];
-        if ([[product pathExtension] isEqualToString:@"app"]) {
-            NSString *executable = [[NSBundle bundleWithPath:path] executablePath];
-            if (executable && [manager isExecutableFileAtPath:executable]) return executable;
-            NSString *name = [[product lastPathComponent] stringByDeletingPathExtension];
-            NSArray *relativePaths = [NSArray arrayWithObjects:
-                [@"Contents/MacOS" stringByAppendingPathComponent:name], name, nil];
-            for (NSString *relative in relativePaths) {
-                executable = [path stringByAppendingPathComponent:relative];
-                if ([manager isExecutableFileAtPath:executable]) return executable;
-            }
-        } else {
-            BOOL directoryFlag = NO;
-            if ([manager fileExistsAtPath:path isDirectory:&directoryFlag] &&
-                !directoryFlag && [manager isExecutableFileAtPath:path]) return path;
+    {
+      NSEnumerator *rootEnumerator = [roots objectEnumerator];
+      NSString *root;
+      while ((root = [rootEnumerator nextObject]) != nil)
+        {
+          NSString *path = [root stringByAppendingPathComponent:product];
+          if ([[product pathExtension] isEqualToString:@"app"]) {
+              NSString *executable = [[NSBundle bundleWithPath:path] executablePath];
+              if (executable && [manager isExecutableFileAtPath:executable]) return executable;
+              NSString *name = [[product lastPathComponent] stringByDeletingPathExtension];
+              NSArray *relativePaths = [NSArray arrayWithObjects:
+                  [@"Contents/MacOS" stringByAppendingPathComponent:name], name, nil];
+              {
+                NSEnumerator *relativeEnumerator = [relativePaths objectEnumerator];
+                NSString *relative;
+                while ((relative = [relativeEnumerator nextObject]) != nil)
+                  {
+                    executable = [path stringByAppendingPathComponent:relative];
+                    if ([manager isExecutableFileAtPath:executable]) return executable;
+                  }
+              }
+          } else {
+              BOOL directoryFlag = NO;
+              if ([manager fileExistsAtPath:path isDirectory:&directoryFlag] &&
+                  !directoryFlag && [manager isExecutableFileAtPath:path]) return path;
+          }
         }
     }
     return nil;
@@ -720,15 +740,15 @@
     _status = success ? YCodeBuildStatusSuccess : YCodeBuildStatusFailed;
     if (operation == YCodeBuildStatusBuilding) {
         if ([_delegate respondsToSelector:@selector(buildSystemDidFinishBuild:success:)])
-            [_delegate buildSystemDidFinishBuild:self success:success];
+            [(id)_delegate buildSystemDidFinishBuild:self success:success];
         if (launch) [self launchProduct];
     } else if (operation == YCodeBuildStatusRunning) {
         if (success) _status = YCodeBuildStatusIdle;
         if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)])
-            [_delegate buildSystemDidFinishRun:self];
+            [(id)_delegate buildSystemDidFinishRun:self];
     } else if (operation == YCodeBuildStatusCleaning) {
         if ([_delegate respondsToSelector:@selector(buildSystemDidFinishClean:)])
-            [_delegate buildSystemDidFinishClean:self];
+            [(id)_delegate buildSystemDidFinishClean:self];
     }
 }
 
@@ -736,7 +756,7 @@
 {
     [_buildErrors appendString:message];
     if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveError:)])
-        [_delegate buildSystem:self didReceiveError:message];
+        [(id)_delegate buildSystem:self didReceiveError:message];
 }
 
 - (void)receiveData:(NSNotification *)notification error:(BOOL)isError
@@ -762,7 +782,7 @@
     } else {
         [_buildOutput appendString:output];
         if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
-            [_delegate buildSystem:self didReceiveOutput:output];
+            [(id)_delegate buildSystem:self didReceiveOutput:output];
     }
     [handle readInBackgroundAndNotify];
 }

@@ -37,15 +37,19 @@ static NSRegularExpression *YCodeTokenPattern(NSString *pattern)
 static NSString *YCodeWordPattern(NSArray *words)
 {
     NSMutableArray *escaped = [NSMutableArray array];
-    for (NSString *word in words)
+    {
+      NSEnumerator *wordEnumerator = [words objectEnumerator];
+      NSString *word;
+      while ((word = [wordEnumerator nextObject]) != nil)
         [escaped addObject:[NSRegularExpression escapedPatternForString:word]];
+    }
     return [escaped count] ? [NSString stringWithFormat:
         @"(?<![A-Za-z0-9_])(?:%@)(?![A-Za-z0-9_])", [escaped componentsJoinedByString:@"|"]] : nil;
 }
 
 @implementation YCodeSyntaxHighlighter
 
-- (instancetype)initWithFileExtension:(NSString *)extension
+- (id)initWithFileExtension:(NSString *)extension
 {
     self = [super init];
     if (self) {
@@ -238,11 +242,16 @@ static NSString *YCodeWordPattern(NSArray *words)
                 text:(NSString *)text range:(NSRange)range
 {
     // Match with full lexical context, but only change the requested characters.
-    for (NSTextCheckingResult *match in [pattern matchesInString:text options:0
-        range:NSMakeRange(0, [text length])]) {
-        NSRange painted = NSIntersectionRange([match range], range);
-        if (painted.length)
-            [[_textView textStorage] addAttribute:NSForegroundColorAttributeName value:color range:painted];
+    {
+      NSEnumerator *matchEnumerator = [[pattern matchesInString:text options:0
+        range:NSMakeRange(0, [text length])] objectEnumerator];
+      NSTextCheckingResult *match;
+      while ((match = [matchEnumerator nextObject]) != nil)
+        {
+          NSRange painted = NSIntersectionRange([match range], range);
+          if (painted.length)
+              [[_textView textStorage] addAttribute:NSForegroundColorAttributeName value:color range:painted];
+        }
     }
 }
 
@@ -265,21 +274,26 @@ static NSString *YCodeWordPattern(NSArray *words)
         [self applyPattern:_keywordPattern color:_keywordColor text:text range:range];
         // One left-to-right lexical pass prevents comment markers in strings,
         // or strings inside comments, from winning over their enclosing token.
-        for (NSTextCheckingResult *match in [_literalPattern matchesInString:text options:0
-            range:NSMakeRange(0, [text length])]) {
-            NSRange token = [match range];
-            NSRange painted = NSIntersectionRange(token, range);
-            if (!painted.length) continue;
-            BOOL comment = [match rangeAtIndex:1].location != NSNotFound;
-            NSColor *color = comment ? _commentColor : _stringColor;
-            if (!comment && highlightKeys) {
-                NSUInteger next = NSMaxRange(token);
-                while (next < [text length] && [[NSCharacterSet whitespaceAndNewlineCharacterSet]
-                    characterIsMember:[text characterAtIndex:next]]) next++;
-                if (next < [text length] && ([text characterAtIndex:next] == ':' || [text characterAtIndex:next] == '='))
-                    color = _symbolColor;
+        {
+          NSEnumerator *matchEnumerator = [[_literalPattern matchesInString:text options:0
+            range:NSMakeRange(0, [text length])] objectEnumerator];
+          NSTextCheckingResult *match;
+          while ((match = [matchEnumerator nextObject]) != nil)
+            {
+              NSRange token = [match range];
+              NSRange painted = NSIntersectionRange(token, range);
+              if (!painted.length) continue;
+              BOOL comment = [match rangeAtIndex:1].location != NSNotFound;
+              NSColor *color = comment ? _commentColor : _stringColor;
+              if (!comment && highlightKeys) {
+                  NSUInteger next = NSMaxRange(token);
+                  while (next < [text length] && [[NSCharacterSet whitespaceAndNewlineCharacterSet]
+                      characterIsMember:[text characterAtIndex:next]]) next++;
+                  if (next < [text length] && ([text characterAtIndex:next] == ':' || [text characterAtIndex:next] == '='))
+                      color = _symbolColor;
+              }
+              [storage addAttribute:NSForegroundColorAttributeName value:color range:painted];
             }
-            [storage addAttribute:NSForegroundColorAttributeName value:color range:painted];
         }
     }
     @finally { [storage endEditing]; }
@@ -381,79 +395,79 @@ static NSString *YCodeWordPattern(NSArray *words)
 
 - (void)setupObjectiveC
 {
-    NSArray *objcKeywords = @[@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
+    NSArray *objcKeywords = [NSArray arrayWithObjects:@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
                               @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
                               @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
                               @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while",
                               @"@interface", @"@implementation", @"@end", @"@class", @"@protocol", @"@property",
                               @"@synthesize", @"@dynamic", @"@selector", @"@encode", @"@try", @"@catch", @"@finally",
                               @"@throw", @"@synchronized", @"@autoreleasepool", @"@import", @"@public", @"@private",
-                              @"@protected", @"@package", @"self", @"super", @"nil", @"Nil", @"YES", @"NO"];
-    NSArray *objcTypes = @[@"id", @"Class", @"SEL", @"IMP", @"BOOL", @"NSInteger", @"NSUInteger", @"CGFloat",
-                           @"NSString", @"NSArray", @"NSDictionary", @"NSObject", @"NSNumber"];
+                              @"@protected", @"@package", @"self", @"super", @"nil", @"Nil", @"YES", @"NO", nil];
+    NSArray *objcTypes = [NSArray arrayWithObjects:@"id", @"Class", @"SEL", @"IMP", @"BOOL", @"NSInteger", @"NSUInteger", @"CGFloat",
+                           @"NSString", @"NSArray", @"NSDictionary", @"NSObject", @"NSNumber", nil];
     ASSIGN(_keywords, objcKeywords);
     ASSIGN(_types, objcTypes);
 }
 
 - (void)setupC
 {
-    NSArray *cKeywords = @[@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
+    NSArray *cKeywords = [NSArray arrayWithObjects:@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
                            @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
                            @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
-                           @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while"];
-    NSArray *cTypes = @[@"size_t", @"ptrdiff_t", @"FILE", @"NULL"];
+                           @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while", nil];
+    NSArray *cTypes = [NSArray arrayWithObjects:@"size_t", @"ptrdiff_t", @"FILE", @"NULL", nil];
     ASSIGN(_keywords, cKeywords);
     ASSIGN(_types, cTypes);
 }
 
 - (void)setupCPlusPlus
 {
-    NSArray *cppKeywords = @[@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
+    NSArray *cppKeywords = [NSArray arrayWithObjects:@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
                              @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
                              @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
                              @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while",
                              @"class", @"private", @"public", @"protected", @"virtual", @"friend", @"inline",
                              @"operator", @"overload", @"template", @"this", @"new", @"delete", @"namespace",
                              @"using", @"try", @"catch", @"throw", @"const_cast", @"dynamic_cast", @"reinterpret_cast",
-                             @"static_cast", @"typeid", @"typename", @"explicit", @"mutable", @"export"];
-    NSArray *cppTypes = @[@"bool", @"wchar_t", @"string", @"vector", @"map", @"set", @"list", @"deque"];
+                             @"static_cast", @"typeid", @"typename", @"explicit", @"mutable", @"export", nil];
+    NSArray *cppTypes = [NSArray arrayWithObjects:@"bool", @"wchar_t", @"string", @"vector", @"map", @"set", @"list", @"deque", nil];
     ASSIGN(_keywords, cppKeywords);
     ASSIGN(_types, cppTypes);
 }
 
 - (void)setupJavaScript
 {
-    NSArray *jsKeywords = @[@"break", @"case", @"catch", @"continue", @"debugger", @"default", @"delete", @"do",
+    NSArray *jsKeywords = [NSArray arrayWithObjects:@"break", @"case", @"catch", @"continue", @"debugger", @"default", @"delete", @"do",
                             @"else", @"finally", @"for", @"function", @"if", @"in", @"instanceof", @"new",
                             @"return", @"switch", @"this", @"throw", @"try", @"typeof", @"var", @"void", @"while",
                             @"with", @"class", @"const", @"enum", @"export", @"extends", @"import", @"super",
                             @"implements", @"interface", @"let", @"package", @"private", @"protected", @"public",
-                            @"static", @"yield"];
-    NSArray *jsTypes = @[@"Array", @"Boolean", @"Date", @"Error", @"Function", @"Number", @"Object", @"RegExp", @"String"];
+                            @"static", @"yield", nil];
+    NSArray *jsTypes = [NSArray arrayWithObjects:@"Array", @"Boolean", @"Date", @"Error", @"Function", @"Number", @"Object", @"RegExp", @"String", nil];
     ASSIGN(_keywords, jsKeywords);
     ASSIGN(_types, jsTypes);
 }
 
 - (void)setupPython
 {
-    NSArray *pythonKeywords = @[@"and", @"as", @"assert", @"break", @"class", @"continue", @"def", @"del", @"elif",
+    NSArray *pythonKeywords = [NSArray arrayWithObjects:@"and", @"as", @"assert", @"break", @"class", @"continue", @"def", @"del", @"elif",
                                 @"else", @"except", @"exec", @"finally", @"for", @"from", @"global", @"if", @"import",
                                 @"in", @"is", @"lambda", @"not", @"or", @"pass", @"print", @"raise", @"return", @"try",
-                                @"while", @"with", @"yield", @"None", @"True", @"False"];
-    NSArray *pythonTypes = @[@"int", @"float", @"str", @"list", @"dict", @"tuple", @"set", @"bool"];
+                                @"while", @"with", @"yield", @"None", @"True", @"False", nil];
+    NSArray *pythonTypes = [NSArray arrayWithObjects:@"int", @"float", @"str", @"list", @"dict", @"tuple", @"set", @"bool", nil];
     ASSIGN(_keywords, pythonKeywords);
     ASSIGN(_types, pythonTypes);
 }
 
 - (void)setupSwift
 {
-    NSArray *swiftKeywords = @[@"associatedtype", @"class", @"deinit", @"enum", @"extension", @"func", @"import",
+    NSArray *swiftKeywords = [NSArray arrayWithObjects:@"associatedtype", @"class", @"deinit", @"enum", @"extension", @"func", @"import",
                                @"init", @"inout", @"internal", @"let", @"operator", @"private", @"protocol", @"public",
                                @"static", @"struct", @"subscript", @"typealias", @"var", @"break", @"case", @"continue",
                                @"default", @"defer", @"do", @"else", @"fallthrough", @"for", @"guard", @"if", @"in",
                                @"repeat", @"return", @"switch", @"where", @"while", @"as", @"catch", @"false", @"is",
-                               @"nil", @"rethrows", @"super", @"self", @"Self", @"throw", @"throws", @"true", @"try"];
-    NSArray *swiftTypes = @[@"Int", @"Float", @"Double", @"Bool", @"String", @"Character", @"Array", @"Dictionary", @"Set"];
+                               @"nil", @"rethrows", @"super", @"self", @"Self", @"throw", @"throws", @"true", @"try", nil];
+    NSArray *swiftTypes = [NSArray arrayWithObjects:@"Int", @"Float", @"Double", @"Bool", @"String", @"Character", @"Array", @"Dictionary", @"Set", nil];
     ASSIGN(_keywords, swiftKeywords);
     ASSIGN(_types, swiftTypes);
 }

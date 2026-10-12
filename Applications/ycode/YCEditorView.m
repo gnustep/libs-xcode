@@ -30,7 +30,7 @@
 
 @implementation YCEditorView
 
-- (instancetype)initWithFrame:(NSRect)frame
+- (id)initWithFrame:(NSRect)frame
 {
     self = [super initWithFrame:frame];
     if (self) {
@@ -141,7 +141,8 @@
         [_textView setFont:_font];
         [_textView setTextColor:_textColor];
         [_textView setBackgroundColor:_backgroundColor];
-        [_textView setSelectedTextAttributes:@{NSBackgroundColorAttributeName: _selectionColor}];
+        [_textView setSelectedTextAttributes:[NSDictionary dictionaryWithObject:_selectionColor
+            forKey:NSBackgroundColorAttributeName]];
         [_textView setInsertionPointColor:_textColor];
         [self applySyntaxHighlighting];
         [[_scrollView horizontalRulerView] setNeedsDisplay:YES];
@@ -813,7 +814,7 @@
 
 @implementation YCEditorLineNumberView
 
-- (instancetype)initWithEditorView:(YCEditorView *)editorView
+- (id)initWithEditorView:(YCEditorView *)editorView
 {
     self = [super initWithScrollView:[editorView scrollView] orientation:NSVerticalRuler];
     if (self) {
@@ -889,10 +890,8 @@
         
         // Draw line number
         NSString *lineNumberString = [NSString stringWithFormat:@"%lu", (unsigned long)lineNumber];
-        NSDictionary *attributes = @{
-            NSFontAttributeName: _font,
-            NSForegroundColorAttributeName: _textColor
-        };
+        NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            _font, NSFontAttributeName, _textColor, NSForegroundColorAttributeName, nil];
         
         NSSize textSize = [lineNumberString sizeWithAttributes:attributes];
         NSRect drawRect = NSMakeRect([self ruleThickness] - textSize.width - 5,

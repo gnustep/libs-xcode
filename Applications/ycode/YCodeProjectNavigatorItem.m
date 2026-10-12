@@ -35,7 +35,7 @@ static NSImage *YCodeProjectCenterIcon(NSString *name)
 
 @implementation YCodeProjectNavigatorItem
 
-- (instancetype)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type
+- (id)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type
 {
     self = [super init];
     if (self) {

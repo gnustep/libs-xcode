@@ -13,7 +13,7 @@
 
 @implementation GSXCCMakeGenerator
 
-- (instancetype) init
+- (id) init
 {
   self = [super init];
 

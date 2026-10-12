@@ -23,7 +23,7 @@ behavior; some README roadmap statements predate current functionality.
 Use an installed GNUstep development environment with an Objective-C compiler,
 runtime, GNUstep Base, and GNUstep make. Ycode additionally needs GNUstep GUI.
 The makefiles discover `GNUSTEP_MAKEFILES` through `gnustep-config` when it is
-unset. If necessary, source the installed `GNUstep.sh` before building.
+unset. If necessary, source the installed `GNUstep.sh` before building. Avoid using ObjC2.0 conventions of any kind.  Also avoid using ARC.
 
 Run from the repository root:
 

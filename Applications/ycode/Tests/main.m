@@ -166,17 +166,31 @@ static void testRecentDocuments(YCodeProject *project, NSString *directory)
     @"Opening a recent project reuses its existing document");
   [menu update];
   NSUInteger occurrences = 0;
-  for (NSMenuItem *item in [menu itemArray])
-    if ([[item representedObject] isEqual:[project fileURL]]) occurrences++;
+  {
+    NSEnumerator *itemEnumerator = [[menu itemArray] objectEnumerator];
+    NSMenuItem *item;
+    while ((item = [itemEnumerator nextObject]) != nil)
+      if ([[item representedObject] isEqual:[project fileURL]]) occurrences++;
+  }
   testAssert(occurrences == 1, @"Reopening does not duplicate recent entries");
   NSMenuItem *clear = [menu itemWithTitle:@"Clear Menu"];
   [NSApp sendAction:[clear action] to:[clear target] from:clear];
   testAssert([[controller recentDocumentURLs] count] == 0 && [menu numberOfItems] == 1
     && ![[menu itemAtIndex:0] isEnabled], @"Clear Menu clears recent history and disables itself");
 #ifdef GNUSTEP
-  for (NSURL *url in saved) [controller noteNewRecentDocumentURL:url];
+  {
+    NSEnumerator *urlEnumerator = [saved objectEnumerator];
+    NSURL *url;
+    while ((url = [urlEnumerator nextObject]) != nil)
+      [controller noteNewRecentDocumentURL:url];
+  }
 #else
-  for (NSURL *url in [saved reverseObjectEnumerator]) [controller noteNewRecentDocumentURL:url];
+  {
+    NSEnumerator *urlEnumerator = [saved reverseObjectEnumerator];
+    NSURL *url;
+    while ((url = [urlEnumerator nextObject]) != nil)
+      [controller noteNewRecentDocumentURL:url];
+  }
 #endif
   [menu update];
   [saved release];
@@ -230,10 +244,22 @@ static void testSaveActiveFile(YCodeProject *project, NSString *directory)
 static NSUInteger buildReferenceCount(YCodeProject *project, PBXFileReference *reference)
 {
   NSUInteger count = 0;
-  for (PBXTarget *target in [[project project] targets])
-    for (PBXBuildPhase *phase in [target buildPhases])
-      for (PBXBuildFile *file in [phase files])
-        if ([file fileRef] == reference) count++;
+  {
+    NSEnumerator *targetEnumerator = [[[project project] targets] objectEnumerator];
+    PBXTarget *target;
+    while ((target = [targetEnumerator nextObject]) != nil)
+      {
+        NSEnumerator *phaseEnumerator = [[target buildPhases] objectEnumerator];
+        PBXBuildPhase *phase;
+        while ((phase = [phaseEnumerator nextObject]) != nil)
+          {
+            NSEnumerator *fileEnumerator = [[phase files] objectEnumerator];
+            PBXBuildFile *file;
+            while ((file = [fileEnumerator nextObject]) != nil)
+              if ([file fileRef] == reference) count++;
+          }
+      }
+  }
   return count;
 }
 
@@ -268,11 +294,16 @@ static void testProjectFileMembership(YCodeProject *project, NSString *directory
   [nested setChildren:[NSMutableArray arrayWithObject:nestedReference]];
   // The same reference may appear in several build phases; removal must clean all of them.
   PBXTarget *target = [[[project project] targets] objectAtIndex:0];
-  for (PBXBuildPhase *phase in [target buildPhases]) {
-    if (![phase files]) [phase setFiles:[NSMutableArray array]];
-    PBXBuildFile *file = AUTORELEASE([[PBXBuildFile alloc] init]);
-    [file setFileRef:nestedReference];
-    [[phase files] addObject:file];
+  {
+    NSEnumerator *phaseEnumerator = [[target buildPhases] objectEnumerator];
+    PBXBuildPhase *phase;
+    while ((phase = [phaseEnumerator nextObject]) != nil)
+      {
+      if (![phase files]) [phase setFiles:[NSMutableArray array]];
+      PBXBuildFile *file = AUTORELEASE([[PBXBuildFile alloc] init]);
+      [file setFileRef:nestedReference];
+      [[phase files] addObject:file];
+      }
   }
   testAssert([project saveProjectToPath:[project projectPath]] && ![project isDocumentEdited],
     @"Successful project save clears the project modified state");
@@ -305,9 +336,13 @@ static void testProjectFileMembership(YCodeProject *project, NSString *directory
   reopened = [YCodeProject new];
   testAssert([reopened readFromURL:[project fileURL] ofType:@"YCodeXcodeProjectType" error:NULL], @"Reopen project after removal");
   NSDictionary *archive = [NSDictionary dictionaryWithContentsOfFile:[[project projectPath] stringByAppendingPathComponent:@"project.pbxproj"]];
-  for (NSDictionary *object in [[archive objectForKey:@"objects"] allValues])
-    testAssert(![[object objectForKey:@"path"] isEqual:@"Added Source.cc"],
-      @"Removed file references are absent from the serialized project");
+  {
+    NSEnumerator *objectEnumerator = [[[archive objectForKey:@"objects"] allValues] objectEnumerator];
+    NSDictionary *object;
+    while ((object = [objectEnumerator nextObject]) != nil)
+      testAssert(![[object objectForKey:@"path"] isEqual:@"Added Source.cc"],
+        @"Removed file references are absent from the serialized project");
+  }
   [reopened close]; [reopened release];
   [project removeFilesFromProject:[NSArray arrayWithObject:source]];
   testAssert(![project isDocumentEdited], @"Removing a missing project reference is a clean no-op");
@@ -417,42 +452,45 @@ static void testSyntaxHighlighting(void)
   [document release];
 
   // Exercise filename detection and the less frequently opened source/configuration formats.
-  NSArray *cases = @[
-    @[@"Example.swift", @"let value: Int = 42", @"let", @"keywordColor"],
-    @[@"Example.hpp", @"constexpr int count = 1;", @"constexpr", @"keywordColor"],
-    @[@"Example.C", @"namespace demo {}", @"namespace", @"keywordColor"],
-    @[@"Example.mm", @"nullptr", @"nullptr", @"keywordColor"],
-    @[@"Example.tsx", @"async function work() {}", @"async", @"keywordColor"],
-    @[@"Example.js", @"const value = `// return\n42`;", @"`// return\n42`", @"stringColor"],
-    @[@"Example.py", @"value = '''# if\n42'''", @"'''# if\n42'''", @"stringColor"],
-    @[@"Example.py", @"async def work(): pass", @"async", @"keywordColor"],
-    @[@"GNUmakefile", @"include $(GNUSTEP_MAKEFILES)/common.make", @"include", @"keywordColor"],
-    @[@"GNUmakefile", @"include $(GNUSTEP_MAKEFILES)/common.make", @"$(GNUSTEP_MAKEFILES)", @"constantColor"],
-    @[@"GNUmakefile.postamble", @"after-all:\n\techo done", @"after-all:", @"typeColor"],
-    @[@"Makefile", @"SOURCES += main.m", @"SOURCES", @"symbolColor"],
-    @[@"CMakeLists.txt", @"add_executable(example main.c)", @"add_executable", @"keywordColor"],
-    @[@"build.sh", @"if test $value; then echo yes; fi", @"$value", @"constantColor"],
-    @[@"build.sh", @"# if $value 42", @"# if $value 42", @"commentColor"],
-    @[@"config.json", @"{\"name\": \"https://example\", \"ok\": true}", @"\"name\"", @"symbolColor"],
-    @[@"config.json", @"{\"name\": \"https://example\"}", @"\"https://example\"", @"stringColor"],
-    @[@"project.pbxproj", @"{ isa = PBXProject; /* 123 */ }", @"isa", @"symbolColor"],
-    @[@"PC.project", @"{ \"name\" = \"Example\"; }", @"\"name\"", @"symbolColor"],
-    @[@"Info.plist", @"<plist version=\"1.0\"><true/></plist>", @"<plist", @"typeColor"],
-    @[@"Window.xib", @"<object id=\"42\"/>", @"id", @"symbolColor"],
-    @[@"Window.xml", @"<!-- if \"text\" 42 -->", @"<!-- if \"text\" 42 -->", @"commentColor"],
-    @[@"Example.c", @"#define FLAG 1\n", @"#define", @"preprocessorColor"],
-    @[@"Example.c", @"int flags = SOME_FLAG;", @"SOME_FLAG", @"constantColor"]
-  ];
-  for (NSArray *example in cases)
-    {
-      document = [[YCodeEditorDocument alloc] initWithFilePath:[example objectAtIndex:0]
-        content:[example objectAtIndex:1]];
-      highlighter = [document syntaxHighlighter];
-      NSColor *color = [highlighter performSelector:NSSelectorFromString([example objectAtIndex:3])];
-      assertSyntaxColor(document, [example objectAtIndex:2], color,
-        [NSString stringWithFormat:@"%@ highlights %@", [example objectAtIndex:0], [example objectAtIndex:2]]);
-      [document release];
-    }
+  NSArray *cases = [NSArray arrayWithObjects:
+    [NSArray arrayWithObjects:@"Example.swift", @"let value: Int = 42", @"let", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.hpp", @"constexpr int count = 1;", @"constexpr", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.C", @"namespace demo {}", @"namespace", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.mm", @"nullptr", @"nullptr", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.tsx", @"async function work() {}", @"async", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.js", @"const value = `// return\n42`;", @"`// return\n42`", @"stringColor", nil],
+    [NSArray arrayWithObjects:@"Example.py", @"value = '''# if\n42'''", @"'''# if\n42'''", @"stringColor", nil],
+    [NSArray arrayWithObjects:@"Example.py", @"async def work(): pass", @"async", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"GNUmakefile", @"include $(GNUSTEP_MAKEFILES)/common.make", @"include", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"GNUmakefile", @"include $(GNUSTEP_MAKEFILES)/common.make", @"$(GNUSTEP_MAKEFILES)", @"constantColor", nil],
+    [NSArray arrayWithObjects:@"GNUmakefile.postamble", @"after-all:\n\techo done", @"after-all:", @"typeColor", nil],
+    [NSArray arrayWithObjects:@"Makefile", @"SOURCES += main.m", @"SOURCES", @"symbolColor", nil],
+    [NSArray arrayWithObjects:@"CMakeLists.txt", @"add_executable(example main.c)", @"add_executable", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"build.sh", @"if test $value; then echo yes; fi", @"$value", @"constantColor", nil],
+    [NSArray arrayWithObjects:@"build.sh", @"# if $value 42", @"# if $value 42", @"commentColor", nil],
+    [NSArray arrayWithObjects:@"config.json", @"{\"name\": \"https://example\", \"ok\": true}", @"\"name\"", @"symbolColor", nil],
+    [NSArray arrayWithObjects:@"config.json", @"{\"name\": \"https://example\"}", @"\"https://example\"", @"stringColor", nil],
+    [NSArray arrayWithObjects:@"project.pbxproj", @"{ isa = PBXProject; /* 123 */ }", @"isa", @"symbolColor", nil],
+    [NSArray arrayWithObjects:@"PC.project", @"{ \"name\" = \"Example\"; }", @"\"name\"", @"symbolColor", nil],
+    [NSArray arrayWithObjects:@"Info.plist", @"<plist version=\"1.0\"><true/></plist>", @"<plist", @"typeColor", nil],
+    [NSArray arrayWithObjects:@"Window.xib", @"<object id=\"42\"/>", @"id", @"symbolColor", nil],
+    [NSArray arrayWithObjects:@"Window.xml", @"<!-- if \"text\" 42 -->", @"<!-- if \"text\" 42 -->", @"commentColor", nil],
+    [NSArray arrayWithObjects:@"Example.c", @"#define FLAG 1\n", @"#define", @"preprocessorColor", nil],
+    [NSArray arrayWithObjects:@"Example.c", @"int flags = SOME_FLAG;", @"SOME_FLAG", @"constantColor", nil], nil];
+  {
+    NSEnumerator *exampleEnumerator = [cases objectEnumerator];
+    NSArray *example;
+    while ((example = [exampleEnumerator nextObject]) != nil)
+      {
+        document = [[YCodeEditorDocument alloc] initWithFilePath:[example objectAtIndex:0]
+          content:[example objectAtIndex:1]];
+        highlighter = [document syntaxHighlighter];
+        NSColor *color = [highlighter performSelector:NSSelectorFromString([example objectAtIndex:3])];
+        assertSyntaxColor(document, [example objectAtIndex:2], color,
+          [NSString stringWithFormat:@"%@ highlights %@", [example objectAtIndex:0], [example objectAtIndex:2]]);
+        [document release];
+      }
+  }
 }
 
 static void testEditorEditing(NSString *directory)
@@ -880,8 +918,8 @@ static void testDebuggerRecords(void)
   testAssert([probe->commands hasSuffix:@"-break-delete 3\n"], @"Delete breakpoint using debugger-assigned number");
   [debugger toggleBreakpointAtFile:@"/tmp/blank.m" line:1];
   [debugger receiveData:[@"^done,bkpt={number=\"4\",fullname=\"/tmp/blank.m\",line=\"2\",original-location=\"/tmp/blank.m:1\"}\n" dataUsingEncoding:NSUTF8StringEncoding]];
-  testAssert([[[debugger breakpointLinesForFile:@"/tmp/blank.m"] objectForKey:@2] intValue] == YCodeBreakpointEnabled &&
-    [[debugger breakpointLinesForFile:@"/tmp/blank.m"] objectForKey:@1] == nil,
+  testAssert([[[debugger breakpointLinesForFile:@"/tmp/blank.m"] objectForKey:[NSNumber numberWithInt:2]] intValue] == YCodeBreakpointEnabled &&
+    [[debugger breakpointLinesForFile:@"/tmp/blank.m"] objectForKey:[NSNumber numberWithInt:1]] == nil,
     @"Draw relocated breakpoints at the executable line rather than the requested blank line");
   [debugger toggleBreakpointAtFile:@"/tmp/blank.m" line:1];
   testAssert([probe->commands hasSuffix:@"-break-delete 4\n"],
@@ -1265,16 +1303,21 @@ static void testProjectCenterImport(NSString *directory)
     @"Import preserves the ProjectCenter product type and name");
   PBXFileReference *source = nil;
   NSUInteger sources = 0, headers = 0, resources = 0, frameworks = 0;
-  for (PBXBuildPhase *phase in [target buildPhases]) {
-    if ([phase isKindOfClass:[PBXSourcesBuildPhase class]]) {
-      sources = [[phase files] count];
-      source = [[[phase files] lastObject] fileRef];
-    } else if ([phase isKindOfClass:[PBXHeadersBuildPhase class]]) {
-      headers = [[phase files] count];
-      testAssert([[[[[phase files] lastObject] settings] objectForKey:@"ATTRIBUTES"]
-        containsObject:@"Public"], @"Imported public headers retain their visibility");
-    } else if ([phase isKindOfClass:[PBXResourcesBuildPhase class]]) resources = [[phase files] count];
-    else if ([phase isKindOfClass:[PBXFrameworksBuildPhase class]]) frameworks = [[phase files] count];
+  {
+    NSEnumerator *phaseEnumerator = [[target buildPhases] objectEnumerator];
+    PBXBuildPhase *phase;
+    while ((phase = [phaseEnumerator nextObject]) != nil)
+      {
+      if ([phase isKindOfClass:[PBXSourcesBuildPhase class]]) {
+        sources = [[phase files] count];
+        source = [[[phase files] lastObject] fileRef];
+      } else if ([phase isKindOfClass:[PBXHeadersBuildPhase class]]) {
+        headers = [[phase files] count];
+        testAssert([[[[[phase files] lastObject] settings] objectForKey:@"ATTRIBUTES"]
+          containsObject:@"Public"], @"Imported public headers retain their visibility");
+      } else if ([phase isKindOfClass:[PBXResourcesBuildPhase class]]) resources = [[phase files] count];
+      else if ([phase isKindOfClass:[PBXFrameworksBuildPhase class]]) frameworks = [[phase files] count];
+      }
   }
   testAssert(sources == 1 && headers == 1 && resources == 4 && frameworks == 1,
     @"Import separates build phases and removes duplicate entries");
@@ -1329,24 +1372,34 @@ static void testProjectCenterImport(NSString *directory)
     @"Relocated import retains its header search directory");
   [relocated close]; [relocated release];
   NSArray *types = [NSArray arrayWithObjects:@"Application", @"Framework", @"Library", @"Bundle", nil];
-  for (NSString *type in types) {
-    [contents setObject:type forKey:@"PROJECT_TYPE"];
-    [contents writeToFile:projectFile atomically:YES];
-    YCodeProject *variant = [[YCodeProject alloc] init];
-    testAssert([variant readFromURL:[NSURL fileURLWithPath:package]
-      ofType:@"YCodeProjectCenterProjectType" error:NULL],
-      [NSString stringWithFormat:@"Import ProjectCenter %@ target", type]);
-    [variant close]; [variant release];
+  {
+    NSEnumerator *typeEnumerator = [types objectEnumerator];
+    NSString *type;
+    while ((type = [typeEnumerator nextObject]) != nil)
+      {
+      [contents setObject:type forKey:@"PROJECT_TYPE"];
+      [contents writeToFile:projectFile atomically:YES];
+      YCodeProject *variant = [[YCodeProject alloc] init];
+      testAssert([variant readFromURL:[NSURL fileURLWithPath:package]
+        ofType:@"YCodeProjectCenterProjectType" error:NULL],
+        [NSString stringWithFormat:@"Import ProjectCenter %@ target", type]);
+      [variant close]; [variant release];
+      }
   }
-  for (id invalid in [NSArray arrayWithObjects:[NSDictionary dictionary],
+  {
+    NSEnumerator *invalidEnumerator = [[NSArray arrayWithObjects:[NSDictionary dictionary],
       [NSDictionary dictionaryWithObjectsAndKeys:@"Bad", @"PROJECT_NAME", @"Tool", @"PROJECT_TYPE",
-        [NSNumber numberWithInt:42], @"CLASS_FILES", nil], nil]) {
-    [invalid writeToFile:projectFile atomically:YES];
-    error = nil;
-    testAssert(![document readFromURL:[NSURL fileURLWithPath:package]
-      ofType:@"YCodeProjectCenterProjectType" error:&error] && error != nil
-      && [document project] == project && [[[document fileURL] path] isEqual:converted],
-      @"Malformed imports fail without replacing the loaded project");
+        [NSNumber numberWithInt:42], @"CLASS_FILES", nil], nil] objectEnumerator];
+    id invalid;
+    while ((invalid = [invalidEnumerator nextObject]) != nil)
+      {
+      [invalid writeToFile:projectFile atomically:YES];
+      error = nil;
+      testAssert(![document readFromURL:[NSURL fileURLWithPath:package]
+        ofType:@"YCodeProjectCenterProjectType" error:&error] && error != nil
+        && [document project] == project && [[[document fileURL] path] isEqual:converted],
+        @"Malformed imports fail without replacing the loaded project");
+      }
   }
   [document close]; [document release];
 }
@@ -1359,9 +1412,13 @@ static void testProjectCenterExport(NSString *directory)
     withIntermediateDirectories:YES attributes:nil error:NULL];
   [manager createDirectoryAtPath:[root stringByAppendingPathComponent:@"English.lproj/Main.gorm"]
     withIntermediateDirectories:YES attributes:nil error:NULL];
-  for (NSString *name in [NSArray arrayWithObjects:@"Main.m", @"Public.h", @"Resources/Icon.png", @"Notes.txt", nil])
-    [@"fixture" writeToFile:[root stringByAppendingPathComponent:name] atomically:YES
-      encoding:NSUTF8StringEncoding error:NULL];
+  {
+    NSEnumerator *nameEnumerator = [[NSArray arrayWithObjects:@"Main.m", @"Public.h", @"Resources/Icon.png", @"Notes.txt", nil] objectEnumerator];
+    NSString *name;
+    while ((name = [nameEnumerator nextObject]) != nil)
+      [@"fixture" writeToFile:[root stringByAppendingPathComponent:name] atomically:YES
+        encoding:NSUTF8StringEncoding error:NULL];
+  }
   NSString *legacyPath = [root stringByAppendingPathComponent:@"Legacy.pcproj"];
   NSDictionary *metadata = [NSDictionary dictionaryWithObjectsAndKeys:
     @"Legacy", @"PROJECT_NAME", @"PCAppProject", @"PROJECT_TYPE",
@@ -1378,16 +1435,26 @@ static void testProjectCenterExport(NSString *directory)
   [document makeWindowControllers];
   YCodeProjectNavigatorController *navigator = [document navigatorController];
   NSMutableArray *expectedPaths = [NSMutableArray array];
-  for (PBXGroup *group in [[[document project] mainGroup] children]) {
-    for (PBXFileReference *reference in [group children]) {
-      if ([[reference sourceTree] isEqual:@"BUILT_PRODUCTS_DIR"]) continue;
-      YCodeProjectNavigatorItem *item = [navigator itemForObject:reference];
-      NSString *path = [navigator resolvedFilePathForNavigatorItem:item];
-      testAssert([[navigator outlineView] rowForItem:item] >= 0,
-        @"Imported sources, headers, resources, and supporting files are visible");
-      testAssert([manager fileExistsAtPath:path], @"ProjectCenter category paths locate the actual files");
-      if (path) [expectedPaths addObject:path];
-    }
+  {
+    NSEnumerator *groupEnumerator = [[[[document project] mainGroup] children] objectEnumerator];
+    PBXGroup *group;
+    while ((group = [groupEnumerator nextObject]) != nil)
+      {
+      {
+        NSEnumerator *referenceEnumerator = [[group children] objectEnumerator];
+        PBXFileReference *reference;
+        while ((reference = [referenceEnumerator nextObject]) != nil)
+          {
+          if ([[reference sourceTree] isEqual:@"BUILT_PRODUCTS_DIR"]) continue;
+          YCodeProjectNavigatorItem *item = [navigator itemForObject:reference];
+          NSString *path = [navigator resolvedFilePathForNavigatorItem:item];
+          testAssert([[navigator outlineView] rowForItem:item] >= 0,
+            @"Imported sources, headers, resources, and supporting files are visible");
+          testAssert([manager fileExistsAtPath:path], @"ProjectCenter category paths locate the actual files");
+          if (path) [expectedPaths addObject:path];
+          }
+      }
+      }
   }
   testAssert([expectedPaths count] == 5
     && [expectedPaths containsObject:[root stringByAppendingPathComponent:@"Resources/Icon.png"]]
@@ -1412,12 +1479,22 @@ static void testProjectCenterExport(NSString *directory)
     ofType:@"YCodeProjectCenterProjectType" error:NULL], @"Reimport the exported ProjectCenter package");
   [reopened makeWindowControllers];
   NSMutableArray *actualPaths = [NSMutableArray array];
-  for (PBXGroup *group in [[[reopened project] mainGroup] children]) {
-    for (PBXFileReference *reference in [group children]) {
-      NSString *path = [[reopened navigatorController] resolvedFilePathForNavigatorItem:
-        [[reopened navigatorController] itemForObject:reference]];
-      if (path) [actualPaths addObject:path];
-    }
+  {
+    NSEnumerator *groupEnumerator = [[[[reopened project] mainGroup] children] objectEnumerator];
+    PBXGroup *group;
+    while ((group = [groupEnumerator nextObject]) != nil)
+      {
+      {
+        NSEnumerator *referenceEnumerator = [[group children] objectEnumerator];
+        PBXFileReference *reference;
+        while ((reference = [referenceEnumerator nextObject]) != nil)
+          {
+          NSString *path = [[reopened navigatorController] resolvedFilePathForNavigatorItem:
+            [[reopened navigatorController] itemForObject:reference]];
+          if (path) [actualPaths addObject:path];
+          }
+      }
+      }
   }
   testAssert([[actualPaths sortedArrayUsingSelector:@selector(compare:)]
     isEqual:[expectedPaths sortedArrayUsingSelector:@selector(compare:)]],
@@ -1506,32 +1583,46 @@ int main(void)
   NSArray *extensions = [NSArray arrayWithObjects:@"m", @"mm", @"c", @"C",
     @"cc", @"cp", @"cpp", @"cxx", @"c++", @"h", @"hh", @"hpp", @"hxx",
     @"h++", @"swift", @"plist", @"png", @"xib", @"gorm", @"unknown", @"", nil];
-  for (NSString *extension in extensions) {
-    PBXFileReference *file = [[PBXFileReference alloc]
-      initWithPath:[@"Example" stringByAppendingPathExtension:extension]];
-    YCodeProjectNavigatorItem *item = [[YCodeProjectNavigatorItem alloc]
-      initWithRepresentedObject:file type:YCodeNavigatorItemTypeFile];
-    testAssert([item icon] != nil && NSEqualSizes([[item icon] size], NSMakeSize(16, 16)),
-      [NSString stringWithFormat:@"Navigator has a small icon for '%@'", extension]);
-    [[outline delegate] outlineView:outline willDisplayCell:navigatorCell
-      forTableColumn:[outline outlineTableColumn] item:item];
-    testAssert([navigatorCell image] == [item icon], @"Reused row receives its file icon");
-    [item release];
-    [file release];
+  {
+    NSEnumerator *extensionEnumerator = [extensions objectEnumerator];
+    NSString *extension;
+    while ((extension = [extensionEnumerator nextObject]) != nil)
+      {
+      PBXFileReference *file = [[PBXFileReference alloc]
+        initWithPath:[@"Example" stringByAppendingPathExtension:extension]];
+      YCodeProjectNavigatorItem *item = [[YCodeProjectNavigatorItem alloc]
+        initWithRepresentedObject:file type:YCodeNavigatorItemTypeFile];
+      testAssert([item icon] != nil && NSEqualSizes([[item icon] size], NSMakeSize(16, 16)),
+        [NSString stringWithFormat:@"Navigator has a small icon for '%@'", extension]);
+      [[outline delegate] outlineView:outline willDisplayCell:navigatorCell
+        forTableColumn:[outline outlineTableColumn] item:item];
+      testAssert([navigatorCell image] == [item icon], @"Reused row receives its file icon");
+      [item release];
+      [file release];
+      }
   }
-  for (NSString *name in [NSArray arrayWithObjects:@"FileM", @"FileMM", @"FileC",
-      @"FileH", @"FileProject", nil]) {
-    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"tiff"
-      inDirectory:@"ProjectCenterIcons"];
-    NSImage *image = path ? [[NSImage alloc] initWithContentsOfFile:path] : nil;
-    testAssert(image != nil, @"ProjectCenter icon resources are bundled and readable");
-    [image release];
+  {
+    NSEnumerator *nameEnumerator = [[NSArray arrayWithObjects:@"FileM", @"FileMM", @"FileC",
+      @"FileH", @"FileProject", nil] objectEnumerator];
+    NSString *name;
+    while ((name = [nameEnumerator nextObject]) != nil)
+      {
+      NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"tiff"
+        inDirectory:@"ProjectCenterIcons"];
+      NSImage *image = path ? [[NSImage alloc] initWithContentsOfFile:path] : nil;
+      testAssert(image != nil, @"ProjectCenter icon resources are bundled and readable");
+      [image release];
+      }
   }
   NSTabView *inspectorTabs = [windowController valueForKey:@"_inspectorTabView"];
   testAssert([navigatorTabs isKindOfClass:[NSTabView class]]
     && [navigatorTabs numberOfTabViewItems] == 3, @"Navigator uses three native tabs");
-  for (NSTabViewItem *item in [navigatorTabs tabViewItems])
-    testAssert(![[item label] isEqual:@"Issues"], @"No Issues navigator tab");
+  {
+    NSEnumerator *itemEnumerator = [[navigatorTabs tabViewItems] objectEnumerator];
+    NSTabViewItem *item;
+    while ((item = [itemEnumerator nextObject]) != nil)
+      testAssert(![[item label] isEqual:@"Issues"], @"No Issues navigator tab");
+  }
   [navigatorTabs selectTabViewItemWithIdentifier:@"search"];
   testAssert([[[navigatorTabs selectedTabViewItem] identifier] isEqual:@"search"],
     @"Native navigator switches pages");
@@ -1643,8 +1734,12 @@ int main(void)
   [brokenFile release];
   testAssert(![editor openFile:invalidImage] && [[editor openDocuments] count] == openCount,
     @"Invalid images do not open as editable text");
-  for (YCodeEditorDocument *openDocument in [NSArray arrayWithArray:[editor openDocuments]])
-    [[[editor tabForDocument:openDocument] closeButton] performClick:nil];
+  {
+    NSEnumerator *openDocumentEnumerator = [[NSArray arrayWithArray:[editor openDocuments]] objectEnumerator];
+    YCodeEditorDocument *openDocument;
+    while ((openDocument = [openDocumentEnumerator nextObject]) != nil)
+      [[[editor tabForDocument:openDocument] closeButton] performClick:nil];
+  }
   testAssert([[editor openDocuments] count] == 0,
     @"Close buttons remove both source and image tabs");
   testAssert([[details string] isEqual:@"No source file selected."],
@@ -1682,10 +1777,15 @@ int main(void)
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-  for (NSString *key in [[defaults dictionaryRepresentation] allKeys]) {
-    if ([key hasPrefix:@"YCodeLastSourceFile:"] &&
-        [key rangeOfString:temporaryDirectory].location != NSNotFound)
-      [defaults removeObjectForKey:key];
+  {
+    NSEnumerator *keyEnumerator = [[[defaults dictionaryRepresentation] allKeys] objectEnumerator];
+    NSString *key;
+    while ((key = [keyEnumerator nextObject]) != nil)
+      {
+      if ([key hasPrefix:@"YCodeLastSourceFile:"] &&
+          [key rangeOfString:temporaryDirectory].location != NSNotFound)
+        [defaults removeObjectForKey:key];
+      }
   }
   [defaults synchronize];
   [manager removeItemAtPath:temporaryDirectory error:NULL];

@@ -57,7 +57,7 @@ typedef enum {
 /**
  * Initialization
  */
-- (instancetype)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type;
+- (id)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type;
 
 /**
  * Represented object

@@ -181,7 +181,7 @@
     NSFont *_font;
 }
 
-- (instancetype)initWithEditorView:(YCEditorView *)editorView;
+- (id)initWithEditorView:(YCEditorView *)editorView;
 - (YCEditorView *)editorView;
 - (void)setEditorView:(YCEditorView *)editorView;
 

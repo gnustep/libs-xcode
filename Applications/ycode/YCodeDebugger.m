@@ -146,8 +146,12 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
 {
   NSString *location = [self locationAtFile:file line:line];
   if ([_breakpoints objectForKey:location]) return location;
-  for (NSString *requested in _resolvedLocations)
-    if ([[_resolvedLocations objectForKey:requested] isEqual:location]) return requested;
+  {
+    NSEnumerator *requestedEnumerator = [_resolvedLocations keyEnumerator];
+    NSString *requested;
+    while ((requested = [requestedEnumerator nextObject]) != nil)
+      if ([[_resolvedLocations objectForKey:requested] isEqual:location]) return requested;
+  }
   return location;
 }
 - (YCodeBreakpointState)stateForLocation:(NSString *)location
@@ -168,13 +172,17 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   NSMutableDictionary *lines = [NSMutableDictionary dictionary];
   if (![file length]) return lines;
   NSString *prefix = [[self sourcePath:file] stringByAppendingString:@":"];
-  for (NSString *requested in _breakpoints)
-    {
-      NSString *location = [_resolvedLocations objectForKey:requested] ?: requested;
-      if ([location hasPrefix:prefix])
-        [lines setObject:[NSNumber numberWithInt:[self stateForLocation:requested]]
-          forKey:[NSNumber numberWithInteger:[[location substringFromIndex:[prefix length]] integerValue]]];
-    }
+  {
+    NSEnumerator *requestedEnumerator = [_breakpoints keyEnumerator];
+    NSString *requested;
+    while ((requested = [requestedEnumerator nextObject]) != nil)
+      {
+        NSString *location = [_resolvedLocations objectForKey:requested] ?: requested;
+        if ([location hasPrefix:prefix])
+          [lines setObject:[NSNumber numberWithInt:[self stateForLocation:requested]]
+            forKey:[NSNumber numberWithInteger:[[location substringFromIndex:[prefix length]] integerValue]]];
+      }
+  }
   return lines;
 }
 - (void)setBreakpointStorageKey:(NSString *)key
@@ -187,14 +195,18 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   id saved = key ? [[NSUserDefaults standardUserDefaults] objectForKey:key] : nil;
   // Older versions saved an array of enabled locations.
   if ([saved isKindOfClass:[NSArray class]] || [saved isKindOfClass:[NSDictionary class]])
-    for (id location in saved)
-      if ([location isKindOfClass:[NSString class]])
-        {
-          [_breakpoints setObject:@"" forKey:location];
-          if ([saved isKindOfClass:[NSDictionary class]] &&
-              ![[saved objectForKey:location] boolValue])
-            [_disabledBreakpoints addObject:location];
-        }
+    {
+      NSEnumerator *locationEnumerator = ([saved isKindOfClass:[NSDictionary class]] ? [saved keyEnumerator] : [saved objectEnumerator]);
+      id location;
+      while ((location = [locationEnumerator nextObject]) != nil)
+        if ([location isKindOfClass:[NSString class]])
+          {
+            [_breakpoints setObject:@"" forKey:location];
+            if ([saved isKindOfClass:[NSDictionary class]] &&
+                ![[saved objectForKey:location] boolValue])
+              [_disabledBreakpoints addObject:location];
+          }
+    }
   [self notifyChange];
 }
 - (void)saveBreakpoints
@@ -202,8 +214,12 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   if (_storageKey)
     {
       NSMutableDictionary *saved = [NSMutableDictionary dictionary];
-      for (NSString *location in _breakpoints)
-        [saved setObject:[NSNumber numberWithBool:![_disabledBreakpoints containsObject:location]] forKey:location];
+      {
+        NSEnumerator *locationEnumerator = [_breakpoints keyEnumerator];
+        NSString *location;
+        while ((location = [locationEnumerator nextObject]) != nil)
+          [saved setObject:[NSNumber numberWithBool:![_disabledBreakpoints containsObject:location]] forKey:location];
+      }
       [[NSUserDefaults standardUserDefaults] setObject:saved forKey:_storageKey];
     }
   [self notifyChange];
@@ -239,7 +255,12 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   RELEASE(_executionFile); _executionFile = nil; _executionLine = 0;
   [_resolvedLocations removeAllObjects];
   [_pendingBreakpoints removeAllObjects];
-  for (NSString *location in [_breakpoints allKeys]) [_breakpoints setObject:@"" forKey:location];
+  {
+    NSEnumerator *locationEnumerator = [[_breakpoints allKeys] objectEnumerator];
+    NSString *location;
+    while ((location = [locationEnumerator nextObject]) != nil)
+      [_breakpoints setObject:@"" forKey:location];
+  }
   [self notifyChange];
 }
 + (NSString *)quote:(NSString *)string
@@ -310,8 +331,12 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
           [self command:@"-gdb-set confirm off"];
           [self command:@"-gdb-set pagination off"];
           [self command:@"-gdb-set mi-async on"];
-          for (NSString *location in _breakpoints)
-            [self insertBreakpointAtLocation:location];
+          {
+            NSEnumerator *locationEnumerator = [_breakpoints keyEnumerator];
+            NSString *location;
+            while ((location = [locationEnumerator nextObject]) != nil)
+              [self insertBreakpointAtLocation:location];
+          }
           [self notifyChange];
           [_delegate debugger:self output:@"Debugger ready. Use Go to run, or set breakpoints first.\n"];
         }
@@ -320,7 +345,7 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   NSDictionary *record = [[self class] parseRecord:line];
   NSString *type = [record objectForKey:@"type"], *event = [record objectForKey:@"event"];
   if ((!record || [type isEqual:@"@"]) && [_delegate respondsToSelector:@selector(debugger:targetOutput:)])
-    [_delegate debugger:self targetOutput:record ? [record objectForKey:@"text"] : [line stringByAppendingString:@"\n"]];
+    [(id)_delegate debugger:self targetOutput:record ? [record objectForKey:@"text"] : [line stringByAppendingString:@"\n"]];
   else if (!record || [type isEqual:@"~"] || [type isEqual:@"@"] || [type isEqual:@"&"])
     [_delegate debugger:self output:record ? [record objectForKey:@"text"] : [line stringByAppendingString:@"\n"]];
   if ([event isEqual:@"error"])
@@ -350,9 +375,13 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   if (number)
     {
       NSString *location = nil;
-      for (NSString *existing in _breakpoints)
-        if ([[_breakpoints objectForKey:existing] isEqual:number])
-          { location = existing; break; }
+      {
+        NSEnumerator *existingEnumerator = [_breakpoints keyEnumerator];
+        NSString *existing;
+        while ((existing = [existingEnumerator nextObject]) != nil)
+          if ([[_breakpoints objectForKey:existing] isEqual:number])
+            { location = existing; break; }
+      }
       NSString *original = [bp objectForKey:@"original-location"];
       if (!location && [_breakpoints objectForKey:original ?: @""]) location = original;
       if (!location && file && [bp objectForKey:@"line"])
@@ -375,14 +404,18 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
         }
     }
   if ([event isEqual:@"breakpoint-deleted"])
-    for (NSString *location in [_breakpoints allKeys])
-      if ([[_breakpoints objectForKey:location] isEqual:[record objectForKey:@"id"]])
-        {
-          [_breakpoints removeObjectForKey:location];
-          [_disabledBreakpoints removeObject:location];
-          [_resolvedLocations removeObjectForKey:location];
-          [_pendingBreakpoints removeObject:location];
-        }
+    {
+      NSEnumerator *locationEnumerator = [[_breakpoints allKeys] objectEnumerator];
+      NSString *location;
+      while ((location = [locationEnumerator nextObject]) != nil)
+        if ([[_breakpoints objectForKey:location] isEqual:[record objectForKey:@"id"]])
+          {
+            [_breakpoints removeObjectForKey:location];
+            [_disabledBreakpoints removeObject:location];
+            [_resolvedLocations removeObjectForKey:location];
+            [_pendingBreakpoints removeObject:location];
+          }
+    }
   if (bp || [event isEqual:@"breakpoint-deleted"]) [self saveBreakpoints];
   else if (frame || [event isEqual:@"running"] || [event isEqual:@"stopped"] || [event isEqual:@"thread-group-exited"])
     [self notifyChange];

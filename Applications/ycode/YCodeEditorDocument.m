@@ -47,7 +47,7 @@
 
 @implementation YCodeEditorDocument
 
-- (instancetype)initWithFilePath:(NSString *)filePath
+- (id)initWithFilePath:(NSString *)filePath
 {
     self = [super init];
     if (self) {
@@ -62,7 +62,7 @@
     return self;
 }
 
-- (instancetype)initWithFilePath:(NSString *)filePath content:(NSString *)content
+- (id)initWithFilePath:(NSString *)filePath content:(NSString *)content
 {
     self = [self initWithFilePath:filePath];
     if (self && content) {

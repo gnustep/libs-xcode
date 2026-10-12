@@ -97,13 +97,21 @@
 - (void)drawRect:(NSRect)rect
 {
     // A theme may omit tabs that no longer fit after resizing.
-    for (NSTabViewItem *item in [self tabViewItems])
+    {
+      NSEnumerator *itemEnumerator = [[self tabViewItems] objectEnumerator];
+      NSTabViewItem *item;
+      while ((item = [itemEnumerator nextObject]) != nil)
         if ([item isKindOfClass:[YCodeEditorTabItem class]])
-            [(YCodeEditorTabItem *)item prepareToDrawLabel];
+              [(YCodeEditorTabItem *)item prepareToDrawLabel];
+    }
     [super drawRect:rect];
-    for (NSTabViewItem *item in [self tabViewItems])
+    {
+      NSEnumerator *itemEnumerator = [[self tabViewItems] objectEnumerator];
+      NSTabViewItem *item;
+      while ((item = [itemEnumerator nextObject]) != nil)
         if ([item isKindOfClass:[YCodeEditorTabItem class]])
-            [(YCodeEditorTabItem *)item updateCloseButtonVisibility];
+              [(YCodeEditorTabItem *)item updateCloseButtonVisibility];
+    }
 }
 - (void)removeTabViewItem:(NSTabViewItem *)item
 {
@@ -123,7 +131,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
 
 @implementation YCodeEditorController
 
-- (instancetype)init
+- (id)init
 {
     self = [super init];
     if (self) {

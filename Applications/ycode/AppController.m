@@ -206,7 +206,7 @@ YCodeFileURLFromPath(NSString *path)
     [productMenu addItem:debugItem];
     NSArray *debugLabels = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
         @"Next", @"Step Into", @"Step Out", @"Up", @"Down", nil];
-    NSArray *debugIcons = @[@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down"];
+    NSArray *debugIcons = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
     for (NSUInteger i = 0; i < [debugLabels count]; i++) {
         NSMenuItem *item = YCodeMenuItem([debugLabels objectAtIndex:i], @selector(debugAction:), @"", self);
         [item setTag:i];
@@ -216,9 +216,13 @@ YCodeFileURLFromPath(NSString *path)
     [debugMenu addItem:YCodeMenuItem(@"Toggle Breakpoint at Selection", @selector(toggleBreakpoint:), @"", self)];
     [productMenu addItem:YCodeMenuItem(@"Run", @selector(runProject:), @"r", self)];
     [productMenu addItem:YCodeMenuItem(@"Stop", @selector(stopProject:), @".", self)];
-    NSArray *controlTitles = @[@"Build", @"Clean", @"Debug", @"Run", @"Stop"];
-    for (NSString *title in controlTitles)
+    NSArray *controlTitles = [NSArray arrayWithObjects:@"Build", @"Clean", @"Debug", @"Run", @"Stop", nil];
+    {
+      NSEnumerator *titleEnumerator = [controlTitles objectEnumerator];
+      NSString *title;
+      while ((title = [titleEnumerator nextObject]) != nil)
         [[productMenu itemWithTitle:title] setImage:YCodeControlIcon([title lowercaseString], 16)];
+    }
     [[debugMenu itemWithTitle:@"Toggle Breakpoint at Selection"] setImage:YCodeControlIcon(@"breakpoint", 16)];
     menuItem = [[NSMenuItem alloc] initWithTitle:projectMenuTitle action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:productMenu];
@@ -810,7 +814,7 @@ YCodeFileURLFromPath(NSString *path)
     [openPanel setCanChooseDirectories:YES];
     [openPanel setAllowsMultipleSelection:NO];
     [openPanel setTreatsFilePackagesAsDirectories:NO];
-    [openPanel setAllowedFileTypes:@[@"xcodeproj", @"pcproj"]];
+    [openPanel setAllowedFileTypes:[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil]];
     [openPanel setMessage:@"Choose a project to open"];
     
     if ([openPanel runModal] == NSModalResponseOK) {

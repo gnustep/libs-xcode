@@ -58,7 +58,7 @@
 /**
  * Initialization
  */
-- (instancetype)initWithFileExtension:(NSString *)extension;
+- (id)initWithFileExtension:(NSString *)extension;
 
 /**
  * File extension and language

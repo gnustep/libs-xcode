@@ -38,7 +38,9 @@ typedef enum {
 - (void)debugger:(YCodeDebugger *)debugger sendCommand:(NSString *)command;
 - (void)debugger:(YCodeDebugger *)debugger output:(NSString *)output;
 - (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)file line:(NSUInteger)line;
-@optional
+@end
+
+@interface NSObject (YCodeDebuggerDelegateOptional)
 - (void)debugger:(YCodeDebugger *)debugger targetOutput:(NSString *)output;
 @end
 

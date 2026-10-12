@@ -33,8 +33,9 @@ extern "C" {
 #endif
 
 @protocol GSXCBuildDelegate
+@end
 
-@optional
+@interface NSObject (GSXCBuildDelegate)
 /**
  * Called when the project publishes a message.
  */
