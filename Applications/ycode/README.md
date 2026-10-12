@@ -37,7 +37,9 @@ targets in the project navigator. Missing or invalid project contents produce
 an error instead of opening an empty project.
 
 The same **Open Project...** dialog imports ProjectCenter `.pcproj` packages
-containing `PC.project`. Application, Tool, Library, StaticLibrary, Framework,
+containing `PC.project` and older single-file `.pcproj` projects. Imported
+groups expand immediately to show their files. Resource references resolve
+under `Resources/` or the project's language directory. Application, Tool, Library, StaticLibrary, Framework,
 and Bundle targets retain their source files, headers, resources, frameworks,
 libraries, search paths, compiler/linker options, and referenced Info.plist.
 Files remain in their original source directory. **Save Project** asks for an
@@ -45,6 +47,14 @@ Files remain in their original source directory. **Save Project** asks for an
 ProjectCenter package is left unchanged. Custom GNUmakefile rules and subproject
 build dependencies are not translated; subproject entries remain navigator references.
 Aggregate and other unsupported target types are rejected.
+
+Use **File > Export ProjectCenter Project...** to write a `.pcproj` package
+containing `PC.project`. Export uses the selected target (or the only target)
+and its default configuration. It writes current file membership, resources,
+public headers, frameworks, libraries, and build options, and preserves metadata
+from an imported ProjectCenter project. Paths are adjusted for the export
+destination; source files stay where they are. Export leaves the active
+document and its unsaved state unchanged.
 
 Each project remembers its last selected source file and
 reopens it next time. Closing the last source tab clears that saved selection;

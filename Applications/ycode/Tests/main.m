@@ -1140,6 +1140,8 @@ static void testProjectCenterImport(NSString *directory)
   YCodeProjectNavigatorItem *item = [navigator itemForObject:source];
   testAssert(item != nil && [[navigator resolvedFilePathForNavigatorItem:item] isEqual:sourcePath],
     @"Imported navigator references resolve outside the pcproj package, including spaces");
+  testAssert([[navigator outlineView] rowForItem:item] >= 0,
+    @"Imported source files are visible immediately without expanding hidden groups");
   testAssert([[document editorController] openFile:[navigator resolvedFilePathForNavigatorItem:item]],
     @"Imported source opens in the editor");
   NSDictionary *settings = [[[target buildConfigurationList] defaultConfiguration] buildSettings];
@@ -1195,7 +1197,7 @@ static void testProjectCenterImport(NSString *directory)
   }
   for (id invalid in [NSArray arrayWithObjects:[NSDictionary dictionary],
       [NSDictionary dictionaryWithObjectsAndKeys:@"Bad", @"PROJECT_NAME", @"Tool", @"PROJECT_TYPE",
-        @"not an array", @"CLASS_FILES", nil], nil]) {
+        [NSNumber numberWithInt:42], @"CLASS_FILES", nil], nil]) {
     [invalid writeToFile:projectFile atomically:YES];
     error = nil;
     testAssert(![document readFromURL:[NSURL fileURLWithPath:package]
@@ -1203,6 +1205,89 @@ static void testProjectCenterImport(NSString *directory)
       && [document project] == project && [[[document fileURL] path] isEqual:converted],
       @"Malformed imports fail without replacing the loaded project");
   }
+  [document close]; [document release];
+}
+
+static void testProjectCenterExport(NSString *directory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root = [directory stringByAppendingPathComponent:@"ProjectCenter Export"];
+  [manager createDirectoryAtPath:[root stringByAppendingPathComponent:@"Resources"]
+    withIntermediateDirectories:YES attributes:nil error:NULL];
+  [manager createDirectoryAtPath:[root stringByAppendingPathComponent:@"English.lproj/Main.gorm"]
+    withIntermediateDirectories:YES attributes:nil error:NULL];
+  for (NSString *name in [NSArray arrayWithObjects:@"Main.m", @"Public.h", @"Resources/Icon.png", @"Notes.txt", nil])
+    [@"fixture" writeToFile:[root stringByAppendingPathComponent:name] atomically:YES
+      encoding:NSUTF8StringEncoding error:NULL];
+  NSString *legacyPath = [root stringByAppendingPathComponent:@"Legacy.pcproj"];
+  NSDictionary *metadata = [NSDictionary dictionaryWithObjectsAndKeys:
+    @"Legacy", @"PROJECT_NAME", @"PCAppProject", @"PROJECT_TYPE",
+    @"Main.m", @"CLASS_FILES", @"Public.h", @"HEADER_FILES", @"Public.h", @"PUBLIC_HEADERS",
+    @"Icon.png", @"IMAGES", @"Main.gorm", @"INTERFACES", @"Main.gorm", @"LOCALIZED_RESOURCES",
+    @"Notes.txt", @"OTHER_FILES", @"English", @"LANGUAGE",
+    @"-lgnustep-base -lgnustep-gui", @"LINKEROPTIONS",
+    @"Preserve this metadata", @"PROJECT_COPYRIGHT", nil];
+  [metadata writeToFile:legacyPath atomically:YES];
+  YCodeProject *document = [[YCodeProject alloc] init];
+  testAssert([document readFromURL:[NSURL fileURLWithPath:legacyPath]
+    ofType:@"YCodeProjectCenterProjectType" error:NULL],
+    @"Read a legacy flat pcproj with singleton file lists and legacy product type");
+  [document makeWindowControllers];
+  YCodeProjectNavigatorController *navigator = [document navigatorController];
+  NSMutableArray *expectedPaths = [NSMutableArray array];
+  for (PBXGroup *group in [[[document project] mainGroup] children]) {
+    for (PBXFileReference *reference in [group children]) {
+      if ([[reference sourceTree] isEqual:@"BUILT_PRODUCTS_DIR"]) continue;
+      YCodeProjectNavigatorItem *item = [navigator itemForObject:reference];
+      NSString *path = [navigator resolvedFilePathForNavigatorItem:item];
+      testAssert([[navigator outlineView] rowForItem:item] >= 0,
+        @"Imported sources, headers, resources, and supporting files are visible");
+      testAssert([manager fileExistsAtPath:path], @"ProjectCenter category paths locate the actual files");
+      if (path) [expectedPaths addObject:path];
+    }
+  }
+  testAssert([expectedPaths count] == 5
+    && [expectedPaths containsObject:[root stringByAppendingPathComponent:@"Resources/Icon.png"]]
+    && [expectedPaths containsObject:[root stringByAppendingPathComponent:@"English.lproj/Main.gorm"]],
+    @"Import resolves Resources and localized interface files without duplicates");
+  [document updateChangeCount:NSChangeDone];
+  NSString *exportPath = [root stringByAppendingPathComponent:@"Exports/Exported.pcproj"];
+  NSError *error = nil;
+  testAssert([document exportProjectCenterToPath:exportPath error:&error] && error == nil,
+    @"Export a ProjectCenter package to another directory");
+  testAssert([[document projectPath] isEqual:legacyPath] && [document isDocumentEdited],
+    @"Export leaves the current project identity and unsaved state intact");
+  NSDictionary *exported = [NSDictionary dictionaryWithContentsOfFile:
+    [exportPath stringByAppendingPathComponent:@"PC.project"]];
+  testAssert([[exported objectForKey:@"PROJECT_COPYRIGHT"] isEqual:@"Preserve this metadata"]
+    && [[exported objectForKey:@"CLASS_FILES"] count] == 1
+    && [[exported objectForKey:@"PUBLIC_HEADERS"] count] == 1
+    && [[exported objectForKey:@"LIBRARIES"] count] == 2,
+    @"Export retains file membership, public headers, libraries, and ProjectCenter metadata");
+  YCodeProject *reopened = [[YCodeProject alloc] init];
+  testAssert([reopened readFromURL:[NSURL fileURLWithPath:exportPath]
+    ofType:@"YCodeProjectCenterProjectType" error:NULL], @"Reimport the exported ProjectCenter package");
+  [reopened makeWindowControllers];
+  NSMutableArray *actualPaths = [NSMutableArray array];
+  for (PBXGroup *group in [[[reopened project] mainGroup] children]) {
+    for (PBXFileReference *reference in [group children]) {
+      NSString *path = [[reopened navigatorController] resolvedFilePathForNavigatorItem:
+        [[reopened navigatorController] itemForObject:reference]];
+      if (path) [actualPaths addObject:path];
+    }
+  }
+  testAssert([[actualPaths sortedArrayUsingSelector:@selector(compare:)]
+    isEqual:[expectedPaths sortedArrayUsingSelector:@selector(compare:)]],
+    @"Export and reimport preserve every original file location");
+  [reopened close]; [reopened release];
+  NSString *blocked = [root stringByAppendingPathComponent:@"Notes.txt/Blocked.pcproj"];
+  error = nil;
+  testAssert(![document exportProjectCenterToPath:blocked error:&error] && error != nil,
+    @"Export reports an unwritable destination");
+  NSMenu *fileMenu = [[[NSApp mainMenu] itemWithTitle:@"File"] submenu];
+  testAssert([[fileMenu itemWithTitle:@"Export ProjectCenter Project..."] action]
+    == @selector(exportProjectCenter:), @"File menu exposes ProjectCenter export");
+  [document updateChangeCount:NSChangeCleared];
   [document close]; [document release];
 }
 
@@ -1448,6 +1533,7 @@ int main(void)
   testEditorEditing(temporaryDirectory);
   testEditorFiles(temporaryDirectory);
   testProjectCenterImport(temporaryDirectory);
+  testProjectCenterExport(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];

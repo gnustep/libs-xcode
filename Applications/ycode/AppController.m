@@ -157,6 +157,7 @@ YCodeFileURLFromPath(NSString *path)
     [fileMenu addItem:YCodeMenuItem(@"Save As...", @selector(saveDocumentAs:), @"S", self)];
     [fileMenu addItem:YCodeMenuItem(@"Save All", @selector(saveAllDocuments:), @"", self)];
     [fileMenu addItem:YCodeMenuItem(@"Save Project", @selector(saveProject:), @"", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Export ProjectCenter Project...", @selector(exportProjectCenter:), @"", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"File" action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:fileMenu];
     [mainMenu addItem:menuItem];
@@ -402,6 +403,24 @@ YCodeFileURLFromPath(NSString *path)
 - (IBAction)saveProject:(id)sender
 {
     [self saveActiveProjectShowingPanel:NO];
+}
+
+- (IBAction)exportProjectCenter:(id)sender
+{
+    YCodeProject *project = [self currentProject];
+    if (!project) return;
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    [panel setTitle:@"Export ProjectCenter Project"];
+    [panel setAllowedFileTypes:[NSArray arrayWithObject:@"pcproj"]];
+    [panel setDirectoryURL:[NSURL fileURLWithPath:[project projectDirectoryPath]]];
+    NSString *name = [[[project projectPath] lastPathComponent] stringByDeletingPathExtension];
+    [panel setNameFieldStringValue:[name stringByAppendingPathExtension:@"pcproj"]];
+    if ([panel runModal] != NSModalResponseOK) return;
+    NSError *error = nil;
+    if (![project exportProjectCenterToPath:[[panel URL] path] error:&error]) {
+        NSAlert *alert = [NSAlert alertWithError:error];
+        [alert runModal];
+    }
 }
 
 - (IBAction)saveDocumentTo:(id)sender
@@ -712,6 +731,7 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
     SEL action = [item action];
+    if (action == @selector(exportProjectCenter:)) return [self currentProject] != nil;
     if (action == @selector(debugProject:) || action == @selector(debugAction:) ||
         action == @selector(toggleBreakpoint:))
         return [[self currentProjectWindowController] validateDebuggerAction:action tag:[item tag]];

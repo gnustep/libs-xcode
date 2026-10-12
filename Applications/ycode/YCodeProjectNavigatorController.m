@@ -234,6 +234,10 @@
         [_outlineView reloadData];
         if ([_rootItems count] > 0) {
             [_outlineView expandItem:[_rootItems objectAtIndex:0]];
+            YCodeProjectNavigatorItem *mainItem = [self itemForObject:[[_project project] mainGroup]];
+            if (mainItem)
+                [_outlineView expandItem:mainItem expandChildren:
+                    [[[_project projectPath] pathExtension] isEqual:@"pcproj"]];
         }
     }
 }

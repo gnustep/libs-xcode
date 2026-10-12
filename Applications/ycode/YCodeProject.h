@@ -84,6 +84,8 @@
 - (BOOL)cleanProject;
 - (BOOL)runProject;
 - (BOOL)saveProjectToPath:(NSString *)path;
+/** Export the selected target as a ProjectCenter package without changing this document. */
+- (BOOL)exportProjectCenterToPath:(NSString *)path error:(NSError **)error;
 
 /**
  * File management
