@@ -50,6 +50,7 @@
  * Called when the application finishes launching.
  */
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif;
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)application;
 
 /**
  * Creates a new project.

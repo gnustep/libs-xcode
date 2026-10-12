@@ -23,6 +23,7 @@
 */
 
 #import "YCodeEditorDocument.h"
+#import "YCEditorView.h"
 #import "YCodeEditorController.h"
 #import "YCodeSyntaxHighlighter.h"
 
@@ -61,35 +62,39 @@
     RELEASE(_textView);
     RELEASE(_lineNumberRuler);
     RELEASE(_syntaxHighlighter);
-    RELEASE(_editorController);
     [super dealloc];
 }
 
 - (void)setupEditorView
 {
     // Create scroll view
-    _scrollView = [[NSScrollView alloc] init];
+    _scrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)];
     [_scrollView setHasVerticalScroller:YES];
     [_scrollView setHasHorizontalScroller:YES];
     [_scrollView setAutohidesScrollers:YES];
     [_scrollView setBorderType:NSNoBorder];
+    [_scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     
     // Create text view
-    NSRect textFrame = NSMakeRect(0, 0, 400, 300);
+    NSRect textFrame = NSMakeRect(0, 0, [_scrollView contentSize].width, [_scrollView contentSize].height);
     _textView = [[NSTextView alloc] initWithFrame:textFrame];
+    [_textView setFont:[NSFont userFixedPitchFontOfSize:12.0]];
     [_textView setDelegate:self];
     [_textView setRichText:NO];
     [_textView setUsesFontPanel:YES];
     [_textView setUsesRuler:NO];
     [_textView setAllowsUndo:YES];
+    [_textView setMinSize:NSMakeSize(0, 0)];
+    [_textView setMaxSize:NSMakeSize(1e7, 1e7)];
     [_textView setVerticallyResizable:YES];
     [_textView setHorizontallyResizable:YES];
-    [_textView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+    [_textView setAutoresizingMask:NSViewNotSizable];
     
     // Configure text container
     NSTextContainer *textContainer = [_textView textContainer];
-    [textContainer setWidthTracksTextView:YES];
-    [textContainer setContainerSize:NSMakeSize(textFrame.size.width, 1e7)];
+    [textContainer setWidthTracksTextView:NO];
+    [textContainer setHeightTracksTextView:NO];
+    [textContainer setContainerSize:NSMakeSize(1e7, 1e7)];
     
     // Set up scroll view
     [_scrollView setDocumentView:_textView];
@@ -100,12 +105,17 @@
 
 - (void)setupLineNumberRuler
 {
-    // Create line number ruler
-    _lineNumberRuler = [[NSRulerView alloc] initWithScrollView:_scrollView orientation:NSVerticalRuler];
+    _lineNumberRuler = [[YCEditorRulerView alloc] initWithScrollView:_scrollView orientation:NSVerticalRuler];
     [_lineNumberRuler setClientView:_textView];
     [_lineNumberRuler setRuleThickness:50.0];
     [_scrollView setVerticalRulerView:_lineNumberRuler];
     [_scrollView setHasVerticalRuler:YES];
+    NSRulerView *columns = [[YCEditorRulerView alloc] initWithScrollView:_scrollView orientation:NSHorizontalRuler];
+    [columns setClientView:_textView];
+    [columns setRuleThickness:24.0];
+    [_scrollView setHorizontalRulerView:columns];
+    [_scrollView setHasHorizontalRuler:YES];
+    RELEASE(columns);
     [_scrollView setRulersVisible:YES];
 }
 
@@ -158,6 +168,9 @@
         if (_textView) {
             [_textView setString:content];
             [self applySyntaxHighlighting];
+            // Update the scrollable extent immediately after loading a file.
+            [_textView sizeToFit];
+            [_lineNumberRuler setNeedsDisplay:YES];
         }
     }
 }
@@ -312,7 +325,11 @@
 - (void)applySyntaxHighlighting
 {
     if (_syntaxHighlighter && _textView) {
-        [_syntaxHighlighter highlightText];
+        if (_editorController && ![_editorController syntaxHighlighting]) {
+            [_syntaxHighlighter removeHighlighting];
+        } else {
+            [_syntaxHighlighter highlightText];
+        }
     }
 }
 

@@ -28,6 +28,15 @@
 #import "GSXCBuildContext.h"
 #import "xcsystem.h"
 
+/* Darwin frameworks must obtain the live environment through crt_externs. */
+#ifdef __APPLE__
+#include <crt_externs.h>
+#define GSXCEnvironment() (*_NSGetEnviron())
+#else
+extern char **environ;
+#define GSXCEnvironment() environ
+#endif
+
 #ifndef ASSIGN
 #define ASSIGN(object, value) \
   do \

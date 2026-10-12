@@ -31,10 +31,10 @@ Ycode_APPLICATION_ICON = Ycode.tiff
 # Libraries and Frameworks
 #
 Ycode_GUI_LIBS += -lXCode
-Ycode_FRAMEWORK_DIRS += ../XCode
+Ycode_LIB_DIRS += -L../../XCode/XCode.framework/Versions/0
 
 # Additional include directories
-ADDITIONAL_INCLUDE_DIRS += -I../XCode 
+ADDITIONAL_INCLUDE_DIRS += -I../..
 
 
 #

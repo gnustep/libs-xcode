@@ -30,7 +30,7 @@
 #import "GSXCBuildContext.h"
 
 #import <Foundation/NSString.h>
-#import <Foundation/NSDebug.h>
+#import "GSXCCommon.h"
 
 @implementation XCFileRef
 

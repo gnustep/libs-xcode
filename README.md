@@ -57,20 +57,39 @@ Supported xcodebuild-style options:
   `-parallelizeTargets`, `-quiet`, `-verbose`, `-list`, and
   `-showBuildSettings` are accepted for command-line compatibility.
 
-#### 1.2.1 CocoaPods
+#### 1.2.1 Native macOS build
 
-The library can also be consumed from CocoaPods on macOS:
+With full Xcode installed and selected as the active developer directory,
+build the framework and command-line tools against Apple's frameworks:
 
+```sh
+xcodebuild -project libs-xcode.xcodeproj \
+  -target XCodeNative -target buildtool-native \
+  -target pc2xc-native -target pcpg-native \
+  -configuration Debug SYMROOT="$PWD/build/macos" CODE_SIGNING_ALLOWED=NO build
 ```
-pod 'XCode', :git => 'https://github.com/gnustep/libs-xcode.git'
+
+Products are in `build/macos/Debug`. Keep the command-line tools beside
+`XCode.framework` so their runtime search paths can locate it. The native
+targets use manual reference counting and do not require GNUstep or CocoaPods.
+The other targets in this project, including `All`, invoke GNUstep make.
+
+To build and run the regression tests and a buildtool startup check:
+
+```sh
+sh Tests/run-macos.sh
+CONFIGURATION=Release sh Tests/run-macos.sh
 ```
 
-The pod builds the Objective-C sources without ARC and exposes the public
-headers under the `XCode` module-style include path, for example:
+Link clients against `XCode.framework` and import its public headers:
 
 ```
 #import <XCode/XCode.h>
 ```
+
+This native build supports using the project parsing library and tools on
+macOS. Buildtool's project-building backend still uses GNUstep tools and
+framework mappings; it is not a replacement for Apple's SDK build pipeline.
 
 #### 1.2.2 Plans for the future
 

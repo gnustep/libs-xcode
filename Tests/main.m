@@ -3,6 +3,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <XCode/GSXCCommon.h>
 
 #import <XCode/PBXCoder.h>
 #import <XCode/PBXContainer.h>
@@ -15,6 +16,7 @@
 #import <XCode/XCConfigurationList.h>
 #import <XCode/PBXNativeTarget.h>
 #import <XCode/PBXFrameworksBuildPhase.h>
+#import <XCode/NSString+PBXAdditions.h>
 
 @interface PBXFrameworksBuildPhase (LinkTest)
 - (NSString *)linkString;
@@ -179,6 +181,28 @@ static void testBuildtoolArgumentParsing(void)
 	     @"build should remain an accepted sub-command");
 }
 
+static void testFrameworkResourcesAndEnvironment(void)
+{
+  NSBundle *bundle = [NSBundle bundleForClass: [PBXFrameworksBuildPhase class]];
+  NSString *path = [bundle pathForResource: @"Framework-mapping" ofType: @"plist"];
+  NSDictionary *mapping = [NSDictionary dictionaryWithContentsOfFile: path];
+  testAssert([[mapping objectForKey: @"Mapped"] objectForKey: @"Foundation"] != nil,
+    @"framework bundle contains its framework mapping");
+
+  const char *oldValue = getenv("GSXC_TEST_LIVE_ENVIRONMENT");
+  NSString *savedValue = oldValue ? [NSString stringWithUTF8String: oldValue] : nil;
+  setenv("GSXC_TEST_LIVE_ENVIRONMENT", "first", 1);
+  testAssert([[@"$(GSXC_TEST_LIVE_ENVIRONMENT)" stringByReplacingEnvironmentVariablesWithValues]
+    isEqualToString: @"first"], @"environment expansion reads live process variables");
+  setenv("GSXC_TEST_LIVE_ENVIRONMENT", "second", 1);
+  testAssert([[@"$(GSXC_TEST_LIVE_ENVIRONMENT)" stringByReplacingEnvironmentVariablesWithValues]
+    isEqualToString: @"second"], @"environment expansion sees subsequent changes");
+  if (savedValue != nil)
+    setenv("GSXC_TEST_LIVE_ENVIRONMENT", [savedValue UTF8String], 1);
+  else
+    unsetenv("GSXC_TEST_LIVE_ENVIRONMENT");
+}
+
 static void testProjectUnarchive(void)
 {
   NSString *path = @"../libs-xcode.xcodeproj/project.pbxproj";
@@ -196,14 +220,17 @@ int main(int argc, const char **argv, char **env)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
 
+#ifdef GNUSTEP
   [NSProcessInfo initializeWithArguments: (char **)argv
 				   count: argc
 			     environment: env];
+#endif
 
   testBuildtoolArgumentParsing();
   testProjectUnarchive();
   testBuildSettingInheritance();
   testHeaderSearchPaths();
+  testFrameworkResourcesAndEnvironment();
 
   if (failures == 0)
     {

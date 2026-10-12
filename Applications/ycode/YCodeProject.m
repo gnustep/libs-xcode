@@ -556,6 +556,9 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)loadXcodeProjectAtPath:(NSString *)path
 {
+    PBXCoder *coder = nil;
+    BOOL success = NO;
+
     if (path == nil || [path length] == 0) {
         return NO;
     }
@@ -566,27 +569,33 @@ YCodeProjectPackagePathForPath(NSString *path)
             return NO;
         }
 
-        PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile:projectFile];
+        coder = [[PBXCoder alloc] initWithContentsOfFile:projectFile];
         if (coder) {
             PBXContainer *container = [coder unarchive];
-            if (container) {
-                [self setContainer:container];
-                [self setProject:[container rootObject]];
-                [self setProjectPath:YCodeProjectPackagePathForPath(path)];
+            PBXProject *project = [container rootObject];
+            if ([project isKindOfClass:[PBXProject class]] &&
+                [[project mainGroup] isKindOfClass:[PBXGroup class]]) {
                 [container setFilename:projectFile];
-                [container setParameter:[self projectPath]];
+                [container setParameter:YCodeProjectPackagePathForPath(path)];
+                [project setContainer:container];
+                [self setContainer:container];
+                [self setProjectPath:YCodeProjectPackagePathForPath(path)];
+                [self setProject:project];
                 
                 // Start watching files
                 [self startWatchingFiles];
                 
-                return YES;
+                success = YES;
             }
         }
     }
     @catch (NSException *exception) {
         NSLog(@"Error loading Xcode project: %@", [exception reason]);
     }
-    return NO;
+    @finally {
+        RELEASE(coder);
+    }
+    return success;
 }
 
 - (BOOL)loadProjectCenterProjectAtPath:(NSString *)path

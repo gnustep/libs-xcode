@@ -180,6 +180,29 @@
 
 #pragma mark - Highlighting Operations
 
++ (NSColor *)plainTextColorForBackground:(NSColor *)background
+{
+    NSColor *rgb = [background colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+    if (!rgb) {
+        rgb = [[NSColor textBackgroundColor] colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+    }
+    return [NSColor colorWithDeviceRed:1.0 - [rgb redComponent]
+                                green:1.0 - [rgb greenComponent]
+                                 blue:1.0 - [rgb blueComponent]
+                                alpha:1.0];
+}
+
+- (void)applyPlainTextColorInRange:(NSRange)range
+{
+    NSColor *color = [[self class] plainTextColorForBackground:[_textView backgroundColor]];
+    [[_textView textStorage] addAttribute:NSForegroundColorAttributeName value:color range:range];
+    NSMutableDictionary *attributes = [[_textView typingAttributes] mutableCopy];
+    [attributes setObject:color forKey:NSForegroundColorAttributeName];
+    [_textView setTypingAttributes:attributes];
+    RELEASE(attributes);
+    [_textView setInsertionPointColor:color];
+}
+
 - (void)highlightText
 {
     if (!_textView) {
@@ -205,8 +228,8 @@
         return;
     }
     
-    // Remove existing attributes in range
-    [textStorage removeAttribute:NSForegroundColorAttributeName range:range];
+    // Restore the default foreground before applying token colors.
+    [self applyPlainTextColorInRange:range];
     
     // Apply syntax highlighting based on language
     NSString *language = [self language];
@@ -228,9 +251,7 @@
     
     NSString *text = [_textView string];
     NSRange fullRange = NSMakeRange(0, [text length]);
-    NSTextStorage *textStorage = [_textView textStorage];
-    
-    [textStorage removeAttribute:NSForegroundColorAttributeName range:fullRange];
+    [self applyPlainTextColorInRange:fullRange];
 }
 
 #pragma mark - Language-Specific Highlighting

@@ -144,7 +144,6 @@
 /* Begin PBXFileReference section */
 		100000000000000000000001 /* GNUmakefile */ = {isa = PBXFileReference; lastKnownFileType = text; path = GNUmakefile; sourceTree = "<group>"; };
 		100000000000000000000002 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		100000000000000000000003 /* XCode.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; path = XCode.podspec; sourceTree = "<group>"; };
 		100000000000000000000004 /* Version */ = {isa = PBXFileReference; lastKnownFileType = text; path = Version; sourceTree = "<group>"; };
 		100000000000000000000005 /* ChangeLog */ = {isa = PBXFileReference; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
 		100000000000000000000006 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
@@ -344,7 +343,6 @@
 			children = (
 				100000000000000000000001 /* GNUmakefile */,
 				100000000000000000000002 /* README.md */,
-				100000000000000000000003 /* XCode.podspec */,
 				100000000000000000000004 /* Version */,
 				100000000000000000000005 /* ChangeLog */,
 				100000000000000000000006 /* LICENSE */,

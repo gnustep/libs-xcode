@@ -265,19 +265,29 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         NSTableColumn *column = nil;
 
         _navigatorOutlineView = [[NSOutlineView alloc] initWithFrame:outlineFrame];
-        [_navigatorOutlineView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [_navigatorOutlineView setAutoresizingMask:NSViewNotSizable];
         [_navigatorOutlineView setHeaderView:nil];
+        [_navigatorOutlineView setGridStyleMask:NSTableViewGridNone];
+        [_navigatorOutlineView setColumnAutoresizingStyle:NSTableViewLastColumnOnlyAutoresizingStyle];
 
         column = [[NSTableColumn alloc] initWithIdentifier:@"name"];
         [column setTitle:@"Project"];
+        [column setMinWidth:0];
+        [column setResizingMask:NSTableColumnAutoresizingMask];
         [column setWidth:NSWidth(outlineFrame)];
         [_navigatorOutlineView addTableColumn:column];
         [_navigatorOutlineView setOutlineTableColumn:column];
         RELEASE(column);
 
-        scrollView = YCodeScrollViewWithDocumentView(_navigatorOutlineView);
-        [scrollView setFrame:outlineFrame];
+        // A table's frame is sized by its columns and rows, not by its pane.
+        scrollView = AUTORELEASE([[NSScrollView alloc] initWithFrame:outlineFrame]);
+        [scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [scrollView setHasVerticalScroller:YES];
+        [scrollView setBorderType:NSNoBorder];
+        [scrollView setHasHorizontalScroller:NO];
+        [scrollView setDocumentView:_navigatorOutlineView];
         [_navigatorView addSubview:scrollView];
+        [_navigatorOutlineView sizeToFit];
         RELEASE(_navigatorOutlineView);
     }
 

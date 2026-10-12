@@ -73,16 +73,17 @@
     [_textView setUsesFontPanel:YES];
     [_textView setUsesRuler:NO];
     [_textView setAllowsUndo:YES];
-    [_textView setVerticallyResizable:YES];
-    [_textView setHorizontallyResizable:YES];
-    [_textView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
     [_textView setMaxSize:NSMakeSize(1e7, 1e7)];
     [_textView setMinSize:NSMakeSize(0, 0)];
+    [_textView setVerticallyResizable:YES];
+    [_textView setHorizontallyResizable:YES];
+    [_textView setAutoresizingMask:NSViewNotSizable];
     
     // Configure text container
     NSTextContainer *textContainer = [_textView textContainer];
-    [textContainer setWidthTracksTextView:YES];
-    [textContainer setContainerSize:NSMakeSize(textFrame.size.width, 1e7)];
+    [textContainer setWidthTracksTextView:NO];
+    [textContainer setHeightTracksTextView:NO];
+    [textContainer setContainerSize:NSMakeSize(1e7, 1e7)];
     
     // Set up scroll view
     [_scrollView setDocumentView:_textView];
@@ -94,16 +95,25 @@
 
 - (void)setupLineNumberView
 {
-    _lineNumberView = [[YCEditorLineNumberView alloc] initWithEditorView:self];
+    _lineNumberView = [[YCEditorRulerView alloc]
+        initWithScrollView:_scrollView orientation:NSVerticalRuler];
+    [_lineNumberView setClientView:_textView];
+    [_lineNumberView setRuleThickness:50.0];
     [_scrollView setVerticalRulerView:_lineNumberView];
     [_scrollView setHasVerticalRuler:YES];
+    NSRulerView *columns = [[YCEditorRulerView alloc] initWithScrollView:_scrollView orientation:NSHorizontalRuler];
+    [columns setClientView:_textView];
+    [columns setRuleThickness:24.0];
+    [_scrollView setHorizontalRulerView:columns];
+    [_scrollView setHasHorizontalRuler:YES];
+    RELEASE(columns);
     [_scrollView setRulersVisible:_showLineNumbers];
 }
 
 - (void)setupDefaultSettings
 {
     // Default editor settings
-    _font = [[NSFont fontWithName:@"Menlo" size:12.0] retain];
+    _font = [[NSFont userFixedPitchFontOfSize:12.0] retain];
     _textColor = [[NSColor blackColor] retain];
     _backgroundColor = [[NSColor whiteColor] retain];
     _selectionColor = [[NSColor selectedTextBackgroundColor] retain];
@@ -125,10 +135,15 @@
 - (void)applySettings
 {
     if (_textView) {
+        ASSIGN(_textColor, [YCodeSyntaxHighlighter plainTextColorForBackground:_backgroundColor]);
         [_textView setFont:_font];
         [_textView setTextColor:_textColor];
         [_textView setBackgroundColor:_backgroundColor];
         [_textView setSelectedTextAttributes:@{NSBackgroundColorAttributeName: _selectionColor}];
+        [_textView setInsertionPointColor:_textColor];
+        [self applySyntaxHighlighting];
+        [[_scrollView horizontalRulerView] setNeedsDisplay:YES];
+        [[_scrollView verticalRulerView] setNeedsDisplay:YES];
     }
     
     if (_scrollView) {
@@ -184,6 +199,8 @@
     if (_textView) {
         [_textView setString:text ? text : @""];
         [self applySyntaxHighlighting];
+        [_textView sizeToFit];
+        [_lineNumberView setNeedsDisplay:YES];
     }
 }
 
@@ -570,6 +587,128 @@
 @end
 
 #pragma mark - Line Number View Implementation
+
+@implementation YCEditorRulerView
+
+- (BOOL)isFlipped
+{
+    return YES;
+}
+
+- (void)setClientView:(NSView *)view
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+        name:NSTextDidChangeNotification object:[self clientView]];
+    [super setClientView:view];
+    if (view) {
+        [[NSNotificationCenter defaultCenter] addObserver:self
+            selector:@selector(editorTextDidChange:)
+            name:NSTextDidChangeNotification object:view];
+    }
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [super dealloc];
+}
+
+- (void)editorTextDidChange:(NSNotification *)notification
+{
+    [self setNeedsDisplay:YES];
+}
+
+- (void)drawHashMarksAndLabelsInRect:(NSRect)rect
+{
+    NSTextView *textView = (NSTextView *)[self clientView];
+    if (![textView isKindOfClass:[NSTextView class]]) {
+        return;
+    }
+    NSFont *font = [textView font];
+    if (!font) {
+        font = [NSFont userFixedPitchFontOfSize:12.0];
+    }
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+        [NSFont systemFontOfSize:10.0], NSFontAttributeName,
+        [NSColor controlTextColor], NSForegroundColorAttributeName, nil];
+    NSPoint origin = [textView textContainerOrigin];
+    NSTextContainer *container = [textView textContainer];
+
+    if ([self orientation] == NSHorizontalRuler) {
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObject:font forKey:NSFontAttributeName];
+        CGFloat advance = [@"0" sizeWithAttributes:fontAttributes].width;
+        if (advance <= 0) {
+            return;
+        }
+        NSClipView *clipView = [[self scrollView] contentView];
+        NSRect viewport = [self convertRect:[clipView bounds] fromView:clipView];
+        viewport.origin.y = NSMinY(rect);
+        viewport.size.height = NSHeight(rect);
+        rect = NSIntersectionRect(rect, viewport);
+        [NSGraphicsContext saveGraphicsState];
+        NSRectClip(rect);
+        origin.x += [container lineFragmentPadding];
+        NSPoint start = [self convertPoint:origin fromView:textView];
+        NSInteger first = MAX(0, (NSInteger)((NSMinX(rect) - start.x) / advance));
+        NSInteger last = MAX(0, (NSInteger)((NSMaxX(rect) - start.x) / advance) + 1);
+        NSInteger column;
+        [[NSColor controlTextColor] set];
+        for (column = first; column <= last; column++) {
+            CGFloat x = start.x + column * advance;
+            BOOL labelled = column == 0 || (column + 1) % 10 == 0;
+            NSRectFill(NSMakeRect(x, NSHeight([self bounds]) - (labelled ? 7 : 3), 1, labelled ? 7 : 3));
+            if (labelled) {
+                NSString *label = [NSString stringWithFormat:@"%ld", (long)column + 1];
+                [label drawAtPoint:NSMakePoint(x, 1) withAttributes:attributes];
+            }
+        }
+        [NSGraphicsContext restoreGraphicsState];
+    } else {
+        NSString *text = [textView string];
+        NSLayoutManager *layout = [textView layoutManager];
+        NSRect visible = [textView visibleRect];
+        visible.origin.x -= origin.x;
+        visible.origin.y -= origin.y;
+        // Line labels must remain visible even when the text is scrolled sideways.
+        visible.origin.x = 0;
+        visible.size.width = [container containerSize].width;
+        NSRange glyphs = [layout glyphRangeForBoundingRect:visible inTextContainer:container];
+        NSRange characters = [layout characterRangeForGlyphRange:glyphs actualGlyphRange:NULL];
+        NSUInteger index = 0;
+        NSUInteger line = 1;
+        while (index <= [text length]) {
+            NSUInteger end, contentsEnd;
+            [text getLineStart:NULL end:&end contentsEnd:&contentsEnd forRange:NSMakeRange(index, 0)];
+            NSRange lineRange = NSMakeRange(index, end - index);
+            if (NSMaxRange(lineRange) >= characters.location) {
+                NSRect fragment;
+                if (index == [text length]) {
+                    fragment = [layout extraLineFragmentRect];
+                } else {
+                    NSUInteger glyph = [layout glyphRangeForCharacterRange:NSMakeRange(index, 1)
+                        actualCharacterRange:NULL].location;
+                    fragment = [layout lineFragmentRectForGlyphAtIndex:glyph effectiveRange:NULL];
+                }
+                NSPoint point = [self convertPoint:NSMakePoint(origin.x, origin.y + NSMinY(fragment))
+                    fromView:textView];
+                if (point.y > NSMaxY(rect)) {
+                    break;
+                }
+                NSString *label = [NSString stringWithFormat:@"%lu", (unsigned long)line];
+                NSSize size = [label sizeWithAttributes:attributes];
+                [label drawAtPoint:NSMakePoint(NSWidth([self bounds]) - size.width - 5, point.y)
+                    withAttributes:attributes];
+            }
+            if (end <= index || contentsEnd == end) {
+                break;
+            }
+            index = NSMaxRange(lineRange);
+            line++;
+        }
+    }
+}
+
+@end
 
 @implementation YCEditorLineNumberView
 

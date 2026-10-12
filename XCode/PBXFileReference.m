@@ -36,7 +36,6 @@
 #import "XCConfigurationList.h"
 #import "XCBuildConfiguration.h"
 
-extern char **environ;
 static NSLock *lock = nil;
 
 @implementation PBXFileReference
@@ -503,7 +502,7 @@ static NSLock *lock = nil;
   
   // get environment variables...
   char **env = NULL;
-  for (env = environ; *env != 0; env++)
+  for (env = GSXCEnvironment(); *env != 0; env++)
     {
       char *thisEnv = *env;
       NSString *envStr = [NSString stringWithCString: thisEnv

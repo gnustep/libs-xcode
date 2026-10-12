@@ -38,15 +38,17 @@
 int main(int argc, const char *argv[])
 {
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  extern char **environ;
   
   // Do our stuff...
   ToolDelegate *delegate = AUTORELEASE([[ToolDelegate alloc] init]);
 
   // Initialize process...
+#ifdef GNUSTEP
+  extern char **environ;
   [NSProcessInfo initializeWithArguments: (char **)argv
 				   count: argc
 			     environment: environ];
+#endif
 
   // Process the arguments...
   [delegate process];

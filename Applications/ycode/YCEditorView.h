@@ -36,7 +36,7 @@
 {
     NSScrollView *_scrollView;
     NSTextView *_textView;
-    YCEditorLineNumberView *_lineNumberView;
+    NSRulerView *_lineNumberView;
     
     YCodeEditorDocument *_document;
     YCodeSyntaxHighlighter *_syntaxHighlighter;
@@ -159,6 +159,9 @@
 /**
  * Line number view
  */
+@interface YCEditorRulerView : NSRulerView
+@end
+
 @interface YCEditorLineNumberView : NSRulerView
 {
     YCEditorView *_editorView;

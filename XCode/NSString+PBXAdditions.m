@@ -24,7 +24,7 @@
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSCharacterSet.h>
-#import <Foundation/NSDebug.h>
+#import "GSXCCommon.h"
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSFileManager.h>
 
@@ -40,7 +40,6 @@
 #import <unistd.h>
 #endif
 
-extern char **environ;
 
 static NSString *_cachedRootPath = nil;
 
@@ -139,7 +138,7 @@ static NSString *_cachedRootPath = nil;
   
   // Get env vars...
   char **env = NULL;
-  for (env = environ; *env != 0; env++)
+  for (env = GSXCEnvironment(); *env != 0; env++)
     {
       char *thisEnv = *env;
       NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];

@@ -25,35 +25,54 @@
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeProjectNavigatorItem.h"
 #import "YCodeProject.h"
+#import <XCode/PBXProject.h>
+#import <XCode/PBXGroup.h>
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXTarget.h>
 
 @implementation YCodeProjectNavigatorController
 
+- (NSString *)resolvedPathForNavigatorItem:(YCodeProjectNavigatorItem *)item
+{
+    id object = [item representedObject];
+    NSString *path;
+    NSString *sourceTree;
+    NSString *basePath = nil;
+
+    if (item == nil || object == [_project project]) {
+        return [_project projectDirectoryPath];
+    }
+    if (![object isKindOfClass:[PBXFileReference class]] &&
+        ![object isKindOfClass:[PBXGroup class]]) {
+        return nil;
+    }
+
+    path = [object path];
+    sourceTree = [object sourceTree];
+    if ([path isAbsolutePath]) {
+        return [path stringByStandardizingPath];
+    }
+    if ([sourceTree length] == 0 || [sourceTree isEqualToString:@"<group>"]) {
+        basePath = [self resolvedPathForNavigatorItem:[item parent]];
+    } else if ([sourceTree isEqualToString:@"SOURCE_ROOT"]) {
+        basePath = [_project projectDirectoryPath];
+    } else {
+        // SDK and build-product locations need a configured build context.
+        return nil;
+    }
+
+    if ([path length] == 0) {
+        return basePath;
+    }
+    return [[basePath stringByAppendingPathComponent:path] stringByStandardizingPath];
+}
+
 - (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item
 {
-    PBXFileReference *fileReference = nil;
-    NSString *path = nil;
-
-    if (item == nil || ![item isFile]) {
+    if (![item isFile] || [[[item representedObject] path] length] == 0) {
         return nil;
     }
-
-    fileReference = [item representedObject];
-    if (![fileReference respondsToSelector:@selector(path)]) {
-        return nil;
-    }
-
-    path = [fileReference path];
-    if (path == nil || [path length] == 0) {
-        return nil;
-    }
-
-    if ([path isAbsolutePath]) {
-        return path;
-    }
-
-    return [[_project projectDirectoryPath] stringByAppendingPathComponent:path];
+    return [self resolvedPathForNavigatorItem:item];
 }
 
 - (instancetype)init
@@ -128,6 +147,7 @@
     [_outlineView setDelegate:self];
     [_outlineView setTarget:self];
     [_outlineView setDoubleAction:@selector(outlineViewDoubleClick:)];
+    [self projectDidChange];
 }
 
 #pragma mark - Project Tree Management

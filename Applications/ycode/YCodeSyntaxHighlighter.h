@@ -71,6 +71,7 @@
 /**
  * Color scheme
  */
++ (NSColor *)plainTextColorForBackground:(NSColor *)background;
 - (NSColor *)keywordColor;
 - (void)setKeywordColor:(NSColor *)color;
 - (NSColor *)stringColor;

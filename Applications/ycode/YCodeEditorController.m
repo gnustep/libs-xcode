@@ -25,6 +25,7 @@
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeProject.h"
+#import "YCodeSyntaxHighlighter.h"
 
 @implementation YCodeEditorController
 
@@ -36,9 +37,9 @@
         _documentTabs = [[NSMutableDictionary alloc] init];
         
         // Default editor settings
-        _editorFont = [[NSFont fontWithName:@"Menlo" size:12.0] retain];
+        _editorFont = [[NSFont userFixedPitchFontOfSize:12.0] retain];
         _backgroundColor = [[NSColor colorWithDeviceWhite:0.95 alpha:1.0] retain];
-        _textColor = [[NSColor blackColor] retain];
+        _textColor = [[YCodeSyntaxHighlighter plainTextColorForBackground:_backgroundColor] retain];
         _showLineNumbers = YES;
         _syntaxHighlighting = YES;
     }
@@ -280,6 +281,9 @@
     
     while ((document = [enumerator nextObject]) != nil) {
         [[document textView] setFont:font];
+        [[document textView] sizeToFit];
+        [[[document scrollView] horizontalRulerView] setNeedsDisplay:YES];
+        [[[document scrollView] verticalRulerView] setNeedsDisplay:YES];
     }
 }
 
@@ -291,6 +295,7 @@
 - (void)setBackgroundColor:(NSColor *)color
 {
     ASSIGN(_backgroundColor, color);
+    ASSIGN(_textColor, [YCodeSyntaxHighlighter plainTextColorForBackground:color]);
     
     // Apply to all open documents
     NSEnumerator *enumerator = [_openDocuments objectEnumerator];
@@ -298,6 +303,8 @@
     
     while ((document = [enumerator nextObject]) != nil) {
         [[document textView] setBackgroundColor:color];
+        [[document textView] setTextColor:_textColor];
+        [document applySyntaxHighlighting];
     }
 }
 
@@ -308,6 +315,7 @@
 
 - (void)setTextColor:(NSColor *)color
 {
+    color = [YCodeSyntaxHighlighter plainTextColorForBackground:_backgroundColor];
     ASSIGN(_textColor, color);
     
     // Apply to all open documents
@@ -316,6 +324,7 @@
     
     while ((document = [enumerator nextObject]) != nil) {
         [[document textView] setTextColor:color];
+        [document applySyntaxHighlighting];
     }
 }
 
@@ -340,13 +349,11 @@
     _syntaxHighlighting = highlighting;
     
     // Apply to all open documents
-    if (highlighting) {
-        NSEnumerator *enumerator = [_openDocuments objectEnumerator];
-        YCodeEditorDocument *document;
-        
-        while ((document = [enumerator nextObject]) != nil) {
-            [document applySyntaxHighlighting];
-        }
+    NSEnumerator *enumerator = [_openDocuments objectEnumerator];
+    YCodeEditorDocument *document;
+
+    while ((document = [enumerator nextObject]) != nil) {
+        [document applySyntaxHighlighting];
     }
 }
 

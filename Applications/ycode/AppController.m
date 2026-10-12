@@ -79,6 +79,11 @@ YCodeFileURLFromPath(NSString *path)
     [self connectDocumentMenuActions];
 }
 
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)application
+{
+    return NO;
+}
+
 - (void)buildMainMenu
 {
     NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"ApplicationName"];
@@ -91,6 +96,13 @@ YCodeFileURLFromPath(NSString *path)
     NSMenu *windowMenu = nil;
     NSMenu *helpMenu = nil;
     NSMenuItem *menuItem = nil;
+#ifdef GNUSTEP
+    NSString *projectMenuTitle = @"Project";
+    NSString *windowMenuTitle = @"Windows";
+#else
+    NSString *projectMenuTitle = @"Product";
+    NSString *windowMenuTitle = @"Window";
+#endif
 
     if ([NSApp mainMenu] != nil) {
         return;
@@ -100,22 +112,33 @@ YCodeFileURLFromPath(NSString *path)
         applicationName = [[NSProcessInfo processInfo] processName];
     }
 
-    mainMenu = [[NSMenu alloc] initWithTitle:@""];
+    mainMenu = [[NSMenu alloc] initWithTitle:applicationName];
 
+#ifdef GNUSTEP
+    appMenu = [[NSMenu alloc] initWithTitle:@"Info"];
+#else
     appMenu = [[NSMenu alloc] initWithTitle:applicationName];
+#endif
     [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"About %@", applicationName],
                                    @selector(orderFrontStandardAboutPanel:), @"", NSApp)];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItem:YCodeMenuItem(@"Preferences...", @selector(showPrefPanel:), @",", self)];
+#ifdef GNUSTEP
+    [appMenu addItem:YCodeMenuItem(@"Help", @selector(showHelp:), @"?", NSApp)];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Info" action:NULL keyEquivalent:@""];
+#else
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"Hide %@", applicationName],
                                    @selector(hide:), @"h", NSApp)];
     [appMenu addItem:YCodeMenuItem(@"Hide Others", @selector(hideOtherApplications:), @"h", NSApp)];
+    [[appMenu itemAtIndex:[appMenu numberOfItems] - 1]
+        setKeyEquivalentModifierMask:NSCommandKeyMask | NSAlternateKeyMask];
     [appMenu addItem:YCodeMenuItem(@"Show All", @selector(unhideAllApplications:), @"", NSApp)];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"Quit %@", applicationName],
                                    @selector(terminate:), @"q", NSApp)];
     menuItem = [[NSMenuItem alloc] initWithTitle:applicationName action:NULL keyEquivalent:@""];
+#endif
     [menuItem setSubmenu:appMenu];
     [mainMenu addItem:menuItem];
     RELEASE(menuItem);
@@ -164,29 +187,41 @@ YCodeFileURLFromPath(NSString *path)
     RELEASE(menuItem);
     RELEASE(viewMenu);
 
-    productMenu = [[NSMenu alloc] initWithTitle:@"Product"];
+    productMenu = [[NSMenu alloc] initWithTitle:projectMenuTitle];
     [productMenu addItem:YCodeMenuItem(@"Build", @selector(buildProject:), @"b", self)];
     [productMenu addItem:YCodeMenuItem(@"Clean", @selector(cleanProject:), @"k", self)];
     [productMenu addItem:YCodeMenuItem(@"Run", @selector(runProject:), @"r", self)];
     [productMenu addItem:YCodeMenuItem(@"Stop", @selector(stopProject:), @".", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Product" action:NULL keyEquivalent:@""];
+    menuItem = [[NSMenuItem alloc] initWithTitle:projectMenuTitle action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:productMenu];
     [mainMenu addItem:menuItem];
     RELEASE(menuItem);
     RELEASE(productMenu);
 
-    windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+    windowMenu = [[NSMenu alloc] initWithTitle:windowMenuTitle];
     [windowMenu addItem:YCodeMenuItem(@"Minimize", @selector(performMiniaturize:), @"m", nil)];
     [windowMenu addItem:YCodeMenuItem(@"Zoom", @selector(performZoom:), @"", nil)];
+    [windowMenu addItem:YCodeMenuItem(@"Close", @selector(performClose:), @"W", nil)];
     [windowMenu addItem:[NSMenuItem separatorItem]];
     [windowMenu addItem:YCodeMenuItem(@"Bring All to Front", @selector(arrangeInFront:), @"", NSApp)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:NULL keyEquivalent:@""];
+    menuItem = [[NSMenuItem alloc] initWithTitle:windowMenuTitle action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:windowMenu];
     [mainMenu addItem:menuItem];
     [NSApp setWindowsMenu:windowMenu];
     RELEASE(menuItem);
     RELEASE(windowMenu);
 
+#ifdef GNUSTEP
+    helpMenu = [[NSMenu alloc] initWithTitle:@"Services"];
+    menuItem = [[NSMenuItem alloc] initWithTitle:@"Services" action:NULL keyEquivalent:@""];
+    [menuItem setSubmenu:helpMenu];
+    [mainMenu addItem:menuItem];
+    [NSApp setServicesMenu:helpMenu];
+    RELEASE(menuItem);
+    RELEASE(helpMenu);
+    [mainMenu addItem:YCodeMenuItem(@"Hide", @selector(hide:), @"h", NSApp)];
+    [mainMenu addItem:YCodeMenuItem(@"Quit", @selector(terminate:), @"q", NSApp)];
+#else
     helpMenu = [[NSMenu alloc] initWithTitle:@"Help"];
     [helpMenu addItem:YCodeMenuItem(@"Ycode Help", @selector(showHelp:), @"?", NSApp)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"Help" action:NULL keyEquivalent:@""];
@@ -194,6 +229,7 @@ YCodeFileURLFromPath(NSString *path)
     [mainMenu addItem:menuItem];
     RELEASE(menuItem);
     RELEASE(helpMenu);
+#endif
 
     [NSApp setMainMenu:mainMenu];
     RELEASE(mainMenu);
@@ -439,6 +475,10 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void)updateApplicationMenuName
 {
+#ifdef GNUSTEP
+    // GNUstep uses the main menu itself as the application menu.
+    return;
+#else
     NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"ApplicationName"];
     NSMenu *mainMenu = [NSApp mainMenu];
     NSMenuItem *applicationItem = nil;
@@ -471,6 +511,7 @@ YCodeFileURLFromPath(NSString *path)
         [self updateApplicationNameItemsInMenu:applicationMenu
                                       appName:applicationName];
     }
+#endif
 }
 
 - (void)updateApplicationNameItemsInMenu:(NSMenu *)menu appName:(NSString *)applicationName
@@ -676,6 +717,7 @@ YCodeFileURLFromPath(NSString *path)
     [openPanel setCanChooseFiles:YES];
     [openPanel setCanChooseDirectories:YES];
     [openPanel setAllowsMultipleSelection:NO];
+    [openPanel setTreatsFilePackagesAsDirectories:NO];
     [openPanel setAllowedFileTypes:@[@"xcodeproj", @"pcproj"]];
     [openPanel setMessage:@"Choose a project to open"];
     

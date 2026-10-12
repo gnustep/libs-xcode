@@ -48,6 +48,9 @@ instead of invoking the test binary from an arbitrary directory: tests read
   not validate them. Check affected UI behavior when changing controllers or
   interface resources.
 - Build documentation with `make -C Documentation` when changing gsdoc.
+- On macOS with full Xcode, use `sh Tests/run-macos.sh` to build the native
+  framework and tools and run the shared tests without GNUstep. Set
+  `CONFIGURATION=Release` to check the Release configuration.
 - `.github/workflows/main.yml` defines GCC and Clang GNUstep runtime variants.
   Preserve compatibility with both compilers and legacy/modern runtimes.
 - CI installs into its configured prefix before testing. Do not install into
@@ -74,7 +77,7 @@ instead of invoking the test binary from an arbitrary directory: tests read
   neighboring library or application license header for new source files.
 - Add sources and public headers to the relevant `GNUmakefile` lists; expose
   public API through `XCode/XCode.h` where appropriate. Check the native
-  `.xcodeproj` and `XCode.podspec` when a change affects those build paths.
+  `.xcodeproj` when a change affects the native macOS build path.
 
 ## Behavior to preserve
 

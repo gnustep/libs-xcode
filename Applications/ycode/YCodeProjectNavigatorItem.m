@@ -47,7 +47,6 @@
 {
     RELEASE(_representedObject);
     RELEASE(_children);
-    RELEASE(_parent);
     RELEASE(_displayName);
     RELEASE(_icon);
     [super dealloc];

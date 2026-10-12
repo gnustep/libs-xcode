@@ -30,7 +30,6 @@
 
 #import "xcsystem.h"
 
-extern char **environ;
 
 @implementation PBXShellScriptBuildPhase
 
@@ -112,7 +111,7 @@ extern char **environ;
   NSString *result = [NSString stringWithFormat: @"\n# Environment variables\n\n"];
   char **env = NULL;
   
-  for (env = environ; *env != 0; env++)
+  for (env = GSXCEnvironment(); *env != 0; env++)
     {
       char *thisEnv = *env;
       NSString *envStr = [NSString stringWithCString: thisEnv encoding: NSUTF8StringEncoding];
