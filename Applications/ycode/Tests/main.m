@@ -1513,6 +1513,78 @@ static void testProjectCenterExport(NSString *directory)
   [document close]; [document release];
 }
 
+@interface YCodeProjectNameTest : NSObject
++ (void)answerPanel:(NSTimer *)timer;
+@end
+@implementation YCodeProjectNameTest
++ (void)answerPanel:(NSTimer *)timer
+{
+  NSWindow *panel = [NSApp modalWindow];
+  if (!panel) return;
+  NSTextField *input = nil;
+  NSButton *button = nil;
+  NSEnumerator *enumerator = [[[panel contentView] subviews] objectEnumerator];
+  NSView *view;
+  NSString *title = [[timer userInfo] boolValue] ? @"Cancel" : @"Create";
+  while ((view = [enumerator nextObject]) != nil) {
+    if ([view isKindOfClass:[NSTextField class]] && [(NSTextField *)view isEditable])
+      input = (NSTextField *)view;
+    if ([view isKindOfClass:[NSButton class]] && [[(NSButton *)view title] isEqual:title])
+      button = (NSButton *)view;
+  }
+  testAssert(input != nil && ![input isHidden] && NSWidth([input frame]) > 100,
+    @"Project-name dialog displays an editable name field");
+  testAssert(button != nil, @"Project-name dialog offers Create and Cancel actions");
+  [input setStringValue:@"  My Named Project  "];
+  if (button) [button sendAction:[button action] to:[button target]];
+  else [NSApp stopModalWithCode:NSModalResponseCancel];
+  [NSApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
+    location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:[panel windowNumber]
+    context:nil subtype:0 data1:0 data2:0] atStart:NO];
+}
+@end
+
+static void testProjectNameDialog(void)
+{
+  AppController *controller = [[AppController alloc] init];
+  NSUInteger choice;
+  for (choice = 0; choice < 2; choice++) {
+    NSTimer *timer = [NSTimer timerWithTimeInterval:0.1 target:[YCodeProjectNameTest class]
+      selector:@selector(answerPanel:) userInfo:[NSNumber numberWithBool:choice != 0] repeats:YES];
+    [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSModalPanelRunLoopMode];
+    NSString *name = [controller getProjectNameFromUser];
+    [timer invalidate];
+    testAssert(choice == 0 ? [name isEqual:@"My Named Project"] : name == nil,
+      @"Create returns the entered name after panel teardown; Cancel returns no name");
+  }
+  [controller release];
+}
+
+static void testWindowFramePersistence(void)
+{
+  YCodeWindowController *first = [[YCodeWindowController alloc] init];
+  NSRect frame = NSMakeRect(80, 70, 760, 480);
+  [[first window] setFrame:frame display:NO];
+  [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidMoveNotification
+    object:[first window]];
+  YCodeWindowController *second = [[YCodeWindowController alloc] init];
+  testAssert(NSEqualRects([[second window] frame], frame),
+    @"New project windows restore the last main-window position and size");
+  testAssert(![second shouldCascadeWindows], @"Window cascading does not override saved placement");
+  frame.origin = NSMakePoint(120, 100);
+  frame.size = NSMakeSize(800, 500);
+  [[second window] setFrame:frame display:NO];
+  [second close];
+  [second release];
+  YCodeWindowController *reopened = [[YCodeWindowController alloc] init];
+  testAssert(NSEqualRects([[reopened window] frame], frame),
+    @"Closing a second project saves its placement while another window remains open");
+  [reopened close];
+  [reopened release];
+  [first close];
+  [first release];
+}
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -1526,6 +1598,10 @@ int main(void)
   NSURL *url;
 
   [NSApplication sharedApplication];
+  id savedWindowFrame = [[[NSUserDefaults standardUserDefaults]
+    objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
+  testWindowFramePersistence();
+  testProjectNameDialog();
   testApplicationStartup();
   testEditorColors();
   testSyntaxHighlighting();
@@ -1789,6 +1865,11 @@ int main(void)
         [defaults removeObjectForKey:key];
       }
   }
+  if (savedWindowFrame)
+    [defaults setObject:savedWindowFrame forKey:@"NSWindow Frame YCodeMainWindow"];
+  else
+    [defaults removeObjectForKey:@"NSWindow Frame YCodeMainWindow"];
+  [savedWindowFrame release];
   [defaults synchronize];
   [manager removeItemAtPath:temporaryDirectory error:NULL];
   NSLog(@"Ycode project loading checks: %lu failures", (unsigned long)failures);

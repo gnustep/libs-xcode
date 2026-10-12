@@ -47,7 +47,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     return AUTORELEASE(scrollView);
 }
 
-@interface YCodeWindowController (BuildIssues)
+@interface YCodeWindowController (Private)
+- (void)saveWindowFrame:(NSNotification *)notification;
 - (void)appendConsoleOutput:(NSString *)output;
 - (void)consumeDiagnostics:(NSString *)output buffer:(NSMutableString *)buffer;
 - (void)finishDiagnostics;
@@ -82,10 +83,27 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [[self window] setTitle:@"Ycode"];
         [[self window] setMinSize:NSMakeSize(700, 420)];
         [self setupInterface];
+        [self setShouldCascadeWindows:NO];
+        [[self window] setFrameUsingName:@"YCodeMainWindow"];
+        // Share the last position across projects. A frame autosave name can
+        // only be owned by one live window, so save each window explicitly.
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(saveWindowFrame:)
+            name:NSWindowDidMoveNotification object:[self window]];
+        [center addObserver:self selector:@selector(saveWindowFrame:)
+            name:NSWindowDidResizeNotification object:[self window]];
+        [center addObserver:self selector:@selector(saveWindowFrame:)
+            name:NSWindowWillCloseNotification object:[self window]];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(debuggerDidChange:)
             name:YCodeDebuggerDidChangeNotification object:nil];
     }
     return self;
+}
+
+- (void)saveWindowFrame:(NSNotification *)notification
+{
+    if (![[self window] isMiniaturized])
+        [[self window] saveFrameUsingName:@"YCodeMainWindow"];
 }
 
 - (void)dealloc

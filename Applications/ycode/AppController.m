@@ -27,6 +27,87 @@
 - (YCodeEditorController *)currentEditorController;
 @end
 
+@interface YCodeProjectNamePanel : NSPanel
+{
+    NSTextField *_nameField;
+}
+- (NSString *)projectName;
+- (void)acceptName:(id)sender;
+@end
+
+@implementation YCodeProjectNamePanel
+- (id)init
+{
+    self = [super initWithContentRect:NSMakeRect(0, 0, 380, 140)
+        styleMask:NSTitledWindowMask | NSClosableWindowMask
+        backing:NSBackingStoreBuffered defer:NO];
+    if (self) {
+        [self setTitle:@"Project Name"];
+        [self setReleasedWhenClosed:NO];
+        [self setDelegate:self];
+        NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 100, 340, 22)];
+        [label setStringValue:@"Enter a name for your new project:"];
+        [label setEditable:NO];
+        [label setSelectable:NO];
+        [label setBezeled:NO];
+        [label setDrawsBackground:NO];
+        [[self contentView] addSubview:label];
+        RELEASE(label);
+        _nameField = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 65, 340, 26)];
+        [_nameField setStringValue:@"MyProject"];
+        [[self contentView] addSubview:_nameField];
+        RELEASE(_nameField); // Owned by the content view.
+        [self setInitialFirstResponder:_nameField];
+        NSButton *create = [[NSButton alloc] initWithFrame:NSMakeRect(265, 15, 95, 32)];
+        [create setTitle:@"Create"];
+        [create setBezelStyle:NSRoundedBezelStyle];
+        [create setTarget:self];
+        [create setAction:@selector(acceptName:)];
+        [create setKeyEquivalent:@"\r"];
+        [[self contentView] addSubview:create];
+        [self setDefaultButtonCell:[create cell]];
+        RELEASE(create);
+        NSButton *cancel = [[NSButton alloc] initWithFrame:NSMakeRect(160, 15, 95, 32)];
+        [cancel setTitle:@"Cancel"];
+        [cancel setBezelStyle:NSRoundedBezelStyle];
+        [cancel setTarget:self];
+        [cancel setAction:@selector(cancelOperation:)];
+        [cancel setKeyEquivalent:@"\033"];
+        [[self contentView] addSubview:cancel];
+        RELEASE(cancel);
+        [self center];
+        [_nameField selectText:self];
+    }
+    return self;
+}
+- (NSString *)projectName
+{
+    return [[_nameField stringValue] stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+- (void)acceptName:(id)sender
+{
+    NSString *name = [self projectName];
+    if (![name length] || [name isEqual:@"."] || [name isEqual:@".."] ||
+        [name rangeOfString:@"/"].location != NSNotFound ||
+        [name rangeOfString:@"\\"].location != NSNotFound) {
+        NSBeep();
+        [_nameField selectText:self];
+        return;
+    }
+    [NSApp stopModalWithCode:NSModalResponseOK];
+}
+- (void)cancelOperation:(id)sender
+{
+    [NSApp stopModalWithCode:NSModalResponseCancel];
+}
+- (BOOL)windowShouldClose:(id)sender
+{
+    [self cancelOperation:sender];
+    return NO;
+}
+@end
+
 static NSMenuItem *
 YCodeMenuItem(NSString *title, SEL action, NSString *keyEquivalent, id target)
 {
@@ -507,30 +588,13 @@ YCodeFileURLFromPath(NSString *path)
 
 - (NSString *) getProjectNameFromUser
 {
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert setMessageText:@"Project Name"];
-    [alert setInformativeText:@"Enter a name for your new project:"];
-    [alert addButtonWithTitle:@"Create"];
-    [alert addButtonWithTitle:@"Cancel"];
-    
-    NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
-    [input setStringValue:@"MyProject"];
-    
-    // GNUstep compatibility: Try setAccessoryView, fallback if not available
-    if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
-        [alert performSelector:@selector(setAccessoryView:) withObject:input];
-    }
-    
-    NSInteger result = [alert runModal];
+    YCodeProjectNamePanel *panel = [[YCodeProjectNamePanel alloc] init];
+    NSInteger result = [NSApp runModalForWindow:panel];
     NSString *projectName = nil;
-    
-    if (result == NSAlertFirstButtonReturn) {
-        projectName = [input stringValue];
-    }
-    
-    RELEASE(input);
-    RELEASE(alert);
-    
+    if (result == NSModalResponseOK)
+        projectName = AUTORELEASE([[panel projectName] copy]);
+    [panel orderOut:self];
+    RELEASE(panel);
     return projectName;
 }
 
