@@ -889,7 +889,8 @@ static void testDebuggerRecords(void)
     @"*running,thread-id=\"all\"\n~\"café\\n\"\n"
     @"*stopped,reason=\"breakpoint-hit\",frame={fullname=\"/tmp/A \\\"quoted\\\".m\",line=\"4\",args=[{name=\"argc\",value=\"1\"}]}\n";
   NSData *bytes = [records dataUsingEncoding:NSUTF8StringEncoding];
-  for (NSUInteger i = 0; i < [bytes length]; i++)
+  NSUInteger i;
+  for (i = 0; i < [bytes length]; i++)
     [debugger receiveData:[bytes subdataWithRange:NSMakeRange(i, 1)]];
   testAssert([debugger isReady] && ![debugger isRunning], @"Chunked MI records update ready/running/stopped state");
   testAssert([probe->file isEqual:@"/tmp/A \"quoted\".m"] && probe->line == 4,
@@ -1079,7 +1080,8 @@ static void testBuildAndRun(NSString *temporaryDirectory)
   [[NSUserDefaults standardUserDefaults] setObject:fakeGDB forKey:@"DebuggerPath"];
   NSString *breakpointStorage = [@"YCodeDebuggerUITest:" stringByAppendingString:root];
   [[build debugger] setBreakpointStorageKey:breakpointStorage];
-  for (NSUInteger session = 0; session < 2; session++) {
+  NSUInteger session;
+  for (session = 0; session < 2; session++) {
     [window debugProject:nil];
     waitForDebugger(build);
     testAssert([build isDebugging] && [[build debugger] isReady], @"Build and start a fresh debugger session");

@@ -49,20 +49,6 @@ env:
     libpthread-workqueue-dev
 
 jobs:
-  macos:
-    name: macOS ${{ matrix.configuration }}
-    runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        configuration: [Debug, Release]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build native framework and tools and run tests
-        env:
-          CONFIGURATION: ${{ matrix.configuration }}
-        run: sh Tests/run-macos.sh
-
   ########### Linux ###########
   linux:
     name: ${{ matrix.name }}

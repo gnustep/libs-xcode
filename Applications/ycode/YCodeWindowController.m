@@ -517,7 +517,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         NSArray *titles = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
             @"Next", @"Step Into", @"Step Out", nil];
         CGFloat x = 2;
-        for (NSUInteger index = 0; index < [titles count]; index++) {
+        NSUInteger index;
+        for (index = 0; index < [titles count]; index++) {
             NSButton *button = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(x, 3, 70, 24)]);
             [button setTitle:[titles objectAtIndex:index]];
             [button setFont:[NSFont systemFontOfSize:11]];

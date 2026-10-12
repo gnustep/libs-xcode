@@ -552,7 +552,7 @@
     
     NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
     if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
-        [alert setAccessoryView:input];
+        [alert performSelector:@selector(setAccessoryView:) withObject:input];
     }
     
     if ([alert runModal] == NSAlertFirstButtonReturn) {

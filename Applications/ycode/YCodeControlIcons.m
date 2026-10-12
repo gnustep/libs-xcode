@@ -71,7 +71,8 @@ NSImage *YCodeControlIcon(NSString *name, CGFloat size)
     {
       [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(7, 4, 10, 14)] fill];
       [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(9, 17, 6, 5)] fill];
-      for (NSInteger y = 7; y <= 17; y += 5)
+      NSInteger y;
+      for (y = 7; y <= 17; y += 5)
         { YCLine(3, y - 2, 8, y); YCLine(16, y, 21, y - 2); }
       [[NSColor whiteColor] set]; YCLine(12, 6, 12, 15);
     }

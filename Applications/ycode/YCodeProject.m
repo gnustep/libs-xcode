@@ -187,8 +187,9 @@ static NSString *YCodeRelativeFilePath(NSString *path, NSString *directory)
         && [[fileParts objectAtIndex:common] isEqual:[baseParts objectAtIndex:common]]) common++;
     if (common == 0) return path;
     NSMutableArray *parts = [NSMutableArray array];
-    for (NSUInteger i = common; i < [baseParts count]; i++) [parts addObject:@".."];
-    for (NSUInteger i = common; i < [fileParts count]; i++) [parts addObject:[fileParts objectAtIndex:i]];
+    NSUInteger i;
+    for (i = common; i < [baseParts count]; i++) [parts addObject:@".."];
+    for (i = common; i < [fileParts count]; i++) [parts addObject:[fileParts objectAtIndex:i]];
     return [parts count] ? [NSString pathWithComponents:parts] : @".";
 }
 
@@ -206,7 +207,8 @@ static NSArray *YCodeSettingWords(id value)
     NSMutableString *word = [NSMutableString string];
     unichar quote = 0;
     BOOL escaped = NO, started = NO;
-    for (NSUInteger i = 0; i < [value length]; i++) {
+    NSUInteger i;
+    for (i = 0; i < [value length]; i++) {
         unichar c = [value characterAtIndex:i];
         if (escaped) { [word appendFormat:@"%C", c]; escaped = NO; started = YES; }
         else if (c == '\\' && quote != '\'') { escaped = YES; started = YES; }
@@ -920,7 +922,8 @@ YCodeProjectPackagePathForPath(NSString *path)
           [group setSourceTree:@"<group>"];
           [group setChildren:[NSMutableArray array]];
           id phase = [phases objectAtIndex:categoryIndex++];
-          for (NSUInteger index = 1; index < [category count]; index++) {
+          NSUInteger index;
+          for (index = 1; index < [category count]; index++) {
               NSString *key = [category objectAtIndex:index];
               {
                 NSEnumerator *entryEnumerator = [[projectDict objectForKey:key] objectEnumerator];

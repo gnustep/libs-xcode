@@ -413,7 +413,8 @@
     NSRange selection = [_textView selectedRange];
     NSUInteger lineNumber = 1;
     
-    for (NSUInteger i = 0; i < selection.location && i < [text length]; i++) {
+    NSUInteger i;
+    for (i = 0; i < selection.location && i < [text length]; i++) {
         if ([text characterAtIndex:i] == '\n') {
             lineNumber++;
         }
@@ -429,7 +430,8 @@
     NSString *text = [_textView string];
     NSUInteger lineCount = 1;
     
-    for (NSUInteger i = 0; i < [text length]; i++) {
+    NSUInteger i;
+    for (i = 0; i < [text length]; i++) {
         if ([text characterAtIndex:i] == '\n') {
             lineCount++;
         }
@@ -447,7 +449,8 @@
     NSUInteger start = 0;
     
     // Find start of target line
-    for (NSUInteger i = 0; i < [text length] && currentLine < lineNumber; i++) {
+    NSUInteger i;
+    for (i = 0; i < [text length] && currentLine < lineNumber; i++) {
         if ([text characterAtIndex:i] == '\n') {
             currentLine++;
             start = i + 1;
@@ -460,7 +463,7 @@
     
     // Find end of target line
     NSUInteger end = start;
-    for (NSUInteger i = start; i < [text length]; i++) {
+    for (i = start; i < [text length]; i++) {
         if ([text characterAtIndex:i] == '\n') {
             break;
         }
@@ -868,7 +871,8 @@
     NSUInteger characterIndex = 0;
     
     // Count lines up to visible range
-    for (NSUInteger i = 0; i < visibleRange.location && i < [text length]; i++) {
+    NSUInteger i;
+    for (i = 0; i < visibleRange.location && i < [text length]; i++) {
         if ([text characterAtIndex:i] == '\n') {
             lineNumber++;
         }

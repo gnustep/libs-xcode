@@ -16,6 +16,17 @@
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
 
+@interface AppController (Private)
+- (void)updateApplicationMenuName;
+- (void)updateApplicationNameItemsInMenu:(NSMenu *)menu appName:(NSString *)applicationName;
+- (void)connectDocumentMenuActions;
+- (void)connectDocumentMenuActionsInMenu:(NSMenu *)menu;
+- (BOOL)saveActiveProjectShowingPanel:(BOOL)showPanel;
+- (YCodeProject *)currentProject;
+- (YCodeWindowController *)currentProjectWindowController;
+- (YCodeEditorController *)currentEditorController;
+@end
+
 static NSMenuItem *
 YCodeMenuItem(NSString *title, SEL action, NSString *keyEquivalent, id target)
 {
@@ -207,7 +218,8 @@ YCodeFileURLFromPath(NSString *path)
     NSArray *debugLabels = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
         @"Next", @"Step Into", @"Step Out", @"Up", @"Down", nil];
     NSArray *debugIcons = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
-    for (NSUInteger i = 0; i < [debugLabels count]; i++) {
+    NSUInteger i;
+    for (i = 0; i < [debugLabels count]; i++) {
         NSMenuItem *item = YCodeMenuItem([debugLabels objectAtIndex:i], @selector(debugAction:), @"", self);
         [item setTag:i];
         [item setImage:YCodeControlIcon([debugIcons objectAtIndex:i], 16)];
@@ -506,9 +518,7 @@ YCodeFileURLFromPath(NSString *path)
     
     // GNUstep compatibility: Try setAccessoryView, fallback if not available
     if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
-        if ([alert respondsToSelector:@selector(setAccessoryView:)]) {
-            [alert setAccessoryView:input];
-        }
+        [alert performSelector:@selector(setAccessoryView:) withObject:input];
     }
     
     NSInteger result = [alert runModal];
