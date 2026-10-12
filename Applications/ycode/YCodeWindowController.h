@@ -67,6 +67,9 @@
     IBOutlet NSView *_bottomView;
     IBOutlet NSTabView *_bottomTabView;
     IBOutlet NSTextView *_consoleTextView;
+    NSTextView *_debuggerTextView;
+    NSTextField *_debuggerCommandField;
+    NSView *_debuggerControls;
     NSTableView *_issuesTableView;
     NSMutableArray *_buildIssues;
     NSMutableString *_diagnosticOutput;

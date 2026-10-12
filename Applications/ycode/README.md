@@ -39,6 +39,15 @@ remain supported. Each project remembers its last selected source file and
 reopens it next time. Closing the last source tab clears that saved selection;
 missing files are skipped when reopening the project.
 
+**File > Save** and its keyboard shortcut save the active source tab. With no
+source tab open, Save saves the project.
+
+The navigator's **Add File...** and **Remove File from Project** actions update
+project references and build-phase membership and mark the project as modified.
+Removing a reference leaves the file on disk. Use **File > Save Project** to
+save these changes while a source tab is open. Adding a group also marks the
+project as modified.
+
 Ycode starts without creating an untitled project. On GNUstep, the main menu
 uses Info for About, Preferences, and Help, with Services, Hide, and Quit at
 the top level. Build and run commands are in Project; window commands are in
@@ -70,10 +79,21 @@ Step Out, and Up/Down stack-frame navigation. Debug initially waits for Go,
 so you can set breakpoints before the program starts. Select a source line and
 choose **Toggle Breakpoint at Selection** to add or remove a breakpoint;
 Ycode remembers source breakpoints per project in its user preferences.
-Breakpoint changes are reported in the console. Stopping or stepping selects
-the reported source line in the editor.
+The bottom pane has separate **Console**, **Issues**, and **Debugger** tabs.
+The Debugger tab contains the GDB transcript, execution controls, and command
+field. Build and program output remain in Console. Starting a debugger session
+or stopping at a source location selects the Debugger tab.
 
-The field below the console accepts GDB commands such as `print variable`,
-`backtrace`, and `break main`. Press Return to send a command. **Project > Stop**
-ends the debugger session; an inferior's normal exit leaves GDB available for
-another Go. A failed build never launches the debugger.
+While debugging, a gutter appears beside the source line numbers. Click it to
+add or remove a breakpoint; Shift-click a breakpoint to enable or disable it.
+Enabled breakpoints are red dots; disabled or unresolved breakpoints are grey.
+A yellow arrow marks the current stopped line, drawn behind the breakpoint dot
+when both occupy that line. The arrow clears on resume, exit, or session end.
+GDB breakpoint commands also update the markers. Breakpoints relocated by GDB
+appear at the executable source line. Saved breakpoints remain visible outside
+a debug session, and their enabled/disabled state is remembered per project.
+
+The field in the Debugger tab accepts GDB commands such as `print variable`,
+`backtrace`, `break main`, `disable 1`, and `enable 1`. Press Return to send a
+command. **Project > Stop** ends the debugger session; an inferior's normal exit
+leaves GDB available for another Go. A failed build never launches the debugger.

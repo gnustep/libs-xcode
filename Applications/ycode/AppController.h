@@ -68,12 +68,14 @@
 - (NSString *) getProjectNameFromUser;
 
 /**
- * Saves the active project.
+ * Saves the active source file, or the project when no source file is open.
  */
 - (IBAction) saveDocument: (id)sender;
 - (IBAction) saveDocumentAs: (id)sender;
 - (IBAction) saveDocumentTo: (id)sender;
 - (IBAction) saveAllDocuments: (id)sender;
+/** Saves project structure while keeping source-file Save independent. */
+- (IBAction) saveProject: (id)sender;
 
 /**
  * Determines whether the application should terminate.

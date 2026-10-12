@@ -42,6 +42,35 @@
 #import <XCode/XCBuildConfiguration.h>
 #import <XCode/XCConfigurationList.h>
 
+/* Resolve group-relative references without depending on the visible outline. */
+static NSString *YCodeReferencePath(id object, NSString *parent, NSString *root)
+{
+    NSString *path = [object path];
+    NSString *tree = [object sourceTree];
+    if ([path isAbsolutePath]) return [path stringByStandardizingPath];
+    NSString *base = nil;
+    if (![tree length] || [tree isEqual:@"<group>"]) base = parent;
+    else if ([tree isEqual:@"SOURCE_ROOT"]) base = root;
+    if (!base) return nil;
+    return [path length] ? [[base stringByAppendingPathComponent:path] stringByStandardizingPath] : base;
+}
+
+static void YCodeCollectFileEntries(PBXGroup *group, NSString *parent, NSString *root, NSMutableArray *entries)
+{
+    NSString *directory = YCodeReferencePath(group, parent, root);
+    for (id child in [group children]) {
+        if ([child isKindOfClass:[PBXGroup class]])
+            YCodeCollectFileEntries(child, directory, root, entries);
+        else if ([child isKindOfClass:[PBXFileReference class]]) {
+            NSMutableDictionary *entry = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                child, @"file", group, @"group", nil];
+            NSString *path = YCodeReferencePath(child, directory, root);
+            if (path) [entry setObject:path forKey:@"path"];
+            [entries addObject:entry];
+        }
+    }
+}
+
 static NSMutableDictionary *
 YCodeBuildSettingsForProduct(NSString *productName)
 {
@@ -757,6 +786,7 @@ YCodeProjectPackagePathForPath(NSString *path)
         BOOL success = [_container save];
         
         if (success) {
+            [self updateChangeCount:NSChangeCleared];
             if ([[originalPath pathExtension] isEqualToString:@"pcproj"]) {
                 [self setProjectPath:originalPath];
             } else {
@@ -858,44 +888,90 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 #pragma mark - File Management
 
+- (NSArray *)projectFileEntries
+{
+    NSMutableArray *entries = [NSMutableArray array];
+    NSString *root = [self projectDirectoryPath];
+    YCodeCollectFileEntries([_project mainGroup], root, root, entries);
+    return entries;
+}
+
 - (void)addFilesToProject:(NSArray *)filePaths
 {
-    if (!_project || !filePaths) {
-        return;
-    }
-    
     PBXGroup *mainGroup = [_project mainGroup];
-    NSEnumerator *enumerator = [filePaths objectEnumerator];
-    NSString *filePath;
-    
-    while ((filePath = [enumerator nextObject]) != nil) {
-        PBXFileReference *fileRef = [[PBXFileReference alloc] initWithPath:filePath];
-        NSMutableArray *children = [mainGroup children];
-
-        if (children == nil) {
-            children = [NSMutableArray array];
-            [mainGroup setChildren:children];
-        }
-        [children addObject:fileRef];
-        
-        // Add to appropriate build phase based on file type
+    if (!mainGroup || ![filePaths count]) return;
+    NSMutableSet *knownPaths = [NSMutableSet set];
+    for (NSDictionary *entry in [self projectFileEntries])
+        if ([entry objectForKey:@"path"]) [knownPaths addObject:[entry objectForKey:@"path"]];
+    BOOL changed = NO;
+    for (NSString *filePath in filePaths) {
+        if (![filePath length]) continue;
+        NSString *absolute = [filePath isAbsolutePath] ? filePath :
+            [[self projectDirectoryPath] stringByAppendingPathComponent:filePath];
+        absolute = [absolute stringByStandardizingPath];
+        if (!absolute || [knownPaths containsObject:absolute]) continue;
+        NSString *root = [[self projectDirectoryPath] stringByAppendingString:@"/"];
+        BOOL local = root && [absolute hasPrefix:root];
+        NSString *storedPath = local ? [absolute substringFromIndex:[root length]] : absolute;
+        PBXFileReference *fileRef = [[PBXFileReference alloc] initWithPath:storedPath];
+        [fileRef setSourceTree:local ? @"SOURCE_ROOT" : @"<absolute>"];
+        if (![mainGroup children]) [mainGroup setChildren:[NSMutableArray array]];
+        [[mainGroup children] addObject:fileRef];
         [self addFileToBuildPhases:fileRef];
         RELEASE(fileRef);
+        [knownPaths addObject:absolute];
+        changed = YES;
     }
-    
-    // Notify navigator of changes
+    if (changed) {
+        [self updateChangeCount:NSChangeDone];
+        [_navigatorController projectDidChange];
+    }
+}
+
+- (void)removeFileReferencesFromProject:(NSArray *)references
+{
+    if (![references count]) return;
+    BOOL changed = NO;
+    for (NSDictionary *entry in [self projectFileEntries]) {
+        if ([references containsObject:[entry objectForKey:@"file"]]) {
+            [[[entry objectForKey:@"group"] children] removeObjectIdenticalTo:[entry objectForKey:@"file"]];
+            changed = YES;
+        }
+    }
+    if (!changed) return;
+    for (PBXTarget *target in [_project targets])
+        for (PBXBuildPhase *phase in [target buildPhases])
+            for (PBXBuildFile *file in [NSArray arrayWithArray:[phase files] ?: [NSArray array]])
+                if ([references containsObject:[file fileRef]])
+                    [[phase files] removeObjectIdenticalTo:file];
+    [self updateChangeCount:NSChangeDone];
     [_navigatorController projectDidChange];
+}
+
+- (void)removeFileReferenceFromProject:(PBXFileReference *)reference
+{
+    if (reference) [self removeFileReferencesFromProject:[NSArray arrayWithObject:reference]];
 }
 
 - (void)removeFilesFromProject:(NSArray *)filePaths
 {
-    // Implementation for removing files
-    [_navigatorController projectDidChange];
+    NSMutableSet *paths = [NSMutableSet set];
+    for (NSString *path in filePaths) {
+        if (![path length]) continue;
+        NSString *absolute = [path isAbsolutePath] ? path :
+            [[self projectDirectoryPath] stringByAppendingPathComponent:path];
+        if (absolute) [paths addObject:[absolute stringByStandardizingPath]];
+    }
+    NSMutableArray *references = [NSMutableArray array];
+    for (NSDictionary *entry in [self projectFileEntries])
+        if ([entry objectForKey:@"path"] && [paths containsObject:[entry objectForKey:@"path"]])
+            [references addObject:[entry objectForKey:@"file"]];
+    [self removeFileReferencesFromProject:references];
 }
 
 - (BOOL)addGroupToProject:(NSString *)groupName
 {
-    if (!_project || !groupName) {
+    if (![_project mainGroup] || ![groupName length]) {
         return NO;
     }
     
@@ -911,6 +987,7 @@ YCodeProjectPackagePathForPath(NSString *path)
     }
     [children addObject:newGroup];
     
+    [self updateChangeCount:NSChangeDone];
     [_navigatorController projectDidChange];
     RELEASE(newGroup);
     return YES;
@@ -918,7 +995,7 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (void)addFileToBuildPhases:(PBXFileReference *)fileRef
 {
-    NSString *extension = [[fileRef path] pathExtension];
+    NSString *extension = [[[fileRef path] pathExtension] lowercaseString];
     NSArray *targets = [_project targets];
     
     NSEnumerator *targetEnum = [targets objectEnumerator];
@@ -930,7 +1007,9 @@ YCodeProjectPackagePathForPath(NSString *path)
         PBXBuildPhase *destinationPhase = nil;
 
         if ([extension isEqualToString:@"m"] || [extension isEqualToString:@"mm"] || 
-            [extension isEqualToString:@"c"] || [extension isEqualToString:@"cpp"]) {
+            [extension isEqualToString:@"c"] || [extension isEqualToString:@"cpp"] ||
+            [extension isEqualToString:@"cc"] || [extension isEqualToString:@"cp"] ||
+            [extension isEqualToString:@"cxx"] || [extension isEqualToString:@"c++"]) {
             while ((phase = [phaseEnum nextObject]) != nil) {
                 if ([phase isKindOfClass:[PBXSourcesBuildPhase class]]) {
                     destinationPhase = phase;

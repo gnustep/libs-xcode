@@ -43,6 +43,7 @@ typedef enum {
 @protocol YCodeBuildSystemDelegate <NSObject>
 
 @optional
+- (void)buildSystem:(id)buildSystem didReceiveDebuggerOutput:(NSString *)output;
 - (void)buildSystem:(id)buildSystem stoppedAtFile:(NSString *)file line:(NSUInteger)line;
 - (void)buildSystemDidStartBuild:(id)buildSystem;
 - (void)buildSystemDidFinishBuild:(id)buildSystem success:(BOOL)success;

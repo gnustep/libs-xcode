@@ -31,6 +31,7 @@
 @class YCodeEditorDocument;
 @class YCodeSyntaxHighlighter;
 @class YCEditorLineNumberView;
+@class YCodeDebugger;
 
 @interface YCEditorView : NSView <NSTextViewDelegate>
 {
@@ -160,6 +161,16 @@
  * Line number view
  */
 @interface YCEditorRulerView : NSRulerView
+{
+    YCodeDebugger *_debugger;
+    NSString *_debugFile;
+    BOOL _debugGutterVisible;
+}
+/** Associate this source ruler with its project's debugger. */
+- (void)setDebugger:(YCodeDebugger *)debugger file:(NSString *)file active:(BOOL)active;
+- (BOOL)debugGutterVisible;
+/** One-based source line at a point in ruler coordinates, or zero outside text. */
+- (NSUInteger)sourceLineAtPoint:(NSPoint)point;
 @end
 
 @interface YCEditorLineNumberView : NSRulerView

@@ -14,6 +14,7 @@
 #import "YCodeDocumentController.h"
 #import "YCodeProject.h"
 #import "YCodeEditorController.h"
+#import "YCodeEditorDocument.h"
 
 static NSMenuItem *
 YCodeMenuItem(NSString *title, SEL action, NSString *keyEquivalent, id target)
@@ -155,6 +156,7 @@ YCodeFileURLFromPath(NSString *path)
     [fileMenu addItem:YCodeMenuItem(@"Save", @selector(saveDocument:), @"s", self)];
     [fileMenu addItem:YCodeMenuItem(@"Save As...", @selector(saveDocumentAs:), @"S", self)];
     [fileMenu addItem:YCodeMenuItem(@"Save All", @selector(saveAllDocuments:), @"", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Save Project", @selector(saveProject:), @"", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"File" action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:fileMenu];
     [mainMenu addItem:menuItem];
@@ -375,12 +377,31 @@ YCodeFileURLFromPath(NSString *path)
 
 - (IBAction)saveDocument:(id)sender
 {
+    YCodeEditorController *editor = [self currentEditorController];
+    if ([editor currentDocument]) {
+        if (![editor saveCurrentFile]) {
+            NSAlert *alert = [[NSAlert alloc] init];
+            [alert setMessageText:@"Unable to save file"];
+            [alert setInformativeText:[NSString stringWithFormat:
+                @"Could not save %@. Your changes remain open in the editor.",
+                [[editor currentDocument] filePath]]];
+            [alert addButtonWithTitle:@"OK"];
+            [alert runModal];
+            RELEASE(alert);
+        }
+        return;
+    }
     [self saveActiveProjectShowingPanel:NO];
 }
 
 - (IBAction)saveDocumentAs:(id)sender
 {
     [self saveActiveProjectShowingPanel:YES];
+}
+
+- (IBAction)saveProject:(id)sender
+{
+    [self saveActiveProjectShowingPanel:NO];
 }
 
 - (IBAction)saveDocumentTo:(id)sender

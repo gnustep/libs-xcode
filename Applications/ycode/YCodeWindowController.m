@@ -81,6 +81,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [[self window] setTitle:@"Ycode"];
         [[self window] setMinSize:NSMakeSize(700, 420)];
         [self setupInterface];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(debuggerDidChange:)
+            name:YCodeDebuggerDidChangeNotification object:nil];
     }
     return self;
 }
@@ -403,6 +405,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)updateInspectors:(NSNotification *)notification
 {
     if (notification && [notification object] != _editorController) return;
+    [self updateDebuggerViews];
     for (NSTabViewItem *item in [_inspectorTabView tabViewItems])
         [(YCInspectorView *)[item view] inspectDocument:
             _project ? [_editorController currentDocument] : nil];
@@ -468,22 +471,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         // Add console tab
         NSTabViewItem *consoleTab = [[NSTabViewItem alloc] initWithIdentifier:@"console"];
         [consoleTab setLabel:@"Console"];
-        if (_consoleTextView) {
-            NSView *console = AUTORELEASE([[NSView alloc] initWithFrame:[_bottomView bounds]]);
-            NSRect bounds = [console bounds];
-            NSScrollView *scroll = YCodeScrollViewWithDocumentView(_consoleTextView);
-            [scroll setFrame:NSMakeRect(0, 28, NSWidth(bounds), MAX(0, NSHeight(bounds) - 28))];
-            [scroll setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-            [console addSubview:scroll];
-            NSTextField *command = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(4, 2, MAX(0, NSWidth(bounds) - 8), 24)]);
-            [command setAutoresizingMask:NSViewWidthSizable];
-            [[command cell] setPlaceholderString:@"GDB command"];
-            [command setToolTip:@"GDB command (for example: print variable, backtrace, break main)"];
-            [command setTarget:self];
-            [command setAction:@selector(debugConsoleCommand:)];
-            [console addSubview:command];
-            [consoleTab setView:console];
-        }
+        [consoleTab setView:YCodeScrollViewWithDocumentView(_consoleTextView)];
         [_bottomTabView addTabViewItem:consoleTab];
         RELEASE(consoleTab);
         
@@ -499,6 +487,58 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         RELEASE(_issuesTableView);
         [_bottomTabView addTabViewItem:issuesTab];
         RELEASE(issuesTab);
+
+        NSTabViewItem *debuggerTab = [[NSTabViewItem alloc] initWithIdentifier:@"debugger"];
+        [debuggerTab setLabel:@"Debugger"];
+        NSView *debuggerView = AUTORELEASE([[NSView alloc] initWithFrame:[_bottomTabView contentRect]]);
+        NSRect bounds = [debuggerView bounds];
+        _debuggerControls = AUTORELEASE([[NSView alloc] initWithFrame:
+            NSMakeRect(0, 0, 494, 30)]);
+        NSArray *titles = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
+            @"Next", @"Step Into", @"Step Out", nil];
+        CGFloat x = 2;
+        for (NSUInteger index = 0; index < [titles count]; index++) {
+            NSButton *button = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(x, 3, 70, 24)]);
+            [button setTitle:[titles objectAtIndex:index]];
+            [button setFont:[NSFont systemFontOfSize:11]];
+            [button setBezelStyle:NSRoundedBezelStyle];
+            [button setTag:index];
+            [button setTarget:self];
+            [button setAction:@selector(debugAction:)];
+            [button setEnabled:NO];
+            [_debuggerControls addSubview:button];
+            x += 70;
+        }
+        NSScrollView *controlsScroll = AUTORELEASE([[NSScrollView alloc] initWithFrame:
+            NSMakeRect(0, MAX(0, NSHeight(bounds) - 46), NSWidth(bounds), 46)]);
+        [controlsScroll setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+        [controlsScroll setHasHorizontalScroller:YES];
+        [controlsScroll setAutohidesScrollers:YES];
+        [controlsScroll setDocumentView:_debuggerControls];
+        [debuggerView addSubview:controlsScroll];
+        _debuggerTextView = AUTORELEASE([[NSTextView alloc] initWithFrame:
+            NSMakeRect(0, 0, NSWidth(bounds), MAX(0, NSHeight(bounds) - 74))]);
+        [_debuggerTextView setEditable:NO];
+        [_debuggerTextView setFont:[NSFont userFixedPitchFontOfSize:12]];
+        [_debuggerTextView setAutoresizingMask:NSViewWidthSizable];
+        [_debuggerTextView setHorizontallyResizable:NO];
+        [[_debuggerTextView textContainer] setWidthTracksTextView:YES];
+        NSScrollView *debugScroll = YCodeScrollViewWithDocumentView(_debuggerTextView);
+        [debugScroll setHasHorizontalScroller:NO];
+        [debugScroll setFrame:NSMakeRect(0, 28, NSWidth(bounds), MAX(0, NSHeight(bounds) - 74))];
+        [debuggerView addSubview:debugScroll];
+        _debuggerCommandField = AUTORELEASE([[NSTextField alloc] initWithFrame:
+            NSMakeRect(4, 2, MAX(0, NSWidth(bounds) - 8), 24)]);
+        [_debuggerCommandField setAutoresizingMask:NSViewWidthSizable];
+        [[_debuggerCommandField cell] setPlaceholderString:@"GDB command"];
+        [_debuggerCommandField setToolTip:@"GDB command: print variable, backtrace, break main, disable 1, enable 1"];
+        [_debuggerCommandField setTarget:self];
+        [_debuggerCommandField setAction:@selector(debugConsoleCommand:)];
+        [_debuggerCommandField setEnabled:NO];
+        [debuggerView addSubview:_debuggerCommandField];
+        [debuggerTab setView:debuggerView];
+        [_bottomTabView addTabViewItem:debuggerTab];
+        RELEASE(debuggerTab);
     }
 }
 
@@ -621,6 +661,34 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     return YES;
 }
 
+- (void)updateDebuggerViews
+{
+    YCodeDebugger *debugger = _project ? [[_project buildSystem] debugger] : nil;
+    for (YCodeEditorDocument *document in [_editorController openDocuments]) {
+        YCEditorRulerView *ruler = (YCEditorRulerView *)[[document scrollView] verticalRulerView];
+        [ruler setDebugger:debugger file:[document filePath] active:[debugger isReady]];
+    }
+    [_debuggerCommandField setEnabled:[debugger isReady] && ![debugger isRunning]];
+    for (NSButton *button in [_debuggerControls subviews])
+        [button setEnabled:[self validateDebuggerAction:@selector(debugAction:) tag:[button tag]]];
+    [_toolbar validateVisibleItems];
+}
+
+- (void)debuggerDidChange:(NSNotification *)notification
+{
+    if (_project && [notification object] == [[_project buildSystem] debugger])
+        [self updateDebuggerViews];
+}
+
+- (void)buildSystem:(id)buildSystem didReceiveDebuggerOutput:(NSString *)output
+{
+    NSTextStorage *storage = [_debuggerTextView textStorage];
+    [storage appendAttributedString:AUTORELEASE([[NSAttributedString alloc] initWithString:output
+        attributes:[NSDictionary dictionaryWithObject:[NSFont userFixedPitchFontOfSize:12]
+        forKey:NSFontAttributeName]])];
+    [_debuggerTextView scrollRangeToVisible:NSMakeRange([storage length], 0)];
+}
+
 - (BOOL)validateDebuggerAction:(SEL)action tag:(NSInteger)tag
 {
     YCodeBuildSystem *build = [_project buildSystem];
@@ -636,7 +704,10 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (IBAction)debugProject:(id)sender
 {
-    if ([self prepareBuild]) [[_project buildSystem] debug];
+    if ([self prepareBuild] && [[_project buildSystem] debug]) {
+        [_debuggerTextView setString:@""];
+        [_bottomTabView selectTabViewItemWithIdentifier:@"debugger"];
+    }
 }
 
 - (IBAction)debugAction:(id)sender
@@ -653,6 +724,9 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (IBAction)debugConsoleCommand:(id)sender
 {
+    if (![[[_project buildSystem] debugger] isReady]) return;
+    [self buildSystem:[_project buildSystem] didReceiveDebuggerOutput:
+        [NSString stringWithFormat:@"(gdb) %@\n", [sender stringValue]]];
     [[[_project buildSystem] debugger] consoleCommand:[sender stringValue]];
     [sender setStringValue:@""];
 }
@@ -672,6 +746,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     }
     [[[_project buildSystem] debugger] toggleBreakpointAtFile:[document filePath] line:line];
     [self setBottomPanelVisible:YES];
+    [_bottomTabView selectTabViewItemWithIdentifier:@"debugger"];
 }
 
 - (void)buildSystem:(id)buildSystem stoppedAtFile:(NSString *)file line:(NSUInteger)line
@@ -687,6 +762,9 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     }
     [text getLineStart:NULL end:NULL contentsEnd:&end forRange:NSMakeRange(offset, 0)];
     [document setSelectedRange:NSMakeRange(offset, end - offset)];
+    [self setBottomPanelVisible:YES];
+    [_bottomTabView selectTabViewItemWithIdentifier:@"debugger"];
+    [self updateDebuggerViews];
 }
 
 - (IBAction)runProject:(id)sender
@@ -739,8 +817,11 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartRun:(id)buildSystem
 {
-    [_bottomTabView selectTabViewItemWithIdentifier:@"console"];
-    [self appendConsoleOutput:@"Starting project session...\n"];
+    [_bottomTabView selectTabViewItemWithIdentifier:[buildSystem isDebugging] ? @"debugger" : @"console"];
+    if ([buildSystem isDebugging])
+        [self buildSystem:buildSystem didReceiveDebuggerOutput:
+            @"Starting debugger. Click the source gutter to add/remove breakpoints; Shift-click to enable/disable.\n"];
+    else [self appendConsoleOutput:@"Starting project session...\n"];
 }
 
 - (void)buildSystemDidFinishRun:(id)buildSystem
@@ -763,7 +844,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystem:(id)buildSystem didReceiveError:(NSString *)error
 {
-    [self appendConsoleOutput:error];
+    if ([buildSystem isDebugging]) [self buildSystem:buildSystem didReceiveDebuggerOutput:error];
+    else [self appendConsoleOutput:error];
     if (_collectingBuildIssues) [self consumeDiagnostics:error buffer:_diagnosticErrors];
 }
 

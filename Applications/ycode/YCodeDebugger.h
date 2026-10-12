@@ -27,10 +27,19 @@
 #import <Foundation/Foundation.h>
 
 @class YCodeDebugger;
+extern NSString * const YCodeDebuggerDidChangeNotification;
+
+typedef enum {
+  YCodeBreakpointNone,
+  YCodeBreakpointEnabled,
+  YCodeBreakpointInactive
+} YCodeBreakpointState;
 @protocol YCodeDebuggerDelegate <NSObject>
 - (void)debugger:(YCodeDebugger *)debugger sendCommand:(NSString *)command;
 - (void)debugger:(YCodeDebugger *)debugger output:(NSString *)output;
 - (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)file line:(NSUInteger)line;
+@optional
+- (void)debugger:(YCodeDebugger *)debugger targetOutput:(NSString *)output;
 @end
 
 /** GDB/MI session, following ProjectCenter's debugger command and event model. */
@@ -39,6 +48,12 @@
   id<YCodeDebuggerDelegate> _delegate;
   NSMutableData *_pending;
   NSMutableDictionary *_breakpoints;
+  NSMutableSet *_disabledBreakpoints;
+  NSMutableDictionary *_resolvedLocations;
+  NSMutableSet *_pendingBreakpoints;
+  NSString *_sourceDirectory;
+  NSString *_executionFile;
+  NSUInteger _executionLine;
   BOOL _ready;
   BOOL _running;
   BOOL _restartPending;
@@ -47,6 +62,14 @@
 - (void)setDelegate:(id<YCodeDebuggerDelegate>)delegate;
 - (void)reset;
 - (void)setBreakpointStorageKey:(NSString *)key;
+- (void)setSourceDirectory:(NSString *)directory;
+/** Source location of the selected stopped frame; cleared on resume or exit. */
+- (NSString *)executionFile;
+- (NSUInteger)executionLine;
+/** Map of source line numbers to YCodeBreakpointState values for this file. */
+- (NSDictionary *)breakpointLinesForFile:(NSString *)file;
+- (YCodeBreakpointState)breakpointStateAtFile:(NSString *)file line:(NSUInteger)line;
+- (void)toggleBreakpointEnabledAtFile:(NSString *)file line:(NSUInteger)line;
 - (void)restart;
 - (BOOL)isReady;
 - (BOOL)isRunning;

@@ -23,6 +23,7 @@
 */
 
 #import "YCEditorView.h"
+#import "YCodeDebugger.h"
 #import "YCodeTextView.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeSyntaxHighlighter.h"
@@ -592,6 +593,90 @@
 
 @implementation YCEditorRulerView
 
+- (void)setDebugger:(YCodeDebugger *)debugger file:(NSString *)file active:(BOOL)active
+{
+    ASSIGN(_debugger, debugger);
+    ASSIGN(_debugFile, file);
+    _debugGutterVisible = active || [[debugger breakpointLinesForFile:file] count] > 0;
+    [self setRuleThickness:_debugGutterVisible ? 72.0 : 50.0];
+    [self setToolTip:_debugGutterVisible ?
+        @"Click to add/remove a breakpoint. Shift-click to enable/disable it." : nil];
+    [self setNeedsDisplay:YES];
+}
+
+- (BOOL)debugGutterVisible { return _debugGutterVisible; }
+
+- (NSUInteger)sourceLineAtPoint:(NSPoint)point
+{
+    NSTextView *textView = (NSTextView *)[self clientView];
+    if (![textView isKindOfClass:[NSTextView class]]) return 0;
+    NSLayoutManager *layout = [textView layoutManager];
+    NSPoint origin = [textView textContainerOrigin];
+    NSString *text = [textView string];
+    NSUInteger index = 0, line = 1;
+    while (index <= [text length])
+      {
+        NSUInteger end, contentsEnd;
+        [text getLineStart:NULL end:&end contentsEnd:&contentsEnd forRange:NSMakeRange(index, 0)];
+        NSRect fragment;
+        if (index == [text length]) fragment = [layout extraLineFragmentRect];
+        else
+          {
+            NSRange glyphs = [layout glyphRangeForCharacterRange:NSMakeRange(index, MAX(1, end - index)) actualCharacterRange:NULL];
+            fragment = NSUnionRect([layout lineFragmentRectForGlyphAtIndex:glyphs.location effectiveRange:NULL],
+              [layout lineFragmentRectForGlyphAtIndex:NSMaxRange(glyphs) - 1 effectiveRange:NULL]);
+          }
+        fragment.origin.x += origin.x;
+        fragment.origin.y += origin.y;
+        fragment = [self convertRect:fragment fromView:textView];
+        if (point.y >= NSMinY(fragment) && point.y < NSMaxY(fragment)) return line;
+        if (end <= index || contentsEnd == end) break;
+        index = end; line++;
+      }
+    return 0;
+}
+
+- (void)mouseDown:(NSEvent *)event
+{
+    NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+    if ([self orientation] != NSVerticalRuler || !_debugGutterVisible || point.x > 22)
+      { [super mouseDown:event]; return; }
+    NSUInteger line = [self sourceLineAtPoint:point];
+    if (!line) return;
+    if ([event modifierFlags] & NSShiftKeyMask)
+      [_debugger toggleBreakpointEnabledAtFile:_debugFile line:line];
+    else [_debugger toggleBreakpointAtFile:_debugFile line:line];
+}
+
+- (void)drawDebugMarkerAtPoint:(NSPoint)point height:(CGFloat)height
+    breakpoint:(YCodeBreakpointState)state execution:(BOOL)execution
+{
+    CGFloat middle = point.y + MAX(12, height) / 2;
+    // Draw the execution arrow first, behind the breakpoint dot.
+    if (execution)
+      {
+        NSBezierPath *arrow = [NSBezierPath bezierPath];
+        [arrow moveToPoint:NSMakePoint(2, middle - 5)];
+        [arrow lineToPoint:NSMakePoint(13, middle - 5)];
+        [arrow lineToPoint:NSMakePoint(13, middle - 8)];
+        [arrow lineToPoint:NSMakePoint(22, middle)];
+        [arrow lineToPoint:NSMakePoint(13, middle + 8)];
+        [arrow lineToPoint:NSMakePoint(13, middle + 5)];
+        [arrow lineToPoint:NSMakePoint(2, middle + 5)];
+        [arrow closePath];
+        [[NSColor yellowColor] set]; [arrow fill];
+        [[NSColor darkGrayColor] set]; [arrow stroke];
+      }
+    if (state != YCodeBreakpointNone)
+      {
+        NSBezierPath *dot = [NSBezierPath bezierPathWithOvalInRect:NSMakeRect(4, middle - 5, 10, 10)];
+        [(state == YCodeBreakpointEnabled ? [NSColor redColor] : [NSColor grayColor]) set];
+        [dot fill];
+        [[NSColor darkGrayColor] set]; [dot stroke];
+      }
+}
+
+
 - (BOOL)isFlipped
 {
     return YES;
@@ -612,6 +697,8 @@
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    RELEASE(_debugger);
+    RELEASE(_debugFile);
     [super dealloc];
 }
 
@@ -666,6 +753,14 @@
         }
         [NSGraphicsContext restoreGraphicsState];
     } else {
+        if (_debugGutterVisible) {
+            [[[NSColor controlBackgroundColor] blendedColorWithFraction:0.1 ofColor:[NSColor grayColor]] set];
+            NSRectFill(NSIntersectionRect(rect, NSMakeRect(0, NSMinY(rect), 22, NSHeight(rect))));
+            [[NSColor grayColor] set];
+            NSRectFill(NSIntersectionRect(rect, NSMakeRect(22, NSMinY(rect), 1, NSHeight(rect))));
+        }
+        NSDictionary *breakpoints = _debugGutterVisible ? [_debugger breakpointLinesForFile:_debugFile] : nil;
+        BOOL executionFile = [[_debugFile stringByStandardizingPath] isEqual:[_debugger executionFile]];
         NSString *text = [textView string];
         NSLayoutManager *layout = [textView layoutManager];
         NSRect visible = [textView visibleRect];
@@ -696,6 +791,10 @@
                 if (point.y > NSMaxY(rect)) {
                     break;
                 }
+                if (_debugGutterVisible)
+                    [self drawDebugMarkerAtPoint:point height:NSHeight(fragment)
+                        breakpoint:[[breakpoints objectForKey:[NSNumber numberWithUnsignedInteger:line]] intValue]
+                        execution:executionFile && [_debugger executionLine] == line];
                 NSString *label = [NSString stringWithFormat:@"%lu", (unsigned long)line];
                 NSSize size = [label sizeWithAttributes:attributes];
                 [label drawAtPoint:NSMakePoint(NSWidth([self bounds]) - size.width - 5, point.y)

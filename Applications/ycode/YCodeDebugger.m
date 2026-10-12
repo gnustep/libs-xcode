@@ -100,32 +100,131 @@ static id YCReadValue(NSScanner *scanner)
   return nil;
 }
 
+NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNotification";
+
 @implementation YCodeDebugger
 - (id)init
 {
   if ((self = [super init]))
-    { _pending = [NSMutableData new]; _breakpoints = [NSMutableDictionary new]; }
+    {
+      _pending = [NSMutableData new];
+      _breakpoints = [NSMutableDictionary new];
+      _disabledBreakpoints = [NSMutableSet new];
+      _resolvedLocations = [NSMutableDictionary new];
+      _pendingBreakpoints = [NSMutableSet new];
+    }
   return self;
 }
 - (void)dealloc
 {
-  RELEASE(_storageKey); RELEASE(_pending); RELEASE(_breakpoints); [super dealloc];
+  RELEASE(_storageKey); RELEASE(_pending); RELEASE(_breakpoints);
+  RELEASE(_disabledBreakpoints); RELEASE(_resolvedLocations); RELEASE(_pendingBreakpoints);
+  RELEASE(_sourceDirectory); RELEASE(_executionFile); [super dealloc];
 }
 - (void)setDelegate:(id<YCodeDebuggerDelegate>)delegate { _delegate = delegate; }
 - (BOOL)isReady { return _ready; }
 - (BOOL)isRunning { return _running; }
+- (void)notifyChange
+{
+  [[NSNotificationCenter defaultCenter] postNotificationName:YCodeDebuggerDidChangeNotification object:self];
+}
+- (void)setSourceDirectory:(NSString *)directory { ASSIGN(_sourceDirectory, directory); }
+- (NSString *)executionFile { return _executionFile; }
+- (NSUInteger)executionLine { return _executionLine; }
+- (NSString *)sourcePath:(NSString *)file
+{
+  if (![file isAbsolutePath])
+    file = [(_sourceDirectory ?: [[NSFileManager defaultManager] currentDirectoryPath])
+      stringByAppendingPathComponent:file];
+  return [file stringByStandardizingPath];
+}
+- (NSString *)locationAtFile:(NSString *)file line:(NSUInteger)line
+{
+  return [NSString stringWithFormat:@"%@:%lu", [self sourcePath:file], (unsigned long)line];
+}
+- (NSString *)storedLocationAtFile:(NSString *)file line:(NSUInteger)line
+{
+  NSString *location = [self locationAtFile:file line:line];
+  if ([_breakpoints objectForKey:location]) return location;
+  for (NSString *requested in _resolvedLocations)
+    if ([[_resolvedLocations objectForKey:requested] isEqual:location]) return requested;
+  return location;
+}
+- (YCodeBreakpointState)stateForLocation:(NSString *)location
+{
+  if (![_breakpoints objectForKey:location]) return YCodeBreakpointNone;
+  return ([_disabledBreakpoints containsObject:location] ||
+    (_ready && ([_pendingBreakpoints containsObject:location] ||
+      ![[_breakpoints objectForKey:location] length])))
+    ? YCodeBreakpointInactive : YCodeBreakpointEnabled;
+}
+- (YCodeBreakpointState)breakpointStateAtFile:(NSString *)file line:(NSUInteger)line
+{
+  if (![file length] || line == 0) return YCodeBreakpointNone;
+  return [self stateForLocation:[self storedLocationAtFile:file line:line]];
+}
+- (NSDictionary *)breakpointLinesForFile:(NSString *)file
+{
+  NSMutableDictionary *lines = [NSMutableDictionary dictionary];
+  if (![file length]) return lines;
+  NSString *prefix = [[self sourcePath:file] stringByAppendingString:@":"];
+  for (NSString *requested in _breakpoints)
+    {
+      NSString *location = [_resolvedLocations objectForKey:requested] ?: requested;
+      if ([location hasPrefix:prefix])
+        [lines setObject:[NSNumber numberWithInt:[self stateForLocation:requested]]
+          forKey:[NSNumber numberWithInteger:[[location substringFromIndex:[prefix length]] integerValue]]];
+    }
+  return lines;
+}
 - (void)setBreakpointStorageKey:(NSString *)key
 {
   ASSIGN(_storageKey, key);
   [_breakpoints removeAllObjects];
-  id saved = [[NSUserDefaults standardUserDefaults] objectForKey:key];
-  if ([saved isKindOfClass:[NSArray class]])
+  [_disabledBreakpoints removeAllObjects];
+  [_resolvedLocations removeAllObjects];
+  [_pendingBreakpoints removeAllObjects];
+  id saved = key ? [[NSUserDefaults standardUserDefaults] objectForKey:key] : nil;
+  // Older versions saved an array of enabled locations.
+  if ([saved isKindOfClass:[NSArray class]] || [saved isKindOfClass:[NSDictionary class]])
     for (id location in saved)
-      if ([location isKindOfClass:[NSString class]]) [_breakpoints setObject:@"" forKey:location];
+      if ([location isKindOfClass:[NSString class]])
+        {
+          [_breakpoints setObject:@"" forKey:location];
+          if ([saved isKindOfClass:[NSDictionary class]] &&
+              ![[saved objectForKey:location] boolValue])
+            [_disabledBreakpoints addObject:location];
+        }
+  [self notifyChange];
 }
 - (void)saveBreakpoints
 {
-  if (_storageKey) [[NSUserDefaults standardUserDefaults] setObject:[_breakpoints allKeys] forKey:_storageKey];
+  if (_storageKey)
+    {
+      NSMutableDictionary *saved = [NSMutableDictionary dictionary];
+      for (NSString *location in _breakpoints)
+        [saved setObject:[NSNumber numberWithBool:![_disabledBreakpoints containsObject:location]] forKey:location];
+      [[NSUserDefaults standardUserDefaults] setObject:saved forKey:_storageKey];
+    }
+  [self notifyChange];
+}
+- (void)insertBreakpointAtLocation:(NSString *)location
+{
+  NSString *options = [_disabledBreakpoints containsObject:location] ? @"-break-insert -f -d " : @"-break-insert -f ";
+  [self command:[options stringByAppendingString:[[self class] quote:location]]];
+}
+- (void)toggleBreakpointEnabledAtFile:(NSString *)file line:(NSUInteger)line
+{
+  if (![file length] || line == 0 || _running) return;
+  NSString *location = [self storedLocationAtFile:file line:line];
+  NSString *number = [_breakpoints objectForKey:location];
+  if (!number) return;
+  BOOL enable = [_disabledBreakpoints containsObject:location];
+  if (enable) [_disabledBreakpoints removeObject:location];
+  else [_disabledBreakpoints addObject:location];
+  if ([number length])
+    [self command:[(enable ? @"-break-enable " : @"-break-disable ") stringByAppendingString:number]];
+  [self saveBreakpoints];
 }
 - (void)restart
 {
@@ -137,7 +236,11 @@ static id YCReadValue(NSScanner *scanner)
 {
   _ready = _running = _restartPending = NO;
   [_pending setLength:0];
+  RELEASE(_executionFile); _executionFile = nil; _executionLine = 0;
+  [_resolvedLocations removeAllObjects];
+  [_pendingBreakpoints removeAllObjects];
   for (NSString *location in [_breakpoints allKeys]) [_breakpoints setObject:@"" forKey:location];
+  [self notifyChange];
 }
 + (NSString *)quote:(NSString *)string
 {
@@ -177,7 +280,7 @@ static id YCReadValue(NSScanner *scanner)
 - (void)toggleBreakpointAtFile:(NSString *)file line:(NSUInteger)line
 {
   if (![file length] || line == 0 || _running) return;
-  NSString *location = [NSString stringWithFormat:@"%@:%lu", file, (unsigned long)line];
+  NSString *location = [self storedLocationAtFile:file line:line];
   NSString *number = [_breakpoints objectForKey:location];
   BOOL removing = (number != nil);
   if (removing)
@@ -185,11 +288,14 @@ static id YCReadValue(NSScanner *scanner)
       if ([number length]) [self command:[@"-break-delete " stringByAppendingString:number]];
       else if (_ready) [self consoleCommand:[@"clear " stringByAppendingString:[[self class] quote:location]]];
       [_breakpoints removeObjectForKey:location];
+      [_disabledBreakpoints removeObject:location];
+      [_resolvedLocations removeObjectForKey:location];
+      [_pendingBreakpoints removeObject:location];
     }
   else
     {
       [_breakpoints setObject:@"" forKey:location];
-      [self command:[@"-break-insert -f " stringByAppendingString:[[self class] quote:location]]];
+      [self insertBreakpointAtLocation:location];
     }
   [_delegate debugger:self output:[NSString stringWithFormat:@"Breakpoint %@: %@\n", removing ? @"removed" : @"added", location]];
   [self saveBreakpoints];
@@ -205,21 +311,27 @@ static id YCReadValue(NSScanner *scanner)
           [self command:@"-gdb-set pagination off"];
           [self command:@"-gdb-set mi-async on"];
           for (NSString *location in _breakpoints)
-            [self command:[@"-break-insert -f " stringByAppendingString:[[self class] quote:location]]];
+            [self insertBreakpointAtLocation:location];
+          [self notifyChange];
           [_delegate debugger:self output:@"Debugger ready. Use Go to run, or set breakpoints first.\n"];
         }
       return;
     }
   NSDictionary *record = [[self class] parseRecord:line];
   NSString *type = [record objectForKey:@"type"], *event = [record objectForKey:@"event"];
-  if (!record || [type isEqual:@"~"] || [type isEqual:@"@"])
+  if ((!record || [type isEqual:@"@"]) && [_delegate respondsToSelector:@selector(debugger:targetOutput:)])
+    [_delegate debugger:self targetOutput:record ? [record objectForKey:@"text"] : [line stringByAppendingString:@"\n"]];
+  else if (!record || [type isEqual:@"~"] || [type isEqual:@"@"] || [type isEqual:@"&"])
     [_delegate debugger:self output:record ? [record objectForKey:@"text"] : [line stringByAppendingString:@"\n"]];
   if ([event isEqual:@"error"])
     [_delegate debugger:self output:[NSString stringWithFormat:@"Debugger error: %@\n", [record objectForKey:@"msg"]]];
-  if ([event isEqual:@"running"]) _running = YES;
+  if ([event isEqual:@"running"])
+    { _running = YES; RELEASE(_executionFile); _executionFile = nil; _executionLine = 0; }
+  if ([event isEqual:@"thread-group-exited"])
+    { _running = NO; RELEASE(_executionFile); _executionFile = nil; _executionLine = 0; }
   if ([event isEqual:@"stopped"])
     {
-      _running = NO;
+      _running = NO; RELEASE(_executionFile); _executionFile = nil; _executionLine = 0;
       [_delegate debugger:self output:[NSString stringWithFormat:@"Stopped: %@\n", [record objectForKey:@"reason"] ?: @"paused"]];
     }
   if (_restartPending && [event isEqual:@"stopped"])
@@ -227,30 +339,53 @@ static id YCReadValue(NSScanner *scanner)
   NSDictionary *frame = [record objectForKey:@"frame"];
   NSString *file = [frame objectForKey:@"fullname"] ?: [frame objectForKey:@"file"];
   if (file && [[frame objectForKey:@"line"] integerValue] > 0)
-    [_delegate debugger:self stoppedAtFile:file line:[[frame objectForKey:@"line"] integerValue]];
+    {
+      ASSIGN(_executionFile, [self sourcePath:file]);
+      _executionLine = [[frame objectForKey:@"line"] integerValue];
+      [_delegate debugger:self stoppedAtFile:_executionFile line:_executionLine];
+    }
   NSDictionary *bp = [record objectForKey:@"bkpt"];
   file = [bp objectForKey:@"fullname"] ?: [bp objectForKey:@"file"];
-  if (file && [bp objectForKey:@"line"] && [bp objectForKey:@"number"])
+  NSString *number = [bp objectForKey:@"number"];
+  if (number)
     {
-      NSString *location = [bp objectForKey:@"original-location"];
-      NSString *number = [bp objectForKey:@"number"];
-      if (!location || ![_breakpoints objectForKey:location])
+      NSString *location = nil;
+      for (NSString *existing in _breakpoints)
+        if ([[_breakpoints objectForKey:existing] isEqual:number])
+          { location = existing; break; }
+      NSString *original = [bp objectForKey:@"original-location"];
+      if (!location && [_breakpoints objectForKey:original ?: @""]) location = original;
+      if (!location && file && [bp objectForKey:@"line"])
+        location = [self locationAtFile:file line:[[bp objectForKey:@"line"] integerValue]];
+      if (location)
         {
-          location = nil;
-          for (NSString *existing in _breakpoints)
-            if ([[_breakpoints objectForKey:existing] isEqual:number])
-              { location = existing; break; }
-          if (!location) location = [NSString stringWithFormat:@"%@:%@", file, [bp objectForKey:@"line"]];
+          BOOL awaitingInsert = ![[_breakpoints objectForKey:location] length];
+          [_breakpoints setObject:number forKey:location];
+          if (file && [bp objectForKey:@"line"])
+            [_resolvedLocations setObject:[self locationAtFile:file line:[[bp objectForKey:@"line"] integerValue]] forKey:location];
+          if ([bp objectForKey:@"pending"] || [[bp objectForKey:@"addr"] isEqual:@"<PENDING>"])
+            [_pendingBreakpoints addObject:location];
+          else [_pendingBreakpoints removeObject:location];
+          if (awaitingInsert && [_disabledBreakpoints containsObject:location] && [[bp objectForKey:@"enabled"] isEqual:@"y"])
+            [self command:[@"-break-disable " stringByAppendingString:number]];
+          else if ([[bp objectForKey:@"enabled"] isEqual:@"n"])
+            [_disabledBreakpoints addObject:location];
+          else if ([[bp objectForKey:@"enabled"] isEqual:@"y"])
+            [_disabledBreakpoints removeObject:location];
         }
-      /* GDB may move a breakpoint from a blank line to executable code.
-       * Keep its requested location so toggling that line still removes it.
-       */
-      [_breakpoints setObject:number forKey:location];
     }
   if ([event isEqual:@"breakpoint-deleted"])
     for (NSString *location in [_breakpoints allKeys])
-      if ([[_breakpoints objectForKey:location] isEqual:[record objectForKey:@"id"]]) [_breakpoints removeObjectForKey:location];
+      if ([[_breakpoints objectForKey:location] isEqual:[record objectForKey:@"id"]])
+        {
+          [_breakpoints removeObjectForKey:location];
+          [_disabledBreakpoints removeObject:location];
+          [_resolvedLocations removeObjectForKey:location];
+          [_pendingBreakpoints removeObject:location];
+        }
   if (bp || [event isEqual:@"breakpoint-deleted"]) [self saveBreakpoints];
+  else if (frame || [event isEqual:@"running"] || [event isEqual:@"stopped"] || [event isEqual:@"thread-group-exited"])
+    [self notifyChange];
 }
 - (void)receiveData:(NSData *)data
 {

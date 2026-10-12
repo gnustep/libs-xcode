@@ -480,7 +480,7 @@
     
     [_contextMenu addItem:[NSMenuItem separatorItem]];
     
-    NSMenuItem *deleteItem = [[NSMenuItem alloc] initWithTitle:@"Delete" 
+    NSMenuItem *deleteItem = [[NSMenuItem alloc] initWithTitle:@"Remove File from Project"
                                                         action:@selector(deleteItem:) 
                                                  keyEquivalent:@""];
     [deleteItem setTarget:self];
@@ -545,14 +545,25 @@
 
 - (IBAction)deleteItem:(id)sender
 {
-    NSInteger selectedRow = [_outlineView selectedRow];
+    NSInteger selectedRow = [_outlineView clickedRow];
+    if (selectedRow < 0) selectedRow = [_outlineView selectedRow];
     if (selectedRow >= 0) {
         id selectedItem = [_outlineView itemAtRow:selectedRow];
         if ([selectedItem isKindOfClass:[YCodeProjectNavigatorItem class]]) {
-            // Implement deletion logic
-            NSLog(@"Delete item: %@", selectedItem);
+            if ([selectedItem isFile])
+                [_project removeFileReferenceFromProject:[selectedItem representedObject]];
         }
     }
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item
+{
+    if ([item action] == @selector(deleteItem:)) {
+        NSInteger row = [_outlineView clickedRow];
+        if (row < 0) row = [_outlineView selectedRow];
+        return row >= 0 && [[_outlineView itemAtRow:row] isFile];
+    }
+    return _project != nil;
 }
 
 - (IBAction)renameItem:(id)sender

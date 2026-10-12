@@ -259,6 +259,7 @@
     if (!_debugger) {
         _debugger = [YCodeDebugger new];
         [_debugger setDelegate:self];
+        [_debugger setSourceDirectory:[_project projectDirectoryPath]];
         if ([_project projectPath]) [_debugger setBreakpointStorageKey:
             [@"YCodeBreakpoints:" stringByAppendingString:[[_project projectPath] stringByStandardizingPath]]];
     }
@@ -286,6 +287,15 @@
 }
 
 - (void)debugger:(YCodeDebugger *)debugger output:(NSString *)output
+{
+    [_buildOutput appendString:output];
+    if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveDebuggerOutput:)])
+        [_delegate buildSystem:self didReceiveDebuggerOutput:output];
+    else if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
+        [_delegate buildSystem:self didReceiveOutput:output];
+}
+
+- (void)debugger:(YCodeDebugger *)debugger targetOutput:(NSString *)output
 {
     [_buildOutput appendString:output];
     if ([_delegate respondsToSelector:@selector(buildSystem:didReceiveOutput:)])
@@ -329,6 +339,7 @@
         return NO;
     }
     _status = YCodeBuildStatusRunning;
+    _debugging = debug;
     if ([_delegate respondsToSelector:@selector(buildSystemDidStartRun:)])
         [_delegate buildSystemDidStartRun:self];
     if (debug) {

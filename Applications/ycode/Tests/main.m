@@ -28,6 +28,10 @@
 #import <XCode/PBXGroup.h>
 #import <XCode/PBXNativeTarget.h>
 #import <XCode/PBXFileReference.h>
+#import <XCode/PBXBuildFile.h>
+#import <XCode/PBXBuildPhase.h>
+#import <XCode/PBXSourcesBuildPhase.h>
+#import <XCode/PBXResourcesBuildPhase.h>
 #import "YCodeBuildSystem.h"
 #import "YCodeWindowController.h"
 #import "YCodeProject.h"
@@ -94,6 +98,138 @@ static void testApplicationStartup(void)
 #endif
   [NSApp setDelegate:nil];
   [delegate autorelease];
+}
+
+static void testSaveActiveFile(YCodeProject *project, NSString *directory)
+{
+  YCodeEditorController *editor = [project editorController];
+  NSString *firstPath = [directory stringByAppendingPathComponent:@"Save First.m"];
+  NSString *secondPath = [directory stringByAppendingPathComponent:@"Save Second.m"];
+  NSString *original = @"// original\n";
+  [original writeToFile:firstPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [original writeToFile:secondPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([editor openFile:firstPath] && [editor openFile:secondPath], @"Open source files for Save regression");
+  YCodeEditorDocument *first = [editor documentForFilePath:firstPath];
+  YCodeEditorDocument *second = [editor documentForFilePath:secondPath];
+  [first insertText:@"// first edit\n" atLocation:0];
+  [second insertText:@"// second edit\n" atLocation:0];
+  [editor setCurrentDocument:first];
+  YCodeWindowController *window = [[project windowControllers] objectAtIndex:0];
+  [[window window] makeKeyAndOrderFront:nil];
+  testAssert([[NSDocumentController sharedDocumentController] currentDocument] == project,
+    @"Save resolves the project belonging to the active window");
+  NSString *projectFile = [[project projectPath] stringByAppendingPathComponent:@"project.pbxproj"];
+  NSData *projectBefore = [NSData dataWithContentsOfFile:projectFile];
+  [project updateChangeCount:NSChangeDone];
+  NSMenuItem *save = [[[NSApp mainMenu] itemWithTitle:@"File"] submenu] ?
+    [[[[NSApp mainMenu] itemWithTitle:@"File"] submenu] itemWithTitle:@"Save"] : nil;
+  testAssert(save != nil && [[save keyEquivalent] isEqual:@"s"] && [save action] == @selector(saveDocument:),
+    @"File Save and its shortcut invoke the same action");
+  [NSApp sendAction:[save action] to:[save target] from:save];
+  NSString *written = [NSString stringWithContentsOfFile:firstPath encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([written isEqual:[first content]] && ![first isModified],
+    @"File Save writes the active editor contents and clears its modified flag");
+  testAssert([[NSString stringWithContentsOfFile:secondPath encoding:NSUTF8StringEncoding error:NULL] isEqual:original]
+    && [second isModified], @"Saving one source tab leaves the other tab's edits unsaved");
+  testAssert([projectBefore isEqual:[NSData dataWithContentsOfFile:projectFile]] && [project isDocumentEdited],
+    @"Saving a source file does not save or clear pending project changes");
+  [editor setCurrentDocument:second];
+  [NSApp sendAction:[save action] to:[save target] from:save];
+  testAssert([[NSString stringWithContentsOfFile:secondPath encoding:NSUTF8StringEncoding error:NULL]
+    isEqual:[second content]] && ![second isModified], @"Save follows the selected source tab");
+  // Keep cleanup independent of a failed Save assertion, without opening a modal prompt.
+  [first setModified:NO];
+  [second setModified:NO];
+  [editor closeFile:firstPath];
+  [editor closeFile:secondPath];
+  [project updateChangeCount:NSChangeCleared];
+}
+
+static NSUInteger buildReferenceCount(YCodeProject *project, PBXFileReference *reference)
+{
+  NSUInteger count = 0;
+  for (PBXTarget *target in [[project project] targets])
+    for (PBXBuildPhase *phase in [target buildPhases])
+      for (PBXBuildFile *file in [phase files])
+        if ([file fileRef] == reference) count++;
+  return count;
+}
+
+static void testProjectFileMembership(YCodeProject *project, NSString *directory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *source = [directory stringByAppendingPathComponent:@"Added Source.cc"];
+  NSString *nestedDirectory = [directory stringByAppendingPathComponent:@"Nested Folder"];
+  NSString *nestedSource = [nestedDirectory stringByAppendingPathComponent:@"Added Source.cc"];
+  [manager createDirectoryAtPath:nestedDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  [@"int value;\n" writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [@"int nestedValue;\n" writeToFile:nestedSource atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  PBXGroup *mainGroup = [[project project] mainGroup];
+  NSUInteger originalCount = [[mainGroup children] count];
+  [project addFilesToProject:[NSArray arrayWithObjects:source, source, nil]];
+  testAssert([project isDocumentEdited] && [[mainGroup children] count] == originalCount + 1,
+    @"Adding a file marks the project modified and avoids duplicates in one operation");
+  PBXFileReference *reference = [[[mainGroup children] lastObject] retain];
+  testAssert([[reference path] isEqual:@"Added Source.cc"] && [[reference sourceTree] isEqual:@"SOURCE_ROOT"],
+    @"Files inside the project use portable source-root-relative references");
+  testAssert(buildReferenceCount(project, reference) > 0, @"Added C++ files enter the sources build phase");
+  [project updateChangeCount:NSChangeCleared];
+  [project addFilesToProject:[NSArray arrayWithObject:@"./Added Source.cc"]];
+  testAssert(![project isDocumentEdited] && [[mainGroup children] count] == originalCount + 1,
+    @"Adding the same file through a relative path is a clean no-op");
+  testAssert([project addGroupToProject:@"Membership Group"] && [project isDocumentEdited],
+    @"Adding a group also marks the project modified");
+  PBXGroup *nested = [[mainGroup children] lastObject];
+  [nested setPath:@"Nested Folder"];
+  [nested setSourceTree:@"SOURCE_ROOT"];
+  PBXFileReference *nestedReference = AUTORELEASE([[PBXFileReference alloc] initWithPath:@"Added Source.cc"]);
+  [nested setChildren:[NSMutableArray arrayWithObject:nestedReference]];
+  // The same reference may appear in several build phases; removal must clean all of them.
+  PBXTarget *target = [[[project project] targets] objectAtIndex:0];
+  for (PBXBuildPhase *phase in [target buildPhases]) {
+    if (![phase files]) [phase setFiles:[NSMutableArray array]];
+    PBXBuildFile *file = AUTORELEASE([[PBXBuildFile alloc] init]);
+    [file setFileRef:nestedReference];
+    [[phase files] addObject:file];
+  }
+  testAssert([project saveProjectToPath:[project projectPath]] && ![project isDocumentEdited],
+    @"Successful project save clears the project modified state");
+  YCodeProject *reopened = [YCodeProject new];
+  testAssert([reopened readFromURL:[project fileURL] ofType:@"YCodeXcodeProjectType" error:NULL],
+    @"Reopen the project after adding files");
+  PBXFileReference *savedReference = [[[[reopened project] mainGroup] children] objectAtIndex:originalCount];
+  testAssert([[savedReference path] isEqual:@"Added Source.cc"] && buildReferenceCount(reopened, savedReference) > 0,
+    @"Added file and its build membership survive save and reload");
+  [reopened close]; [reopened release];
+  [project removeFilesFromProject:[NSArray arrayWithObject:@"Nested Folder/Added Source.cc"]];
+  testAssert([project isDocumentEdited] && [[nested children] count] == 0 && buildReferenceCount(project, nestedReference) == 0,
+    @"Removing a nested file updates its group and every build phase");
+  testAssert([[mainGroup children] containsObject:reference] && [manager fileExistsAtPath:nestedSource],
+    @"Removal preserves the source on disk and same-named files in other groups");
+  NSString *badDestination = [directory stringByAppendingPathComponent:@"Not A Directory.xcodeproj"];
+  [@"blocked" writeToFile:badDestination atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert(![project saveProjectToPath:badDestination] && [project isDocumentEdited],
+    @"Failed project saves retain the modified state");
+  YCodeProjectNavigatorController *navigator = [project navigatorController];
+  [navigator expandItem:[navigator itemForObject:mainGroup]];
+  [navigator selectItem:[navigator itemForObject:reference]];
+  [navigator deleteItem:nil];
+  testAssert(![[mainGroup children] containsObject:reference] && [manager fileExistsAtPath:source],
+    @"Navigator Remove File changes the project without deleting the disk file");
+  NSMenuItem *saveProject = [[[[NSApp mainMenu] itemWithTitle:@"File"] submenu] itemWithTitle:@"Save Project"];
+  testAssert(saveProject != nil, @"A separate Save Project action is available with an editor tab open");
+  [NSApp sendAction:[saveProject action] to:[saveProject target] from:saveProject];
+  testAssert(![project isDocumentEdited], @"Save Project persists membership changes while a source tab is open");
+  reopened = [YCodeProject new];
+  testAssert([reopened readFromURL:[project fileURL] ofType:@"YCodeXcodeProjectType" error:NULL], @"Reopen project after removal");
+  NSDictionary *archive = [NSDictionary dictionaryWithContentsOfFile:[[project projectPath] stringByAppendingPathComponent:@"project.pbxproj"]];
+  for (NSDictionary *object in [[archive objectForKey:@"objects"] allValues])
+    testAssert(![[object objectForKey:@"path"] isEqual:@"Added Source.cc"],
+      @"Removed file references are absent from the serialized project");
+  [reopened close]; [reopened release];
+  [project removeFilesFromProject:[NSArray arrayWithObject:source]];
+  testAssert(![project isDocumentEdited], @"Removing a missing project reference is a clean no-op");
+  [reference release];
 }
 
 static void testEditorColors(void)
@@ -508,14 +644,34 @@ static void testDebuggerRecords(void)
     @"Keep split UTF-8 stream output and hide MI bookkeeping");
   testAssert([probe->commands rangeOfString:@"-break-insert -f \"/tmp/A \\\"quoted\\\".m:4\"\n"].location != NSNotFound,
     @"Restore prelaunch breakpoints with MI quoting");
+  testAssert([[debugger executionFile] isEqual:probe->file] && [debugger executionLine] == 4,
+    @"Breakpoint stop records the execution arrow's source location");
+  [debugger toggleBreakpointEnabledAtFile:probe->file line:4];
+  testAssert([debugger breakpointStateAtFile:probe->file line:4] == YCodeBreakpointInactive &&
+    [probe->commands hasSuffix:@"-break-disable 3\n"], @"Disable keeps a grey source breakpoint and tells GDB");
+  YCodeDebugger *disabledSession = [YCodeDebugger new];
+  [disabledSession setDelegate:probe];
+  [disabledSession setBreakpointStorageKey:storage];
+  [disabledSession receiveData:[@"(gdb)\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([probe->commands rangeOfString:@"-break-insert -f -d"].location != NSNotFound,
+    @"Disabled breakpoints remain disabled when restored in a new session");
+  [disabledSession release];
+  [debugger toggleBreakpointEnabledAtFile:probe->file line:4];
+  testAssert([debugger breakpointStateAtFile:probe->file line:4] == YCodeBreakpointEnabled &&
+    [probe->commands hasSuffix:@"-break-enable 3\n"], @"Re-enable makes the breakpoint red and tells GDB");
   [debugger toggleBreakpointAtFile:probe->file line:4];
   testAssert([probe->commands hasSuffix:@"-break-delete 3\n"], @"Delete breakpoint using debugger-assigned number");
   [debugger toggleBreakpointAtFile:@"/tmp/blank.m" line:1];
   [debugger receiveData:[@"^done,bkpt={number=\"4\",fullname=\"/tmp/blank.m\",line=\"2\",original-location=\"/tmp/blank.m:1\"}\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([[[debugger breakpointLinesForFile:@"/tmp/blank.m"] objectForKey:@2] intValue] == YCodeBreakpointEnabled &&
+    [[debugger breakpointLinesForFile:@"/tmp/blank.m"] objectForKey:@1] == nil,
+    @"Draw relocated breakpoints at the executable line rather than the requested blank line");
   [debugger toggleBreakpointAtFile:@"/tmp/blank.m" line:1];
   testAssert([probe->commands hasSuffix:@"-break-delete 4\n"],
     @"Toggling the requested line removes a breakpoint relocated by GDB");
   [debugger receiveData:[@"*running,thread-id=\"all\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([debugger executionFile] == nil && [debugger executionLine] == 0,
+    @"Resuming removes the old execution arrow");
   [debugger restart];
   testAssert([probe->commands hasSuffix:@"-exec-interrupt --all\n"], @"Restart interrupts a running inferior first");
   [debugger receiveData:[@"*stopped,reason=\"signal-received\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
@@ -525,6 +681,24 @@ static void testDebuggerRecords(void)
     @"Display MI command failures in the console");
   NSDictionary *parsed = [YCodeDebugger parseRecord:@"24^done,stack=[frame={level=\"0\"},frame={level=\"1\"}]"];
   testAssert([[parsed objectForKey:@"stack"] count] == 2, @"Parse MI result lists as well as value lists");
+  [debugger setSourceDirectory:@"/tmp/Source Folder"];
+  [debugger receiveData:[@"=breakpoint-created,bkpt={number=\"7\",file=\"main.c\",line=\"3\",enabled=\"y\"}\n"
+    @"=breakpoint-modified,bkpt={number=\"7\",file=\"main.c\",line=\"3\",enabled=\"n\"}\n"
+    dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/Source Folder/main.c" line:3] == YCodeBreakpointInactive,
+    @"GDB console breakpoint changes update the correct absolute source path");
+  [debugger receiveData:[@"=breakpoint-deleted,id=\"7\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/Source Folder/main.c" line:3] == YCodeBreakpointNone,
+    @"GDB deletion removes its source marker");
+  [debugger toggleBreakpointAtFile:@"/tmp/later.c" line:5];
+  [debugger receiveData:[@"^done,bkpt={number=\"8\",addr=\"<PENDING>\",pending=\"/tmp/later.c:5\",original-location=\"/tmp/later.c:5\",enabled=\"y\"}\n"
+    dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointInactive,
+    @"Unresolved breakpoints are grey until GDB resolves them");
+  [debugger receiveData:[@"=breakpoint-modified,bkpt={number=\"8\",fullname=\"/tmp/later.c\",line=\"5\",addr=\"0x1234\",enabled=\"y\"}\n"
+    dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
+    @"Resolved breakpoints become red");
   [YCodeDebugger parseRecord:@"^done,bad=[garbage"];
   [debugger reset];
   testAssert(![debugger isReady] && ![debugger isRunning], @"Reset session state after termination");
@@ -648,10 +822,51 @@ static void testBuildAndRun(NSString *temporaryDirectory)
     @"case \"$command\" in\n-exec-run) printf '*running,thread-id=\"all\"\\n*stopped,reason=\"exited-normally\"\\n';;\n"
     @"-gdb-exit) exit 0;;\n*) printf '^done\\n';;\nesac\ndone\n");
   [[NSUserDefaults standardUserDefaults] setObject:fakeGDB forKey:@"DebuggerPath"];
+  NSString *breakpointStorage = [@"YCodeDebuggerUITest:" stringByAppendingString:root];
+  [[build debugger] setBreakpointStorageKey:breakpointStorage];
   for (NSUInteger session = 0; session < 2; session++) {
     [window debugProject:nil];
     waitForDebugger(build);
     testAssert([build isDebugging] && [[build debugger] isReady], @"Build and start a fresh debugger session");
+    NSTabView *bottomTabs = [window valueForKey:@"_bottomTabView"];
+    testAssert([[[bottomTabs selectedTabViewItem] identifier] isEqual:@"debugger"],
+      @"Starting GDB selects its dedicated tab");
+    NSTextView *debugOutput = [window valueForKey:@"_debuggerTextView"];
+    testAssert([[debugOutput string] rangeOfString:@"Debugger ready"].location != NSNotFound &&
+      [[console string] rangeOfString:@"Debugger ready"].location == NSNotFound,
+      @"Debugger output goes to its own transcript instead of the program console");
+    NSString *source = [root stringByAppendingPathComponent:@"gutter.c"];
+    [@"// first\nint main(void) {\n  return 0;\n}\n" writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    [[window editorController] openFile:source];
+    YCodeEditorDocument *editorDocument = [[window editorController] currentDocument];
+    YCEditorRulerView *ruler = (YCEditorRulerView *)[[editorDocument scrollView] verticalRulerView];
+    testAssert([ruler debugGutterVisible] && [ruler ruleThickness] == 72,
+      @"Active debugger adds a clickable gutter to a newly opened source file");
+    NSTextView *sourceView = [editorDocument textView];
+    NSLayoutManager *layout = [sourceView layoutManager];
+    NSUInteger glyph = [layout glyphRangeForCharacterRange:NSMakeRange(9, 1) actualCharacterRange:NULL].location;
+    NSRect fragment = [layout lineFragmentRectForGlyphAtIndex:glyph effectiveRange:NULL];
+    NSPoint point = [ruler convertPoint:NSMakePoint(0, [sourceView textContainerOrigin].y + NSMidY(fragment)) fromView:sourceView];
+    point.x = 10;
+    testAssert([ruler sourceLineAtPoint:point] == 2, @"Gutter hit testing uses source line layout");
+    NSPoint clickPoint = [ruler convertPoint:point toView:nil];
+    NSEvent *click = [NSEvent mouseEventWithType:NSLeftMouseDown location:clickPoint modifierFlags:0
+      timestamp:0 windowNumber:[[window window] windowNumber] context:nil eventNumber:0 clickCount:1 pressure:1];
+    [ruler mouseDown:click];
+    testAssert([[build debugger] breakpointStateAtFile:source line:2] != YCodeBreakpointNone,
+      @"Clicking the gutter creates a breakpoint in that file");
+    NSString *response = [NSString stringWithFormat:@"^done,bkpt={number=\"9\",fullname=%@,line=\"2\",enabled=\"y\"}\n"
+      @"*stopped,reason=\"breakpoint-hit\",frame={fullname=%@,line=\"2\"}\n",
+      [YCodeDebugger quote:source], [YCodeDebugger quote:source]];
+    [[build debugger] receiveData:[response dataUsingEncoding:NSUTF8StringEncoding]];
+    testAssert([[build debugger] executionLine] == 2 &&
+      [[[build debugger] executionFile] isEqual:source], @"Stopped source and breakpoint share the gutter line");
+    click = [NSEvent mouseEventWithType:NSLeftMouseDown location:clickPoint modifierFlags:NSShiftKeyMask
+      timestamp:0 windowNumber:[[window window] windowNumber] context:nil eventNumber:0 clickCount:1 pressure:1];
+    [ruler mouseDown:click];
+    testAssert([[build debugger] breakpointStateAtFile:source line:2] == YCodeBreakpointInactive,
+      @"Shift-click disables the breakpoint without deleting it");
+    [[build debugger] toggleBreakpointAtFile:source line:2];
     testAssert(![build debug] && ![build run], @"Debug session excludes competing builds and runs");
     [[build debugger] command:@"-exec-run"];
     [[build debugger] command:@"-gdb-exit"];
@@ -679,6 +894,7 @@ static void testBuildAndRun(NSString *temporaryDirectory)
   if (savedDebuggerPath) [[NSUserDefaults standardUserDefaults] setObject:savedDebuggerPath forKey:@"DebuggerPath"];
   else [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"DebuggerPath"];
   [savedDebuggerPath release];
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:breakpointStorage];
   [build setTargetName:@"MissingTarget"];
   testAssert(![build run] && ![build isBusy], @"Missing runnable targets fail without launching another product");
   [build setTargetName:nil];
@@ -722,13 +938,17 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
     @"Showing results restores the split without duplicate panes");
 
   NSView *consolePane = [[tabs tabViewItemAtIndex:0] view];
-  NSTextField *commandField = [[consolePane subviews] lastObject];
-  NSView *consoleScroll = [[consolePane subviews] objectAtIndex:0];
-  testAssert([commandField isKindOfClass:[NSTextField class]] &&
-    [commandField action] == @selector(debugConsoleCommand:) &&
-    !NSIntersectsRect([commandField frame], [consoleScroll frame]) &&
-    NSContainsRect([consolePane bounds], [commandField frame]),
-    @"Debugger input remains visible below console output after resizing");
+  testAssert([consolePane isKindOfClass:[NSScrollView class]],
+    @"Console is a full-height transcript without a debugger command field");
+  [tabs selectTabViewItemWithIdentifier:@"debugger"];
+  NSView *debuggerPane = [[tabs selectedTabViewItem] view];
+  NSTextField *commandField = [controller valueForKey:@"_debuggerCommandField"];
+  NSView *debuggerScroll = [[debuggerPane subviews] objectAtIndex:1];
+  testAssert([commandField action] == @selector(debugConsoleCommand:) &&
+    !NSIntersectsRect([commandField frame], [debuggerScroll frame]) &&
+    NSContainsRect([debuggerPane bounds], [commandField frame]) &&
+    NSContainsRect([debuggerPane bounds], [debuggerScroll frame]),
+    @"Debugger command field and transcript remain separate and visible after resizing");
   NSString *source = [temporaryDirectory stringByAppendingPathComponent:@"Issue Source.m"];
   NSString *text = @"first line\n  invalidSymbol();\nlast line\n";
   [text writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
@@ -912,6 +1132,9 @@ int main(void)
     [editor closeFile:[openDocument filePath]];
   testAssert([[details string] isEqual:@"No source file selected."],
     @"Closing the final editor clears File inspector");
+
+  testSaveActiveFile(document, temporaryDirectory);
+  testProjectFileMembership(document, temporaryDirectory);
 
   // A failed read must report an error and preserve an already loaded project.
   PBXProject *originalProject = [document project];
