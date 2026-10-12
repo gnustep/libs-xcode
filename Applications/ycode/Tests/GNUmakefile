@@ -5,6 +5,8 @@ endif
 include $(GNUSTEP_MAKEFILES)/common.make
 
 TEST_TOOL_NAME = ycode_tests
+ycode_tests_HAS_RESOURCE_BUNDLE = yes
+ycode_tests_RESOURCE_FILES = ../Resources/ProjectCenterIcons
 ycode_tests_OBJC_FILES = main.m $(filter-out ../Ycode_main.m,$(wildcard ../*.m))
 ycode_tests_INCLUDE_DIRS += -I.. -I../../..
 ycode_tests_LIB_DIRS += -L../../../XCode/XCode.framework/Versions/0

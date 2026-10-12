@@ -30,6 +30,55 @@
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXTarget.h>
 
+/* NSTextFieldCell preserves the table's selection colors, including dark themes. */
+@interface YCodeNavigatorCell : NSTextFieldCell
+{
+    NSImage *_navigatorImage;
+}
+@end
+
+@implementation YCodeNavigatorCell
+- (void)dealloc
+{
+    RELEASE(_navigatorImage);
+    [super dealloc];
+}
+- (id)copyWithZone:(NSZone *)zone
+{
+    YCodeNavigatorCell *cell = [super copyWithZone:zone];
+    cell->_navigatorImage = RETAIN(_navigatorImage);
+    return cell;
+}
+- (void)setImage:(NSImage *)image { ASSIGN(_navigatorImage, image); }
+- (NSImage *)image { return _navigatorImage; }
+- (NSRect)imageRectForBounds:(NSRect)bounds
+{
+    return NSMakeRect(NSMinX(bounds) + 2, NSMidY(bounds) - 8, 16, 16);
+}
+- (void)drawInteriorWithFrame:(NSRect)frame inView:(NSView *)view
+{
+    if (_navigatorImage)
+      {
+        [NSGraphicsContext saveGraphicsState];
+        NSRectClip(frame);
+        [_navigatorImage drawInRect:[self imageRectForBounds:frame]
+            fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0
+            respectFlipped:YES hints:nil];
+        [NSGraphicsContext restoreGraphicsState];
+        frame.origin.x += 20;
+        frame.size.width = MAX(0, frame.size.width - 20);
+      }
+    [super drawInteriorWithFrame:frame inView:view];
+}
+- (NSSize)cellSize
+{
+    NSSize size = [super cellSize];
+    if (_navigatorImage) size.width += 20;
+    size.height = MAX(20, size.height);
+    return size;
+}
+@end
+
 @implementation YCodeProjectNavigatorController
 
 - (NSString *)resolvedPathForNavigatorItem:(YCodeProjectNavigatorItem *)item
@@ -143,6 +192,14 @@
     }
 
     ASSIGN(_outlineView, outlineView);
+    NSTableColumn *column = [_outlineView outlineTableColumn];
+    YCodeNavigatorCell *cell = [[YCodeNavigatorCell alloc] initTextCell:@""];
+    // The outline view supplies disclosure triangles; the cell supplies the icon.
+    [cell setEditable:NO];
+    [cell setFont:[NSFont systemFontOfSize:[NSFont smallSystemFontSize]]];
+    [column setDataCell:cell];
+    RELEASE(cell);
+    [_outlineView setRowHeight:MAX(20, [_outlineView rowHeight])];
     [_outlineView setDataSource:self];
     [_outlineView setDelegate:self];
     [_outlineView setTarget:self];

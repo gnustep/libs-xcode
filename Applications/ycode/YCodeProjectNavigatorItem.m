@@ -26,6 +26,13 @@
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXGroup.h>
 
+static NSImage *YCodeProjectCenterIcon(NSString *name)
+{
+    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"tiff"
+        inDirectory:@"ProjectCenterIcons"];
+    return path ? AUTORELEASE([[NSImage alloc] initWithContentsOfFile:path]) : nil;
+}
+
 @implementation YCodeProjectNavigatorItem
 
 - (instancetype)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type
@@ -61,7 +68,7 @@
             } else {
                 [self setDisplayName:@"Project"];
             }
-            [self setIcon:[NSImage imageNamed:@"project"]];
+            [self setIcon:YCodeProjectCenterIcon(@"FileProject")];
             break;
             
         case YCodeNavigatorItemTypeGroup:
@@ -71,7 +78,7 @@
             } else {
                 [self setDisplayName:@"Group"];
             }
-            [self setIcon:[NSImage imageNamed:@"folder"]];
+            [self setIcon:[[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode('fldr')]];
             break;
             
         case YCodeNavigatorItemTypeFile:
@@ -81,7 +88,7 @@
                 [self setIcon:[self iconForFileExtension:[path pathExtension]]];
             } else {
                 [self setDisplayName:@"File"];
-                [self setIcon:[NSImage imageNamed:@"document"]];
+                [self setIcon:[self iconForFileExtension:@""]];
             }
             break;
             
@@ -103,24 +110,24 @@
 
 - (NSImage *)iconForFileExtension:(NSString *)extension
 {
-    if ([extension isEqualToString:@"h"]) {
-        return [NSImage imageNamed:@"header"];
-    } else if ([extension isEqualToString:@"m"] || [extension isEqualToString:@"mm"]) {
-        return [NSImage imageNamed:@"objc"];
-    } else if ([extension isEqualToString:@"c"]) {
-        return [NSImage imageNamed:@"c"];
-    } else if ([extension isEqualToString:@"cpp"] || [extension isEqualToString:@"cc"]) {
-        return [NSImage imageNamed:@"cpp"];
-    } else if ([extension isEqualToString:@"xib"] || [extension isEqualToString:@"nib"]) {
-        return [NSImage imageNamed:@"nib"];
-    } else if ([extension isEqualToString:@"plist"]) {
-        return [NSImage imageNamed:@"plist"];
-    } else if ([extension isEqualToString:@"png"] || [extension isEqualToString:@"jpg"] || 
-               [extension isEqualToString:@"gif"]) {
-        return [NSImage imageNamed:@"image"];
-    }
-    
-    return [NSImage imageNamed:@"document"];
+    NSString *ext = [extension lowercaseString];
+    NSString *name = nil;
+    if ([ext isEqualToString:@"m"])
+        name = @"FileM";
+    else if ([ext isEqualToString:@"mm"])
+        name = @"FileMM";
+    else if ([[NSArray arrayWithObjects:@"h", @"hh", @"hpp", @"hxx", @"h++", nil]
+        containsObject:ext])
+        name = @"FileH";
+    else if ([[NSArray arrayWithObjects:@"c", @"cc", @"cp", @"cpp", @"cxx", @"c++", nil]
+        containsObject:ext])
+        name = @"FileC";
+    NSImage *image = name ? YCodeProjectCenterIcon(name) : nil;
+    if (!image)
+        image = [[NSWorkspace sharedWorkspace] iconForFileType:ext ? ext : @""];
+    if (!image)
+        image = [[NSWorkspace sharedWorkspace] iconForFileType:@"unknown"];
+    return image;
 }
 
 #pragma mark - Accessors
@@ -165,7 +172,11 @@
 
 - (void)setIcon:(NSImage *)icon
 {
-    ASSIGN(_icon, icon);
+    // Workspace images are shared; resize only our own copy.
+    NSImage *smallIcon = [icon copy];
+    [smallIcon setSize:NSMakeSize(16, 16)];
+    RELEASE(_icon);
+    _icon = smallIcon;
 }
 
 #pragma mark - Tree Structure

@@ -853,6 +853,33 @@ int main(void)
     && NSMinX([outline frame]) == 0, @"Navigator remains fully visible after moving the divider");
 
   NSTabView *navigatorTabs = [windowController valueForKey:@"_navigatorTabView"];
+  NSCell *navigatorCell = [[outline outlineTableColumn] dataCell];
+  testAssert([navigatorCell isKindOfClass:NSClassFromString(@"YCodeNavigatorCell")],
+    @"Navigator cell draws an icon alongside the filename");
+  NSArray *extensions = [NSArray arrayWithObjects:@"m", @"mm", @"c", @"C",
+    @"cc", @"cp", @"cpp", @"cxx", @"c++", @"h", @"hh", @"hpp", @"hxx",
+    @"h++", @"swift", @"plist", @"png", @"xib", @"gorm", @"unknown", @"", nil];
+  for (NSString *extension in extensions) {
+    PBXFileReference *file = [[PBXFileReference alloc]
+      initWithPath:[@"Example" stringByAppendingPathExtension:extension]];
+    YCodeProjectNavigatorItem *item = [[YCodeProjectNavigatorItem alloc]
+      initWithRepresentedObject:file type:YCodeNavigatorItemTypeFile];
+    testAssert([item icon] != nil && NSEqualSizes([[item icon] size], NSMakeSize(16, 16)),
+      [NSString stringWithFormat:@"Navigator has a small icon for '%@'", extension]);
+    [[outline delegate] outlineView:outline willDisplayCell:navigatorCell
+      forTableColumn:[outline outlineTableColumn] item:item];
+    testAssert([navigatorCell image] == [item icon], @"Reused row receives its file icon");
+    [item release];
+    [file release];
+  }
+  for (NSString *name in [NSArray arrayWithObjects:@"FileM", @"FileMM", @"FileC",
+      @"FileH", @"FileProject", nil]) {
+    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"tiff"
+      inDirectory:@"ProjectCenterIcons"];
+    NSImage *image = path ? [[NSImage alloc] initWithContentsOfFile:path] : nil;
+    testAssert(image != nil, @"ProjectCenter icon resources are bundled and readable");
+    [image release];
+  }
   NSTabView *inspectorTabs = [windowController valueForKey:@"_inspectorTabView"];
   testAssert([navigatorTabs isKindOfClass:[NSTabView class]]
     && [navigatorTabs numberOfTabViewItems] == 3, @"Navigator uses three native tabs");

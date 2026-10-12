@@ -41,7 +41,8 @@ ADDITIONAL_INCLUDE_DIRS += -I../..
 # Resource files
 #
 Ycode_RESOURCE_FILES = \
-Resources/Ycode.tiff
+Resources/Ycode.tiff \
+Resources/ProjectCenterIcons
 
 
 #
