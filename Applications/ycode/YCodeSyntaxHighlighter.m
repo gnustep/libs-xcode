@@ -24,6 +24,25 @@
 
 #import "YCodeSyntaxHighlighter.h"
 
+static NSRegularExpression *YCodeTokenPattern(NSString *pattern)
+{
+    if (![pattern length]) return nil;
+    NSError *error = nil;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
+        options:NSRegularExpressionAnchorsMatchLines error:&error];
+    if (error) NSLog(@"Invalid syntax highlighting pattern: %@", error);
+    return regex;
+}
+
+static NSString *YCodeWordPattern(NSArray *words)
+{
+    NSMutableArray *escaped = [NSMutableArray array];
+    for (NSString *word in words)
+        [escaped addObject:[NSRegularExpression escapedPatternForString:word]];
+    return [escaped count] ? [NSString stringWithFormat:
+        @"(?<![A-Za-z0-9_])(?:%@)(?![A-Za-z0-9_])", [escaped componentsJoinedByString:@"|"]] : nil;
+}
+
 @implementation YCodeSyntaxHighlighter
 
 - (instancetype)initWithFileExtension:(NSString *)extension
@@ -38,6 +57,8 @@
         _preprocessorColor = [[NSColor colorWithDeviceRed:0.64 green:0.45 blue:0.14 alpha:1.0] retain]; // Brown
         _typeColor = [[NSColor colorWithDeviceRed:0.15 green:0.54 blue:0.61 alpha:1.0] retain];   // Teal
         
+        _symbolColor = [[NSColor colorWithDeviceRed:0.12 green:0.40 blue:0.64 alpha:1.0] retain];
+        _constantColor = [[NSColor colorWithDeviceRed:0.60 green:0.32 blue:0.12 alpha:1.0] retain];
         [self setFileExtension:extension];
     }
     return self;
@@ -55,8 +76,13 @@
     RELEASE(_typeColor);
     RELEASE(_keywords);
     RELEASE(_types);
-    RELEASE(_stringPattern);
-    RELEASE(_commentPattern);
+    RELEASE(_symbolColor);
+    RELEASE(_constantColor);
+    RELEASE(_keywordPattern);
+    RELEASE(_typePattern);
+    RELEASE(_symbolPattern);
+    RELEASE(_constantPattern);
+    RELEASE(_literalPattern);
     RELEASE(_numberPattern);
     RELEASE(_preprocessorPattern);
     [super dealloc];
@@ -72,35 +98,25 @@
 - (void)setFileExtension:(NSString *)extension
 {
     ASSIGN(_fileExtension, extension);
-    NSString *language = [self language];
-    if (language) {
-        [self setupForLanguage:language];
-    }
+    [self setupForLanguage:[self language]];
 }
 
 - (NSString *)language
 {
-    if (!_fileExtension) {
-        return nil;
-    }
-    
-    if ([_fileExtension isEqualToString:@"m"] || [_fileExtension isEqualToString:@"mm"]) {
-        return @"objc";
-    } else if ([_fileExtension isEqualToString:@"h"]) {
-        return @"objc"; // Assuming Objective-C headers
-    } else if ([_fileExtension isEqualToString:@"c"]) {
-        return @"c";
-    } else if ([_fileExtension isEqualToString:@"cpp"] || [_fileExtension isEqualToString:@"cc"] || 
-               [_fileExtension isEqualToString:@"cxx"]) {
-        return @"cpp";
-    } else if ([_fileExtension isEqualToString:@"js"]) {
-        return @"javascript";
-    } else if ([_fileExtension isEqualToString:@"py"]) {
-        return @"python";
-    } else if ([_fileExtension isEqualToString:@"swift"]) {
-        return @"swift";
-    }
-    
+    NSString *extension = [_fileExtension lowercaseString];
+    if ([_fileExtension isEqual:@"C"]) return @"cpp";
+    if ([[NSArray arrayWithObjects:@"m", @"mm", @"h", nil] containsObject:extension]) return @"objc";
+    if ([extension isEqual:@"c"]) return @"c";
+    if ([[NSArray arrayWithObjects:@"cpp", @"cc", @"cp", @"cxx", @"c++", @"hpp", @"hh", @"hxx", @"h++", nil] containsObject:extension]) return @"cpp";
+    if ([[NSArray arrayWithObjects:@"js", @"jsx", @"mjs", @"cjs", @"ts", @"tsx", nil] containsObject:extension]) return @"javascript";
+    if ([[NSArray arrayWithObjects:@"py", @"pyw", nil] containsObject:extension]) return @"python";
+    if ([extension isEqual:@"swift"]) return @"swift";
+    if ([[NSArray arrayWithObjects:@"make", @"mk", @"makefile", @"gnumakefile", nil] containsObject:extension]) return @"make";
+    if ([extension isEqual:@"cmake"]) return @"cmake";
+    if ([[NSArray arrayWithObjects:@"sh", @"bash", @"zsh", nil] containsObject:extension]) return @"shell";
+    if ([[NSArray arrayWithObjects:@"json", @"jsonc", nil] containsObject:extension]) return @"json";
+    if ([[NSArray arrayWithObjects:@"plist", @"pbxproj", @"xcworkspacedata", @"strings", @"pcproj", @"project", nil] containsObject:extension]) return @"plist";
+    if ([[NSArray arrayWithObjects:@"xml", @"xib", @"html", @"htm", @"svg", @"xcscheme", @"gsmarkup", nil] containsObject:extension]) return @"xml";
     return @"plain";
 }
 
@@ -178,6 +194,9 @@
     ASSIGN(_typeColor, color);
 }
 
+- (NSColor *)symbolColor { return _symbolColor; }
+- (NSColor *)constantColor { return _constantColor; }
+
 #pragma mark - Highlighting Operations
 
 + (NSColor *)plainTextColorForBackground:(NSColor *)background
@@ -215,39 +234,55 @@
     [self highlightRange:fullRange];
 }
 
+- (void)applyPattern:(NSRegularExpression *)pattern color:(NSColor *)color
+                text:(NSString *)text range:(NSRange)range
+{
+    // Match with full lexical context, but only change the requested characters.
+    for (NSTextCheckingResult *match in [pattern matchesInString:text options:0
+        range:NSMakeRange(0, [text length])]) {
+        NSRange painted = NSIntersectionRange([match range], range);
+        if (painted.length)
+            [[_textView textStorage] addAttribute:NSForegroundColorAttributeName value:color range:painted];
+    }
+}
+
 - (void)highlightRange:(NSRange)range
 {
-    if (!_textView) {
-        return;
-    }
-    
+    if (!_textView) return;
     NSString *text = [_textView string];
-    NSTextStorage *textStorage = [_textView textStorage];
-    
-    if (range.location + range.length > [text length]) {
-        return;
-    }
-    
-    // Commit all token colors together so layout and observers run once per pass.
-    [textStorage beginEditing];
+    if (range.location > [text length] || range.length > [text length] - range.location) return;
+    NSString *language = [self language];
+    BOOL highlightKeys = [language isEqual:@"json"] || [language isEqual:@"plist"];
+    NSTextStorage *storage = [_textView textStorage];
+    [storage beginEditing];
     @try {
-        // Restore the default foreground before applying token colors.
         [self applyPlainTextColorInRange:range];
-
-        // Apply syntax highlighting based on language
-        NSString *language = [self language];
-
-        if ([language isEqualToString:@"objc"] || [language isEqualToString:@"c"] || [language isEqualToString:@"cpp"]) {
-            [self highlightCStyleLanguage:text inRange:range textStorage:textStorage];
-        } else if ([language isEqualToString:@"javascript"]) {
-            [self highlightJavaScript:text inRange:range textStorage:textStorage];
-        } else if ([language isEqualToString:@"python"]) {
-            [self highlightPython:text inRange:range textStorage:textStorage];
+        [self applyPattern:_preprocessorPattern color:_preprocessorColor text:text range:range];
+        [self applyPattern:_symbolPattern color:_symbolColor text:text range:range];
+        [self applyPattern:_constantPattern color:_constantColor text:text range:range];
+        [self applyPattern:_typePattern color:_typeColor text:text range:range];
+        [self applyPattern:_numberPattern color:_numberColor text:text range:range];
+        [self applyPattern:_keywordPattern color:_keywordColor text:text range:range];
+        // One left-to-right lexical pass prevents comment markers in strings,
+        // or strings inside comments, from winning over their enclosing token.
+        for (NSTextCheckingResult *match in [_literalPattern matchesInString:text options:0
+            range:NSMakeRange(0, [text length])]) {
+            NSRange token = [match range];
+            NSRange painted = NSIntersectionRange(token, range);
+            if (!painted.length) continue;
+            BOOL comment = [match rangeAtIndex:1].location != NSNotFound;
+            NSColor *color = comment ? _commentColor : _stringColor;
+            if (!comment && highlightKeys) {
+                NSUInteger next = NSMaxRange(token);
+                while (next < [text length] && [[NSCharacterSet whitespaceAndNewlineCharacterSet]
+                    characterIsMember:[text characterAtIndex:next]]) next++;
+                if (next < [text length] && ([text characterAtIndex:next] == ':' || [text characterAtIndex:next] == '='))
+                    color = _symbolColor;
+            }
+            [storage addAttribute:NSForegroundColorAttributeName value:color range:painted];
         }
     }
-    @finally {
-        [textStorage endEditing];
-    }
+    @finally { [storage endEditing]; }
 }
 
 - (void)removeHighlighting
@@ -261,121 +296,91 @@
     [self applyPlainTextColorInRange:fullRange];
 }
 
-#pragma mark - Language-Specific Highlighting
-
-- (void)highlightCStyleLanguage:(NSString *)text inRange:(NSRange)range textStorage:(NSTextStorage *)textStorage
-{
-    // Highlight comments
-    if (_commentPattern) {
-        NSArray *matches = [_commentPattern matchesInString:text options:0 range:range];
-        for (NSTextCheckingResult *match in matches) {
-            [textStorage addAttribute:NSForegroundColorAttributeName
-                                value:_commentColor
-                                range:[match range]];
-        }
-    }
-    
-    // Highlight strings
-    if (_stringPattern) {
-        NSArray *matches = [_stringPattern matchesInString:text options:0 range:range];
-        for (NSTextCheckingResult *match in matches) {
-            [textStorage addAttribute:NSForegroundColorAttributeName
-                                value:_stringColor
-                                range:[match range]];
-        }
-    }
-    
-    // Highlight preprocessor directives
-    if (_preprocessorPattern) {
-        NSArray *matches = [_preprocessorPattern matchesInString:text options:0 range:range];
-        for (NSTextCheckingResult *match in matches) {
-            [textStorage addAttribute:NSForegroundColorAttributeName
-                                value:_preprocessorColor
-                                range:[match range]];
-        }
-    }
-    
-    // Highlight numbers
-    if (_numberPattern) {
-        NSArray *matches = [_numberPattern matchesInString:text options:0 range:range];
-        for (NSTextCheckingResult *match in matches) {
-            [textStorage addAttribute:NSForegroundColorAttributeName
-                                value:_numberColor
-                                range:[match range]];
-        }
-    }
-    
-    // Highlight keywords
-    if (_keywords) {
-        for (NSString *keyword in _keywords) {
-            NSString *pattern = [NSString stringWithFormat:@"\\\\b%@\\\\b", keyword];
-            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
-                                                                                   options:0
-                                                                                     error:nil];
-            if (regex) {
-                NSArray *matches = [regex matchesInString:text options:0 range:range];
-                for (NSTextCheckingResult *match in matches) {
-                    [textStorage addAttribute:NSForegroundColorAttributeName
-                                        value:_keywordColor
-                                        range:[match range]];
-                }
-            }
-        }
-    }
-    
-    // Highlight types
-    if (_types) {
-        for (NSString *type in _types) {
-            NSString *pattern = [NSString stringWithFormat:@"\\\\b%@\\\\b", type];
-            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
-                                                                                   options:0
-                                                                                     error:nil];
-            if (regex) {
-                NSArray *matches = [regex matchesInString:text options:0 range:range];
-                for (NSTextCheckingResult *match in matches) {
-                    [textStorage addAttribute:NSForegroundColorAttributeName
-                                        value:_typeColor
-                                        range:[match range]];
-                }
-            }
-        }
-    }
-}
-
-- (void)highlightJavaScript:(NSString *)text inRange:(NSRange)range textStorage:(NSTextStorage *)textStorage
-{
-    // Similar to C-style highlighting but with JavaScript-specific keywords
-    [self highlightCStyleLanguage:text inRange:range textStorage:textStorage];
-}
-
-- (void)highlightPython:(NSString *)text inRange:(NSRange)range textStorage:(NSTextStorage *)textStorage
-{
-    // Python-specific highlighting (simpler comment pattern, different string handling)
-    [self highlightCStyleLanguage:text inRange:range textStorage:textStorage];
-}
-
 #pragma mark - Language-Specific Setup
 
 - (void)setupForLanguage:(NSString *)language
 {
-    if ([language isEqualToString:@"objc"]) {
-        [self setupObjectiveC];
-    } else if ([language isEqualToString:@"c"]) {
-        [self setupC];
-    } else if ([language isEqualToString:@"cpp"]) {
-        [self setupCPlusPlus];
-    } else if ([language isEqualToString:@"javascript"]) {
-        [self setupJavaScript];
-    } else if ([language isEqualToString:@"python"]) {
-        [self setupPython];
-    } else if ([language isEqualToString:@"swift"]) {
-        [self setupSwift];
+    DESTROY(_keywords); DESTROY(_types);
+    DESTROY(_numberPattern);
+    DESTROY(_preprocessorPattern); DESTROY(_keywordPattern); DESTROY(_typePattern);
+    DESTROY(_symbolPattern); DESTROY(_constantPattern); DESTROY(_literalPattern);
+    if ([language isEqual:@"plain"]) return;
+
+    if ([language isEqual:@"objc"]) [self setupObjectiveC];
+    else if ([language isEqual:@"c"]) [self setupC];
+    else if ([language isEqual:@"cpp"]) [self setupCPlusPlus];
+    else if ([language isEqual:@"javascript"]) [self setupJavaScript];
+    else if ([language isEqual:@"python"]) [self setupPython];
+    else if ([language isEqual:@"swift"]) [self setupSwift];
+
+    NSString *strings = @"@?\"(?:\\\\[\\s\\S]|[^\"\\\\\\r\\n])*(?:\"|$)|'(?:\\\\[\\s\\S]|[^'\\\\\\r\\n])*(?:'|$)";
+    NSString *comments = @"/\\*[\\s\\S]*?(?:\\*/|\\z)|//[^\\r\\n]*";
+    NSString *preprocessor = @"^[ \\t]*#[ \\t]*[A-Za-z_]+(?:[^\\r\\n\\\\]|\\\\[^\\r\\n]|\\\\\\r?\\n)*";
+    NSString *symbols = @"\\b[A-Za-z_]\\w*(?=[ \\t]*(?:\\(|:))|(?<=\\.)[A-Za-z_]\\w*|\\b_[A-Za-z_]\\w*";
+    NSString *types = @"\\b[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*\\b(?![ \\t]*\\()";
+    NSString *constants = @"\\b[A-Z][A-Z0-9_]+\\b";
+    NSArray *extraKeywords = nil;
+    if ([language isEqual:@"objc"]) {
+        symbols = [symbols stringByAppendingString:@"|\\b[A-Za-z_]\\w*(?=[ \\t]*\\])"];
+        extraKeywords = [@"instancetype __block __weak __strong __bridge nullable nonnull nonatomic atomic readonly readwrite retain copy assign strong weak @optional @required @available" componentsSeparatedByString:@" "];
+        if ([_fileExtension isEqual:@"mm"])
+            extraKeywords = [extraKeywords arrayByAddingObjectsFromArray:[@"class namespace template typename using new delete virtual public private protected nullptr constexpr noexcept" componentsSeparatedByString:@" "]];
+    } else if ([language isEqual:@"cpp"] || [language isEqual:@"c"]) {
+        extraKeywords = [@"inline restrict _Bool _Atomic _Thread_local _Static_assert true false nullptr constexpr noexcept override final decltype static_assert thread_local alignas alignof concept requires co_await co_return co_yield" componentsSeparatedByString:@" "];
+    } else if ([language isEqual:@"javascript"]) {
+        preprocessor = nil;
+        strings = [@"`(?:\\\\[\\s\\S]|[^`\\\\])*(?:`|\\z)|" stringByAppendingString:strings];
+        extraKeywords = [@"async await of true false null undefined type declare abstract readonly as keyof infer unknown never" componentsSeparatedByString:@" "];
+    } else if ([language isEqual:@"python"]) {
+        comments = @"#[^\\r\\n]*";
+        preprocessor = @"^[ \\t]*@[A-Za-z_][\\w.]*";
+        strings = [@"(?:[rRuUbBfF]{0,2})(?:\"\"\"[\\s\\S]*?(?:\"\"\"|\\z)|'{3}[\\s\\S]*?(?:'{3}|\\z))|" stringByAppendingString:strings];
+        extraKeywords = [@"async await nonlocal match case" componentsSeparatedByString:@" "];
+    } else if ([language isEqual:@"swift"]) {
+        strings = [@"\"\"\"[\\s\\S]*?(?:\"\"\"|\\z)|" stringByAppendingString:strings];
+        extraKeywords = [@"actor async await some any isolated nonisolated weak unowned override final open convenience required mutating nonmutating" componentsSeparatedByString:@" "];
+    } else if ([language isEqual:@"make"] || [language isEqual:@"shell"] || [language isEqual:@"cmake"]) {
+        comments = @"(?<!\\\\)#[^\\r\\n]*";
+        preprocessor = nil;
+        types = nil;
+        constants = @"\\$\\([^\\r\\n)]*\\)|\\$\\{[^\\r\\n}]*\\}|\\$[A-Za-z_][A-Za-z0-9_]*|\\$[@<^?*%+|#0-9]";
+        if ([language isEqual:@"make"]) {
+            extraKeywords = [@"include -include sinclude ifeq ifneq ifdef ifndef else endif define endef override export unexport vpath private undefine" componentsSeparatedByString:@" "];
+            types = @"^[^\\s#:=][^\\r\\n:=]*:(?!=)";
+            symbols = @"^[ \\t]*[A-Za-z_][A-Za-z0-9_]*(?=[ \\t]*[?:+!]?=)";
+        } else if ([language isEqual:@"shell"]) {
+            extraKeywords = [@"if then else elif fi for while until do done case esac in function select time export local readonly return break continue exit source" componentsSeparatedByString:@" "];
+        } else {
+            extraKeywords = [@"if elseif else endif foreach endforeach while endwhile function endfunction macro endmacro return include find_package add_executable add_library target_link_libraries target_include_directories set option project cmake_minimum_required" componentsSeparatedByString:@" "];
+            constants = [constants stringByAppendingString:@"|\\b(?:ON|OFF|TRUE|FALSE|PUBLIC|PRIVATE|INTERFACE|REQUIRED)\\b"];
+            comments = @"#\\[\\[[\\s\\S]*?(?:\\]\\]|\\z)|#[^\\r\\n]*";
+        }
+    } else if ([language isEqual:@"json"] || [language isEqual:@"plist"] || [language isEqual:@"xml"]) {
+        extraKeywords = [@"true false null YES NO" componentsSeparatedByString:@" "];
+        preprocessor = @"<\\?[\\s\\S]*?\\?>|<!DOCTYPE[^>]*>";
+        types = @"</?[A-Za-z_][\\w:.-]*|/?>";
+        symbols = @"\\b[A-Za-z_][\\w.-]*(?=[ \\t]*=)";
+        comments = [@"<!--[\\s\\S]*?(?:-->|\\z)|" stringByAppendingString:comments];
+        if ([language isEqual:@"json"]) { types = nil; preprocessor = nil; symbols = nil; constants = nil; }
+        if ([language isEqual:@"xml"]) comments = @"<!--[\\s\\S]*?(?:-->|\\z)";
     }
+    if (extraKeywords) {
+        NSArray *all = _keywords ? [_keywords arrayByAddingObjectsFromArray:extraKeywords] : extraKeywords;
+        ASSIGN(_keywords, all);
+    }
+    NSString *knownTypes = YCodeWordPattern(_types);
+    if (knownTypes) types = types ? [NSString stringWithFormat:@"(?:%@)|(?:%@)", types, knownTypes] : knownTypes;
+    _keywordPattern = RETAIN(YCodeTokenPattern(YCodeWordPattern(_keywords)));
+    _typePattern = RETAIN(YCodeTokenPattern(types));
+    _symbolPattern = RETAIN(YCodeTokenPattern(symbols));
+    _constantPattern = RETAIN(YCodeTokenPattern(constants));
+    _preprocessorPattern = RETAIN(YCodeTokenPattern(preprocessor));
+    _numberPattern = RETAIN(YCodeTokenPattern(@"(?<![\\w.])@?(?:0[xX][0-9a-fA-F]+|0[bB][01]+|(?:[0-9][0-9_]*(?:\\.[0-9_]*)?|\\.[0-9_]+)(?:[eE][+-]?[0-9_]+)?)[uUlLfF]*(?!\\w)"));
+    _literalPattern = RETAIN(YCodeTokenPattern([NSString stringWithFormat:@"(%@)|(?:%@)", comments, strings]));
 }
 
 - (void)setupObjectiveC
 {
-    // Objective-C keywords
     NSArray *objcKeywords = @[@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
                               @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
                               @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
@@ -384,43 +389,25 @@
                               @"@synthesize", @"@dynamic", @"@selector", @"@encode", @"@try", @"@catch", @"@finally",
                               @"@throw", @"@synchronized", @"@autoreleasepool", @"@import", @"@public", @"@private",
                               @"@protected", @"@package", @"self", @"super", @"nil", @"Nil", @"YES", @"NO"];
-    
     NSArray *objcTypes = @[@"id", @"Class", @"SEL", @"IMP", @"BOOL", @"NSInteger", @"NSUInteger", @"CGFloat",
                            @"NSString", @"NSArray", @"NSDictionary", @"NSObject", @"NSNumber"];
-    
     ASSIGN(_keywords, objcKeywords);
     ASSIGN(_types, objcTypes);
-    
-    // Regular expressions
-    _stringPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\\"[^\\\"]*\\\"|\\'[^\\']*\\'"
-                                                                 options:0 error:nil] retain];
-    _commentPattern = [[NSRegularExpression regularExpressionWithPattern:@"/\\*[\\s\\S]*?\\*/|//.*?$"
-                                                                  options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
-    _numberPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?[fFdD]?\\b"
-                                                                 options:0 error:nil] retain];
-    _preprocessorPattern = [[NSRegularExpression regularExpressionWithPattern:@"^\\s*#.*$"
-                                                                       options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
 }
 
 - (void)setupC
 {
-    // C keywords
     NSArray *cKeywords = @[@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
                            @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
                            @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
                            @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while"];
-    
     NSArray *cTypes = @[@"size_t", @"ptrdiff_t", @"FILE", @"NULL"];
-    
     ASSIGN(_keywords, cKeywords);
     ASSIGN(_types, cTypes);
-    
-    [self setupCommonCPatterns];
 }
 
 - (void)setupCPlusPlus
 {
-    // C++ keywords (includes C keywords)
     NSArray *cppKeywords = @[@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
                              @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
                              @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
@@ -429,25 +416,9 @@
                              @"operator", @"overload", @"template", @"this", @"new", @"delete", @"namespace",
                              @"using", @"try", @"catch", @"throw", @"const_cast", @"dynamic_cast", @"reinterpret_cast",
                              @"static_cast", @"typeid", @"typename", @"explicit", @"mutable", @"export"];
-    
     NSArray *cppTypes = @[@"bool", @"wchar_t", @"string", @"vector", @"map", @"set", @"list", @"deque"];
-    
     ASSIGN(_keywords, cppKeywords);
     ASSIGN(_types, cppTypes);
-    
-    [self setupCommonCPatterns];
-}
-
-- (void)setupCommonCPatterns
-{
-    _stringPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\\"[^\\\"]*\\\"|\\'[^\\']*\\'"
-                                                                 options:0 error:nil] retain];
-    _commentPattern = [[NSRegularExpression regularExpressionWithPattern:@"/\\*[\\s\\S]*?\\*/|//.*?$"
-                                                                  options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
-    _numberPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?[fFdDlL]?\\b"
-                                                                 options:0 error:nil] retain];
-    _preprocessorPattern = [[NSRegularExpression regularExpressionWithPattern:@"^\\s*#.*$"
-                                                                       options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
 }
 
 - (void)setupJavaScript
@@ -458,19 +429,9 @@
                             @"with", @"class", @"const", @"enum", @"export", @"extends", @"import", @"super",
                             @"implements", @"interface", @"let", @"package", @"private", @"protected", @"public",
                             @"static", @"yield"];
-    
     NSArray *jsTypes = @[@"Array", @"Boolean", @"Date", @"Error", @"Function", @"Number", @"Object", @"RegExp", @"String"];
-    
     ASSIGN(_keywords, jsKeywords);
     ASSIGN(_types, jsTypes);
-    
-    _stringPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\\"[^\\\"]*\\\"|'[^']*'|`[^`]*`"
-                                                                 options:0 error:nil] retain];
-    _commentPattern = [[NSRegularExpression regularExpressionWithPattern:@"/\\*[\\s\\S]*?\\*/|//.*?$"
-                                                                  options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
-    _numberPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
-                                                                 options:0 error:nil] retain];
-    _preprocessorPattern = nil; // JavaScript doesn't have preprocessor
 }
 
 - (void)setupPython
@@ -479,19 +440,9 @@
                                 @"else", @"except", @"exec", @"finally", @"for", @"from", @"global", @"if", @"import",
                                 @"in", @"is", @"lambda", @"not", @"or", @"pass", @"print", @"raise", @"return", @"try",
                                 @"while", @"with", @"yield", @"None", @"True", @"False"];
-    
     NSArray *pythonTypes = @[@"int", @"float", @"str", @"list", @"dict", @"tuple", @"set", @"bool"];
-    
     ASSIGN(_keywords, pythonKeywords);
     ASSIGN(_types, pythonTypes);
-    
-    _stringPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\\"\\\"\\\"[\\s\\S]*?\\\"\\\"\\\"|'''[\\s\\S]*?'''|\\\"[^\\\"]*\\\"|'[^']*'"
-                                                                 options:0 error:nil] retain];
-    _commentPattern = [[NSRegularExpression regularExpressionWithPattern:@"#.*?$"
-                                                                  options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
-    _numberPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
-                                                                 options:0 error:nil] retain];
-    _preprocessorPattern = nil; // Python doesn't have preprocessor
 }
 
 - (void)setupSwift
@@ -502,19 +453,9 @@
                                @"default", @"defer", @"do", @"else", @"fallthrough", @"for", @"guard", @"if", @"in",
                                @"repeat", @"return", @"switch", @"where", @"while", @"as", @"catch", @"false", @"is",
                                @"nil", @"rethrows", @"super", @"self", @"Self", @"throw", @"throws", @"true", @"try"];
-    
     NSArray *swiftTypes = @[@"Int", @"Float", @"Double", @"Bool", @"String", @"Character", @"Array", @"Dictionary", @"Set"];
-    
     ASSIGN(_keywords, swiftKeywords);
     ASSIGN(_types, swiftTypes);
-    
-    _stringPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\\"[^\\\"]*\\\""
-                                                                 options:0 error:nil] retain];
-    _commentPattern = [[NSRegularExpression regularExpressionWithPattern:@"/\\*[\\s\\S]*?\\*/|//.*?$"
-                                                                  options:NSRegularExpressionAnchorsMatchLines error:nil] retain];
-    _numberPattern = [[NSRegularExpression regularExpressionWithPattern:@"\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
-                                                                 options:0 error:nil] retain];
-    _preprocessorPattern = nil; // Swift doesn't have preprocessor
 }
 
 @end

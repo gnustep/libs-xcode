@@ -40,14 +40,19 @@
     NSColor *_numberColor;
     NSColor *_preprocessorColor;
     NSColor *_typeColor;
+    NSColor *_symbolColor;
+    NSColor *_constantColor;
     
     // Language patterns
     NSArray *_keywords;
     NSArray *_types;
-    NSRegularExpression *_stringPattern;
-    NSRegularExpression *_commentPattern;
     NSRegularExpression *_numberPattern;
     NSRegularExpression *_preprocessorPattern;
+    NSRegularExpression *_keywordPattern;
+    NSRegularExpression *_typePattern;
+    NSRegularExpression *_symbolPattern;
+    NSRegularExpression *_constantPattern;
+    NSRegularExpression *_literalPattern;
 }
 
 /**
@@ -84,6 +89,8 @@
 - (void)setPreprocessorColor:(NSColor *)color;
 - (NSColor *)typeColor;
 - (void)setTypeColor:(NSColor *)color;
+- (NSColor *)symbolColor;
+- (NSColor *)constantColor;
 
 /**
  * Highlighting operations

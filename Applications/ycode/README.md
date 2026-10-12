@@ -64,6 +64,13 @@ missing files are skipped when reopening the project.
 Choose an entry to reopen it, or **Clear Menu** to clear the saved history.
 Missing projects remain listed but disabled.
 
+The editor highlights keywords, types, function and method names, constants,
+numbers, strings, and comments in Objective-C, C, C++, Swift, JavaScript,
+TypeScript, and Python. Highlighting also covers GNUmakefiles, CMake files,
+shell scripts, JSON, XML, property lists, and project files. GNUmakefile and
+CMakeLists.txt are recognized by filename. Colors use lexical patterns;
+they do not require a successful build or a language server.
+
 **File > Save** and its keyboard shortcut save the active source tab. With no
 source tab open, Save saves the project.
 

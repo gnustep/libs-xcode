@@ -351,6 +351,110 @@ static void testEditorColors(void)
   [editor release];
 }
 
+static void assertSyntaxColor(YCodeEditorDocument *document, NSString *token,
+                              NSColor *expected, NSString *message)
+{
+  NSRange range = [[document content] rangeOfString:token];
+  BOOL matches = range.location != NSNotFound;
+  if (matches)
+    {
+      NSUInteger index;
+      for (index = range.location; index < NSMaxRange(range); index++)
+        if (![[[[document textView] textStorage] attribute:NSForegroundColorAttributeName
+               atIndex:index effectiveRange:NULL] isEqual:expected])
+          { matches = NO; break; }
+    }
+  testAssert(matches, message);
+}
+
+static void testSyntaxHighlighting(void)
+{
+  NSString *source = @"@interface Example : NSObject\n@property(copy) NSString *title;\n@end\n"
+    @"BOOL ready = YES; int returnValue = 0xFF; double fraction = .5e-2;\n"
+    @"[self setTitle:@\"https://example/* return 123 */\"]; NSLog(@\"hi\"); [items count];\n"
+    @"// return 42 \"quoted\"\n/* if 9\n NSString *text = @\"comment\"; */\n"
+    @"if (ready) return _value;\n";
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:@"Example.m" content:source];
+  YCodeSyntaxHighlighter *highlighter = [document syntaxHighlighter];
+  assertSyntaxColor(document, @"@interface", [highlighter keywordColor], @"Objective-C @keywords are highlighted");
+  assertSyntaxColor(document, @"NSString", [highlighter typeColor], @"Foundation types are highlighted");
+  assertSyntaxColor(document, @"Example", [highlighter typeColor], @"Custom class names are highlighted");
+  assertSyntaxColor(document, @"BOOL", [highlighter typeColor], @"Known types take precedence over constant heuristics");
+  assertSyntaxColor(document, @"setTitle", [highlighter symbolColor], @"Objective-C selectors are highlighted");
+  assertSyntaxColor(document, @"count", [highlighter symbolColor], @"Unary Objective-C messages are highlighted");
+  assertSyntaxColor(document, @"NSLog", [highlighter symbolColor], @"Function calls are highlighted");
+  assertSyntaxColor(document, @"_value", [highlighter symbolColor], @"Instance variables are highlighted");
+  assertSyntaxColor(document, @"0xFF", [highlighter numberColor], @"Hexadecimal literals are highlighted");
+  assertSyntaxColor(document, @".5e-2", [highlighter numberColor], @"Fractional exponent literals are highlighted");
+  assertSyntaxColor(document, @"@\"https://example/* return 123 */\"", [highlighter stringColor],
+    @"Comment markers, keywords and numbers inside strings stay string-colored");
+  assertSyntaxColor(document, @"// return 42 \"quoted\"", [highlighter commentColor],
+    @"Keywords, numbers and quotes inside comments stay comment-colored");
+  NSString *block = @"/* if 9\n NSString *text = @\"comment\"; */";
+  assertSyntaxColor(document, block, [highlighter commentColor], @"Multiline comments retain one color");
+  NSColor *plain = [YCodeSyntaxHighlighter plainTextColorForBackground:[[document textView] backgroundColor]];
+  assertSyntaxColor(document, @"returnValue", plain, @"Keywords do not match inside identifiers");
+  NSRange partial = [source rangeOfString:@"text ="];
+  [[[document textView] textStorage] addAttribute:NSForegroundColorAttributeName value:plain range:partial];
+  [highlighter highlightRange:partial];
+  assertSyntaxColor(document, block, [highlighter commentColor], @"Partial repaint retains multiline lexical context");
+  [[document textView] setSelectedRange:NSMakeRange(5, 3)];
+  NSFont *font = [[document textView] font];
+  [document setModified:NO];
+  [document applySyntaxHighlighting];
+  testAssert(NSEqualRanges([[document textView] selectedRange], NSMakeRange(5, 3)) &&
+    [[[document textView] font] isEqual:font] && [[document content] isEqual:source] && ![document isModified],
+    @"Highlighting preserves content, selection, font and modified state");
+  [document setFilePath:@"Example.txt"];
+  assertSyntaxColor(document, source, plain, @"Renaming to plain text clears all syntax colors immediately");
+  [document setFilePath:@"Example.m"];
+  [document setContent:@"/* unfinished\nreturn 123"];
+  highlighter = [document syntaxHighlighter];
+  assertSyntaxColor(document, [document content], [highlighter commentColor], @"Unterminated comments extend through EOF");
+  [document setContent:@"return 123"];
+  assertSyntaxColor(document, @"return", [highlighter keywordColor], @"Removing a comment opener recolors the following code");
+  [document release];
+
+  // Exercise filename detection and the less frequently opened source/configuration formats.
+  NSArray *cases = @[
+    @[@"Example.swift", @"let value: Int = 42", @"let", @"keywordColor"],
+    @[@"Example.hpp", @"constexpr int count = 1;", @"constexpr", @"keywordColor"],
+    @[@"Example.C", @"namespace demo {}", @"namespace", @"keywordColor"],
+    @[@"Example.mm", @"nullptr", @"nullptr", @"keywordColor"],
+    @[@"Example.tsx", @"async function work() {}", @"async", @"keywordColor"],
+    @[@"Example.js", @"const value = `// return\n42`;", @"`// return\n42`", @"stringColor"],
+    @[@"Example.py", @"value = '''# if\n42'''", @"'''# if\n42'''", @"stringColor"],
+    @[@"Example.py", @"async def work(): pass", @"async", @"keywordColor"],
+    @[@"GNUmakefile", @"include $(GNUSTEP_MAKEFILES)/common.make", @"include", @"keywordColor"],
+    @[@"GNUmakefile", @"include $(GNUSTEP_MAKEFILES)/common.make", @"$(GNUSTEP_MAKEFILES)", @"constantColor"],
+    @[@"GNUmakefile.postamble", @"after-all:\n\techo done", @"after-all:", @"typeColor"],
+    @[@"Makefile", @"SOURCES += main.m", @"SOURCES", @"symbolColor"],
+    @[@"CMakeLists.txt", @"add_executable(example main.c)", @"add_executable", @"keywordColor"],
+    @[@"build.sh", @"if test $value; then echo yes; fi", @"$value", @"constantColor"],
+    @[@"build.sh", @"# if $value 42", @"# if $value 42", @"commentColor"],
+    @[@"config.json", @"{\"name\": \"https://example\", \"ok\": true}", @"\"name\"", @"symbolColor"],
+    @[@"config.json", @"{\"name\": \"https://example\"}", @"\"https://example\"", @"stringColor"],
+    @[@"project.pbxproj", @"{ isa = PBXProject; /* 123 */ }", @"isa", @"symbolColor"],
+    @[@"PC.project", @"{ \"name\" = \"Example\"; }", @"\"name\"", @"symbolColor"],
+    @[@"Info.plist", @"<plist version=\"1.0\"><true/></plist>", @"<plist", @"typeColor"],
+    @[@"Window.xib", @"<object id=\"42\"/>", @"id", @"symbolColor"],
+    @[@"Window.xml", @"<!-- if \"text\" 42 -->", @"<!-- if \"text\" 42 -->", @"commentColor"],
+    @[@"Example.c", @"#define FLAG 1\n", @"#define", @"preprocessorColor"],
+    @[@"Example.c", @"int flags = SOME_FLAG;", @"SOME_FLAG", @"constantColor"]
+  ];
+  for (NSArray *example in cases)
+    {
+      document = [[YCodeEditorDocument alloc] initWithFilePath:[example objectAtIndex:0]
+        content:[example objectAtIndex:1]];
+      highlighter = [document syntaxHighlighter];
+      NSColor *color = [highlighter performSelector:NSSelectorFromString([example objectAtIndex:3])];
+      assertSyntaxColor(document, [example objectAtIndex:2], color,
+        [NSString stringWithFormat:@"%@ highlights %@", [example objectAtIndex:0], [example objectAtIndex:2]]);
+      [document release];
+    }
+}
+
 static void testEditorEditing(NSString *directory)
 {
   NSString *root = [directory stringByAppendingPathComponent:@"Editing Rules"];
@@ -1345,6 +1449,7 @@ int main(void)
   [NSApplication sharedApplication];
   testApplicationStartup();
   testEditorColors();
+  testSyntaxHighlighting();
   testDebuggerRecords();
   testAssert([manager createDirectoryAtPath:temporaryDirectory
               withIntermediateDirectories:YES attributes:nil error:&error],
