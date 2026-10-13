@@ -22,9 +22,12 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */
 
+#import "YCodePreferences.h"
 #import "YCodeControlIcons.h"
 #import "YCodeWindowController.h"
 #import "YCodeProject.h"
+#import <XCode/PBXProject.h>
+#import <XCode/PBXTarget.h>
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
@@ -42,8 +45,11 @@
   NSMutableDictionary *_attributes;
   NSMutableString *_sequence;
   NSUInteger _state;
+  NSFont *_font;
+  BOOL _bold;
 }
 - (NSAttributedString *)decode:(NSString *)text;
+- (void)setFont:(NSFont *)font;
 @end
 
 @implementation YCANSITranscript
@@ -51,19 +57,28 @@
 {
   if ((self = [super init]))
     {
+      _font = RETAIN([YCodePreferences fontForPane:@"Console"]);
       _attributes = [NSMutableDictionary new];
       _sequence = [NSMutableString new];
-      [_attributes setObject:[NSFont userFixedPitchFontOfSize:12] forKey:NSFontAttributeName];
+      [_attributes setObject:_font forKey:NSFontAttributeName];
       [_attributes setObject:[NSColor textColor] forKey:NSForegroundColorAttributeName];
     }
   return self;
 }
 - (void)dealloc
 {
+  [_font release];
   [_attributes release];
   [_sequence release];
   [super dealloc];
 }
+- (void)setFont:(NSFont *)font
+{
+    ASSIGN(_font, font);
+    NSFont *styled = _bold ? [[NSFontManager sharedFontManager] convertFont:_font toHaveTrait:NSBoldFontMask] : _font;
+    [_attributes setObject:styled ?: _font forKey:NSFontAttributeName];
+}
+
 - (NSColor *)color:(NSInteger)index
 {
   static const unsigned char palette[16][3] = {
@@ -94,14 +109,15 @@
       NSString *key = NSForegroundColorAttributeName;
       if (code == 0)
         {
+          _bold = NO;
           [_attributes removeAllObjects];
-          [_attributes setObject:[NSFont userFixedPitchFontOfSize:12] forKey:NSFontAttributeName];
+          [_attributes setObject:_font forKey:NSFontAttributeName];
           [_attributes setObject:[NSColor textColor] forKey:NSForegroundColorAttributeName];
         }
-      else if (code == 1 || code == 22)
-        [_attributes setObject:[[NSFontManager sharedFontManager]
-          convertFont:[NSFont userFixedPitchFontOfSize:12]
-          toHaveTrait:code == 1 ? NSBoldFontMask : NSUnboldFontMask] forKey:NSFontAttributeName];
+      else if (code == 1 || code == 22) {
+        _bold = code == 1;
+        [self setFont:_font];
+      }
       else if (code == 4 || code == 24)
         [_attributes setObject:[NSNumber numberWithInt:code == 4 ? NSUnderlineStyleSingle : NSUnderlineStyleNone]
           forKey:NSUnderlineStyleAttributeName];
@@ -173,6 +189,18 @@
 }
 @end
 
+/* Custom toolbar views need their enabled state refreshed during validation,
+   including after cancellation has finished draining the task's output. */
+@interface YCodeTargetToolbarItem : NSToolbarItem
+@end
+@implementation YCodeTargetToolbarItem
+- (void)validate
+{
+    [super validate];
+    [(NSPopUpButton *)[self view] setEnabled:[[self target] validateToolbarItem:self]];
+}
+@end
+
 static NSScrollView *
 YCodeScrollViewWithDocumentView(NSView *documentView)
 {
@@ -188,6 +216,10 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 @interface YCodeWindowController (Private)
 - (void)saveWindowFrame:(NSNotification *)notification;
+- (void)restoreSidebarWidths;
+- (void)fontsChanged:(NSNotification *)notification;
+- (void)refreshTargetSelectors;
+- (void)populateTargetSelector:(NSPopUpButton *)selector;
 - (void)appendConsoleOutput:(NSString *)output;
 - (NSAttributedString *)decodeOutput:(NSString *)output stream:(NSString *)stream;
 - (void)consumeDiagnostics:(NSString *)output buffer:(NSMutableString *)buffer;
@@ -214,8 +246,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     RELEASE(window);
 
     if (self) {
-        _navigatorVisible = YES;
-        _inspectorVisible = YES;
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        _navigatorWidth = [defaults doubleForKey:@"YCodeNavigatorWidth"];
+        _inspectorWidth = [defaults doubleForKey:@"YCodeInspectorWidth"];
+        if (!isfinite(_navigatorWidth) || _navigatorWidth < 80) _navigatorWidth = 250;
+        if (!isfinite(_inspectorWidth) || _inspectorWidth < 80) _inspectorWidth = 250;
+        _navigatorVisible = ![defaults boolForKey:@"YCodeNavigatorHidden"];
+        _inspectorVisible = ![defaults boolForKey:@"YCodeInspectorHidden"];
         _bottomPanelVisible = NO;
         
         // Initialize controllers
@@ -227,9 +264,18 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [self setupInterface];
         [self setShouldCascadeWindows:NO];
         [[self window] setFrameUsingName:@"YCodeMainWindow"];
+        [self restoreSidebarWidths];
+        [self fontsChanged:nil];
         // Share the last position across projects. A frame autosave name can
         // only be owned by one live window, so save each window explicitly.
         NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(fontsChanged:) name:@"YCodeFontsDidChange" object:nil];
+        [center addObserver:self selector:@selector(sidebarResized:) name:NSSplitViewDidResizeSubviewsNotification object:_mainSplitView];
+        [center addObserver:self selector:@selector(sidebarResized:) name:NSSplitViewDidResizeSubviewsNotification object:_contentSplitView];
+        [_navigatorView setPostsFrameChangedNotifications:YES];
+        [_inspectorView setPostsFrameChangedNotifications:YES];
+        [center addObserver:self selector:@selector(sidebarResized:) name:NSViewFrameDidChangeNotification object:_navigatorView];
+        [center addObserver:self selector:@selector(sidebarResized:) name:NSViewFrameDidChangeNotification object:_inspectorView];
         [center addObserver:self selector:@selector(saveWindowFrame:)
             name:NSWindowDidMoveNotification object:[self window]];
         [center addObserver:self selector:@selector(saveWindowFrame:)
@@ -240,6 +286,70 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             name:YCodeDebuggerDidChangeNotification object:nil];
     }
     return self;
+}
+
+- (void)fontsChanged:(NSNotification *)notification
+{
+    NSArray *views = [NSArray arrayWithObjects:_consoleTextView, _debuggerTextView, nil];
+    NSArray *panes = [NSArray arrayWithObjects:@"Console", @"Debugger", nil];
+    NSUInteger i;
+    for (i = 0; i < [views count]; i++) {
+        NSTextView *view = [views objectAtIndex:i];
+        NSFont *font = [YCodePreferences fontForPane:[panes objectAtIndex:i]];
+        [YCodePreferences applyFont:font toText:[view textStorage]];
+        NSMutableDictionary *typing = [NSMutableDictionary dictionaryWithDictionary:[view typingAttributes]];
+        [typing setObject:font forKey:NSFontAttributeName];
+        [view setTypingAttributes:typing];
+    }
+    NSFont *font = [YCodePreferences fontForPane:@"Issues"];
+    NSEnumerator *enumerator = [_buildIssues objectEnumerator];
+    NSDictionary *issue;
+    while ((issue = [enumerator nextObject]) != nil)
+        [YCodePreferences applyFont:font toText:[issue objectForKey:@"display"]];
+    if ([[_issuesTableView tableColumns] count])
+        [[[[_issuesTableView tableColumns] objectAtIndex:0] dataCell] setFont:font];
+    [_issuesTableView setRowHeight:MAX(58, ceil(([font ascender] - [font descender] + [font leading]) * 2 + 12))];
+    [_issuesTableView reloadData];
+}
+
+- (void)restoreSidebarWidths
+{
+    BOOL restoring = _restoringSidebars;
+    _restoringSidebars = YES;
+    if (_navigatorVisible) {
+        CGFloat desired = MIN(_navigatorWidth, MAX(80, NSWidth([_mainSplitView bounds]) - 400));
+        CGFloat position = NSMaxX([_navigatorView frame]);
+#ifdef GNUSTEP
+        position = (position + NSMinX([_contentSplitView frame])) / 2;
+#endif
+        [_mainSplitView setPosition:position + desired - NSWidth([_navigatorView frame]) ofDividerAtIndex:0];
+    }
+    if (_inspectorVisible) {
+        CGFloat desired = MIN(_inspectorWidth, MAX(80, NSWidth([_contentSplitView bounds]) - 250));
+        CGFloat position = NSMaxX([_editorView frame]);
+#ifdef GNUSTEP
+        position = (position + NSMinX([_inspectorView frame])) / 2;
+#endif
+        [_contentSplitView setPosition:position + NSWidth([_inspectorView frame]) - desired ofDividerAtIndex:0];
+    }
+    _restoringSidebars = restoring;
+}
+
+- (void)sidebarResized:(NSNotification *)notification
+{
+    if (_restoringSidebars) return;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    CGFloat width = NSWidth([_navigatorView frame]);
+    if (_navigatorVisible && width >= 80) {
+        _navigatorWidth = width;
+        [defaults setDouble:width forKey:@"YCodeNavigatorWidth"];
+    }
+    width = NSWidth([_inspectorView frame]);
+    if (_inspectorVisible && width >= 80) {
+        _inspectorWidth = width;
+        [defaults setDouble:width forKey:@"YCodeInspectorWidth"];
+    }
+    [defaults synchronize];
 }
 
 - (void)saveWindowFrame:(NSNotification *)notification
@@ -331,6 +441,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_editorController setTabView:_editorTabView];
     }
     [self updateInspectors:nil];
+    [self refreshTargetSelectors];
     
     if (_project)
       {
@@ -463,6 +574,39 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_toolbar setAllowsUserCustomization:YES];
         [_toolbar setAutosavesConfiguration:YES];
         [[self window] setToolbar:_toolbar];
+        if (![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeTargetToolbarItemAdded"]) {
+            BOOL found = NO;
+            NSEnumerator *enumerator = [[_toolbar items] objectEnumerator];
+            NSToolbarItem *item;
+            while ((item = [enumerator nextObject]) != nil)
+                if ([[item itemIdentifier] isEqual:@"scheme"]) found = YES;
+            if (!found) [_toolbar insertItemWithItemIdentifier:@"scheme" atIndex:MIN(3, [[_toolbar items] count])];
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"YCodeTargetToolbarItemAdded"];
+        }
+        // Migrate the target selector's position once, preserving other custom items.
+        if (![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeTargetToolbarAfterSeparator"]) {
+            NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
+            NSUInteger targetIndex = [identifiers indexOfObject:@"scheme"];
+            if (targetIndex != NSNotFound) [_toolbar removeItemAtIndex:targetIndex];
+            identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
+            NSUInteger separatorIndex = [identifiers indexOfObject:NSToolbarSeparatorItemIdentifier];
+            if (separatorIndex == NSNotFound) {
+                separatorIndex = [identifiers count];
+                [_toolbar insertItemWithItemIdentifier:NSToolbarSeparatorItemIdentifier atIndex:separatorIndex];
+            }
+            [_toolbar insertItemWithItemIdentifier:@"scheme" atIndex:separatorIndex + 1];
+#ifdef GNUSTEP
+            // GNUstep saves removals but not programmatic insertions.
+            NSMutableDictionary *configuration = [NSMutableDictionary dictionaryWithDictionary:
+                [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"NSToolbar Config YCodeMainToolbar"]
+                    ?: [NSDictionary dictionary]];
+            [configuration setObject:[[_toolbar items] valueForKey:@"itemIdentifier"] forKey:@"items"];
+            [[NSUserDefaults standardUserDefaults] setObject:configuration
+                forKey:@"NSToolbar Config YCodeMainToolbar"];
+#endif
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"YCodeTargetToolbarAfterSeparator"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+        }
         // Add Build to older saved layouts once; subsequent customization is respected.
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         if (![defaults boolForKey:@"YCodeBuildToolbarItemAdded"]) {
@@ -478,6 +622,46 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             [defaults setBool:YES forKey:@"YCodeBuildToolbarItemAdded"];
         }
     }
+}
+
+- (void)populateTargetSelector:(NSPopUpButton *)selector
+{
+    [selector removeAllItems];
+    [selector addItemWithTitle:@"Automatic"];
+    NSEnumerator *enumerator = [[[_project project] targets] objectEnumerator];
+    PBXTarget *target;
+    NSString *selection = [[_project buildSystem] targetName];
+    while ((target = [enumerator nextObject]) != nil) {
+        if (![[target name] length]) continue;
+        // Insert individual items so a target named Automatic remains distinct.
+        NSMenuItem *entry = AUTORELEASE([[NSMenuItem alloc] initWithTitle:[target name]
+            action:NULL keyEquivalent:@""]);
+        [entry setRepresentedObject:[target name]];
+        [[selector menu] addItem:entry];
+        if ([[target name] isEqual:selection]) [selector selectItem:entry];
+    }
+    [selector setEnabled:[selector numberOfItems] > 1 && ![[_project buildSystem] isBusy]];
+}
+
+- (void)refreshTargetSelectors
+{
+    NSEnumerator *enumerator = [[_toolbar items] objectEnumerator];
+    NSToolbarItem *item;
+    while ((item = [enumerator nextObject]) != nil) {
+        if ([[item itemIdentifier] isEqual:@"scheme"] && [[item view] isKindOfClass:[NSPopUpButton class]])
+            [self populateTargetSelector:(NSPopUpButton *)[item view]];
+    }
+}
+
+- (void)selectBuildTarget:(NSPopUpButton *)sender
+{
+    if (!_project || [[_project buildSystem] isBusy]) {
+        [self refreshTargetSelectors];
+        return;
+    }
+    [[_project buildSystem] setTargetName:[[sender selectedItem] representedObject]];
+    [[_project buildSystem] setScheme:nil];
+    [self refreshTargetSelectors];
 }
 
 - (void)setupNavigatorArea
@@ -764,6 +948,12 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)setNavigatorVisible:(BOOL)visible
 {
+    if (_navigatorVisible != visible) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        [defaults setBool:!visible forKey:@"YCodeNavigatorHidden"];
+        [defaults synchronize];
+    }
+    _restoringSidebars = YES;
     _navigatorVisible = visible;
     if (_navigatorView) {
         [_navigatorView setHidden:!visible];
@@ -772,13 +962,15 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         if (_mainSplitView && [_mainSplitView subviews].count > 0) {
             NSView *firstSubview = [[_mainSplitView subviews] objectAtIndex:0];
             if (visible) {
-                [firstSubview setFrame:NSMakeRect(0, 0, 250, NSHeight([firstSubview frame]))]; 
+                [firstSubview setFrame:NSMakeRect(0, 0, _navigatorWidth, NSHeight([firstSubview frame]))];
             } else {
                 [firstSubview setFrame:NSMakeRect(0, 0, 0, NSHeight([firstSubview frame]))];
             }
             [_mainSplitView adjustSubviews];
         }
     }
+    [self restoreSidebarWidths];
+    _restoringSidebars = NO;
 }
 
 - (BOOL)isInspectorVisible
@@ -788,6 +980,12 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)setInspectorVisible:(BOOL)visible
 {
+    if (_inspectorVisible != visible) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        [defaults setBool:!visible forKey:@"YCodeInspectorHidden"];
+        [defaults synchronize];
+    }
+    _restoringSidebars = YES;
     _inspectorVisible = visible;
     if (_inspectorView) {
         [_inspectorView setHidden:!visible];
@@ -796,13 +994,15 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         if (_contentSplitView && [_contentSplitView subviews].count > 1) {
             NSView *lastSubview = [[_contentSplitView subviews] lastObject];
             if (visible) {
-                [lastSubview setFrame:NSMakeRect(0, 0, 250, NSHeight([lastSubview frame]))]; 
+                [lastSubview setFrame:NSMakeRect(0, 0, _inspectorWidth, NSHeight([lastSubview frame]))];
             } else {
                 [lastSubview setFrame:NSMakeRect(0, 0, 0, NSHeight([lastSubview frame]))];
             }
             [_contentSplitView adjustSubviews];
         }
     }
+    [self restoreSidebarWidths];
+    _restoringSidebars = NO;
 }
 
 - (BOOL)isBottomPanelVisible
@@ -856,6 +1056,9 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         decoder = AUTORELEASE([YCANSITranscript new]);
         [_ansiDecoders setObject:decoder forKey:stream];
     }
+    NSString *pane = [stream hasPrefix:@"issue"] ? @"Issues" :
+        ([stream isEqual:@"debugger"] ? @"Debugger" : @"Console");
+    [decoder setFont:[YCodePreferences fontForPane:pane]];
     return [decoder decode:output];
 }
 
@@ -1013,6 +1216,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (BOOL)validateToolbarItem:(NSToolbarItem *)item
 {
+    if ([item action] == @selector(selectBuildTarget:))
+        return [[[_project project] targets] count] > 0 && ![[_project buildSystem] isBusy];
     if ([item action] == @selector(debugProject:) || [item action] == @selector(debugAction:))
         return [self validateDebuggerAction:[item action] tag:[item tag]];
     if ([item action] == @selector(stopProject:))
@@ -1024,6 +1229,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartBuild:(id)buildSystem
 {
+    [self refreshTargetSelectors];
     [_ansiDecoders removeAllObjects];
     [_issuesTableView deselectAll:nil];
     [_buildIssues removeAllObjects];
@@ -1038,6 +1244,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidFinishBuild:(id)buildSystem success:(BOOL)success
 {
+    [self refreshTargetSelectors];
     [self finishDiagnostics];
     [self appendConsoleOutput:success ? @"Build succeeded.\n" : @"Build failed.\n"];
     [self setBottomPanelVisible:YES];
@@ -1047,6 +1254,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartRun:(id)buildSystem
 {
+    [self refreshTargetSelectors];
     [_ansiDecoders removeAllObjects];
     [_bottomTabView selectTabViewItemWithIdentifier:[buildSystem isDebugging] ? @"debugger" : @"console"];
     if ([buildSystem isDebugging])
@@ -1057,12 +1265,24 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidFinishRun:(id)buildSystem
 {
+    [self refreshTargetSelectors];
     [self appendConsoleOutput:[(YCodeBuildSystem *)buildSystem status] == YCodeBuildStatusFailed
         ? @"Run failed.\n" : @"Project exited.\n"];
 }
 
+- (void)buildSystemDidStartClean:(id)buildSystem
+{
+    [self refreshTargetSelectors];
+}
+
+- (void)buildSystemDidFinishClean:(id)buildSystem
+{
+    [self refreshTargetSelectors];
+}
+
 - (void)buildSystemDidCancel:(id)buildSystem
 {
+    [self refreshTargetSelectors];
     if (_collectingTests) {
         _collectingTests = NO;
         [_testStatus setStringValue:@"Tests cancelled."];
@@ -1242,6 +1462,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartTests:(id)buildSystem
 {
+    [self refreshTargetSelectors];
     [_testResults removeAllObjects];
     [_testOutput setString:@""];
     [_testErrors setString:@""];
@@ -1295,6 +1516,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidFinishTests:(id)buildSystem success:(BOOL)success
 {
+    [self refreshTargetSelectors];
     [self consumeTestOutput:@"\n" buffer:_testOutput];
     [self consumeTestOutput:@"\n" buffer:_testErrors];
     _collectingTests = NO;
@@ -1375,6 +1597,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             [display appendAttributedString:AUTORELEASE([[NSAttributedString alloc]
                 initWithString:[@": " stringByAppendingString:[[issue objectForKey:@"location"] stringByAppendingString:@"\n"]]])];
             [display appendAttributedString:[styled attributedSubstringFromRange:[match rangeAtIndex:message]]];
+            [YCodePreferences applyFont:[YCodePreferences fontForPane:@"Issues"] toText:display];
             [issue setObject:display forKey:@"display"];
             [_buildIssues replaceObjectAtIndex:count withObject:issue];
         }
@@ -1537,23 +1760,38 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", @"scheme", NSToolbarSeparatorItemIdentifier,
+    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme",
              @"navigator", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"scheme", NSToolbarSeparatorItemIdentifier,
+    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", NSToolbarSeparatorItemIdentifier, @"scheme",
              NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"inspector", nil];
 }
 
 - (NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSString *)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag
 {
-    NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+    Class itemClass = [itemIdentifier isEqual:@"scheme"] ? [YCodeTargetToolbarItem class] : [NSToolbarItem class];
+    NSToolbarItem *item = [[itemClass alloc] initWithItemIdentifier:itemIdentifier];
     
     NSArray *debugIdentifiers = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
     NSUInteger debugIndex = [debugIdentifiers indexOfObject:itemIdentifier];
-    if (debugIndex != NSNotFound) {
+    if ([itemIdentifier isEqualToString:@"scheme"]) {
+        NSPopUpButton *selector = AUTORELEASE([[NSPopUpButton alloc]
+            initWithFrame:NSMakeRect(0, 0, 190, 26) pullsDown:NO]);
+        [selector setTarget:self];
+        [selector setAction:@selector(selectBuildTarget:)];
+        [selector setToolTip:@"Target for Build, Run, Debug, and Tests"];
+        [self populateTargetSelector:selector];
+        [item setTarget:self];
+        [item setAction:@selector(selectBuildTarget:)];
+        [item setLabel:@"Target"];
+        [item setPaletteLabel:@"Target"];
+        [item setView:selector];
+        [item setMinSize:NSMakeSize(140, 26)];
+        [item setMaxSize:NSMakeSize(260, 26)];
+    } else if (debugIndex != NSNotFound) {
         NSArray *labels = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart", @"Next", @"Step Into", @"Step Out", @"Up", @"Down", nil];
         [item setLabel:[labels objectAtIndex:debugIndex]];
         [item setPaletteLabel:[labels objectAtIndex:debugIndex]];

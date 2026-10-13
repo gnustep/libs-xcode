@@ -602,13 +602,26 @@
     ASSIGN(_debugger, debugger);
     ASSIGN(_debugFile, file);
     _debugGutterVisible = active || [[debugger breakpointLinesForFile:file] count] > 0;
-    [self setRuleThickness:_debugGutterVisible ? 72.0 : 50.0];
+    [self updateRulerVisibility];
     [self setToolTip:_debugGutterVisible ?
         @"Click to add/remove a breakpoint. Shift-click to enable/disable it." : nil];
     [self setNeedsDisplay:YES];
 }
 
 - (BOOL)debugGutterVisible { return _debugGutterVisible; }
+
+- (void)updateRulerVisibility
+{
+    if ([self orientation] != NSVerticalRuler) return;
+    BOOL rulers = ![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeHideEditorRulers"];
+    NSScrollView *scroll = [self scrollView];
+    [self setRuleThickness:(rulers ? 50.0 : 0.0) + (_debugGutterVisible ? 22.0 : 0.0)];
+    [scroll setHasHorizontalRuler:rulers];
+    [scroll setHasVerticalRuler:rulers || _debugGutterVisible];
+    [scroll setRulersVisible:rulers || _debugGutterVisible];
+    [self setNeedsDisplay:YES];
+}
+
 
 - (NSUInteger)sourceLineAtPoint:(NSPoint)point
 {
@@ -799,10 +812,12 @@
                     [self drawDebugMarkerAtPoint:point height:NSHeight(fragment)
                         breakpoint:[[breakpoints objectForKey:[NSNumber numberWithUnsignedInteger:line]] intValue]
                         execution:executionFile && [_debugger executionLine] == line];
-                NSString *label = [NSString stringWithFormat:@"%lu", (unsigned long)line];
-                NSSize size = [label sizeWithAttributes:attributes];
-                [label drawAtPoint:NSMakePoint(NSWidth([self bounds]) - size.width - 5, point.y)
-                    withAttributes:attributes];
+                if (![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeHideEditorRulers"]) {
+                    NSString *label = [NSString stringWithFormat:@"%lu", (unsigned long)line];
+                    NSSize size = [label sizeWithAttributes:attributes];
+                    [label drawAtPoint:NSMakePoint(NSWidth([self bounds]) - size.width - 5, point.y)
+                        withAttributes:attributes];
+                }
             }
             if (end <= index || contentsEnd == end) {
                 break;

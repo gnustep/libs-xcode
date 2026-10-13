@@ -169,6 +169,8 @@
 /** Associate this source ruler with its project's debugger. */
 - (void)setDebugger:(YCodeDebugger *)debugger file:(NSString *)file active:(BOOL)active;
 - (BOOL)debugGutterVisible;
+/** Apply ruler preferences without hiding the debugger gutter. */
+- (void)updateRulerVisibility;
 /** One-based source line at a point in ruler coordinates, or zero outside text. */
 - (NSUInteger)sourceLineAtPoint:(NSPoint)point;
 @end

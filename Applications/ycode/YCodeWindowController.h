@@ -96,6 +96,9 @@
     YCodeEditorController *_editorController;
     
     // State
+    CGFloat _navigatorWidth;
+    CGFloat _inspectorWidth;
+    BOOL _restoringSidebars;
     BOOL _navigatorVisible;
     BOOL _inspectorVisible;
     BOOL _bottomPanelVisible;

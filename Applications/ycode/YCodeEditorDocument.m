@@ -22,6 +22,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */
 
+#import "YCodePreferences.h"
 #import "YCodeEditorDocument.h"
 #import "YCEditorView.h"
 #import "YCodeTextView.h"
@@ -60,6 +61,10 @@
         [self setupSyntaxHighlighter];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorColorsChanged:)
             name:@"YCodeEditorColorsDidChange" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorRulersChanged:)
+            name:@"YCodeEditorRulersDidChange" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorFontsChanged:)
+            name:@"YCodeFontsDidChange" object:nil];
     }
     return self;
 }
@@ -100,7 +105,7 @@
     // Create text view
     NSRect textFrame = NSMakeRect(0, 0, [_scrollView contentSize].width, [_scrollView contentSize].height);
     _textView = [[YCodeTextView alloc] initWithFrame:textFrame];
-    [_textView setFont:[NSFont userFixedPitchFontOfSize:12.0]];
+    [_textView setFont:[YCodePreferences fontForPane:@"Editor"]];
     [_textView setDelegate:self];
     [_textView setRichText:NO];
     [_textView setUsesFontPanel:YES];
@@ -140,7 +145,7 @@
     [_scrollView setHorizontalRulerView:columns];
     [_scrollView setHasHorizontalRuler:YES];
     RELEASE(columns);
-    [_scrollView setRulersVisible:YES];
+    [(YCEditorRulerView *)_lineNumberRuler updateRulerVisibility];
 }
 
 - (void)setupSyntaxHighlighter
@@ -405,6 +410,19 @@
 - (YCodeSyntaxHighlighter *)syntaxHighlighter
 {
     return _syntaxHighlighter;
+}
+
+- (void)editorFontsChanged:(NSNotification *)notification
+{
+    [_textView setFont:[YCodePreferences fontForPane:@"Editor"]];
+    [self applySyntaxHighlighting];
+    [_lineNumberRuler setNeedsDisplay:YES];
+    [[_scrollView horizontalRulerView] setNeedsDisplay:YES];
+}
+
+- (void)editorRulersChanged:(NSNotification *)notification
+{
+    if (!_image) [(YCEditorRulerView *)_lineNumberRuler updateRulerVisibility];
 }
 
 - (void)editorColorsChanged:(NSNotification *)notification

@@ -4,6 +4,17 @@
     };
     objectVersion = 56;
     objects = {
+        YCODE_PREFERENCES_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodePreferences.h; sourceTree = "<group>"; };
+        YCODE_PREFERENCES_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodePreferences.m; sourceTree = "<group>"; };
+        YCODE_PREFERENCES_BUILD = { isa = PBXBuildFile; fileRef = YCODE_PREFERENCES_M; };
+        YCODE_DOCUMENT_ICON_H = { isa = PBXFileReference; lastKnownFileType = image.tiff; path = Resources/ProjectCenterIcons/FileH.tiff; sourceTree = "<group>"; };
+        YCODE_DOCUMENT_ICON_H_BUILD = { isa = PBXBuildFile; fileRef = YCODE_DOCUMENT_ICON_H; };
+        YCODE_DOCUMENT_ICON_C = { isa = PBXFileReference; lastKnownFileType = image.tiff; path = Resources/ProjectCenterIcons/FileC.tiff; sourceTree = "<group>"; };
+        YCODE_DOCUMENT_ICON_C_BUILD = { isa = PBXBuildFile; fileRef = YCODE_DOCUMENT_ICON_C; };
+        YCODE_DOCUMENT_ICON_M = { isa = PBXFileReference; lastKnownFileType = image.tiff; path = Resources/ProjectCenterIcons/FileM.tiff; sourceTree = "<group>"; };
+        YCODE_DOCUMENT_ICON_M_BUILD = { isa = PBXBuildFile; fileRef = YCODE_DOCUMENT_ICON_M; };
+        YCODE_DOCUMENT_ICON_MM = { isa = PBXFileReference; lastKnownFileType = image.tiff; path = Resources/ProjectCenterIcons/FileMM.tiff; sourceTree = "<group>"; };
+        YCODE_DOCUMENT_ICON_MM_BUILD = { isa = PBXBuildFile; fileRef = YCODE_DOCUMENT_ICON_MM; };
         YCODE_TEMPLATES = { isa = PBXFileReference; lastKnownFileType = folder; path = Resources/Templates; sourceTree = "<group>"; };
         YCODE_TEMPLATES_BUILD = { isa = PBXBuildFile; fileRef = YCODE_TEMPLATES; };
         YCODE_FILE_ICONS = { isa = PBXFileReference; lastKnownFileType = folder; path = Resources/ProjectCenterIcons; sourceTree = "<group>"; };
@@ -68,7 +79,9 @@
         YCODE_IMAGE_INSPECTOR_SOURCE,
         YCODE_FILE_INSPECTOR_HEADER,
         YCODE_IMAGE_INSPECTOR_HEADER,
+        YCODE_PREFERENCES_H, YCODE_PREFERENCES_M,
         YCODE_FILE_ICONS,
+        YCODE_DOCUMENT_ICON_H, YCODE_DOCUMENT_ICON_C, YCODE_DOCUMENT_ICON_M, YCODE_DOCUMENT_ICON_MM,
         YCODE_TEMPLATES,
         YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
@@ -102,7 +115,7 @@
 	"3EFFAD06-3C2F-A000-447C-11BA1E695B29" = {
 	    files = (
 		YCODE_TEXT_BUILD,
-        YCODE_ICONS_BUILD,
+        YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD,
         YCODE_FILE_INSPECTOR_BUILD,
         YCODE_IMAGE_INSPECTOR_BUILD,
         YCODE_DEBUGGER_BUILD,
@@ -151,6 +164,7 @@
 	};
 	"A5517E5A-3371-9A0A-79AA-5D307EFF3750" = {
 	    files = (
+                YCODE_DOCUMENT_ICON_H_BUILD, YCODE_DOCUMENT_ICON_C_BUILD, YCODE_DOCUMENT_ICON_M_BUILD, YCODE_DOCUMENT_ICON_MM_BUILD,
                 YCODE_FILE_ICONS_BUILD, YCODE_TEMPLATES_BUILD,
 	    );
 	    isa = PBXResourcesBuildPhase;

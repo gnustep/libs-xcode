@@ -8,6 +8,7 @@
    Application Controller
 */
 
+#import "YCodePreferences.h"
 #import "YCodeControlIcons.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "AppController.h"
@@ -28,6 +29,38 @@
 - (YCodeEditorController *)currentEditorController;
 - (NSView *)newProjectAccessoryView;
 - (void)createNewProjectAtURL:(NSURL *)url format:(NSString *)format productType:(NSString *)productType;
+@end
+
+/* The Fonts panel routes actions to the main window when it becomes key. */
+@interface YCodePreferencesPanel : NSPanel
+@end
+
+@implementation YCodePreferencesPanel
+- (BOOL)canBecomeMainWindow
+{
+    return YES;
+}
+@end
+
+/* Keep font-panel actions in the responder chain of the selected preference. */
+@interface YCodePreferenceFontButton : NSButton
+@end
+
+@implementation YCodePreferenceFontButton
+- (BOOL)acceptsFirstResponder
+{
+    return YES;
+}
+- (void)changeFont:(id)sender
+{
+    NSString *pane = [[YCodePreferences fontPanes] objectAtIndex:[self tag]];
+    NSFont *font = [sender convertFont:[YCodePreferences fontForPane:pane]];
+    if (font && [font pointSize] >= 6 && [font pointSize] <= 144) {
+        [YCodePreferences setFont:font forPane:pane];
+        [[NSFontManager sharedFontManager] setSelectedFont:font isMultiple:NO];
+        [[self target] performSelector:@selector(refreshFontPreferences)];
+    }
+}
 @end
 
 static NSMenuItem *
@@ -78,6 +111,7 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void) dealloc
 {
+  RELEASE(_fontChoices);
   RELEASE(_editorColorWells);
   RELEASE(_preferencesPanel);
   [super dealloc];
@@ -827,15 +861,121 @@ YCodeFileURLFromPath(NSString *path)
     [self refreshEditorColorWells];
 }
 
+- (void)selectPreferenceGroup:(id)sender
+{
+    if ([_fontChoices containsObject:[_preferencesPanel firstResponder]])
+        [_preferencesPanel makeFirstResponder:_preferencesGroup];
+    BOOL colors = [_preferencesGroup indexOfSelectedItem] == 0;
+    [_colorPreferencesView setHidden:!colors];
+    [_editorPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 1];
+    [_fontPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 2];
+    if (!colors) {
+        NSEnumerator *enumerator = [_editorColorWells objectEnumerator];
+        NSColorWell *well;
+        while ((well = [enumerator nextObject]) != nil) [well deactivate];
+    }
+}
+
+- (void)changeEditorRulers:(NSButton *)sender
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setBool:[sender state] != NSOnState forKey:@"YCodeHideEditorRulers"];
+    [defaults synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeEditorRulersDidChange" object:nil];
+}
+
+- (void)refreshFontPreferences
+{
+    NSUInteger i;
+    NSArray *panes = [YCodePreferences fontPanes];
+    for (i = 0; i < [_fontChoices count]; i++) {
+        NSFont *font = [YCodePreferences fontForPane:[panes objectAtIndex:i]];
+        NSButton *choice = [_fontChoices objectAtIndex:i];
+        NSString *name = [font displayName];
+        if (![name length]) name = [font fontName];
+        [choice setTitle:[NSString stringWithFormat:@"%@ — %g pt", name, (double)[font pointSize]]];
+        /* Preview the chosen face while keeping the preference row readable. */
+        [choice setFont:[[NSFontManager sharedFontManager] convertFont:font
+            toSize:MIN(18, MAX(12, [font pointSize]))]];
+        [choice setNeedsDisplay:YES];
+    }
+}
+
+- (void)choosePreferenceFont:(NSButton *)sender
+{
+    [[sender window] makeKeyAndOrderFront:nil];
+    [[sender window] makeMainWindow];
+    [[sender window] makeFirstResponder:sender];
+    NSFontManager *manager = [NSFontManager sharedFontManager];
+    [manager setSelectedFont:[YCodePreferences fontForPane:
+        [[YCodePreferences fontPanes] objectAtIndex:[sender tag]]] isMultiple:NO];
+    [manager orderFrontFontPanel:sender];
+}
+
+- (void)resetPreferenceFonts:(id)sender
+{
+    [YCodePreferences resetFonts];
+    [self refreshFontPreferences];
+    id responder = [_preferencesPanel firstResponder];
+    if ([_fontChoices containsObject:responder])
+        [[NSFontManager sharedFontManager] setSelectedFont:[YCodePreferences fontForPane:
+            [[YCodePreferences fontPanes] objectAtIndex:[responder tag]]] isMultiple:NO];
+}
+
+- (void)setupFontPreferences
+{
+    _fontPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
+    [[_preferencesPanel contentView] addSubview:_fontPreferencesView];
+    _fontChoices = [NSMutableArray new];
+    NSArray *panes = [YCodePreferences fontPanes];
+    NSUInteger i;
+    for (i = 0; i < [panes count]; i++) {
+        CGFloat y = 407 - i * 85;
+        NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, y, 350, 22)]);
+        [label setStringValue:[panes objectAtIndex:i]];
+        [label setEditable:NO]; [label setBezeled:NO]; [label setDrawsBackground:NO];
+        [_fontPreferencesView addSubview:label];
+        NSButton *font = AUTORELEASE([[YCodePreferenceFontButton alloc]
+            initWithFrame:NSMakeRect(20, y - 34, 350, 30)]);
+        [font setBezelStyle:NSRoundedBezelStyle];
+        [font setTag:i];
+        [font setToolTip:@"Choose the font and size in the Fonts panel"];
+        [font setTarget:self]; [font setAction:@selector(choosePreferenceFont:)];
+        [_fontPreferencesView addSubview:font]; [_fontChoices addObject:font];
+    }
+    NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
+    [reset setTitle:@"Restore Defaults"]; [reset setBezelStyle:NSRoundedBezelStyle];
+    [reset setTarget:self]; [reset setAction:@selector(resetPreferenceFonts:)];
+    [_fontPreferencesView addSubview:reset];
+}
+
 - (void) showPrefPanel: (id)sender
 {
     if (!_preferencesPanel) {
-        _preferencesPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 390, 450)
+        _preferencesPanel = [[YCodePreferencesPanel alloc] initWithContentRect:NSMakeRect(0, 0, 390, 500)
             styleMask:NSTitledWindowMask | NSClosableWindowMask
             backing:NSBackingStoreBuffered defer:NO];
-        [_preferencesPanel setTitle:@"Editor Colors"];
+        [_preferencesPanel setTitle:@"Preferences"];
         [_preferencesPanel setReleasedWhenClosed:NO];
         [_preferencesPanel center];
+        NSView *content = [_preferencesPanel contentView];
+        _preferencesGroup = AUTORELEASE([[NSPopUpButton alloc]
+            initWithFrame:NSMakeRect(20, 458, 350, 28) pullsDown:NO]);
+        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", nil]];
+        [_preferencesGroup setTarget:self];
+        [_preferencesGroup setAction:@selector(selectPreferenceGroup:)];
+        [content addSubview:_preferencesGroup];
+        _colorPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
+        [content addSubview:_colorPreferencesView];
+        _editorPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
+        [content addSubview:_editorPreferencesView];
+        _showEditorRulers = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 401, 350, 28)]);
+        [_showEditorRulers setButtonType:NSSwitchButton];
+        [_showEditorRulers setTitle:@"Show editor rulers (lines and columns)"];
+        [_showEditorRulers setTarget:self];
+        [_showEditorRulers setAction:@selector(changeEditorRulers:)];
+        [_editorPreferencesView addSubview:_showEditorRulers];
+        [self setupFontPreferences];
         _editorColorWells = [NSMutableArray new];
         NSArray *labels = [NSArray arrayWithObjects:@"Editor background", @"Plain text", @"Keywords",
             @"Strings", @"Comments", @"Numbers", @"Preprocessor directives", @"Types",
@@ -849,13 +989,13 @@ YCodeFileURLFromPath(NSString *path)
             [label setSelectable:NO];
             [label setBezeled:NO];
             [label setDrawsBackground:NO];
-            [[_preferencesPanel contentView] addSubview:label];
+            [_colorPreferencesView addSubview:label];
             NSColorWell *well = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(290, y, 80, 26)]);
             [well setTag:i];
             [well setTarget:self];
             [well setAction:@selector(changeEditorColor:)];
             [well setContinuous:YES];
-            [[_preferencesPanel contentView] addSubview:well];
+            [_colorPreferencesView addSubview:well];
             [_editorColorWells addObject:well];
         }
         NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 58, 350, 22)]);
@@ -864,15 +1004,19 @@ YCodeFileURLFromPath(NSString *path)
         [hint setBezeled:NO];
         [hint setDrawsBackground:NO];
         [hint setFont:[NSFont systemFontOfSize:12]];
-        [[_preferencesPanel contentView] addSubview:hint];
+        [_colorPreferencesView addSubview:hint];
         NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
         [reset setTitle:@"Restore Defaults"];
         [reset setBezelStyle:NSRoundedBezelStyle];
         [reset setTarget:self];
         [reset setAction:@selector(resetEditorColors:)];
-        [[_preferencesPanel contentView] addSubview:reset];
+        [_colorPreferencesView addSubview:reset];
     }
     [self refreshEditorColorWells];
+    [self refreshFontPreferences];
+    [_showEditorRulers setState:[[NSUserDefaults standardUserDefaults]
+        boolForKey:@"YCodeHideEditorRulers"] ? NSOffState : NSOnState];
+    [self selectPreferenceGroup:nil];
     [_preferencesPanel makeKeyAndOrderFront:sender];
 }
 

@@ -50,6 +50,7 @@
 #import "YCInspectorView.h"
 #import "YCodeTextView.h"
 #import "AppController.h"
+#import "YCodePreferences.h"
 #include <math.h>
 
 @interface YCodeProjectNavigatorController (Testing)
@@ -354,10 +355,13 @@ static void testEditorColorPreferences(void)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   id saved = [[defaults objectForKey:@"YCodeEditorColors"] retain];
+  id savedRulers = [[defaults objectForKey:@"YCodeHideEditorRulers"] retain];
+  [defaults removeObjectForKey:@"YCodeHideEditorRulers"];
   [YCodeSyntaxHighlighter resetColorPreferences];
   YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
     initWithFilePath:@"Colors.m" content:@"int ordinary = 42;"];
   [document setModified:NO];
+  YCodeEditorController *existingEditor = [YCodeEditorController new];
   AppController *app = [AppController new];
   [app showPrefPanel:nil];
   NSPanel *panel = [app valueForKey:@"_preferencesPanel"];
@@ -390,8 +394,49 @@ static void testEditorColorPreferences(void)
     colorMatches([[[document textView] textStorage] attribute:NSForegroundColorAttributeName
       atIndex:4 effectiveRange:NULL], 0.14, 0.2, 0.3) && ![document isModified],
     @"Live background and plain text updates do not mark source files modified");
+  NSPopUpButton *groups = [app valueForKey:@"_preferencesGroup"];
+  NSView *colorsGroup = [app valueForKey:@"_colorPreferencesView"];
+  NSView *editorGroup = [app valueForKey:@"_editorPreferencesView"];
+  NSButton *rulers = [app valueForKey:@"_showEditorRulers"];
+  testAssert([groups numberOfItems] == 3 && ![colorsGroup isHidden] && [editorGroup isHidden],
+    @"Preferences starts with the color group selected");
+  [groups selectItemAtIndex:1];
+  [groups sendAction:[groups action] to:[groups target]];
+  testAssert([colorsGroup isHidden] && ![editorGroup isHidden] && [rulers state] == NSOnState,
+    @"Selecting Editor exposes ruler preferences with rulers enabled by default");
+  [rulers setState:NSOffState];
+  [rulers sendAction:[rulers action] to:[rulers target]];
+  testAssert(![[document scrollView] rulersVisible] && ![document isModified] &&
+    [defaults boolForKey:@"YCodeHideEditorRulers"],
+    @"Turning rulers off updates open editors and saves the preference without modifying source");
   YCodeEditorDocument *newDocument = [[YCodeEditorDocument alloc]
     initWithFilePath:@"NewColors.m" content:@"int value;"];
+  testAssert(![[newDocument scrollView] rulersVisible], @"New editors respect the saved ruler preference");
+  NSString *reopenedPath = [NSTemporaryDirectory() stringByAppendingPathComponent:
+    [[[NSProcessInfo processInfo] globallyUniqueString] stringByAppendingPathExtension:@"m"]];
+  [@"int ordinary = 42;" writeToFile:reopenedPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([existingEditor openFile:reopenedPath] &&
+    colorMatches([[[existingEditor currentDocument] textView] backgroundColor], 0.1, 0.2, 0.3) &&
+    ![[[existingEditor currentDocument] scrollView] rulersVisible],
+    @"Existing controllers open files with the updated palette and ruler settings");
+  NSTask *reader = [NSTask new];
+  [reader setLaunchPath:[[[NSProcessInfo processInfo] arguments] objectAtIndex:0]];
+  [reader setArguments:[NSArray arrayWithObjects:@"--check-editor-preferences", reopenedPath, nil]];
+  [reader launch];
+  [reader waitUntilExit];
+  testAssert([reader terminationStatus] == 0,
+    @"A separate process reloads saved colors and ruler settings when opening a source file");
+  [reader release];
+  [existingEditor closeFile:reopenedPath];
+  [existingEditor release];
+  [[NSFileManager defaultManager] removeItemAtPath:reopenedPath error:NULL];
+  [rulers setState:NSOnState];
+  [rulers sendAction:[rulers action] to:[rulers target]];
+  testAssert([[document scrollView] rulersVisible] && [[newDocument scrollView] rulersVisible],
+    @"Turning rulers back on restores them in all open editors");
+  [groups selectItemAtIndex:0];
+  [groups sendAction:[groups action] to:[groups target]];
+  testAssert(![colorsGroup isHidden] && [editorGroup isHidden], @"Returning to Colors restores its controls");
   testAssert(colorMatches([[newDocument textView] backgroundColor], 0.1, 0.2, 0.3) &&
     colorMatches([[newDocument syntaxHighlighter] keywordColor], 0.18, 0.2, 0.3) &&
     [[defaults dictionaryForKey:@"YCodeEditorColors"] count] == 10,
@@ -404,7 +449,135 @@ static void testEditorColorPreferences(void)
   [app release];
   [newDocument release];
   [document release];
+  if (savedRulers) [defaults setObject:savedRulers forKey:@"YCodeHideEditorRulers"];
+  else [defaults removeObjectForKey:@"YCodeHideEditorRulers"];
+  [savedRulers release];
   if (saved) [defaults setObject:saved forKey:@"YCodeEditorColors"];
+  [saved release];
+  [defaults synchronize];
+}
+
+static void testFontAndSidebarPreferences(void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  NSArray *keys = [NSArray arrayWithObjects:@"YCodeFonts", @"YCodeNavigatorWidth", @"YCodeInspectorWidth",
+    @"YCodeNavigatorHidden", @"YCodeInspectorHidden", @"NSWindow Frame YCodeMainWindow", nil];
+  NSMutableDictionary *saved = [NSMutableDictionary dictionary];
+  NSEnumerator *e = [keys objectEnumerator]; NSString *key;
+  while ((key = [e nextObject])) if ([defaults objectForKey:key]) [saved setObject:[defaults objectForKey:key] forKey:key];
+  [defaults setBool:NO forKey:@"YCodeNavigatorHidden"];
+  [defaults setBool:NO forKey:@"YCodeInspectorHidden"];
+  YCodeProject *project = [YCodeProject new];
+  [project setProjectPath:@"/tmp/FontPreferences.xcodeproj"];
+  YCodeWindowController *window = [YCodeWindowController new];
+  [window setProject:project];
+  [[window window] setContentSize:NSMakeSize(1200, 800)];
+  NSSplitView *main = [window valueForKey:@"_mainSplitView"];
+  NSSplitView *content = [window valueForKey:@"_contentSplitView"];
+  [main setPosition:280 ofDividerAtIndex:0];
+  [content setPosition:NSWidth([content bounds]) - [content dividerThickness] - 210 ofDividerAtIndex:0];
+  CGFloat navigatorWidth = [defaults doubleForKey:@"YCodeNavigatorWidth"];
+  CGFloat inspectorWidth = [defaults doubleForKey:@"YCodeInspectorWidth"];
+  testAssert(fabs(navigatorWidth - 280) < 2 && fabs(inspectorWidth - 210) < 2,
+    @"Dragging sidebar dividers saves their widths");
+  [window setNavigatorVisible:NO]; [window setInspectorVisible:NO];
+  testAssert(fabs([defaults doubleForKey:@"YCodeNavigatorWidth"] - navigatorWidth) < 1 &&
+    fabs([defaults doubleForKey:@"YCodeInspectorWidth"] - inspectorWidth) < 1,
+    @"Hiding sidebars preserves their expanded widths");
+  YCodeEditorDocument *source = [[YCodeEditorDocument alloc] initWithFilePath:@"Fonts.m" content:@"int value;"];
+  [source setModified:NO];
+  YCodeBuildSystem *build = [project buildSystem];
+  [window buildSystemDidStartBuild:build];
+  [window buildSystem:build didReceiveOutput:@"\033[1;31mcolored\033[0m\n"];
+  [window buildSystem:build didReceiveError:@"Fonts.m:1: error: message\n"];
+  [window buildSystem:build didReceiveDebuggerOutput:@"debugger\n"];
+  AppController *app = [AppController new]; [app showPrefPanel:nil];
+  NSPopUpButton *groups = [app valueForKey:@"_preferencesGroup"];
+  [groups selectItemAtIndex:2]; [groups sendAction:[groups action] to:[groups target]];
+  testAssert(![[app valueForKey:@"_fontPreferencesView"] isHidden], @"Fonts is an independent preference group");
+  NSArray *choices = [app valueForKey:@"_fontChoices"];
+  NSUInteger i;
+  for (i = 0; i < 4; i++) {
+    NSButton *choice = [choices objectAtIndex:i];
+    [choice performClick:nil];
+    NSFontManager *manager = [NSFontManager sharedFontManager];
+    testAssert([[choice window] firstResponder] == choice && [[manager fontPanel:NO] isVisible],
+      @"Each preference opens the font panel with its button as font responder");
+    NSFont *selected = [NSFont fontWithName:@"DejaVuSerif" size:18 + i];
+    if (!selected) selected = [NSFont userFontOfSize:18 + i];
+    [[manager fontPanel:NO] setPanelFont:selected isMultiple:NO];
+    [[manager fontPanel:NO] makeKeyAndOrderFront:nil];
+    [manager modifyFontViaPanel:[manager fontPanel:NO]];
+    testAssert([[YCodePreferences fontForPane:[[YCodePreferences fontPanes] objectAtIndex:i]] pointSize] == 18 + i,
+      @"Each pane saves its own font size");
+    testAssert([[[YCodePreferences fontForPane:[[YCodePreferences fontPanes] objectAtIndex:i]] fontName]
+      isEqualToString:[selected fontName]] && [[choice title] rangeOfString:[selected displayName]].location != NSNotFound,
+      @"Selected font family is saved and displayed in Preferences");
+    testAssert([[[choice font] fontName] isEqualToString:[selected fontName]],
+      @"Preference previews render using the selected font face");
+  }
+  NSTextView *console = [window valueForKey:@"_consoleTextView"];
+  NSTextView *debugger = [window valueForKey:@"_debuggerTextView"];
+  NSArray *issues = [window valueForKey:@"_buildIssues"];
+  NSAttributedString *issue = [[issues objectAtIndex:0] objectForKey:@"display"];
+  testAssert([[[source textView] font] pointSize] == 18 && ![source isModified] &&
+    [[[console textStorage] attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL] pointSize] == 19 &&
+    [[issue attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL] pointSize] == 20 &&
+    [[[debugger textStorage] attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL] pointSize] == 21,
+    @"Font changes update existing editor, console, issue and debugger text");
+  [window buildSystem:build didReceiveOutput:@"\033[0mnew output"];
+  testAssert([[[console textStorage] attribute:NSFontAttributeName atIndex:[[console string] length] - 1 effectiveRange:NULL] pointSize] == 19,
+    @"ANSI reset and new output retain the selected console font");
+  [[[NSFontManager sharedFontManager] fontPanel:NO] orderOut:nil];
+  [[app valueForKey:@"_preferencesPanel"] close]; [app release];
+  [window close]; [window release]; [project release]; [source release];
+  window = [YCodeWindowController new];
+  [window setNavigatorVisible:YES]; [window setInspectorVisible:YES];
+  testAssert(fabs(NSWidth([[window valueForKey:@"_navigatorView"] frame]) - navigatorWidth) < 2 &&
+    fabs(NSWidth([[window valueForKey:@"_inspectorView"] frame]) - inspectorWidth) < 2,
+    @"Reopened windows restore both sidebar widths even when last hidden");
+  NSTask *reader = [NSTask new];
+  [reader setLaunchPath:[[[NSProcessInfo processInfo] arguments] objectAtIndex:0]];
+  [reader setArguments:[NSArray arrayWithObject:@"--read-font-layout"]];
+  [reader launch]; [reader waitUntilExit];
+  testAssert([reader terminationStatus] == 0, @"Fresh process restores fonts and sidebar widths");
+  [reader release]; [window close]; [window release];
+  e = [keys objectEnumerator];
+  while ((key = [e nextObject])) {
+    if ([saved objectForKey:key]) [defaults setObject:[saved objectForKey:key] forKey:key];
+    else [defaults removeObjectForKey:key];
+  }
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeFontsDidChange" object:nil];
+}
+
+static void testHiddenRulersDebugGutter(void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey:@"YCodeHideEditorRulers"] retain];
+  [defaults setBool:YES forKey:@"YCodeHideEditorRulers"];
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:@"Gutter.m" content:@"first line\nsecond line\n"];
+  NSScrollView *scroll = [document scrollView];
+  YCEditorRulerView *ruler = (YCEditorRulerView *)[scroll verticalRulerView];
+  testAssert(![scroll rulersVisible], @"Hidden rulers stay hidden outside debugging");
+  [ruler setDebugger:nil file:@"Gutter.m" active:YES];
+  testAssert([scroll rulersVisible] && [scroll hasVerticalRuler] && ![scroll hasHorizontalRuler] &&
+    [ruler debugGutterVisible] && [ruler ruleThickness] == 22,
+    @"Debugging shows a breakpoint-only gutter while line and column rulers remain hidden");
+  [defaults setBool:NO forKey:@"YCodeHideEditorRulers"];
+  [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeEditorRulersDidChange" object:nil];
+  testAssert([scroll hasHorizontalRuler] && [ruler ruleThickness] == 72,
+    @"Enabling rulers adds line numbers alongside the debugger gutter");
+  [defaults setBool:YES forKey:@"YCodeHideEditorRulers"];
+  [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeEditorRulersDidChange" object:nil];
+  testAssert([scroll rulersVisible] && ![scroll hasHorizontalRuler] && [ruler ruleThickness] == 22,
+    @"Turning rulers off during debugging preserves the gutter");
+  [ruler setDebugger:nil file:@"Gutter.m" active:NO];
+  testAssert(![scroll rulersVisible], @"Stopping debugging restores the hidden-ruler layout");
+  [document release];
+  if (saved) [defaults setObject:saved forKey:@"YCodeHideEditorRulers"];
+  else [defaults removeObjectForKey:@"YCodeHideEditorRulers"];
   [saved release];
   [defaults synchronize];
 }
@@ -1177,7 +1350,10 @@ static void testBuildAndRun(NSString *temporaryDirectory)
   [target setName:@"RunTarget"];
   [target setProductType:@"com.apple.product-type.application"];
   [target setProductReference:AUTORELEASE([[PBXFileReference alloc] initWithPath:@"Run Product.app"])];
-  [project setTargets:[NSMutableArray arrayWithObject:target]];
+  PBXNativeTarget *otherTarget = AUTORELEASE([PBXNativeTarget new]);
+  [otherTarget setName:@"OtherTarget"];
+  [otherTarget setProductType:@"com.apple.product-type.tool"];
+  [project setTargets:[NSMutableArray arrayWithObjects:target, otherTarget, nil]];
   [document setProject:project];
   [document setProjectPath:[root stringByAppendingPathComponent:@"Run Project.xcodeproj"]];
   YCodeBuildSystem *build = [document buildSystem];
@@ -1200,8 +1376,26 @@ static void testBuildAndRun(NSString *temporaryDirectory)
   YCodeWindowController *window = [[YCodeWindowController alloc] init];
   [window setProject:document];
   [window showWindow:nil];
+  NSToolbar *toolbar = [[window window] toolbar];
+  NSToolbarItem *targetItem = nil;
+  NSEnumerator *items = [[toolbar items] objectEnumerator];
+  NSToolbarItem *candidate;
+  while ((candidate = [items nextObject]) != nil)
+    if ([[candidate itemIdentifier] isEqual:@"scheme"]) targetItem = candidate;
+  NSPopUpButton *selector = (NSPopUpButton *)[targetItem view];
+  NSArray *toolbarIdentifiers = [[toolbar items] valueForKey:@"itemIdentifier"];
+  NSUInteger targetPosition = [toolbarIdentifiers indexOfObject:@"scheme"];
+  testAssert(targetPosition != NSNotFound && targetPosition > 0 &&
+    [[toolbarIdentifiers objectAtIndex:targetPosition - 1] isEqual:NSToolbarSeparatorItemIdentifier],
+    @"Target selector follows the toolbar separator after restoring the layout");
+  testAssert([selector isKindOfClass:[NSPopUpButton class]] && [selector numberOfItems] == 3,
+    @"Toolbar offers Automatic and each project target");
+  [selector selectItemAtIndex:1];
+  [selector sendAction:[selector action] to:[selector target]];
+  testAssert([[build targetName] isEqual:@"RunTarget"], @"Target dropdown selects the build and run target");
   [window runProject:nil];
   testAssert([build isBuilding], @"Play starts an asynchronous build");
+  testAssert(![selector isEnabled], @"Target selection is disabled during a build");
   testAssert(![build run] && ![build build], @"Reject duplicate operations while busy");
   waitForBuild(build, YES);
   testAssert([build isRunning], @"Successful build launches the named application product");
@@ -1219,6 +1413,26 @@ static void testBuildAndRun(NSString *temporaryDirectory)
   waitForBuild(build, NO);
   testAssert(![build isBusy] && [build status] == YCodeBuildStatusCancelled,
     @"Stop terminates the application and preserves cancelled status");
+  [toolbar validateVisibleItems];
+  testAssert([selector isEnabled], @"Target selection is enabled after cancellation finishes");
+  [selector selectItemAtIndex:2];
+  [selector sendAction:[selector action] to:[selector target]];
+  [window buildProject:nil];
+  waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"OtherTarget"].location != NSNotFound &&
+    [[build buildOutput] rangeOfString:@"application output"].location == NSNotFound,
+    @"Build-only uses the target chosen in the toolbar without launching a product");
+  [selector selectItemAtIndex:0];
+  [selector sendAction:[selector action] to:[selector target]];
+  testAssert([build targetName] == nil && [build scheme] == nil,
+    @"Automatic restores the default target selection");
+  if ([[[NSProcessInfo processInfo] arguments] containsObject:@"--check-target-toolbar"]) {
+    [window close];
+    [window release];
+    [document close];
+    [document release];
+    return;
+  }
   [build setEnvironmentVariable:@"fail" forKey:@"MODE"];
   [window runProject:nil];
   waitForBuild(build, NO);
@@ -1772,6 +1986,11 @@ static void testProjectCenterExport(NSString *directory)
     [panel ok:nil];
   } else [panel cancel:nil];
   [timer invalidate];
+  // Wake the modal event wait after the timer accepts or cancels the panel.
+  [NSApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
+    location:NSZeroPoint modifierFlags:0 timestamp:0
+    windowNumber:[panel windowNumber] context:nil
+    subtype:0 data1:0 data2:0] atStart:NO];
 }
 @end
 
@@ -1890,6 +2109,43 @@ static void testProjectCreationInSelectedDirectory(NSString *temporaryDirectory)
   }
 }
 
+static void testPanelVisibilityPersistence(void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id navigator = [[defaults objectForKey:@"YCodeNavigatorHidden"] retain];
+  id inspector = [[defaults objectForKey:@"YCodeInspectorHidden"] retain];
+  [defaults removeObjectForKey:@"YCodeNavigatorHidden"];
+  [defaults removeObjectForKey:@"YCodeInspectorHidden"];
+  YCodeWindowController *window = [YCodeWindowController new];
+  testAssert([window isNavigatorVisible] && [window isInspectorVisible],
+    @"Navigator and inspector are visible by default");
+  NSUInteger combination;
+  for (combination = 0; combination < 4; combination++) {
+    BOOL showNavigator = (combination & 1) != 0;
+    BOOL showInspector = (combination & 2) != 0;
+    [window setNavigatorVisible:showNavigator];
+    [window setInspectorVisible:showInspector];
+    NSTask *reader = [NSTask new];
+    [reader setLaunchPath:[[[NSProcessInfo processInfo] arguments] objectAtIndex:0]];
+    [reader setArguments:[NSArray arrayWithObjects:@"--check-panel-state",
+        showNavigator ? @"YES" : @"NO", showInspector ? @"YES" : @"NO", nil]];
+    [reader launch];
+    [reader waitUntilExit];
+    testAssert([reader terminationStatus] == 0,
+      @"Fresh application windows restore each combination of navigator and inspector visibility");
+    [reader release];
+  }
+  [window close];
+  [window release];
+  if (navigator) [defaults setObject:navigator forKey:@"YCodeNavigatorHidden"];
+  else [defaults removeObjectForKey:@"YCodeNavigatorHidden"];
+  if (inspector) [defaults setObject:inspector forKey:@"YCodeInspectorHidden"];
+  else [defaults removeObjectForKey:@"YCodeInspectorHidden"];
+  [navigator release];
+  [inspector release];
+  [defaults synchronize];
+}
+
 static void testWindowFramePersistence(void)
 {
   YCodeWindowController *first = [[YCodeWindowController alloc] init];
@@ -1928,14 +2184,73 @@ int main(void)
   NSURL *url;
 
   [NSApplication sharedApplication];
+  NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--read-font-layout"]) {
+    NSUInteger i; BOOL passed = YES;
+    for (i = 0; i < 4; i++)
+      passed = passed && [[YCodePreferences fontForPane:[[YCodePreferences fontPanes] objectAtIndex:i]] pointSize] == 18 + i;
+    YCodeWindowController *window = [YCodeWindowController new];
+    passed = passed && fabs(NSWidth([[window valueForKey:@"_navigatorView"] frame]) - 280) < 2 &&
+      fabs(NSWidth([[window valueForKey:@"_inspectorView"] frame]) - 210) < 2;
+    [window close]; [window release]; [pool drain]; return passed ? 0 : 1;
+  }
+  if ([arguments containsObject:@"--check-font-layout"]) {
+    [NSApp finishLaunching];
+    [NSApp activateIgnoringOtherApps:YES];
+    testFontAndSidebarPreferences();
+    NSLog(@"Ycode font and sidebar checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
+  if ([arguments count] == 2 && [[arguments objectAtIndex:1] isEqual:@"--check-debug-gutter"]) {
+    testHiddenRulersDebugGutter();
+    NSLog(@"Ycode debugger gutter checks: %lu failures", (unsigned long)failures);
+    [pool drain];
+    return failures ? 1 : 0;
+  }
+  if ([arguments count] == 2 && [[arguments objectAtIndex:1] isEqual:@"--check-target-toolbar"]) {
+    testBuildAndRun(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode target toolbar checks: %lu failures", (unsigned long)failures);
+    [pool drain];
+    return failures ? 1 : 0;
+  }
+  if ([arguments count] == 4 && [[arguments objectAtIndex:1] isEqual:@"--check-panel-state"]) {
+    YCodeWindowController *window = [YCodeWindowController new];
+    BOOL navigator = [[arguments objectAtIndex:2] boolValue];
+    BOOL inspector = [[arguments objectAtIndex:3] boolValue];
+    BOOL passed = [window isNavigatorVisible] == navigator && [window isInspectorVisible] == inspector &&
+      [[window valueForKey:@"_navigatorView"] isHidden] == !navigator &&
+      [[window valueForKey:@"_inspectorView"] isHidden] == !inspector;
+    [window close];
+    [window release];
+    [pool drain];
+    return passed ? 0 : 1;
+  }
+  if ([arguments count] == 3 && [[arguments objectAtIndex:1] isEqual:@"--check-editor-preferences"]) {
+    YCodeEditorController *editor = [YCodeEditorController new];
+    BOOL opened = [editor openFile:[arguments objectAtIndex:2]];
+    YCodeEditorDocument *source = [editor currentDocument];
+    BOOL passed = opened && colorMatches([[source textView] backgroundColor], 0.1, 0.2, 0.3) &&
+      colorMatches([[source syntaxHighlighter] keywordColor], 0.18, 0.2, 0.3) &&
+      colorMatches([[[source textView] textStorage] attribute:NSForegroundColorAttributeName
+        atIndex:4 effectiveRange:NULL], 0.14, 0.2, 0.3) &&
+      ![[source scrollView] rulersVisible] && ![editor showLineNumbers];
+    [editor closeFile:[arguments objectAtIndex:2]];
+    [editor release];
+    [pool drain];
+    return passed ? 0 : 1;
+  }
   id savedWindowFrame = [[[NSUserDefaults standardUserDefaults]
     objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
+  testPanelVisibilityPersistence();
   testWindowFramePersistence();
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
+  testFontAndSidebarPreferences();
   testEditorColorPreferences();
   testEditorColors();
+  testHiddenRulersDebugGutter();
   testSyntaxHighlighting();
   testDebuggerRecords();
   testAssert([manager createDirectoryAtPath:temporaryDirectory

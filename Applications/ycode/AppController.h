@@ -21,6 +21,12 @@
   YCodeWindowController *windowController;
   NSPanel *_preferencesPanel;
   NSMutableArray *_editorColorWells;
+  NSPopUpButton *_preferencesGroup;
+  NSView *_colorPreferencesView;
+  NSView *_editorPreferencesView;
+  NSButton *_showEditorRulers;
+  NSView *_fontPreferencesView;
+  NSMutableArray *_fontChoices;
 }
 
 /**

@@ -22,6 +22,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */
 
+#import "YCodePreferences.h"
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeProject.h"
@@ -139,17 +140,24 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
         _documentTabs = [[NSMutableDictionary alloc] init];
         
         // Default editor settings
-        _editorFont = [[NSFont userFixedPitchFontOfSize:12.0] retain];
-        _backgroundColor = [[NSColor colorWithDeviceWhite:0.95 alpha:1.0] retain];
+        _editorFont = [[YCodePreferences fontForPane:@"Editor"] retain];
+        _backgroundColor = [[YCodeSyntaxHighlighter preferredColorForKey:@"background"] retain];
         _textColor = [[YCodeSyntaxHighlighter plainTextColorForBackground:_backgroundColor] retain];
-        _showLineNumbers = YES;
+        _showLineNumbers = ![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeHideEditorRulers"];
         _syntaxHighlighting = YES;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorPreferencesChanged:)
+            name:@"YCodeEditorColorsDidChange" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorPreferencesChanged:)
+            name:@"YCodeEditorRulersDidChange" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorFontsChanged:)
+            name:@"YCodeFontsDidChange" object:nil];
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     RELEASE(_project);
     RELEASE(_tabView);
     RELEASE(_openDocuments);
@@ -159,6 +167,19 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     RELEASE(_backgroundColor);
     RELEASE(_textColor);
     [super dealloc];
+}
+
+- (void)editorFontsChanged:(NSNotification *)notification
+{
+    [self setEditorFont:[YCodePreferences fontForPane:@"Editor"]];
+}
+
+- (void)editorPreferencesChanged:(NSNotification *)notification
+{
+    // Keep the settings applied by openFile: in sync with the saved preferences.
+    ASSIGN(_backgroundColor, [YCodeSyntaxHighlighter preferredColorForKey:@"background"]);
+    ASSIGN(_textColor, [YCodeSyntaxHighlighter preferredColorForKey:@"text"]);
+    _showLineNumbers = ![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeHideEditorRulers"];
 }
 
 #pragma mark - Project Association

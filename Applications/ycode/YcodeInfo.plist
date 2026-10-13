@@ -29,6 +29,41 @@
             NSName = YCodeProjectCenterProjectType;
             NSRole = Editor;
             NSUnixExtensions = ( pcproj );
+        },
+        {
+            NSHumanReadableName = "C and C++ header";
+            NSIcon = "FileH.tiff";
+            NSName = YCodeHeaderType;
+            NSRole = Editor;
+            NSUnixExtensions = ( h, hh, hpp, hxx, "h++", H );
+        },
+        {
+            NSHumanReadableName = "C source";
+            NSIcon = "FileC.tiff";
+            NSName = YCodeCSourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( c );
+        },
+        {
+            NSHumanReadableName = "Objective-C source";
+            NSIcon = "FileM.tiff";
+            NSName = YCodeObjectiveCSourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( m );
+        },
+        {
+            NSHumanReadableName = "Objective-C++ source";
+            NSIcon = "FileMM.tiff";
+            NSName = YCodeObjectiveCPlusPlusSourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( mm, M );
+        },
+        {
+            NSHumanReadableName = "C++ source";
+            NSIcon = "FileC.tiff";
+            NSName = YCodeCPlusPlusSourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( cc, cp, cpp, cxx, "c++", C );
         }
     );
 }
