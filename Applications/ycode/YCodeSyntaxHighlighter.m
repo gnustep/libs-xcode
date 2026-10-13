@@ -23,6 +23,7 @@
 */
 
 #import "YCodeSyntaxHighlighter.h"
+#include <math.h>
 
 static NSRegularExpression *YCodeTokenPattern(NSString *pattern)
 {
@@ -49,20 +50,84 @@ static NSString *YCodeWordPattern(NSArray *words)
 
 @implementation YCodeSyntaxHighlighter
 
+// Store RGB components as property-list values, without archiving AppKit objects.
++ (NSArray *)colorPreferenceKeys
+{
+    return [NSArray arrayWithObjects:@"background", @"text", @"keyword", @"string",
+        @"comment", @"number", @"preprocessor", @"type", @"symbol", @"constant", nil];
+}
+
++ (NSColor *)savedColorForKey:(NSString *)key
+{
+    id components = [[[NSUserDefaults standardUserDefaults] dictionaryForKey:@"YCodeEditorColors"] objectForKey:key];
+    if (![components isKindOfClass:[NSArray class]] || [components count] != 3) return nil;
+    NSUInteger i;
+    for (i = 0; i < 3; i++) {
+        id value = [components objectAtIndex:i];
+        if (![value isKindOfClass:[NSNumber class]] || !isfinite([value doubleValue]) ||
+            [value doubleValue] < 0 || [value doubleValue] > 1) return nil;
+    }
+    return [NSColor colorWithDeviceRed:[[components objectAtIndex:0] doubleValue]
+        green:[[components objectAtIndex:1] doubleValue]
+        blue:[[components objectAtIndex:2] doubleValue] alpha:1];
+}
+
++ (NSColor *)preferredColorForKey:(NSString *)key
+{
+    NSColor *saved = [self savedColorForKey:key];
+    if (saved) return saved;
+    if ([key isEqual:@"background"]) return [NSColor whiteColor];
+    if ([key isEqual:@"text"]) return [self plainTextColorForBackground:[self preferredColorForKey:@"background"]];
+    static const CGFloat defaults[8][3] = {
+        {0.67, 0.20, 0.89}, {0.77, 0.10, 0.08}, {0.42, 0.48, 0.53},
+        {0.11, 0.28, 0.80}, {0.64, 0.45, 0.14}, {0.15, 0.54, 0.61},
+        {0.12, 0.40, 0.64}, {0.60, 0.32, 0.12}
+    };
+    NSUInteger index = [[self colorPreferenceKeys] indexOfObject:key];
+    if (index == NSNotFound || index < 2) return nil;
+    return [NSColor colorWithDeviceRed:defaults[index - 2][0]
+        green:defaults[index - 2][1] blue:defaults[index - 2][2] alpha:1];
+}
+
++ (void)setPreferredColor:(NSColor *)color forKey:(NSString *)key
+{
+    if (![[self colorPreferenceKeys] containsObject:key]) return;
+    NSColor *rgb = [color colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+    if (!rgb) return;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSMutableDictionary *colors = [NSMutableDictionary dictionaryWithDictionary:
+        [defaults dictionaryForKey:@"YCodeEditorColors"] ?: [NSDictionary dictionary]];
+    [colors setObject:[NSArray arrayWithObjects:[NSNumber numberWithDouble:[rgb redComponent]],
+        [NSNumber numberWithDouble:[rgb greenComponent]], [NSNumber numberWithDouble:[rgb blueComponent]], nil] forKey:key];
+    [defaults setObject:colors forKey:@"YCodeEditorColors"];
+    [defaults synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeEditorColorsDidChange" object:nil];
+}
+
++ (void)resetColorPreferences
+{
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"YCodeEditorColors"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeEditorColorsDidChange" object:nil];
+}
+
+- (void)loadPreferredColors
+{
+    ASSIGN(_keywordColor, [[self class] preferredColorForKey:@"keyword"]);
+    ASSIGN(_stringColor, [[self class] preferredColorForKey:@"string"]);
+    ASSIGN(_commentColor, [[self class] preferredColorForKey:@"comment"]);
+    ASSIGN(_numberColor, [[self class] preferredColorForKey:@"number"]);
+    ASSIGN(_preprocessorColor, [[self class] preferredColorForKey:@"preprocessor"]);
+    ASSIGN(_typeColor, [[self class] preferredColorForKey:@"type"]);
+    ASSIGN(_symbolColor, [[self class] preferredColorForKey:@"symbol"]);
+    ASSIGN(_constantColor, [[self class] preferredColorForKey:@"constant"]);
+}
+
 - (id)initWithFileExtension:(NSString *)extension
 {
     self = [super init];
     if (self) {
-        // Default color scheme
-        _keywordColor = [[NSColor colorWithDeviceRed:0.67 green:0.20 blue:0.89 alpha:1.0] retain]; // Purple
-        _stringColor = [[NSColor colorWithDeviceRed:0.77 green:0.10 blue:0.08 alpha:1.0] retain];  // Red
-        _commentColor = [[NSColor colorWithDeviceRed:0.42 green:0.48 blue:0.53 alpha:1.0] retain]; // Gray
-        _numberColor = [[NSColor colorWithDeviceRed:0.11 green:0.28 blue:0.80 alpha:1.0] retain];  // Blue
-        _preprocessorColor = [[NSColor colorWithDeviceRed:0.64 green:0.45 blue:0.14 alpha:1.0] retain]; // Brown
-        _typeColor = [[NSColor colorWithDeviceRed:0.15 green:0.54 blue:0.61 alpha:1.0] retain];   // Teal
-        
-        _symbolColor = [[NSColor colorWithDeviceRed:0.12 green:0.40 blue:0.64 alpha:1.0] retain];
-        _constantColor = [[NSColor colorWithDeviceRed:0.60 green:0.32 blue:0.12 alpha:1.0] retain];
+        [self loadPreferredColors];
         [self setFileExtension:extension];
     }
     return self;
@@ -134,6 +199,7 @@ static NSString *YCodeWordPattern(NSArray *words)
 - (void)setTextView:(NSTextView *)textView
 {
     ASSIGN(_textView, textView);
+    [_textView setBackgroundColor:[[self class] preferredColorForKey:@"background"]];
 }
 
 #pragma mark - Color Scheme
@@ -205,6 +271,8 @@ static NSString *YCodeWordPattern(NSArray *words)
 
 + (NSColor *)plainTextColorForBackground:(NSColor *)background
 {
+    NSColor *saved = [self savedColorForKey:@"text"];
+    if (saved) return saved;
     NSColor *rgb = [background colorUsingColorSpaceName:NSDeviceRGBColorSpace];
     if (!rgb) {
         rgb = [[NSColor textBackgroundColor] colorUsingColorSpaceName:NSDeviceRGBColorSpace];

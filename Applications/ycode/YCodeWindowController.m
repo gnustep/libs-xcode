@@ -35,6 +35,144 @@
 #import "YCFileInspectorView.h"
 #import "YCImageInspectorView.h"
 
+/* Stateful ANSI transcript decoder. Cursor controls are consumed: these panes
+   are append-only transcripts, rather than terminal emulators. */
+@interface YCANSITranscript : NSObject
+{
+  NSMutableDictionary *_attributes;
+  NSMutableString *_sequence;
+  NSUInteger _state;
+}
+- (NSAttributedString *)decode:(NSString *)text;
+@end
+
+@implementation YCANSITranscript
+- (id)init
+{
+  if ((self = [super init]))
+    {
+      _attributes = [NSMutableDictionary new];
+      _sequence = [NSMutableString new];
+      [_attributes setObject:[NSFont userFixedPitchFontOfSize:12] forKey:NSFontAttributeName];
+      [_attributes setObject:[NSColor textColor] forKey:NSForegroundColorAttributeName];
+    }
+  return self;
+}
+- (void)dealloc
+{
+  [_attributes release];
+  [_sequence release];
+  [super dealloc];
+}
+- (NSColor *)color:(NSInteger)index
+{
+  static const unsigned char palette[16][3] = {
+    {0,0,0}, {170,0,0}, {0,170,0}, {170,85,0},
+    {0,0,170}, {170,0,170}, {0,170,170}, {170,170,170},
+    {85,85,85}, {255,85,85}, {85,255,85}, {255,255,85},
+    {85,85,255}, {255,85,255}, {85,255,255}, {255,255,255}
+  };
+  if (index < 0 || index > 255) return nil;
+  if (index < 16)
+    return [NSColor colorWithCalibratedRed:palette[index][0] / 255.0
+      green:palette[index][1] / 255.0 blue:palette[index][2] / 255.0 alpha:1];
+  if (index >= 232)
+    return [NSColor colorWithCalibratedWhite:(8 + (index - 232) * 10) / 255.0 alpha:1];
+  NSInteger n = index - 16;
+  NSInteger r = n / 36, g = (n / 6) % 6, b = n % 6;
+  return [NSColor colorWithCalibratedRed:(r ? 55 + r * 40 : 0) / 255.0
+    green:(g ? 55 + g * 40 : 0) / 255.0 blue:(b ? 55 + b * 40 : 0) / 255.0 alpha:1];
+}
+- (void)applyStyle
+{
+  NSArray *codes = [_sequence componentsSeparatedByString:@";"];
+  NSUInteger i;
+  for (i = 0; i < [codes count]; i++)
+    {
+      NSInteger code = [[codes objectAtIndex:i] integerValue];
+      NSColor *color = nil;
+      NSString *key = NSForegroundColorAttributeName;
+      if (code == 0)
+        {
+          [_attributes removeAllObjects];
+          [_attributes setObject:[NSFont userFixedPitchFontOfSize:12] forKey:NSFontAttributeName];
+          [_attributes setObject:[NSColor textColor] forKey:NSForegroundColorAttributeName];
+        }
+      else if (code == 1 || code == 22)
+        [_attributes setObject:[[NSFontManager sharedFontManager]
+          convertFont:[NSFont userFixedPitchFontOfSize:12]
+          toHaveTrait:code == 1 ? NSBoldFontMask : NSUnboldFontMask] forKey:NSFontAttributeName];
+      else if (code == 4 || code == 24)
+        [_attributes setObject:[NSNumber numberWithInt:code == 4 ? NSUnderlineStyleSingle : NSUnderlineStyleNone]
+          forKey:NSUnderlineStyleAttributeName];
+      else if (code == 39) [_attributes setObject:[NSColor textColor] forKey:NSForegroundColorAttributeName];
+      else if (code == 49) [_attributes removeObjectForKey:NSBackgroundColorAttributeName];
+      else if ((code >= 30 && code <= 37) || (code >= 90 && code <= 97))
+        color = [self color:code >= 90 ? code - 90 + 8 : code - 30];
+      else if ((code >= 40 && code <= 47) || (code >= 100 && code <= 107))
+        {
+          key = NSBackgroundColorAttributeName;
+          color = [self color:code >= 100 ? code - 100 + 8 : code - 40];
+        }
+      else if ((code == 38 || code == 48) && i + 1 < [codes count])
+        {
+          key = code == 38 ? NSForegroundColorAttributeName : NSBackgroundColorAttributeName;
+          NSInteger mode = [[codes objectAtIndex:++i] integerValue];
+          if (mode == 5 && i + 1 < [codes count]) color = [self color:[[codes objectAtIndex:++i] integerValue]];
+          else if (mode == 2 && i + 3 < [codes count])
+            {
+              NSInteger red = [[codes objectAtIndex:++i] integerValue];
+              NSInteger green = [[codes objectAtIndex:++i] integerValue];
+              NSInteger blue = [[codes objectAtIndex:++i] integerValue];
+              CGFloat r = MAX(0, MIN(255, red)) / 255.0;
+              CGFloat g = MAX(0, MIN(255, green)) / 255.0;
+              CGFloat b = MAX(0, MIN(255, blue)) / 255.0;
+              color = [NSColor colorWithCalibratedRed:r green:g blue:b alpha:1];
+            }
+          else break;
+        }
+      if (color) [_attributes setObject:color forKey:key];
+    }
+}
+- (NSAttributedString *)decode:(NSString *)text
+{
+  NSMutableAttributedString *result = AUTORELEASE([[NSMutableAttributedString alloc] init]);
+  NSUInteger i, start = 0;
+  for (i = 0; i < [text length]; i++)
+    {
+      unichar c = [text characterAtIndex:i];
+      if (_state == 0 && c != 27) continue;
+      if (_state == 0)
+        {
+          if (i > start) [result appendAttributedString:AUTORELEASE([[NSAttributedString alloc]
+            initWithString:[text substringWithRange:NSMakeRange(start, i - start)] attributes:_attributes])];
+          _state = 1;
+        }
+      else if (_state == 1)
+        {
+          [_sequence setString:@""];
+          _state = c == '[' ? 2 : (c == ']' || c == 'P' || c == '^' || c == '_' ? 3 : 0);
+        }
+      else if (_state == 2)
+        {
+          if (c >= 0x40 && c <= 0x7e)
+            {
+              if (c == 'm') [self applyStyle];
+              _state = 0;
+            }
+          else if ([_sequence length] < 1024) [_sequence appendFormat:@"%C", c];
+          else _state = 0;
+        }
+      else if (_state == 3) { if (c == 7) _state = 0; else if (c == 27) _state = 4; }
+      else if (_state == 4) _state = c == '\\' || c == 7 ? 0 : 3;
+      start = i + 1;
+    }
+  if (start < [text length]) [result appendAttributedString:AUTORELEASE([[NSAttributedString alloc]
+    initWithString:[text substringFromIndex:start] attributes:_attributes])];
+  return result;
+}
+@end
+
 static NSScrollView *
 YCodeScrollViewWithDocumentView(NSView *documentView)
 {
@@ -51,6 +189,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 @interface YCodeWindowController (Private)
 - (void)saveWindowFrame:(NSNotification *)notification;
 - (void)appendConsoleOutput:(NSString *)output;
+- (NSAttributedString *)decodeOutput:(NSString *)output stream:(NSString *)stream;
 - (void)consumeDiagnostics:(NSString *)output buffer:(NSMutableString *)buffer;
 - (void)finishDiagnostics;
 - (void)parseDiagnosticLine:(NSString *)line;
@@ -134,7 +273,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     RELEASE(_diagnosticErrors);
     RELEASE(_buildDirectories);
     RELEASE(_diagnosticPattern);
-    RELEASE(_ansiPattern);
+    RELEASE(_ansiDecoders);
     RELEASE(_toolDiagnosticPattern);
     RELEASE(_directoryPattern);
     [super dealloc];
@@ -324,6 +463,20 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_toolbar setAllowsUserCustomization:YES];
         [_toolbar setAutosavesConfiguration:YES];
         [[self window] setToolbar:_toolbar];
+        // Add Build to older saved layouts once; subsequent customization is respected.
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        if (![defaults boolForKey:@"YCodeBuildToolbarItemAdded"]) {
+            NSArray *items = [_toolbar items];
+            NSUInteger index, insertionIndex = 0;
+            BOOL hasBuild = NO;
+            for (index = 0; index < [items count]; index++) {
+                NSString *identifier = [[items objectAtIndex:index] itemIdentifier];
+                if ([identifier isEqualToString:@"build"]) hasBuild = YES;
+                if ([identifier isEqualToString:@"run"]) insertionIndex = index;
+            }
+            if (!hasBuild) [_toolbar insertItemWithItemIdentifier:@"build" atIndex:insertionIndex];
+            [defaults setBool:YES forKey:@"YCodeBuildToolbarItemAdded"];
+        }
     }
 }
 
@@ -499,8 +652,6 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             options:0 error:NULL];
         _toolDiagnosticPattern = [[NSRegularExpression alloc] initWithPattern:
             @"^(?:([^:]+):\\s*)?(fatal error|error|warning|note):\\s*(.*)$"
-            options:0 error:NULL];
-        _ansiPattern = [[NSRegularExpression alloc] initWithPattern:@"\033\\[[0-?]*[ -/]*[@-~]"
             options:0 error:NULL];
         _directoryPattern = [[NSRegularExpression alloc] initWithPattern:
             @"(?:g?make)(?:\\[[0-9]+\\])?: (Entering|Leaving) directory [\\x60'‘](.*)['’]$"
@@ -697,13 +848,22 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [self setBottomPanelVisible:!_bottomPanelVisible];
 }
 
+- (NSAttributedString *)decodeOutput:(NSString *)output stream:(NSString *)stream
+{
+    if (!_ansiDecoders) _ansiDecoders = [NSMutableDictionary new];
+    YCANSITranscript *decoder = [_ansiDecoders objectForKey:stream];
+    if (!decoder) {
+        decoder = AUTORELEASE([YCANSITranscript new]);
+        [_ansiDecoders setObject:decoder forKey:stream];
+    }
+    return [decoder decode:output];
+}
+
 - (void)appendConsoleOutput:(NSString *)output
 {
     if (!_consoleTextView || !output) return;
     NSTextStorage *storage = [_consoleTextView textStorage];
-    NSAttributedString *text = [[NSAttributedString alloc] initWithString:output];
-    [storage appendAttributedString:text];
-    RELEASE(text);
+    [storage appendAttributedString:[self decodeOutput:output stream:@"console"]];
     [_consoleTextView scrollRangeToVisible:NSMakeRange([storage length], 0)];
 }
 
@@ -754,9 +914,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)buildSystem:(id)buildSystem didReceiveDebuggerOutput:(NSString *)output
 {
     NSTextStorage *storage = [_debuggerTextView textStorage];
-    [storage appendAttributedString:AUTORELEASE([[NSAttributedString alloc] initWithString:output
-        attributes:[NSDictionary dictionaryWithObject:[NSFont userFixedPitchFontOfSize:12]
-        forKey:NSFontAttributeName]])];
+    [storage appendAttributedString:[self decodeOutput:output stream:@"debugger"]];
     [_debuggerTextView scrollRangeToVisible:NSMakeRange([storage length], 0)];
 }
 
@@ -866,6 +1024,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartBuild:(id)buildSystem
 {
+    [_ansiDecoders removeAllObjects];
     [_issuesTableView deselectAll:nil];
     [_buildIssues removeAllObjects];
     [_issuesTableView reloadData];
@@ -888,6 +1047,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartRun:(id)buildSystem
 {
+    [_ansiDecoders removeAllObjects];
     [_bottomTabView selectTabViewItemWithIdentifier:[buildSystem isDebugging] ? @"debugger" : @"console"];
     if ([buildSystem isDebugging])
         [self buildSystem:buildSystem didReceiveDebuggerOutput:
@@ -921,7 +1081,11 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)buildSystem:(id)buildSystem didReceiveError:(NSString *)error
 {
     if ([buildSystem isDebugging]) [self buildSystem:buildSystem didReceiveDebuggerOutput:error];
-    else [self appendConsoleOutput:error];
+    else {
+        NSTextStorage *storage = [_consoleTextView textStorage];
+        [storage appendAttributedString:[self decodeOutput:error stream:@"consoleErrors"]];
+        [_consoleTextView scrollRangeToVisible:NSMakeRange([storage length], 0)];
+    }
     if (_collectingTests) [self consumeTestOutput:error buffer:_testErrors];
     if (_collectingBuildIssues) [self consumeDiagnostics:error buffer:_diagnosticErrors];
 }
@@ -1185,7 +1349,35 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     NSRange newline;
     while ((newline = [buffer rangeOfString:@"\n"]).location != NSNotFound) {
         NSString *line = [buffer substringToIndex:newline.location];
-        [self parseDiagnosticLine:line];
+        NSAttributedString *styled = [self decodeOutput:line
+            stream:buffer == _diagnosticOutput ? @"issueOutput" : @"issueErrors"];
+        NSString *plain = [styled string];
+        NSCharacterSet *space = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+        NSUInteger first = 0, last = [plain length];
+        while (first < last && [space characterIsMember:[plain characterAtIndex:first]]) first++;
+        while (last > first && [space characterIsMember:[plain characterAtIndex:last - 1]]) last--;
+        styled = [styled attributedSubstringFromRange:NSMakeRange(first, last - first)];
+        plain = [styled string];
+        NSUInteger count = [_buildIssues count];
+        [self parseDiagnosticLine:plain];
+        if ([_buildIssues count] > count) {
+            NSMutableDictionary *issue = [[[_buildIssues lastObject] mutableCopy] autorelease];
+            NSTextCheckingResult *match = [_diagnosticPattern firstMatchInString:plain
+                options:0 range:NSMakeRange(0, [plain length])];
+            NSUInteger severity = 4, message = 5;
+            if (!match) {
+                match = [_toolDiagnosticPattern firstMatchInString:plain
+                    options:0 range:NSMakeRange(0, [plain length])];
+                severity = 2; message = 3;
+            }
+            NSMutableAttributedString *display = AUTORELEASE([[NSMutableAttributedString alloc]
+                initWithAttributedString:[styled attributedSubstringFromRange:[match rangeAtIndex:severity]]]);
+            [display appendAttributedString:AUTORELEASE([[NSAttributedString alloc]
+                initWithString:[@": " stringByAppendingString:[[issue objectForKey:@"location"] stringByAppendingString:@"\n"]]])];
+            [display appendAttributedString:[styled attributedSubstringFromRange:[match rangeAtIndex:message]]];
+            [issue setObject:display forKey:@"display"];
+            [_buildIssues replaceObjectAtIndex:count withObject:issue];
+        }
         [buffer deleteCharactersInRange:NSMakeRange(0, NSMaxRange(newline))];
     }
     if (previousCount == [_buildIssues count]) return;
@@ -1205,8 +1397,6 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)parseDiagnosticLine:(NSString *)line
 {
-    line = [_ansiPattern stringByReplacingMatchesInString:line options:0
-        range:NSMakeRange(0, [line length]) withTemplate:@""];
     line = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     NSTextCheckingResult *directory = [_directoryPattern firstMatchInString:line
         options:0 range:NSMakeRange(0, [line length])];
@@ -1274,8 +1464,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     }
     if (row < 0 || row >= (NSInteger)[_buildIssues count]) return nil;
     NSDictionary *issue = [_buildIssues objectAtIndex:row];
-    return [NSString stringWithFormat:@"%@: %@\n%@", [issue objectForKey:@"severity"],
-        [issue objectForKey:@"location"], [issue objectForKey:@"message"]];
+    return [issue objectForKey:@"display"];
 }
 
 - (NSString *)tableView:(NSTableView *)tableView toolTipForCell:(NSCell *)cell
@@ -1348,13 +1537,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", @"scheme", NSToolbarSeparatorItemIdentifier,
+    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", @"scheme", NSToolbarSeparatorItemIdentifier,
              @"navigator", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"run", @"debug", @"stop", @"pause", @"continue", @"next", @"scheme", NSToolbarSeparatorItemIdentifier,
+    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"scheme", NSToolbarSeparatorItemIdentifier,
              NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"inspector", nil];
 }
 
@@ -1380,6 +1569,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [item setTarget:self];
         [item setAction:@selector(debugProject:)];
         [item setImage:YCodeControlIcon(@"debug", 24)];
+    } else if ([itemIdentifier isEqualToString:@"build"]) {
+        [item setLabel:@"Build"];
+        [item setPaletteLabel:@"Build"];
+        [item setToolTip:@"Build the current project without running it"];
+        [item setTarget:self];
+        [item setAction:@selector(buildProject:)];
+        [item setImage:YCodeControlIcon(@"build", 24)];
     } else if ([itemIdentifier isEqualToString:@"run"]) {
         [item setLabel:@"Run"];
         [item setPaletteLabel:@"Run"];

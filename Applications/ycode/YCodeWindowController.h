@@ -86,7 +86,7 @@
     NSMutableString *_diagnosticErrors;
     NSMutableArray *_buildDirectories;
     NSRegularExpression *_diagnosticPattern;
-    NSRegularExpression *_ansiPattern;
+    NSMutableDictionary *_ansiDecoders;
     NSRegularExpression *_toolDiagnosticPattern;
     NSRegularExpression *_directoryPattern;
     BOOL _collectingBuildIssues;

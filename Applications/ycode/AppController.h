@@ -19,6 +19,8 @@
 @interface AppController : NSObject
 {
   YCodeWindowController *windowController;
+  NSPanel *_preferencesPanel;
+  NSMutableArray *_editorColorWells;
 }
 
 /**

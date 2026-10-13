@@ -76,6 +76,12 @@
 /**
  * Color scheme
  */
+/** Saved editor colors, shared by all project windows. */
++ (NSArray *)colorPreferenceKeys;
++ (NSColor *)preferredColorForKey:(NSString *)key;
++ (void)setPreferredColor:(NSColor *)color forKey:(NSString *)key;
++ (void)resetColorPreferences;
+- (void)loadPreferredColors;
 + (NSColor *)plainTextColorForBackground:(NSColor *)background;
 - (NSColor *)keywordColor;
 - (void)setKeywordColor:(NSColor *)color;

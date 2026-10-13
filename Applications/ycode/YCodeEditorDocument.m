@@ -58,6 +58,8 @@
         
         [self setupEditorView];
         [self setupSyntaxHighlighter];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorColorsChanged:)
+            name:@"YCodeEditorColorsDidChange" object:nil];
     }
     return self;
 }
@@ -73,6 +75,7 @@
 
 - (void)dealloc
 {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     RELEASE(_image);
     RELEASE(_filePath);
     RELEASE(_content);
@@ -402,6 +405,13 @@
 - (YCodeSyntaxHighlighter *)syntaxHighlighter
 {
     return _syntaxHighlighter;
+}
+
+- (void)editorColorsChanged:(NSNotification *)notification
+{
+    [_syntaxHighlighter loadPreferredColors];
+    [_textView setBackgroundColor:[YCodeSyntaxHighlighter preferredColorForKey:@"background"]];
+    [self applySyntaxHighlighting];
 }
 
 - (void)applySyntaxHighlighting

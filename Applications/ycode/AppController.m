@@ -9,6 +9,7 @@
 */
 
 #import "YCodeControlIcons.h"
+#import "YCodeSyntaxHighlighter.h"
 #import "AppController.h"
 #import "YCodeWindowController.h"
 #import "YCodeDocumentController.h"
@@ -77,6 +78,8 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void) dealloc
 {
+  RELEASE(_editorColorWells);
+  RELEASE(_preferencesPanel);
   [super dealloc];
 }
 
@@ -802,14 +805,75 @@ YCodeFileURLFromPath(NSString *path)
     [[self currentProjectWindowController] toggleBottomPanel:sender];
 }
 
+- (void)refreshEditorColorWells
+{
+    NSArray *keys = [YCodeSyntaxHighlighter colorPreferenceKeys];
+    NSUInteger i;
+    for (i = 0; i < [_editorColorWells count]; i++)
+        [[_editorColorWells objectAtIndex:i] setColor:
+            [YCodeSyntaxHighlighter preferredColorForKey:[keys objectAtIndex:i]]];
+}
+
+- (void)changeEditorColor:(NSColorWell *)sender
+{
+    NSString *key = [[YCodeSyntaxHighlighter colorPreferenceKeys] objectAtIndex:[sender tag]];
+    [YCodeSyntaxHighlighter setPreferredColor:[sender color] forKey:key];
+    [self refreshEditorColorWells];
+}
+
+- (void)resetEditorColors:(id)sender
+{
+    [YCodeSyntaxHighlighter resetColorPreferences];
+    [self refreshEditorColorWells];
+}
+
 - (void) showPrefPanel: (id)sender
 {
-    // TODO: Implement preferences panel
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert setMessageText:@"Preferences"];
-    [alert setInformativeText:@"Preferences panel not yet implemented"];
-    [alert runModal];
-    RELEASE(alert);
+    if (!_preferencesPanel) {
+        _preferencesPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 390, 450)
+            styleMask:NSTitledWindowMask | NSClosableWindowMask
+            backing:NSBackingStoreBuffered defer:NO];
+        [_preferencesPanel setTitle:@"Editor Colors"];
+        [_preferencesPanel setReleasedWhenClosed:NO];
+        [_preferencesPanel center];
+        _editorColorWells = [NSMutableArray new];
+        NSArray *labels = [NSArray arrayWithObjects:@"Editor background", @"Plain text", @"Keywords",
+            @"Strings", @"Comments", @"Numbers", @"Preprocessor directives", @"Types",
+            @"Symbols", @"Constants", nil];
+        NSUInteger i;
+        for (i = 0; i < [labels count]; i++) {
+            CGFloat y = 405 - i * 34;
+            NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, y, 250, 24)]);
+            [label setStringValue:[labels objectAtIndex:i]];
+            [label setEditable:NO];
+            [label setSelectable:NO];
+            [label setBezeled:NO];
+            [label setDrawsBackground:NO];
+            [[_preferencesPanel contentView] addSubview:label];
+            NSColorWell *well = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(290, y, 80, 26)]);
+            [well setTag:i];
+            [well setTarget:self];
+            [well setAction:@selector(changeEditorColor:)];
+            [well setContinuous:YES];
+            [[_preferencesPanel contentView] addSubview:well];
+            [_editorColorWells addObject:well];
+        }
+        NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 58, 350, 22)]);
+        [hint setStringValue:@"Changes are saved and applied immediately."];
+        [hint setEditable:NO];
+        [hint setBezeled:NO];
+        [hint setDrawsBackground:NO];
+        [hint setFont:[NSFont systemFontOfSize:12]];
+        [[_preferencesPanel contentView] addSubview:hint];
+        NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
+        [reset setTitle:@"Restore Defaults"];
+        [reset setBezelStyle:NSRoundedBezelStyle];
+        [reset setTarget:self];
+        [reset setAction:@selector(resetEditorColors:)];
+        [[_preferencesPanel contentView] addSubview:reset];
+    }
+    [self refreshEditorColorWells];
+    [_preferencesPanel makeKeyAndOrderFront:sender];
 }
 
 - (IBAction) openProject: (id)sender

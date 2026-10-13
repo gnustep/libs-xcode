@@ -350,6 +350,65 @@ static void testProjectFileMembership(YCodeProject *project, NSString *directory
   [reference release];
 }
 
+static void testEditorColorPreferences(void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey:@"YCodeEditorColors"] retain];
+  [YCodeSyntaxHighlighter resetColorPreferences];
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:@"Colors.m" content:@"int ordinary = 42;"];
+  [document setModified:NO];
+  AppController *app = [AppController new];
+  [app showPrefPanel:nil];
+  NSPanel *panel = [app valueForKey:@"_preferencesPanel"];
+  NSArray *wells = [app valueForKey:@"_editorColorWells"];
+  NSArray *keys = [YCodeSyntaxHighlighter colorPreferenceKeys];
+  testAssert(colorMatches([[wells objectAtIndex:0] color], 1, 1, 1) &&
+    colorMatches([[wells objectAtIndex:1] color], 0, 0, 0) &&
+    colorMatches([[document textView] backgroundColor], 1, 1, 1) &&
+    colorMatches([[[document textView] textStorage] attribute:NSForegroundColorAttributeName
+      atIndex:4 effectiveRange:NULL], 0, 0, 0),
+    @"Default preferences and editor both use black text on white regardless of the system theme");
+  testAssert([panel isVisible] && [wells count] == 10,
+    @"Preferences exposes background, plain text and all eight syntax colors");
+  NSUInteger i;
+  for (i = 0; i < [wells count]; i++) {
+    NSColorWell *well = [wells objectAtIndex:i];
+    testAssert(NSContainsRect([[panel contentView] bounds], [well frame]),
+      @"Color controls fit within the preferences panel");
+    [well setColor:[NSColor colorWithDeviceRed:0.1 + i * 0.04 green:0.2 blue:0.3 alpha:1]];
+    [well sendAction:[well action] to:[well target]];
+    testAssert(colorMatches([YCodeSyntaxHighlighter preferredColorForKey:[keys objectAtIndex:i]],
+      0.1 + i * 0.04, 0.2, 0.3), @"Color wells save each chosen color");
+    if (i >= 2) {
+      NSString *property = [[keys objectAtIndex:i] stringByAppendingString:@"Color"];
+      testAssert(colorMatches([[document syntaxHighlighter] valueForKey:property],
+        0.1 + i * 0.04, 0.2, 0.3), @"Open highlighters update every syntax category immediately");
+    }
+  }
+  testAssert(colorMatches([[document textView] backgroundColor], 0.1, 0.2, 0.3) &&
+    colorMatches([[[document textView] textStorage] attribute:NSForegroundColorAttributeName
+      atIndex:4 effectiveRange:NULL], 0.14, 0.2, 0.3) && ![document isModified],
+    @"Live background and plain text updates do not mark source files modified");
+  YCodeEditorDocument *newDocument = [[YCodeEditorDocument alloc]
+    initWithFilePath:@"NewColors.m" content:@"int value;"];
+  testAssert(colorMatches([[newDocument textView] backgroundColor], 0.1, 0.2, 0.3) &&
+    colorMatches([[newDocument syntaxHighlighter] keywordColor], 0.18, 0.2, 0.3) &&
+    [[defaults dictionaryForKey:@"YCodeEditorColors"] count] == 10,
+    @"New editors inherit the persisted palette");
+  [YCodeSyntaxHighlighter resetColorPreferences];
+  testAssert([defaults objectForKey:@"YCodeEditorColors"] == nil &&
+    colorMatches([[document syntaxHighlighter] keywordColor], 0.67, 0.20, 0.89),
+    @"Restoring defaults clears saved overrides and recolors open editors");
+  [panel close];
+  [app release];
+  [newDocument release];
+  [document release];
+  if (saved) [defaults setObject:saved forKey:@"YCodeEditorColors"];
+  [saved release];
+  [defaults synchronize];
+}
+
 static void testEditorColors(void)
 {
   YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
@@ -1349,6 +1408,32 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
   [text writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
   YCodeBuildSystem *build = [project buildSystem];
   [controller buildSystemDidStartBuild:build];
+  NSTextView *consoleText = [controller valueForKey:@"_consoleTextView"];
+  NSTextView *debuggerText = [controller valueForKey:@"_debuggerTextView"];
+  [consoleText setString:@""];
+  [controller buildSystem:build didReceiveOutput:@"\033[3"];
+  [controller buildSystem:build didReceiveError:@"stderr"];
+  [controller buildSystem:build didReceiveOutput:@"1mred\033[0m plain\033]0;title"];
+  [controller buildSystem:build didReceiveOutput:@"\007 end\n"];
+  testAssert([[consoleText string] isEqual:@"stderrred plain end\n"],
+    @"Console consumes split ANSI and OSC sequences independently for stdout and stderr");
+  NSColor *red = [[consoleText textStorage] attribute:NSForegroundColorAttributeName atIndex:6 effectiveRange:NULL];
+  NSColor *normal = [[consoleText textStorage] attribute:NSForegroundColorAttributeName atIndex:9 effectiveRange:NULL];
+  testAssert(![red isEqual:normal] && [normal isEqual:[NSColor textColor]],
+    @"Console applies foreground color and resets it without leaking to other streams");
+  [debuggerText setString:@""];
+  [controller buildSystem:build didReceiveDebuggerOutput:@"\033[38;2;12;34;"];
+  [controller buildSystem:build didReceiveDebuggerOutput:@"56mRGB\033[48;5;196mBG\033[0mplain\033[K"];
+  NSColor *rgb = [[[debuggerText textStorage] attribute:NSForegroundColorAttributeName
+    atIndex:0 effectiveRange:NULL] colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
+  testAssert([[debuggerText string] isEqual:@"RGBBGplain"] &&
+    fabs([rgb redComponent] - 12.0 / 255) < 0.001 &&
+    fabs([rgb greenComponent] - 34.0 / 255) < 0.001 &&
+    fabs([rgb blueComponent] - 56.0 / 255) < 0.001 &&
+    [[debuggerText textStorage] attribute:NSBackgroundColorAttributeName atIndex:3 effectiveRange:NULL] != nil &&
+    [[debuggerText textStorage] attribute:NSBackgroundColorAttributeName atIndex:5 effectiveRange:NULL] == nil,
+    @"Debugger decodes split truecolor, indexed background colors, reset and cursor controls");
+  [controller buildSystemDidStartBuild:build];
   [controller buildSystem:build didReceiveOutput:@"ordinary build progress\n"];
   [controller buildSystem:build didReceiveError:@"\033[1mIssue Source.m:2:"];
   testAssert([table numberOfRows] == 0, @"Incomplete diagnostic waits for its remaining output");
@@ -1367,6 +1452,11 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
   testAssert([[[issues objectAtIndex:0] objectForKey:@"message"] isEqual:@"unknown symbol"] &&
     [[[issues objectAtIndex:0] objectForKey:@"path"] isEqual:source],
     @"Remove ANSI colors and resolve relative diagnostic paths");
+  NSAttributedString *issueDisplay = [[issues objectAtIndex:0] objectForKey:@"display"];
+  testAssert([[issueDisplay string] isEqual:@"error: Issue Source.m:2:3\nunknown symbol"] &&
+    [[issueDisplay attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL] isEqual:red] &&
+    [[issueDisplay attribute:NSForegroundColorAttributeName atIndex:[issueDisplay length] - 1 effectiveRange:NULL] isEqual:red],
+    @"Issues retain ANSI colors in severity and message while keeping navigation metadata clean");
   [table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
   YCodeEditorDocument *document = [[controller editorController] currentDocument];
   testAssert([[document filePath] isEqual:source] && [document selectedRange].location == 13,
@@ -1844,6 +1934,7 @@ int main(void)
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
+  testEditorColorPreferences();
   testEditorColors();
   testSyntaxHighlighting();
   testDebuggerRecords();

@@ -429,6 +429,22 @@
     return YES;
 }
 
+- (void)openNavigatorFile:(NSString *)filePath
+{
+    // Interface document formats declared by Gorm's application bundle.
+    NSArray *interfaceTypes = [NSArray arrayWithObjects:@"gorm", @"nib", @"xib",
+        @"nix", @"storyboard", @"gmodel", @"cib", nil];
+    if ([interfaceTypes containsObject:[[filePath pathExtension] lowercaseString]]) {
+        if (![[NSWorkspace sharedWorkspace] openFile:filePath withApplication:@"Gorm"]) {
+            NSRunAlertPanel(@"Unable to Open Interface File",
+                @"Gorm could not open %@. Check that Gorm is installed and the file is accessible.",
+                @"OK", nil, nil, filePath);
+        }
+    } else {
+        [[_project editorController] openFile:filePath];
+    }
+}
+
 - (void)outlineViewSelectionDidChange:(NSNotification *)notification
 {
     NSInteger selectedRow = [_outlineView selectedRow];
@@ -438,10 +454,10 @@
             YCodeProjectNavigatorItem *navItem = (YCodeProjectNavigatorItem *)selectedItem;
             
             if ([navItem isFile]) {
-                // Open file in editor
+                // Open interface documents in Gorm and other files in the editor
                 NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
                 if (filePath) {
-                    [[_project editorController] openFile:filePath];
+                    [self openNavigatorFile:filePath];
                 }
             }
         }
@@ -457,10 +473,10 @@
             YCodeProjectNavigatorItem *navItem = (YCodeProjectNavigatorItem *)clickedItem;
             
             if ([navItem isFile]) {
-                // Open file in editor
+                // Open interface documents in Gorm and other files in the editor
                 NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
                 if (filePath) {
-                    [[_project editorController] openFile:filePath];
+                    [self openNavigatorFile:filePath];
                 }
             } else if (![navItem isLeaf]) {
                 // Toggle expansion
