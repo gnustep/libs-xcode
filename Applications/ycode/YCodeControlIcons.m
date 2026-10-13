@@ -127,11 +127,14 @@ NSImage *YCodeControlIcon(NSString *name, CGFloat size)
       [path lineToPoint:NSMakePoint(14, 7)]; [path lineToPoint:NSMakePoint(9, 2)];
       [path closePath]; [path fill];
     }
-  else if ([name isEqual:@"navigator"] || [name isEqual:@"inspector"])
+  else if ([name isEqual:@"navigator"] || [name isEqual:@"inspector"] || [name isEqual:@"bottom"])
     {
       NSBezierPath *frame = [NSBezierPath bezierPathWithRect:NSMakeRect(3, 4, 18, 16)];
       [frame setLineWidth:2]; [frame stroke];
-      NSRectFill(NSMakeRect([name isEqual:@"navigator"] ? 4 : 15, 5, 5, 14));
+      if ([name isEqual:@"bottom"])
+        NSRectFill(NSMakeRect(4, 5, 16, 5));
+      else
+        NSRectFill(NSMakeRect([name isEqual:@"navigator"] ? 4 : 15, 5, 5, 14));
     }
   [image unlockFocus];
   [image setName:key];

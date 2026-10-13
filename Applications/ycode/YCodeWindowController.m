@@ -621,6 +621,48 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             if (!hasBuild) [_toolbar insertItemWithItemIdentifier:@"build" atIndex:insertionIndex];
             [defaults setBool:YES forKey:@"YCodeBuildToolbarItemAdded"];
         }
+        if (![defaults boolForKey:@"YCodeCleanAndStepToolbarItemsAdded"]) {
+            NSArray *newItems = [NSArray arrayWithObjects:@"clean", @"stepInto", @"stepOut", nil];
+            NSArray *anchors = [NSArray arrayWithObjects:@"build", @"next", @"stepInto", nil];
+            NSUInteger i;
+            for (i = 0; i < [newItems count]; i++) {
+                NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
+                if ([identifiers containsObject:[newItems objectAtIndex:i]]) continue;
+                NSUInteger index = [identifiers indexOfObject:[anchors objectAtIndex:i]];
+                if (index == NSNotFound) index = [identifiers indexOfObject:NSToolbarSeparatorItemIdentifier];
+                else if (i > 0) index++;
+                if (index == NSNotFound) index = [identifiers count];
+                [_toolbar insertItemWithItemIdentifier:[newItems objectAtIndex:i] atIndex:index];
+            }
+#ifdef GNUSTEP
+            NSMutableDictionary *configuration = [NSMutableDictionary dictionaryWithDictionary:
+                [defaults dictionaryForKey:@"NSToolbar Config YCodeMainToolbar"] ?: [NSDictionary dictionary]];
+            [configuration setObject:[[_toolbar items] valueForKey:@"itemIdentifier"] forKey:@"items"];
+            [defaults setObject:configuration forKey:@"NSToolbar Config YCodeMainToolbar"];
+#endif
+            [defaults setBool:YES forKey:@"YCodeCleanAndStepToolbarItemsAdded"];
+            [defaults synchronize];
+        }
+        // Add the bottom-pane control to existing layouts once.
+        if (![defaults boolForKey:@"YCodeBottomToolbarItemAdded"]) {
+            NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
+            if (![identifiers containsObject:@"bottom"]) {
+                NSUInteger index = [identifiers indexOfObject:@"inspector"];
+                if (index == NSNotFound) {
+                    index = [identifiers indexOfObject:@"navigator"];
+                    index = index == NSNotFound ? [identifiers count] : index + 1;
+                }
+                [_toolbar insertItemWithItemIdentifier:@"bottom" atIndex:index];
+            }
+#ifdef GNUSTEP
+            NSMutableDictionary *configuration = [NSMutableDictionary dictionaryWithDictionary:
+                [defaults dictionaryForKey:@"NSToolbar Config YCodeMainToolbar"] ?: [NSDictionary dictionary]];
+            [configuration setObject:[[_toolbar items] valueForKey:@"itemIdentifier"] forKey:@"items"];
+            [defaults setObject:configuration forKey:@"NSToolbar Config YCodeMainToolbar"];
+#endif
+            [defaults setBool:YES forKey:@"YCodeBottomToolbarItemAdded"];
+            [defaults synchronize];
+        }
     }
 }
 
@@ -1209,6 +1251,14 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if ([self prepareBuild]) [_project buildProject];
 }
 
+- (IBAction)cleanProject:(id)sender
+{
+    if (!_project || [[_project buildSystem] isBusy]) return;
+    [self setBottomPanelVisible:YES];
+    [_bottomTabView selectTabViewItemWithIdentifier:@"console"];
+    [_project cleanProject];
+}
+
 - (IBAction)stopProject:(id)sender
 {
     [[_project buildSystem] stop];
@@ -1222,7 +1272,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         return [self validateDebuggerAction:[item action] tag:[item tag]];
     if ([item action] == @selector(stopProject:))
         return [[_project buildSystem] isBusy];
-    if ([item action] == @selector(runProject:) || [item action] == @selector(buildProject:))
+    if ([item action] == @selector(runProject:) || [item action] == @selector(buildProject:) ||
+        [item action] == @selector(cleanProject:))
         return _project != nil && ![[_project buildSystem] isBusy];
     return YES;
 }
@@ -1760,14 +1811,14 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme",
-             @"navigator", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
+    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme",
+             @"navigator", @"bottom", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", NSToolbarSeparatorItemIdentifier, @"scheme",
-             NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"inspector", nil];
+    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", NSToolbarSeparatorItemIdentifier, @"scheme",
+             NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"bottom", @"inspector", nil];
 }
 
 - (NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSString *)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag
@@ -1807,6 +1858,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [item setTarget:self];
         [item setAction:@selector(debugProject:)];
         [item setImage:YCodeControlIcon(@"debug", 24)];
+    } else if ([itemIdentifier isEqualToString:@"clean"]) {
+        [item setLabel:@"Clean"];
+        [item setPaletteLabel:@"Clean"];
+        [item setToolTip:@"Clean the current project's build products"];
+        [item setTarget:self];
+        [item setAction:@selector(cleanProject:)];
+        [item setImage:YCodeControlIcon(@"clean", 24)];
     } else if ([itemIdentifier isEqualToString:@"build"]) {
         [item setLabel:@"Build"];
         [item setPaletteLabel:@"Build"];
@@ -1835,6 +1893,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [item setTarget:self];
         [item setAction:@selector(toggleNavigator:)];
         [item setImage:YCodeControlIcon(@"navigator", 24)];
+    } else if ([itemIdentifier isEqualToString:@"bottom"]) {
+        [item setLabel:@"Bottom Pane"];
+        [item setPaletteLabel:@"Bottom Pane"];
+        [item setToolTip:@"Show or hide the console, issues, and debugger pane"];
+        [item setTarget:self];
+        [item setAction:@selector(toggleBottomPanel:)];
+        [item setImage:YCodeControlIcon(@"bottom", 24)];
     } else if ([itemIdentifier isEqualToString:@"inspector"]) {
         [item setLabel:@"Inspector"];
         [item setPaletteLabel:@"Inspector"];

@@ -149,6 +149,7 @@
 - (IBAction)searchProject:(id)sender;
 - (IBAction)testProject:(id)sender;
 - (IBAction)buildProject:(id)sender;
+- (IBAction)cleanProject:(id)sender;
 - (IBAction)stopProject:(id)sender;
 
 /**
