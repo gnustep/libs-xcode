@@ -27,6 +27,7 @@
 #import <XCode/PBXProject.h>
 #import <XCode/PBXGroup.h>
 #import <XCode/PBXNativeTarget.h>
+#import <XCode/PBXTargetDependency.h>
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXBuildFile.h>
 #import <XCode/PBXBuildPhase.h>
@@ -995,6 +996,17 @@ static void testSearchAndTestNavigator(NSString *temporaryDirectory)
   NSArray *results = [window valueForKey:@"_searchResults"];
   testAssert([results count] == 3, @"Search includes every occurrence in all project text files");
   NSTableView *table = [window valueForKey:@"_searchResultsTable"];
+  NSTabView *navigatorTabs = [window valueForKey:@"_navigatorTabView"];
+  [navigatorTabs selectTabViewItemWithIdentifier:@"search"];
+  NSScrollView *resultsScroll = [table enclosingScrollView];
+  NSView *searchView = [[navigatorTabs selectedTabViewItem] view];
+  testAssert(fabs(NSMaxY([resultsScroll frame]) - (NSHeight([searchView bounds]) - 62)) < 2
+    && NSHeight([resultsScroll frame]) > 100,
+    @"Search results viewport fills the area directly below the controls");
+  NSRect firstRow = [table convertRect:[table rectOfRow:0] toView:searchView];
+  testAssert(fabs(NSMaxY(firstRow) - NSMaxY([resultsScroll frame])) < 5,
+    @"The first search result appears at the top of the viewport");
+  testAssert([table gridStyleMask] == NSTableViewGridNone, @"Search results have no grid");
   [table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
   YCodeEditorDocument *editorDocument = [[window editorController] currentDocument];
   testAssert([[editorDocument filePath] isEqual:first] &&
@@ -1043,8 +1055,50 @@ static void testSearchAndTestNavigator(NSString *temporaryDirectory)
   [build setEnvironmentVariable:@"buildfail" forKey:@"MODE"];
   [build test];
   waitForBuild(build, NO);
-  testAssert([build status] == YCodeBuildStatusFailed && [tests count] == 0,
-    @"Build failure prevents test execution and clears stale results");
+  testAssert([build status] == YCodeBuildStatusFailed && [tests count] == 1
+    && [[[tests objectAtIndex:0] objectForKey:@"name"] isEqual:@"Test run"],
+    @"Build failure prevents test execution and displays a startup failure");
+
+  PBXNativeTarget *host = AUTORELEASE([PBXNativeTarget new]);
+  [host setName:@"Host App"];
+  [host setProductType:@"com.apple.product-type.application"];
+  [host setProductReference:AUTORELEASE([[PBXFileReference alloc] initWithPath:@"Host App.app"])];
+  PBXTargetDependency *dependency = AUTORELEASE([PBXTargetDependency new]);
+  [dependency setTarget:host];
+  [target setDependencies:[NSMutableArray arrayWithObject:dependency]];
+  XCBuildConfiguration *config = AUTORELEASE([[XCBuildConfiguration alloc] initWithName:@"Debug"
+    buildSettings:[NSMutableDictionary dictionaryWithObject:@"$(BUILT_PRODUCTS_DIR)/Host App.app/Host App"
+      forKey:@"TEST_HOST"]]);
+  [target setBuildConfigurationList:AUTORELEASE([[XCConfigurationList alloc]
+    initWithConfigurations:[NSMutableArray arrayWithObject:config]])];
+  [project setTargets:[NSMutableArray arrayWithObjects:host, target, nil]];
+  NSString *hostDirectory = [root stringByAppendingPathComponent:
+    [NSString stringWithFormat:@"build/%@/Products/Host App.app", [host name]]];
+  [manager createDirectoryAtPath:hostDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *hostExecutable = [hostDirectory stringByAppendingPathComponent:@"Host App"];
+  writeExecutable(hostExecutable, @"#!/bin/sh\nprintf '%s\n' \"$@\"\necho \"XCTest:     Hosted.testRun PASSED\" >&2\n");
+  [build setEnvironmentVariable:@"hosted" forKey:@"MODE"];
+  [document updateChangeCount:NSChangeCleared];
+  NSTabView *tabs = [window valueForKey:@"_navigatorTabView"];
+  [tabs selectTabViewItemWithIdentifier:@"test"];
+  NSEnumerator *controls = [[[[tabs selectedTabViewItem] view] subviews] objectEnumerator];
+  NSView *control;
+  while ((control = [controls nextObject]) != nil)
+    if ([control isKindOfClass:[NSButton class]]) [(NSButton *)control performClick:nil];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusSuccess && [tests count] == 1
+    && [[[tests objectAtIndex:0] objectForKey:@"name"] isEqual:@"Hosted.testRun"],
+    @"Run Tests button executes hosted tests inside the application");
+  testAssert([[build buildOutput] rangeOfString:@"-GSAppKitUserBundles"].location != NSNotFound
+    && [[build buildOutput] rangeOfString:@"YCodeTestHost.bundle"].location != NSNotFound
+    && [[build buildOutput] rangeOfString:@"-YCodeTestBundle"].location != NSNotFound,
+    @"Hosted execution passes the embedded helper and test bundle as distinct arguments");
+  [manager removeItemAtPath:hostExecutable error:NULL];
+  [build test];
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusFailed && [tests count] == 1
+    && [[[tests objectAtIndex:0] objectForKey:@"display"] rangeOfString:@"host application"].location != NSNotFound,
+    @"Missing test hosts produce visible startup errors");
 #endif
   [window setProject:nil];
   testAssert([tests count] == 0 && [results count] == 0, @"Project changes clear navigator results");

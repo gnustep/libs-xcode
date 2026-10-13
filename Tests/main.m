@@ -16,6 +16,7 @@
 #import <XCode/XCConfigurationList.h>
 #import <XCode/PBXNativeTarget.h>
 #import <XCode/PBXFrameworksBuildPhase.h>
+#import <XCode/PBXResourcesBuildPhase.h>
 #import <XCode/NSString+PBXAdditions.h>
 
 @interface PBXFrameworksBuildPhase (LinkTest)
@@ -282,6 +283,30 @@ static void testFrameworkResourcesAndEnvironment(void)
     unsetenv("GSXC_TEST_LIVE_ENVIRONMENT");
 }
 
+static void testGeneratedBundleExecutable(void)
+{
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  PBXResourcesBuildPhase *phase = AUTORELEASE([PBXResourcesBuildPhase new]);
+  NSArray *names = [NSArray arrayWithObjects: @"Host App", @"Hosted Tests", nil];
+  NSEnumerator *enumerator = [names objectEnumerator];
+  NSString *name;
+  while ((name = [enumerator nextObject]) != nil)
+    {
+      [context contextDictionaryForName: name];
+      [context setObject: name forKey: @"EXECUTABLE_NAME"];
+      NSDictionary *plist = [phase configToInfoPlist: configuration([NSDictionary dictionary]) withIconFile: nil];
+      testAssert([[plist objectForKey: @"CFBundleExecutable"] isEqual: name],
+        @"Generated Info.plist names the current target executable, including spaces");
+      testAssert([plist objectForKey: @"CFBundlExecutable"] == nil,
+        @"Generated Info.plist does not use the misspelled executable key");
+#ifdef GNUSTEP
+      testAssert([[plist objectForKey: @"NSExecutable"] isEqual: name],
+        @"Generated GNUstep test bundle identifies its loadable executable");
+#endif
+      [context popCurrentContext];
+    }
+}
+
 static void testProjectUnarchive(void)
 {
   NSString *path = @"../libs-xcode.xcodeproj/project.pbxproj";
@@ -310,6 +335,7 @@ int main(int argc, const char **argv, char **env)
   testBuildSettingInheritance();
   testHeaderSearchPaths();
   testFrameworkResourcesAndEnvironment();
+  testGeneratedBundleExecutable();
   testBuildtoolOperationResults();
 
   if (failures == 0)

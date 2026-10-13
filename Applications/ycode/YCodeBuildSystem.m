@@ -30,6 +30,7 @@
 - (BOOL)runCommand:(NSString *)command withArguments:(NSArray *)arguments;
 - (BOOL)launchProduct;
 - (BOOL)launchNextTestBundle;
+- (NSString *)testHostProductForTarget:(PBXTarget *)target;
 - (NSString *)findExecutable;
 - (PBXNativeTarget *)runnableTarget;
 - (void)releaseTask;
@@ -380,9 +381,13 @@
                 ![[target productType] isEqual:@"com.apple.product-type.bundle.unit-test"]) continue;
             NSString *product = [[(PBXNativeTarget *)target productReference] path];
             if (![product length]) continue;
-            [_testBundles addObject:[[[_project projectDirectoryPath]
+            NSString *path = [[[_project projectDirectoryPath]
                 stringByAppendingPathComponent:[NSString stringWithFormat:@"build/%@/Products", [target name]]]
-                stringByAppendingPathComponent:product]];
+                stringByAppendingPathComponent:product];
+            NSMutableDictionary *test = [NSMutableDictionary dictionaryWithObject:path forKey:@"bundle"];
+            NSString *host = [self testHostProductForTarget:target];
+            if (host) [test setObject:host forKey:@"host"];
+            [_testBundles addObject:test];
         }
         if (![_testBundles count]) {
             _status = YCodeBuildStatusFailed;
@@ -400,12 +405,63 @@
     return [self testWithMake];
 }
 
+- (NSString *)testHostProductForTarget:(PBXTarget *)target
+{
+    XCBuildConfiguration *configuration = [[target buildConfigurationList]
+        configurationWithName:_buildConfiguration];
+    if (!configuration) configuration = [[target buildConfigurationList] defaultConfiguration];
+    NSString *host = [[configuration buildSettings] objectForKey:@"TEST_HOST"];
+    if (!host) {
+        configuration = [[[_project project] buildConfigurationList] configurationWithName:_buildConfiguration];
+        host = [[configuration buildSettings] objectForKey:@"TEST_HOST"];
+    }
+    if (![host isKindOfClass:[NSString class]] || ![host length]) return nil;
+    NSEnumerator *targets = [[[_project project] targets] objectEnumerator];
+    PBXTarget *candidate;
+    while ((candidate = [targets nextObject]) != nil) {
+        if (![candidate isKindOfClass:[PBXNativeTarget class]] ||
+            ![[candidate productType] isEqual:@"com.apple.product-type.application"]) continue;
+        NSString *product = [[(PBXNativeTarget *)candidate productReference] path];
+        if (![product length]) continue;
+        BOOL matches = [[host pathComponents] containsObject:product];
+        NSEnumerator *dependencies = [[target dependencies] objectEnumerator];
+        PBXTargetDependency *dependency;
+        while ((dependency = [dependencies nextObject]) != nil)
+            if ([dependency target] == candidate) matches = YES;
+        if (matches) return [[[_project projectDirectoryPath] stringByAppendingPathComponent:
+            [NSString stringWithFormat:@"build/%@/Products", [candidate name]]]
+            stringByAppendingPathComponent:product];
+    }
+    // Preserve an unresolved host as a failure, rather than running hosted tests standalone.
+    return host;
+}
+
 - (BOOL)launchNextTestBundle
 {
     if (![_testBundles count]) return NO;
-    NSString *path = [[[_testBundles objectAtIndex:0] retain] autorelease];
+    NSDictionary *test = [[[_testBundles objectAtIndex:0] retain] autorelease];
     [_testBundles removeObjectAtIndex:0];
-    return [self runCommand:@"xctest" withArguments:[NSArray arrayWithObject:path]];
+    NSString *path = [test objectForKey:@"bundle"];
+    NSString *host = [test objectForKey:@"host"];
+    if (!host) return [self runCommand:@"xctest" withArguments:[NSArray arrayWithObject:path]];
+
+    NSString *helper = [[NSBundle mainBundle] pathForResource:@"YCodeTestHost" ofType:@"bundle"];
+    NSString *executable = [[NSBundle bundleWithPath:host] executablePath];
+    if (![executable length]) executable = [host stringByAppendingPathComponent:
+        [[host lastPathComponent] stringByDeletingPathExtension]];
+    if (!helper || ![[NSFileManager defaultManager] isExecutableFileAtPath:executable]) {
+        [self reportError:[NSString stringWithFormat:
+            @"Cannot start hosted XCTest: host application or YCodeTestHost helper is missing (%@).\n", host]];
+        _testFailed = YES;
+        [_testBundles removeAllObjects];
+        _status = YCodeBuildStatusFailed;
+        if ([_delegate respondsToSelector:@selector(buildSystemDidFinishTests:success:)])
+            [(id)_delegate buildSystemDidFinishTests:self success:NO];
+        return NO;
+    }
+    return [self runCommand:executable withArguments:[NSArray arrayWithObjects:
+        @"-GSAppKitUserBundles", [[NSArray arrayWithObject:helper] description],
+        @"-YCodeTestBundle", path, nil]];
 }
 
 - (BOOL)archive

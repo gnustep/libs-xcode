@@ -966,18 +966,23 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [status setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
         [status setStringValue:index == 1 ? @"Enter text and press Return." : @"No tests run yet."];
         [view addSubview:status];
-        NSTableView *table = AUTORELEASE([[NSTableView alloc] initWithFrame:
-            NSMakeRect(0, 0, NSWidth(bounds), MAX(0, NSHeight(bounds) - 62))]);
+        NSRect resultsFrame = NSMakeRect(0, 0, NSWidth(bounds), MAX(0, NSHeight(bounds) - 62));
+        NSTableView *table = AUTORELEASE([[NSTableView alloc] initWithFrame:resultsFrame]);
         NSTableColumn *column = AUTORELEASE([[NSTableColumn alloc] initWithIdentifier:@"result"]);
         [column setWidth:600];
         [column setEditable:NO];
         [table addTableColumn:column];
         [table setHeaderView:nil];
+        [table setGridStyleMask:NSTableViewGridNone];
         [table setRowHeight:38];
         [[column dataCell] setWraps:YES];
         [table setDataSource:(id)self];
         [table setDelegate:(id)self];
-        [view addSubview:YCodeScrollViewWithDocumentView(table)];
+        NSScrollView *scrollView = YCodeScrollViewWithDocumentView(table);
+        // An empty table shrinks to its rows; the viewport must retain the
+        // full area below the search controls rather than the table's frame.
+        [scrollView setFrame:resultsFrame];
+        [view addSubview:scrollView];
         if (index == 1) { _searchResultsTable = table; _searchStatus = status; }
         else { _testResultsTable = table; _testStatus = status; }
     }
@@ -1062,7 +1067,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (IBAction)testProject:(id)sender
 {
+    if (!_project) { [_testStatus setStringValue:@"Open a project to run tests."]; return; }
+    if ([[_project buildSystem] isBusy]) {
+        [_testStatus setStringValue:@"Project is busy. Stop it first."];
+        return;
+    }
     if ([self prepareBuild]) [[_project buildSystem] test];
+    else [_testStatus setStringValue:@"Tests cancelled. See console."];
 }
 
 - (void)buildSystemDidStartTests:(id)buildSystem
@@ -1137,6 +1148,15 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             (unsigned long)passed, (unsigned long)failed, (unsigned long)skipped]
         : @"Tests failed. See console.";
     if (success && ![_testResults count]) summary = @"No XCTest results. See console.";
+    if (!success && ![_testResults count]) {
+        NSString *details = [[buildSystem buildErrors]
+            stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (![details length]) details = @"Build or test runner failed. See console for details.";
+        [_testResults addObject:[NSDictionary dictionaryWithObjectsAndKeys:
+            @"Test run", @"name", @"Failed", @"status",
+            [@"Unable to run tests: " stringByAppendingString:details], @"display", nil]];
+        [_testResultsTable reloadData];
+    }
     [_testStatus setStringValue:summary];
     [_testStatus setToolTip:summary];
 }

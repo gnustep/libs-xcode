@@ -66,7 +66,10 @@ files. Run the search again after editing to refresh the results.
 In the **Test** tab, choose **Run Tests** to save edits and run the project's
 tests. Results update with each XCTest case and show passed, failed, and skipped
 states. On GNUstep, Xcode projects are built with `buildtool`, then their unit-test
-bundles run with `xctest`; both tools must be on `PATH`. Native macOS uses
+bundles run with `xctest`; both tools must be on `PATH`. Tests with `TEST_HOST`
+run inside their built application using Ycode's embedded test helper, so app
+classes, resources, and launch setup are available. Startup failures appear in
+the Test tab as well as Console. Native macOS uses
 `xcodebuild test`. GNUmakefile projects use `make check`, and other make projects
 use `make test`. Full output and build/runner errors appear in Console.
 **Project > Stop** cancels the operation. Each run replaces the previous results.

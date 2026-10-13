@@ -538,7 +538,14 @@
     }
 
   [ipd setObject: @"$(DEVELOPMENT_LANGUAGE)" forKey: @"CFBundleDevelopmentRegion"];
-  [ipd setObject: @"$(EXECUTABLE_NAME)" forKey: @"CFBundlExecutable"];
+  NSString *executable = [[GSXCBuildContext sharedBuildContext] objectForKey: @"EXECUTABLE_NAME"];
+  if ([executable length] > 0)
+    {
+      [ipd setObject: executable forKey: @"CFBundleExecutable"];
+#ifdef GNUSTEP
+      [ipd setObject: executable forKey: @"NSExecutable"];
+#endif
+    }
 
   if (bundleIdentifier != nil)
     {

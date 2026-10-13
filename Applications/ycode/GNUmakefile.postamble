@@ -38,3 +38,10 @@
 # Things to do after checking
 # after-check::
 
+
+# Build the hosted XCTest helper before application resources are copied.
+before-all::
+	$(MAKE) -C TestHost all
+
+before-clean::
+	$(MAKE) -C TestHost clean
