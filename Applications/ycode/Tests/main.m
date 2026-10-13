@@ -1202,6 +1202,47 @@ static void waitForDebugger(YCodeBuildSystem *build)
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
 }
 
+static void testResultNavigation(NSString *temporaryDirectory)
+{
+  NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Test Sources"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:NULL];
+  [@"all:\n" writeToFile:[root stringByAppendingPathComponent:@"Makefile"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  NSString *path = [root stringByAppendingPathComponent:@"Several Tests.mm"];
+  NSString *source = @"@implementation Other\n- (void)testOne {}\n@end\n// @implementation Example - (void)testOne {} @end\n@implementation Example\n/* - (void)testOne {} */\n- (void)\ntestOne\n{ NSString *s = @\"@end\"; }\n- (void)testTwo {}\n@end\n";
+  [source writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  NSString *swiftPath = [root stringByAppendingPathComponent:@"SwiftTests.swift"];
+  [@"class SwiftTests: XCTestCase {\n func testSwift() { }\n}\n" writeToFile:swiftPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  YCodeProject *project = [YCodeProject new];
+  testAssert([project readFromURL:[NSURL fileURLWithPath:root] ofType:@"YCodeMakeProjectType" error:NULL], @"Open test navigation fixture");
+  YCodeWindowController *window = [YCodeWindowController new]; [window setProject:project];
+  YCodeBuildSystem *build = [project buildSystem];
+  [window buildSystemDidStartTests:build];
+  [window buildSystem:build didReceiveOutput:@"Test Case '-[Example testOne]' passed.\nXCTest: Example.testTwo FAILED\nTest Case 'Module.SwiftTests.testSwift()' passed.\nTest Case '-[Missing testOne]' failed.\n"];
+  [window buildSystemDidFinishTests:build success:NO];
+  NSTableView *table = [window valueForKey:@"_testResultsTable"];
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+  YCodeEditorDocument *document = [[window editorController] currentDocument];
+  NSRange expected = [source rangeOfString:@"testOne\n{"];
+  testAssert([[document filePath] isEqual:path] && NSEqualRanges([document selectedRange], NSMakeRange(expected.location, 7)),
+    @"Clicking a result opens the matching class implementation and method, ignoring comments and other classes");
+  NSString *edited = [@"// unsaved lines\n\n" stringByAppendingString:source];
+  [document setContent:edited];
+  [document setModified:YES];
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:1] byExtendingSelection:NO];
+  expected = [edited rangeOfString:@"testTwo"];
+  testAssert(NSEqualRanges([document selectedRange], expected) && [document isModified],
+    @"GNUstep XCTest results navigate using unsaved editor text without discarding edits");
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:2] byExtendingSelection:NO];
+  YCodeEditorDocument *swift = [[window editorController] currentDocument];
+  testAssert([[swift filePath] isEqual:swiftPath] && [[[swift content] substringWithRange:[swift selectedRange]] isEqual:@"testSwift"],
+    @"Module-qualified Swift results navigate to the test method");
+  [table selectRowIndexes:[NSIndexSet indexSetWithIndex:3] byExtendingSelection:NO];
+  testAssert([[window editorController] currentDocument] == swift, @"Unresolved tests do not navigate to a different class with the same method name");
+  [document setModified:NO];
+  [window close]; [window release]; [project release];
+}
+
 static void testSearchAndTestNavigator(NSString *temporaryDirectory)
 {
   NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Search And Tests"];
@@ -2256,6 +2297,13 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-test-navigation"]) {
+    testResultNavigation(temporaryDirectory);
+    testSearchAndTestNavigator(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode test navigation checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-make-directory"]) {
     testMakeDirectory(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -2576,6 +2624,7 @@ int main(void)
   testEditorFiles(temporaryDirectory);
   testProjectCenterImport(temporaryDirectory);
   testProjectCenterExport(temporaryDirectory);
+  testResultNavigation(temporaryDirectory);
   testSearchAndTestNavigator(temporaryDirectory);
   testMakeDirectory(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);

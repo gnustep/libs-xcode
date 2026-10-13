@@ -883,6 +883,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             @"(?:g?make)(?:\\[[0-9]+\\])?: (Entering|Leaving) directory [\\x60'‘](.*)['’]$"
             options:0 error:NULL];
         _issuesTableView = [[NSTableView alloc] initWithFrame:[_bottomView bounds]];
+        [_issuesTableView setGridStyleMask:NSTableViewGridNone];
         [_issuesTableView setAllowsMultipleSelection:NO];
         [_issuesTableView setAllowsEmptySelection:YES];
         [_issuesTableView setDataSource:self];
@@ -1419,8 +1420,40 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [scrollView setFrame:resultsFrame];
         [view addSubview:scrollView];
         if (index == 1) { _searchResultsTable = table; _searchStatus = status; }
-        else { _testResultsTable = table; _testStatus = status; }
+        else {
+            _testResultsTable = table; _testStatus = status;
+            [table setTarget:self];
+            [table setAction:@selector(openTestResult:)];
+            [table setDoubleAction:@selector(openTestResult:)];
+        }
     }
+}
+
+- (NSArray *)projectSearchPaths
+{
+    [_navigatorController reloadProjectTree];
+    NSMutableArray *pending = [NSMutableArray arrayWithArray:[_navigatorController rootItems]];
+    NSMutableSet *paths = [NSMutableSet set];
+    while ([pending count]) {
+        YCodeProjectNavigatorItem *item = [[[pending lastObject] retain] autorelease];
+        [pending removeLastObject];
+        [pending addObjectsFromArray:[item children]];
+        NSString *path = [_navigatorController resolvedFilePathForNavigatorItem:item];
+        if (path) {
+            BOOL directory = NO;
+            if ([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&directory] && directory) {
+                NSDirectoryEnumerator *files = [[NSFileManager defaultManager] enumeratorAtPath:path];
+                NSString *relative;
+                while ((relative = [files nextObject]) != nil) {
+                    NSString *child = [path stringByAppendingPathComponent:relative];
+                    BOOL childDirectory = NO;
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:child isDirectory:&childDirectory]
+                        && !childDirectory) [paths addObject:child];
+                }
+            } else [paths addObject:path];
+        }
+    }
+    return [[paths allObjects] sortedArrayUsingSelector:@selector(compare:)];
 }
 
 - (IBAction)searchProject:(id)sender
@@ -1429,29 +1462,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [_searchResults removeAllObjects];
     NSString *query = [_projectSearchField stringValue];
     if ([query length] && _project) {
-        [_navigatorController reloadProjectTree];
-        NSMutableArray *pending = [NSMutableArray arrayWithArray:[_navigatorController rootItems]];
-        NSMutableSet *paths = [NSMutableSet set];
-        while ([pending count]) {
-            YCodeProjectNavigatorItem *item = [[[pending lastObject] retain] autorelease];
-            [pending removeLastObject];
-            [pending addObjectsFromArray:[item children]];
-            NSString *path = [_navigatorController resolvedFilePathForNavigatorItem:item];
-            if (path) {
-                BOOL directory = NO;
-                if ([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&directory] && directory) {
-                    NSDirectoryEnumerator *files = [[NSFileManager defaultManager] enumeratorAtPath:path];
-                    NSString *relative;
-                    while ((relative = [files nextObject]) != nil) {
-                        NSString *child = [path stringByAppendingPathComponent:relative];
-                        BOOL childDirectory = NO;
-                        if ([[NSFileManager defaultManager] fileExistsAtPath:child isDirectory:&childDirectory]
-                            && !childDirectory) [paths addObject:child];
-                    }
-                } else [paths addObject:path];
-            }
-        }
-        NSEnumerator *enumerator = [[[paths allObjects] sortedArrayUsingSelector:@selector(compare:)] objectEnumerator];
+        NSEnumerator *enumerator = [[self projectSearchPaths] objectEnumerator];
         NSString *path;
         while ((path = [enumerator nextObject]) != nil) {
             NSString *text = nil;
@@ -1498,6 +1509,100 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     NSRange range = [[result objectForKey:@"range"] rangeValue];
     if (NSMaxRange(range) <= [[document content] length]) [document setSelectedRange:range];
     [[self window] makeFirstResponder:[document textView]];
+}
+
+- (void)openTestResult:(id)sender
+{
+    NSInteger row = [_testResultsTable selectedRow];
+    if (!_project || row < 0 || row >= (NSInteger)[_testResults count]) return;
+    NSString *name = [[_testResults objectAtIndex:row] objectForKey:@"name"];
+    NSString *className = nil, *methodName = nil;
+    NSRegularExpression *identifier = [NSRegularExpression regularExpressionWithPattern:
+        @"\\[([^ ]+) +([^] ]+)\\]" options:0 error:NULL];
+    NSTextCheckingResult *identity = [identifier firstMatchInString:name options:0 range:NSMakeRange(0, [name length])];
+    if (identity) {
+        className = [name substringWithRange:[identity rangeAtIndex:1]];
+        methodName = [name substringWithRange:[identity rangeAtIndex:2]];
+    } else {
+        NSArray *parts = [name componentsSeparatedByString:@"."];
+        if ([parts count] >= 2) {
+            className = [parts objectAtIndex:[parts count] - 2];
+            methodName = [parts lastObject];
+            if ([methodName hasSuffix:@"()"]) methodName = [methodName substringToIndex:[methodName length] - 2];
+        }
+    }
+    if (![className length] || ![methodName length]) return;
+    NSString *escapedClass = [NSRegularExpression escapedPatternForString:className];
+    NSString *escapedMethod = [NSRegularExpression escapedPatternForString:methodName];
+    NSRegularExpression *ignored = [NSRegularExpression regularExpressionWithPattern:
+        @"//[^\\r\\n]*|/\\*[\\s\\S]*?\\*/|\"(?:\\\\[\\s\\S]|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'" options:0 error:NULL];
+    NSMutableArray *locations = [NSMutableArray array];
+    NSEnumerator *paths = [[self projectSearchPaths] objectEnumerator];
+    NSString *path;
+    while ((path = [paths nextObject]) != nil) {
+        NSString *extension = [[path pathExtension] lowercaseString];
+        BOOL swift = [extension isEqual:@"swift"];
+        if (!swift && ![extension isEqual:@"m"] && ![extension isEqual:@"mm"]) continue;
+        NSString *text = nil;
+        NSEnumerator *documents = [[_editorController openDocuments] objectEnumerator];
+        YCodeEditorDocument *document;
+        while ((document = [documents nextObject]) != nil)
+            if ([[document filePath] isEqual:path]) text = [document content];
+        NSStringEncoding encoding;
+        if (!text) text = [NSString stringWithContentsOfFile:path usedEncoding:&encoding error:NULL];
+        if (!text) continue;
+        // Mask comments and strings without changing source offsets.
+        NSMutableString *source = [[text mutableCopy] autorelease];
+        NSEnumerator *comments = [[ignored matchesInString:text options:0 range:NSMakeRange(0, [text length])] objectEnumerator];
+        NSTextCheckingResult *match;
+        while ((match = [comments nextObject]) != nil) {
+            NSRange range = [match range];
+            NSMutableString *spaces = [NSMutableString string];
+            NSUInteger i;
+            for (i = range.location; i < NSMaxRange(range); i++) {
+                unichar c = [text characterAtIndex:i];
+                [spaces appendFormat:@"%C", (unichar)((c == '\n' || c == '\r') ? c : ' ')];
+            }
+            [source replaceCharactersInRange:range withString:spaces];
+        }
+        NSString *classPattern = swift
+            ? [NSString stringWithFormat:@"\\b(?:class|extension)\\s+%@\\b[^{}]*\\{", escapedClass]
+            : [NSString stringWithFormat:@"@implementation\\s+%@\\b", escapedClass];
+        NSString *methodPattern = swift
+            ? [NSString stringWithFormat:@"\\bfunc\\s+(%@)\\s*\\(", escapedMethod]
+            : [NSString stringWithFormat:@"-\\s*\\(\\s*void\\s*\\)\\s*(%@)\\s*\\{", escapedMethod];
+        NSRegularExpression *classes = [NSRegularExpression regularExpressionWithPattern:classPattern options:0 error:NULL];
+        NSRegularExpression *methods = [NSRegularExpression regularExpressionWithPattern:methodPattern options:0 error:NULL];
+        NSEnumerator *implementations = [[classes matchesInString:source options:0 range:NSMakeRange(0, [source length])] objectEnumerator];
+        while ((match = [implementations nextObject]) != nil) {
+            NSUInteger start = NSMaxRange([match range]), end = [source length];
+            if (swift) {
+                NSUInteger i, depth = 1;
+                for (i = start; i < [source length]; i++) {
+                    unichar c = [source characterAtIndex:i];
+                    if (c == '{') depth++;
+                    else if (c == '}' && --depth == 0) { end = i; break; }
+                }
+            } else {
+                NSRange close = [source rangeOfString:@"@end" options:0 range:NSMakeRange(start, end - start)];
+                if (close.location == NSNotFound) continue;
+                end = close.location;
+            }
+            NSTextCheckingResult *method = [methods firstMatchInString:source options:0 range:NSMakeRange(start, end - start)];
+            if (method) [locations addObject:[NSDictionary dictionaryWithObjectsAndKeys:path, @"path",
+                [NSValue valueWithRange:[method rangeAtIndex:1]], @"range", nil]];
+        }
+    }
+    if ([locations count] != 1) {
+        [_testStatus setStringValue:[locations count] ? @"Multiple test definitions found." : @"Test source could not be found."];
+        return;
+    }
+    NSDictionary *location = [locations objectAtIndex:0];
+    if ([_editorController openFile:[location objectForKey:@"path"]]) {
+        YCodeEditorDocument *document = [_editorController currentDocument];
+        [document setSelectedRange:[[location objectForKey:@"range"] rangeValue]];
+        [[self window] makeFirstResponder:[document textView]];
+    }
 }
 
 - (IBAction)testProject:(id)sender
@@ -1760,6 +1865,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
     if ([notification object] == _searchResultsTable) [self openSearchResult:nil];
+    if ([notification object] == _testResultsTable) [self openTestResult:nil];
     if ([notification object] == _issuesTableView) [self openBuildIssue:nil];
 }
 
