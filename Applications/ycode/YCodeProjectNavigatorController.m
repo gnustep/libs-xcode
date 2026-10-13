@@ -503,6 +503,9 @@
 {
     _contextMenu = [[NSMenu alloc] initWithTitle:@"Navigator Context Menu"];
     
+    NSMenuItem *refresh = AUTORELEASE([[NSMenuItem alloc] initWithTitle:@"Refresh Folder"
+        action:@selector(refreshFolder:) keyEquivalent:@""]);
+    [refresh setTarget:self]; [_contextMenu addItem:refresh];
     NSMenuItem *addFileItem = [[NSMenuItem alloc] initWithTitle:@"Add File..." 
                                                          action:@selector(addFile:) 
                                                   keyEquivalent:@""];
@@ -595,8 +598,16 @@
     }
 }
 
+- (IBAction)refreshFolder:(id)sender
+{
+    [_project refreshDirectoryFiles];
+}
+
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
+    if ([item action] == @selector(refreshFolder:)) return [_project isDirectoryProject];
+    if ([_project isDirectoryProject] &&
+        ([item action] == @selector(deleteItem:) || [item action] == @selector(addFile:))) return NO;
     if ([item action] == @selector(deleteItem:)) {
         NSInteger row = [_outlineView clickedRow];
         if (row < 0) row = [_outlineView selectedRow];

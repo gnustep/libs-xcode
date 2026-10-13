@@ -95,6 +95,14 @@
         [self menuNeedsUpdate:[sender menu]];
 }
 
+- (NSString *)typeForContentsOfURL:(NSURL *)url error:(NSError **)error
+{
+    if ([YCodeProject isMakeProjectDirectory:[url path]] &&
+        ![[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] containsObject:[[url path] pathExtension]])
+        return @"YCodeMakeProjectType";
+    return [super typeForContentsOfURL:url error:error];
+}
+
 - (NSString *)typeFromFileExtension:(NSString *)fileExtension
 {
     if ([fileExtension isEqualToString:@"xcodeproj"]) {
@@ -110,6 +118,7 @@
 
 - (Class)documentClassForType:(NSString *)type
 {
+    if ([type isEqualToString:@"YCodeMakeProjectType"]) return [YCodeProject class];
     if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
         [type isEqualToString:@"YCodeProjectCenterProjectType"] ||
         [type isEqualToString:@"xcodeproj"] ||
@@ -137,6 +146,7 @@
 
 - (NSString *)displayNameForType:(NSString *)type
 {
+    if ([type isEqual:@"YCodeMakeProjectType"]) return @"Makefile folder";
     if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
         [type isEqualToString:@"xcodeproj"]) {
         return @"Xcode project";

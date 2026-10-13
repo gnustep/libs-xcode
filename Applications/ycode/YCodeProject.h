@@ -37,6 +37,7 @@
 
 @interface YCodeProject : NSDocument
 {
+  BOOL _directoryProject;
   PBXProject *_project;
   PBXContainer *_container;
   NSString *_projectPath;
@@ -74,6 +75,10 @@
 - (NSString *)projectPath;
 - (void)setProjectPath:(NSString *)path;
 - (NSString *)projectDirectoryPath;
+/** Open a directory containing GNUmakefile, makefile, or Makefile. */
++ (BOOL)isMakeProjectDirectory:(NSString *)path;
+- (BOOL)isDirectoryProject;
+- (void)refreshDirectoryFiles;
 
 /**
  * Controllers

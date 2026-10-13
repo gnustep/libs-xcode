@@ -320,10 +320,14 @@
 - (BOOL)run
 {
     if ([self isBusy]) return NO;
-    if (![self runnableTarget]) {
+    if (![self runnableTarget] && !([_project isDirectoryProject] &&
+        [[[_project settings] objectForKey:@"Executable"] isKindOfClass:[NSString class]] &&
+        [[[_project settings] objectForKey:@"Executable"] length])) {
         [self clearOutput];
         _status = YCodeBuildStatusFailed;
-        [self reportError:@"The project has no runnable application or command-line target.\n"];
+        [self reportError:[_project isDirectoryProject]
+            ? @"Set Executable in .ycode.plist and reopen the folder to enable Run and Debug.\n"
+            : @"The project has no runnable application or command-line target.\n"];
         return NO;
     }
     _runAfterBuild = YES;
@@ -538,23 +542,30 @@
     return [self runCommand:[self xcodeCommand] withArguments:arguments];
 }
 
+- (NSArray *)makeArgumentsForSetting:(NSString *)key defaultTarget:(NSString *)fallback
+{
+    NSMutableArray *arguments = [NSMutableArray array];
+    id target = [_project isDirectoryProject] ? [[_project settings] objectForKey:key] : nil;
+    if ([_project isDirectoryProject] && [key isEqual:@"BuildTarget"] && [_targetName length]) target = _targetName;
+    if (![target isKindOfClass:[NSString class]] || ![target length]) target = fallback;
+    if (target) {
+        [arguments addObject:@"--"];
+        [arguments addObject:target];
+    }
+    return arguments;
+}
+
 - (BOOL)buildWithMake
 {
-    return [self runCommand:@"make" withArguments:[NSArray array]];
+    return [self runCommand:@"make" withArguments:[self makeArgumentsForSetting:@"BuildTarget" defaultTarget:nil]];
 }
 
 - (BOOL)buildWithGNUMake
 {
     NSMutableArray *arguments = [NSMutableArray array];
-    
-    if (_buildConfiguration) {
-        if ([_buildConfiguration isEqualToString:@"Debug"]) {
-            [arguments addObject:@"debug=yes"];
-        } else if ([_buildConfiguration isEqualToString:@"Release"]) {
-            [arguments addObject:@"debug=no"];
-        }
-    }
-    
+    if ([_buildConfiguration isEqual:@"Debug"]) [arguments addObject:@"debug=yes"];
+    else if ([_buildConfiguration isEqual:@"Release"]) [arguments addObject:@"debug=no"];
+    [arguments addObjectsFromArray:[self makeArgumentsForSetting:@"BuildTarget" defaultTarget:nil]];
     return [self runCommand:@"make" withArguments:arguments];
 }
 
@@ -590,12 +601,12 @@
 
 - (BOOL)cleanWithMake
 {
-    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"clean"]];
+    return [self runCommand:@"make" withArguments:[self makeArgumentsForSetting:@"CleanTarget" defaultTarget:@"clean"]];
 }
 
 - (BOOL)cleanWithGNUMake
 {
-    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:@"clean"]];
+    return [self runCommand:@"make" withArguments:[self makeArgumentsForSetting:@"CleanTarget" defaultTarget:@"clean"]];
 }
 
 - (BOOL)cleanWithCMake
@@ -625,7 +636,7 @@
 
 - (BOOL)testWithMake
 {
-    return [self runCommand:@"make" withArguments:[NSArray arrayWithObject:
+    return [self runCommand:@"make" withArguments:[self makeArgumentsForSetting:@"TestTarget" defaultTarget:
         [self hasGNUmakefile] ? @"check" : @"test"]];
 }
 
@@ -750,6 +761,15 @@
 
 - (NSString *)findExecutable
 {
+    if ([_project isDirectoryProject]) {
+        id path = [[_project settings] objectForKey:@"Executable"];
+        if (![path isKindOfClass:[NSString class]] || ![path length]) return nil;
+        if (![path isAbsolutePath]) path = [[_project projectDirectoryPath] stringByAppendingPathComponent:path];
+        BOOL directory = NO;
+        NSFileManager *manager = [NSFileManager defaultManager];
+        return [manager fileExistsAtPath:path isDirectory:&directory] && !directory &&
+            [manager isExecutableFileAtPath:path] ? path : nil;
+    }
     PBXNativeTarget *target = [self runnableTarget];
     NSString *product = [[target productReference] path];
     NSString *directory = [_project projectDirectoryPath];
@@ -947,6 +967,7 @@
 
 - (NSString *)detectedBuildSystem
 {
+    if ([_project isDirectoryProject]) return [self hasGNUmakefile] ? @"gnumake" : @"make";
     if ([self hasXcodeProject]) {
         return @"xcode";
     } else if ([self hasGNUmakefile]) {
@@ -972,7 +993,8 @@
     if (!projectDir) return NO;
     
     NSString *makefilePath = [projectDir stringByAppendingPathComponent:@"Makefile"];
-    return [[NSFileManager defaultManager] fileExistsAtPath:makefilePath];
+    return [[NSFileManager defaultManager] fileExistsAtPath:makefilePath] ||
+        [[NSFileManager defaultManager] fileExistsAtPath:[projectDir stringByAppendingPathComponent:@"makefile"]];
 }
 
 - (BOOL)hasCMakeLists

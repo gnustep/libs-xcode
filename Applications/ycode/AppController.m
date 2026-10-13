@@ -528,7 +528,7 @@ YCodeFileURLFromPath(NSString *path)
     projectPath = [project projectPath];
 
     BOOL importedProject = [[projectPath pathExtension] isEqualToString:@"pcproj"];
-    if (showPanel || importedProject || projectPath == nil || [projectPath length] == 0) {
+    if (![project isDirectoryProject] && (showPanel || importedProject || projectPath == nil || [projectPath length] == 0)) {
         NSSavePanel *panel = [NSSavePanel savePanel];
         NSString *name = @"Project.xcodeproj";
 
@@ -572,7 +572,8 @@ YCodeFileURLFromPath(NSString *path)
 {
     // Check if it's a project file
     NSString *extension = [fileName pathExtension];
-    if ([extension isEqualToString:@"xcodeproj"] || [extension isEqualToString:@"pcproj"]) {
+    if ([extension isEqualToString:@"xcodeproj"] || [extension isEqualToString:@"pcproj"] ||
+        [YCodeProject isMakeProjectDirectory:fileName]) {
         NSError *error = nil;
         NSURL *fileURL = YCodeFileURLFromPath(fileName);
         if (fileURL == nil) {
@@ -1029,7 +1030,7 @@ YCodeFileURLFromPath(NSString *path)
     [openPanel setAllowsMultipleSelection:NO];
     [openPanel setTreatsFilePackagesAsDirectories:NO];
     [openPanel setAllowedFileTypes:[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil]];
-    [openPanel setMessage:@"Choose a project to open"];
+    [openPanel setMessage:@"Choose a project or a folder containing GNUmakefile, makefile, or Makefile"];
     
     if ([openPanel runModal] == NSModalResponseOK) {
         NSString *projectPath = [[openPanel URL] path];

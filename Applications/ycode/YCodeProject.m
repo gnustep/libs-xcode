@@ -261,23 +261,80 @@ YCodeProjectPackagePathForPath(NSString *path)
     return [path stringByAppendingPathExtension:@"xcodeproj"];
 }
 
+/* Use disk paths, without interpreting make syntax or following directory symlinks. */
+static PBXGroup *YCodeDirectoryGroup(NSString *path)
+{
+    PBXGroup *group = AUTORELEASE([PBXGroup new]);
+    [group setName:[path lastPathComponent]];
+    [group setPath:[path lastPathComponent]];
+    [group setSourceTree:@"<group>"];
+    NSMutableArray *children = [NSMutableArray array];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSEnumerator *names = [[[manager contentsOfDirectoryAtPath:path error:NULL]
+        sortedArrayUsingSelector:@selector(compare:)] objectEnumerator];
+    NSString *name;
+    while ((name = [names nextObject]) != nil) {
+        if ([name hasPrefix:@"."] || [name isEqual:@"obj"] || [name isEqual:@"build"]) continue;
+        NSString *file = [path stringByAppendingPathComponent:name];
+        NSDictionary *attributes = [manager attributesOfItemAtPath:file error:NULL];
+        if ([[attributes objectForKey:NSFileType] isEqual:NSFileTypeDirectory] &&
+            ![[NSWorkspace sharedWorkspace] isFilePackageAtPath:file]) {
+            [children addObject:YCodeDirectoryGroup(file)];
+        } else {
+            PBXFileReference *reference = AUTORELEASE([PBXFileReference new]);
+            [reference setName:name]; [reference setPath:name]; [reference setSourceTree:@"<group>"];
+            [children addObject:reference];
+        }
+    }
+    [group setChildren:children];
+    return group;
+}
+
 @implementation YCodeProject
+
++ (BOOL)isMakeProjectDirectory:(NSString *)path
+{
+    BOOL directory = NO;
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if (![manager fileExistsAtPath:path isDirectory:&directory] || !directory) return NO;
+    NSEnumerator *names = [[NSArray arrayWithObjects:@"GNUmakefile", @"makefile", @"Makefile", nil] objectEnumerator];
+    NSString *name;
+    while ((name = [names nextObject]) != nil) {
+        if ([manager fileExistsAtPath:[path stringByAppendingPathComponent:name] isDirectory:&directory] && !directory) return YES;
+    }
+    return NO;
+}
+
+- (BOOL)isDirectoryProject
+{
+    return _directoryProject;
+}
+
+- (void)refreshDirectoryFiles
+{
+    if (!_directoryProject) return;
+    PBXGroup *group = YCodeDirectoryGroup(_projectPath);
+    [group setPath:@""];
+    [_project setMainGroup:group];
+    [_navigatorController projectDidChange];
+}
 
 + (NSArray *)readableTypes
 {
     return [NSArray arrayWithObjects:@"YCodeXcodeProjectType",
-        @"YCodeProjectCenterProjectType", @"xcodeproj", @"pcproj", nil];
+        @"YCodeProjectCenterProjectType", @"YCodeMakeProjectType", @"xcodeproj", @"pcproj", nil];
 }
 
 + (NSArray *)writableTypes
 {
     return [NSArray arrayWithObjects:@"YCodeXcodeProjectType",
-        @"xcodeproj", nil];
+        @"YCodeMakeProjectType", @"xcodeproj", nil];
 }
 
 + (BOOL)isNativeType:(NSString *)type
 {
-    return ([type isEqualToString:@"YCodeXcodeProjectType"] ||
+    return ([type isEqualToString:@"YCodeMakeProjectType"] ||
+            [type isEqualToString:@"YCodeXcodeProjectType"] ||
             [type isEqualToString:@"xcodeproj"]);
 }
 
@@ -566,7 +623,32 @@ YCodeProjectPackagePathForPath(NSString *path)
         return NO;
     }
     
-    if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
+    if ([[self class] isMakeProjectDirectory:path] &&
+        ![[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] containsObject:[path pathExtension]]) {
+        _directoryProject = YES;
+        [self setProjectPath:[path stringByStandardizingPath]];
+        NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:
+            [path stringByAppendingPathComponent:@".ycode.plist"]];
+        [_settings removeAllObjects];
+        if (settings) [_settings addEntriesFromDictionary:settings];
+        PBXProject *project = AUTORELEASE([PBXProject new]);
+        [project setProjectDirPath:@""]; [project setProjectRoot:@""];
+        NSMutableArray *targets = [NSMutableArray array];
+        id names = [_settings objectForKey:@"MakeTargets"];
+        if ([names isKindOfClass:[NSArray class]]) {
+            NSEnumerator *enumerator = [names objectEnumerator];
+            id name;
+            while ((name = [enumerator nextObject]) != nil) {
+                if (![name isKindOfClass:[NSString class]] || ![name length]) continue;
+                PBXTarget *target = AUTORELEASE([PBXTarget new]);
+                [target setName:name]; [targets addObject:target];
+            }
+        }
+        [project setTargets:targets];
+        [self setProject:project];
+        [self refreshDirectoryFiles];
+        success = YES;
+    } else if ([[path pathExtension] isEqualToString:@"xcodeproj"]) {
         success = [self loadXcodeProjectAtPath:path];
     } else if ([[path pathExtension] isEqualToString:@"pcproj"]) {
         success = [self loadProjectCenterProjectAtPath:path];
@@ -596,6 +678,13 @@ YCodeProjectPackagePathForPath(NSString *path)
     return NO;
 }
 
+- (BOOL)writeSafelyToURL:(NSURL *)url ofType:(NSString *)type
+       forSaveOperation:(NSSaveOperationType)operation error:(NSError **)error
+{
+    if (_directoryProject) return [self writeToURL:url ofType:type error:error];
+    return [super writeSafelyToURL:url ofType:type forSaveOperation:operation error:error];
+}
+
 - (BOOL)writeToURL:(NSURL *)url ofType:(NSString *)typeName error:(NSError **)outError
 {
     NSString *path = [url path];
@@ -610,6 +699,8 @@ YCodeProjectPackagePathForPath(NSString *path)
         }
         return NO;
     }
+
+    if (_directoryProject) return [self saveProjectToPath:path];
 
     if (_container == nil) {
         if (outError) {
@@ -1143,6 +1234,12 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)saveProjectToPath:(NSString *)path
 {
+    if (_directoryProject) {
+        if (![[path stringByStandardizingPath] isEqual:_projectPath]) return NO;
+        BOOL saved = [_settings writeToFile:[path stringByAppendingPathComponent:@".ycode.plist"] atomically:YES];
+        if (saved) [self updateChangeCount:NSChangeCleared];
+        return saved;
+    }
     NSString *projectPath = YCodeProjectPackagePathForPath(path);
     NSString *projectFile = nil;
     BOOL isDirectory = NO;
@@ -1291,6 +1388,7 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (NSString *)projectDirectoryPath
 {
+    if (_directoryProject) return _projectPath;
     if (_projectPath) {
         return [_projectPath stringByDeletingLastPathComponent];
     }
@@ -1350,6 +1448,7 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (void)addFilesToProject:(NSArray *)filePaths
 {
+    if (_directoryProject) { [self refreshDirectoryFiles]; return; }
     PBXGroup *mainGroup = [_project mainGroup];
     if (!mainGroup || ![filePaths count]) return;
     NSMutableSet *knownPaths = [NSMutableSet set];
@@ -1458,6 +1557,15 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 - (BOOL)addGroupToProject:(NSString *)groupName
 {
+    if (_directoryProject) {
+        if (![groupName length] || ![[groupName lastPathComponent] isEqual:groupName] ||
+            [groupName isEqual:@"."] || [groupName isEqual:@".."]) return NO;
+        BOOL created = [[NSFileManager defaultManager] createDirectoryAtPath:
+            [_projectPath stringByAppendingPathComponent:groupName]
+            withIntermediateDirectories:NO attributes:nil error:NULL];
+        if (created) [self refreshDirectoryFiles];
+        return created;
+    }
     if (![_project mainGroup] || ![groupName length]) {
         return NO;
     }

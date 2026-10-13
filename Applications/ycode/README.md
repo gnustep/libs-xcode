@@ -160,3 +160,37 @@ The field in the Debugger tab accepts GDB commands such as `print variable`,
 `backtrace`, `break main`, `disable 1`, and `enable 1`. Press Return to send a
 command. **Project > Stop** ends the debugger session; an inferior's normal exit
 leaves GDB available for another Go. A failed build never launches the debugger.
+
+## Makefile folders
+
+Use **File → Open Project** and select a folder containing `GNUmakefile`,
+`makefile`, or `Makefile`. Ycode shows the folder's files and subfolders without
+creating an Xcode project or changing its makefiles. Hidden entries and the
+`obj` and `build` directories are omitted from the navigator; directory symlinks
+are not traversed. Use the navigator's **Refresh Folder** menu after adding files
+outside Ycode. **Add Group** creates a real subdirectory in this mode.
+
+Build invokes `make` in the selected folder, Clean invokes `make clean`, and
+Tests invokes `make check` for GNUmakefile projects or `make test` otherwise.
+Compiler output appears in the console and issues panes as usual.
+
+Optional settings live in `.ycode.plist` inside the folder. For example:
+
+```plist
+{
+    MakeTargets = (all, application, tools);
+    BuildTarget = all;
+    CleanTarget = clean;
+    TestTarget = check;
+    Executable = "obj/My Tool";
+}
+```
+
+Reopen the folder after editing these settings. `MakeTargets` supplies the
+Target toolbar choices; Automatic uses `BuildTarget`, or make's default target
+when omitted. Clean and Tests use their own targets. `Executable` is an absolute
+path or a path relative to the folder, and enables Run and Debug after building.
+For an application bundle, specify the executable inside the bundle. Ycode does
+not guess executable paths or parse arbitrary makefiles to discover targets.
+Save Project writes only `.ycode.plist`; makefiles remain authoritative for
+sources and dependencies. Project Save As does not convert or move this folder.

@@ -1339,6 +1339,77 @@ static void testSearchAndTestNavigator(NSString *temporaryDirectory)
   [document release];
 }
 
+static void testMakeDirectory(NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *directory = [temporaryDirectory stringByAppendingPathComponent:@"Make Folder With Spaces"];
+  [manager createDirectoryAtPath:[directory stringByAppendingPathComponent:@"Sources"]
+      withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *makefile = @"all:\n\t@echo default-build\ncustom:\n\t@echo custom-build\nclean:\n\t@echo folder-clean\ntest:\n\t@echo folder-tests\n";
+  NSString *makePath = [directory stringByAppendingPathComponent:@"makefile"];
+  [makefile writeToFile:makePath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [@"int main(void) { return 0; }" writeToFile:[directory stringByAppendingPathComponent:@"Sources/main.c"]
+      atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [manager createSymbolicLinkAtPath:[directory stringByAppendingPathComponent:@"loop"]
+      withDestinationPath:directory error:NULL];
+  YCodeDocumentController *controller = [YCodeDocumentController sharedDocumentController];
+  NSError *error = nil;
+  NSURL *url = [NSURL fileURLWithPath:directory];
+  testAssert([[controller typeForContentsOfURL:url error:&error] isEqual:@"YCodeMakeProjectType"],
+    @"Detect a directory containing a lowercase makefile");
+  YCodeProject *project = [controller openDocumentWithContentsOfURL:url display:YES error:&error];
+  testAssert(project != nil && [project isDirectoryProject] && error == nil,
+    @"Open a Makefile directory through the document controller");
+  if (!project) return;
+  testAssert([[project projectDirectoryPath] isEqual:directory], @"Make commands use the selected directory");
+  PBXGroup *group = [[project project] mainGroup];
+  testAssert([[group children] count] == 3, @"Navigator includes files, subdirectories and non-recursive symlinks");
+  testAssert([project addGroupToProject:@"New Folder"] &&
+    [manager fileExistsAtPath:[directory stringByAppendingPathComponent:@"New Folder"]],
+    @"Adding a directory-project group creates a real folder");
+  [@"new" writeToFile:[directory stringByAppendingPathComponent:@"new.txt"]
+    atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [project refreshDirectoryFiles];
+  testAssert([[[[project project] mainGroup] children] count] == 5, @"Refresh discovers externally added files");
+  YCodeBuildSystem *build = [project buildSystem];
+  testAssert([build build], @"Start a directory make build"); waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusSuccess && [[build buildOutput] rangeOfString:@"default-build"].location != NSNotFound,
+    @"Directory default make target runs successfully");
+  [build setTargetName:@"custom"];
+  testAssert([build build], @"Start a selected make target"); waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"custom-build"].location != NSNotFound, @"Make honors the target selector");
+  testAssert([build clean], @"Start make clean"); waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"folder-clean"].location != NSNotFound, @"Make clean runs in the folder");
+  testAssert([build test], @"Start make tests"); waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"folder-tests"].location != NSNotFound, @"Make test runs in the folder");
+  writeExecutable([directory stringByAppendingPathComponent:@"run tool"], @"#!/bin/sh\necho folder-run\n");
+  [[project settings] setObject:@"run tool" forKey:@"Executable"];
+  [[project settings] setObject:[NSArray arrayWithObjects:@"all", @"custom", nil] forKey:@"MakeTargets"];
+  [[project settings] setObject:@"custom" forKey:@"BuildTarget"];
+  testAssert([build run], @"Run a configured make executable"); waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"folder-run"].location != NSNotFound, @"Configured executable runs after building");
+  testAssert([project writeSafelyToURL:url ofType:@"YCodeMakeProjectType" forSaveOperation:NSSaveOperation error:&error],
+    @"Saving folder settings does not replace the source directory");
+  testAssert([[NSString stringWithContentsOfFile:makePath encoding:NSUTF8StringEncoding error:NULL] isEqual:makefile]
+    && ![manager fileExistsAtPath:[directory stringByAppendingPathExtension:@"xcodeproj"]],
+    @"Makefiles remain unchanged and no Xcode project is generated");
+  [project close];
+  project = [controller openDocumentWithContentsOfURL:url display:NO error:&error];
+  testAssert([[[project settings] objectForKey:@"Executable"] isEqual:@"run tool"] && [[[project project] targets] count] == 2,
+    @"Reopening restores make targets and executable settings");
+  [project close];
+  NSString *gnuPath = [directory stringByAppendingPathComponent:@"GNUmakefile"];
+  [@"all:\n\t@echo gnu-build\ncheck:\n\t@echo gnu-tests\n" writeToFile:gnuPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  project = [controller openDocumentWithContentsOfURL:url display:NO error:&error];
+  build = [project buildSystem];
+  testAssert([[build detectedBuildSystem] isEqual:@"gnumake"] && [build test], @"GNUmakefile selects the GNUstep check target");
+  waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"gnu-tests"].location != NSNotFound, @"GNUmakefile tests run with make check");
+  [project close];
+  testAssert(![YCodeProject isMakeProjectDirectory:[directory stringByAppendingPathComponent:@"Sources"]],
+    @"Reject folders without a makefile");
+}
+
 static void testBuildAndRun(NSString *temporaryDirectory)
 {
   NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Build With Spaces"];
@@ -2185,6 +2256,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-make-directory"]) {
+    testMakeDirectory(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode Makefile directory checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--read-font-layout"]) {
     NSUInteger i; BOOL passed = YES;
     for (i = 0; i < 4; i++)
@@ -2500,6 +2577,7 @@ int main(void)
   testProjectCenterImport(temporaryDirectory);
   testProjectCenterExport(temporaryDirectory);
   testSearchAndTestNavigator(temporaryDirectory);
+  testMakeDirectory(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
