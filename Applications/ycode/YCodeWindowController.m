@@ -1600,8 +1600,19 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     NSDictionary *location = [locations objectAtIndex:0];
     if ([_editorController openFile:[location objectForKey:@"path"]]) {
         YCodeEditorDocument *document = [_editorController currentDocument];
-        [document setSelectedRange:[[location objectForKey:@"range"] rangeValue]];
-        [[self window] makeFirstResponder:[document textView]];
+        NSRange range = [[location objectForKey:@"range"] rangeValue];
+        [document setSelectedRange:range];
+        NSTextView *textView = [document textView];
+        [[self window] makeFirstResponder:textView];
+        NSLayoutManager *layout = [textView layoutManager];
+        NSRange glyphs = [layout glyphRangeForCharacterRange:range actualCharacterRange:NULL];
+        NSRect methodRect = [layout boundingRectForGlyphRange:glyphs
+                                            inTextContainer:[textView textContainer]];
+        methodRect.origin.y += [textView textContainerOrigin].y;
+        NSRect visible = [textView visibleRect];
+        CGFloat y = NSMidY(methodRect) - NSHeight(visible) / 2;
+        y = MAX(NSMinY([textView bounds]), MIN(y, NSMaxY([textView bounds]) - NSHeight(visible)));
+        [textView scrollPoint:NSMakePoint(NSMinX(visible), y)];
     }
 }
 

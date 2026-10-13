@@ -1210,6 +1210,8 @@ static void testResultNavigation(NSString *temporaryDirectory)
   [@"all:\n" writeToFile:[root stringByAppendingPathComponent:@"Makefile"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
   NSString *path = [root stringByAppendingPathComponent:@"Several Tests.mm"];
   NSString *source = @"@implementation Other\n- (void)testOne {}\n@end\n// @implementation Example - (void)testOne {} @end\n@implementation Example\n/* - (void)testOne {} */\n- (void)\ntestOne\n{ NSString *s = @\"@end\"; }\n- (void)testTwo {}\n@end\n";
+  NSString *padding = [@"" stringByPaddingToLength:200 withString:@"\n" startingAtIndex:0];
+  source = [NSString stringWithFormat:@"%@%@%@", padding, source, padding];
   [source writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
   NSString *swiftPath = [root stringByAppendingPathComponent:@"SwiftTests.swift"];
   [@"class SwiftTests: XCTestCase {\n func testSwift() { }\n}\n" writeToFile:swiftPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
@@ -1226,6 +1228,13 @@ static void testResultNavigation(NSString *temporaryDirectory)
   NSRange expected = [source rangeOfString:@"testOne\n{"];
   testAssert([[document filePath] isEqual:path] && NSEqualRanges([document selectedRange], NSMakeRange(expected.location, 7)),
     @"Clicking a result opens the matching class implementation and method, ignoring comments and other classes");
+  NSTextView *textView = [document textView];
+  NSLayoutManager *layout = [textView layoutManager];
+  NSRange glyphs = [layout glyphRangeForCharacterRange:[document selectedRange] actualCharacterRange:NULL];
+  NSRect methodRect = [layout boundingRectForGlyphRange:glyphs inTextContainer:[textView textContainer]];
+  CGFloat methodY = NSMidY(methodRect) + [textView textContainerOrigin].y;
+  testAssert(fabs(methodY - NSMidY([textView visibleRect])) < 2,
+    @"Test navigation centers the method vertically in the editor viewport");
   NSString *edited = [@"// unsaved lines\n\n" stringByAppendingString:source];
   [document setContent:edited];
   [document setModified:YES];
