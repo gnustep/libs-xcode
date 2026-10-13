@@ -1651,51 +1651,153 @@ static void testProjectCenterExport(NSString *directory)
   [document close]; [document release];
 }
 
-@interface YCodeProjectNameTest : NSObject
-+ (void)answerPanel:(NSTimer *)timer;
+@interface AppController (NewProjectTesting)
+- (NSView *)newProjectAccessoryView;
+- (void)createNewProjectAtURL:(NSURL *)url format:(NSString *)format productType:(NSString *)productType;
 @end
-@implementation YCodeProjectNameTest
-+ (void)answerPanel:(NSTimer *)timer
+
+@interface YCodeNewProjectPanelTest : NSObject
++ (void)cancelPanel:(NSTimer *)timer;
+@end
+@implementation YCodeNewProjectPanelTest
++ (void)cancelPanel:(NSTimer *)timer
 {
-  NSWindow *panel = [NSApp modalWindow];
+  NSSavePanel *panel = (NSSavePanel *)[NSApp modalWindow];
   if (!panel) return;
-  NSTextField *input = nil;
-  NSButton *button = nil;
-  NSEnumerator *enumerator = [[[panel contentView] subviews] objectEnumerator];
-  NSView *view;
-  NSString *title = [[timer userInfo] boolValue] ? @"Cancel" : @"Create";
-  while ((view = [enumerator nextObject]) != nil) {
-    if ([view isKindOfClass:[NSTextField class]] && [(NSTextField *)view isEditable])
-      input = (NSTextField *)view;
-    if ([view isKindOfClass:[NSButton class]] && [[(NSButton *)view title] isEqual:title])
-      button = (NSButton *)view;
-  }
-  testAssert(input != nil && ![input isHidden] && NSWidth([input frame]) > 100,
-    @"Project-name dialog displays an editable name field");
-  testAssert(button != nil, @"Project-name dialog offers Create and Cancel actions");
-  [input setStringValue:@"  My Named Project  "];
-  if (button) [button sendAction:[button action] to:[button target]];
-  else [NSApp stopModalWithCode:NSModalResponseCancel];
-  [NSApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
-    location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:[panel windowNumber]
-    context:nil subtype:0 data1:0 data2:0] atStart:NO];
+  testAssert([panel isKindOfClass:[NSSavePanel class]] && ![panel isKindOfClass:[NSOpenPanel class]],
+    @"New Project accepts a new folder name instead of requiring an existing folder");
+  testAssert([[panel nameFieldLabel] isEqual:@"Project name:"]
+    && [[panel nameFieldStringValue] isEqual:@"MyProject"] && [[panel defaultButtonCell] isEnabled],
+    @"Project name field has a default value and Create is enabled");
+  NSView *accessory = [panel accessoryView];
+  NSPopUpButton *types = (NSPopUpButton *)[accessory viewWithTag:100];
+  testAssert(types != nil && [types window] == panel && ![types isHidden],
+    @"Project type selector is visible in the location panel");
+  [types selectItemAtIndex:2];
+  testAssert([[[types selectedItem] representedObject] isEqual:@"Bundle"],
+    @"Project type selector can choose a bundle target");
+  if ([timer userInfo]) {
+    [panel setDirectoryURL:[NSURL fileURLWithPath:[timer userInfo]]];
+    [panel setNameFieldStringValue:@"Named New App"];
+    [panel ok:nil];
+  } else [panel cancel:nil];
+  [timer invalidate];
 }
 @end
 
-static void testProjectNameDialog(void)
+static void testNewProjectTemplates(NSString *temporaryDirectory)
 {
-  AppController *controller = [[AppController alloc] init];
-  NSUInteger choice;
-  for (choice = 0; choice < 2; choice++) {
-    NSTimer *timer = [NSTimer timerWithTimeInterval:0.1 target:[YCodeProjectNameTest class]
-      selector:@selector(answerPanel:) userInfo:[NSNumber numberWithBool:choice != 0] repeats:YES];
-    [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSModalPanelRunLoopMode];
-    NSString *name = [controller getProjectNameFromUser];
-    [timer invalidate];
-    testAssert(choice == 0 ? [name isEqual:@"My Named Project"] : name == nil,
-      @"Create returns the entered name after panel teardown; Cancel returns no name");
+  AppController *controller = AUTORELEASE([AppController new]);
+  NSView *accessory = [controller newProjectAccessoryView];
+  NSPopUpButton *types = (NSPopUpButton *)[accessory viewWithTag:100];
+  NSPopUpButton *formats = (NSPopUpButton *)[accessory viewWithTag:101];
+  testAssert([types numberOfItems] == 6 && [formats numberOfItems] == 2,
+    @"New-project accessory offers six target kinds and both project formats");
+  testAssert([[[types selectedItem] representedObject] isEqual:@"Application"],
+    @"New projects default to the application template");
+  NSUInteger originalDocumentCount = [[[NSDocumentController sharedDocumentController] documents] count];
+  NSTimer *timer = [NSTimer timerWithTimeInterval:0.1 target:[YCodeNewProjectPanelTest class]
+    selector:@selector(cancelPanel:) userInfo:nil repeats:YES];
+  [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSModalPanelRunLoopMode];
+  [controller newProject:nil];
+  [timer invalidate];
+  testAssert([[[NSDocumentController sharedDocumentController] documents] count] == originalDocumentCount,
+    @"Cancelling the location panel does not create a project");
+  timer = [NSTimer timerWithTimeInterval:0.1 target:[YCodeNewProjectPanelTest class]
+    selector:@selector(cancelPanel:) userInfo:temporaryDirectory repeats:YES];
+  [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSModalPanelRunLoopMode];
+  [controller newProject:nil];
+  [timer invalidate];
+  NSString *createdRoot = [temporaryDirectory stringByAppendingPathComponent:@"Named New App"];
+  NSString *createdPackage = [createdRoot stringByAppendingPathComponent:@"Named New App.xcodeproj"];
+  testAssert([[NSFileManager defaultManager] fileExistsAtPath:createdPackage]
+    && [[NSFileManager defaultManager] fileExistsAtPath:[createdRoot stringByAppendingPathComponent:@"ProjectObject.m"]],
+    @"Create uses the typed name for a new project folder and the selected Bundle template");
+  NSEnumerator *createdDocuments = [[NSArray arrayWithArray:[[NSDocumentController sharedDocumentController] documents]] objectEnumerator];
+  YCodeProject *createdDocument;
+  while ((createdDocument = [createdDocuments nextObject]) != nil)
+    if ([[createdDocument projectPath] isEqual:createdPackage]) [createdDocument close];
+  NSArray *kinds = [YCodeProject newProjectTypes];
+  NSArray *products = [NSArray arrayWithObjects:@"application", @"tool", @"bundle", @"framework", @"library.dynamic", @"library.static", nil];
+  NSUInteger format, index;
+  for (format = 0; format < 2; format++) {
+    for (index = 0; index < [kinds count]; index++) {
+      NSString *kind = [kinds objectAtIndex:index];
+      NSString *name = [NSString stringWithFormat:@"Starter%lu%@", (unsigned long)format, kind];
+      NSString *root = [temporaryDirectory stringByAppendingPathComponent:name];
+      NSString *projectFormat = format == 0 ? @"Xcode" : @"ProjectCenter";
+      YCodeProject *document = [YCodeProject createNewProjectAtPath:root name:name
+        type:projectFormat productType:kind];
+      testAssert(document != nil, [NSString stringWithFormat:@"Create %@ %@ project", projectFormat, kind]);
+      if (!document) continue;
+      PBXTarget *target = [[[document project] targets] objectAtIndex:0];
+      testAssert([[target productType] isEqual:[@"com.apple.product-type." stringByAppendingString:[products objectAtIndex:index]]],
+        @"Selected project kind determines the product type");
+      YCodeProject *reopened = AUTORELEASE([YCodeProject new]);
+      testAssert([reopened readFromURL:[document fileURL] ofType:[document fileType] error:NULL],
+        @"Created project can be reopened in its selected format");
+      if ([kind isEqual:@"Application"]) {
+        NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:
+          [root stringByAppendingPathComponent:[name stringByAppendingString:@"Info.plist"]]];
+        testAssert([[info objectForKey:@"NSMainNibFile"] isEqual:@"MainMenu"],
+          @"Application metadata loads the starter interface");
+        NSString *xib = [NSString stringWithContentsOfFile:[root stringByAppendingPathComponent:@"MainMenu.xib"]
+          encoding:NSUTF8StringEncoding error:NULL];
+        testAssert([xib rangeOfString:@"customClass=\"AppController\""].location != NSNotFound
+          && [xib rangeOfString:@"property=\"window\""].location != NSNotFound
+          && [xib rangeOfString:@"selector=\"terminate:\""].location != NSNotFound,
+          @"Starter XIB connects AppController, window, and Quit action");
+        testAssert([[NSFileManager defaultManager] fileExistsAtPath:[root stringByAppendingPathComponent:@"AppController.m"]],
+          @"Application includes AppController implementation");
+        BOOL sourceFound = NO, resourceFound = NO;
+        NSEnumerator *phases = [[target buildPhases] objectEnumerator];
+        PBXBuildPhase *phase;
+        while ((phase = [phases nextObject]) != nil) {
+          NSEnumerator *files = [[phase files] objectEnumerator];
+          PBXBuildFile *file;
+          while ((file = [files nextObject]) != nil) {
+            if ([phase isKindOfClass:[PBXSourcesBuildPhase class]] && [[[file fileRef] path] isEqual:@"AppController.m"]) sourceFound = YES;
+            if ([phase isKindOfClass:[PBXResourcesBuildPhase class]] && [[[file fileRef] path] isEqual:@"MainMenu.xib"]) resourceFound = YES;
+          }
+        }
+        testAssert(sourceFound && resourceFound, @"Application source and XIB participate in the build");
+      } else {
+        testAssert(![[NSFileManager defaultManager] fileExistsAtPath:[root stringByAppendingPathComponent:@"MainMenu.xib"]],
+          @"Non-application templates do not include an application interface");
+      }
+      testAssert([YCodeProject createNewProjectAtPath:root name:name type:projectFormat productType:kind] == nil,
+        @"New-project creation does not overwrite an existing project");
+    }
   }
-  [controller release];
+  testAssert([YCodeProject createNewProjectAtPath:[temporaryDirectory stringByAppendingPathComponent:@"Unsupported"]
+    name:@"Unsupported" type:@"Xcode" productType:@"Unknown"] == nil, @"Unsupported project kinds are rejected");
+}
+
+static void testProjectCreationInSelectedDirectory(NSString *temporaryDirectory)
+{
+  AppController *controller = AUTORELEASE([AppController new]);
+  NSUInteger format;
+  for (format = 0; format < 2; format++) {
+    NSString *name = format == 0 ? @"Selected App Folder" : @"Selected Tool Folder";
+    NSString *directory = [temporaryDirectory stringByAppendingPathComponent:name];
+    [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+    [controller createNewProjectAtURL:[NSURL fileURLWithPath:directory]
+      format:format == 0 ? @"Xcode" : @"ProjectCenter" productType:format == 0 ? @"Application" : @"Tool"];
+    NSString *package = [directory stringByAppendingPathComponent:[name stringByAppendingPathExtension:
+      format == 0 ? @"xcodeproj" : @"pcproj"]];
+    testAssert([[NSFileManager defaultManager] fileExistsAtPath:package],
+      @"Selected directory supplies the project name and contains its package");
+    testAssert([[NSFileManager defaultManager] fileExistsAtPath:[directory stringByAppendingPathComponent:@"main.m"]]
+      && ![[NSFileManager defaultManager] fileExistsAtPath:[directory stringByAppendingPathComponent:name]],
+      @"Create writes source directly into the selected folder, without another directory");
+    NSEnumerator *documents = [[NSArray arrayWithArray:[[NSDocumentController sharedDocumentController] documents]] objectEnumerator];
+    YCodeProject *document;
+    BOOL opened = NO;
+    while ((document = [documents nextObject]) != nil) {
+      if ([[document projectPath] isEqual:package]) { opened = YES; [document close]; }
+    }
+    testAssert(opened, @"Created project opens immediately without a name prompt");
+  }
 }
 
 static void testWindowFramePersistence(void)
@@ -1739,7 +1841,8 @@ int main(void)
   id savedWindowFrame = [[[NSUserDefaults standardUserDefaults]
     objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
   testWindowFramePersistence();
-  testProjectNameDialog();
+  testProjectCreationInSelectedDirectory(temporaryDirectory);
+  testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
   testEditorColors();
   testSyntaxHighlighting();

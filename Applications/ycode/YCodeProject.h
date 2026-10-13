@@ -53,7 +53,12 @@
   NSMutableDictionary *_fileWatchers;
 }
 
+/** Supported target kinds for the new-project accessory view. */
++ (NSArray *)newProjectTypes;
 + (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name type:(NSString *)type;
+/** Create the selected target kind in Xcode or ProjectCenter format. */
++ (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name
+                                 type:(NSString *)type productType:(NSString *)productType;
 
 /**
  * Project access

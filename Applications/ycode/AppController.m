@@ -25,87 +25,8 @@
 - (YCodeProject *)currentProject;
 - (YCodeWindowController *)currentProjectWindowController;
 - (YCodeEditorController *)currentEditorController;
-@end
-
-@interface YCodeProjectNamePanel : NSPanel
-{
-    NSTextField *_nameField;
-}
-- (NSString *)projectName;
-- (void)acceptName:(id)sender;
-@end
-
-@implementation YCodeProjectNamePanel
-- (id)init
-{
-    self = [super initWithContentRect:NSMakeRect(0, 0, 380, 140)
-        styleMask:NSTitledWindowMask | NSClosableWindowMask
-        backing:NSBackingStoreBuffered defer:NO];
-    if (self) {
-        [self setTitle:@"Project Name"];
-        [self setReleasedWhenClosed:NO];
-        [self setDelegate:self];
-        NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 100, 340, 22)];
-        [label setStringValue:@"Enter a name for your new project:"];
-        [label setEditable:NO];
-        [label setSelectable:NO];
-        [label setBezeled:NO];
-        [label setDrawsBackground:NO];
-        [[self contentView] addSubview:label];
-        RELEASE(label);
-        _nameField = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 65, 340, 26)];
-        [_nameField setStringValue:@"MyProject"];
-        [[self contentView] addSubview:_nameField];
-        RELEASE(_nameField); // Owned by the content view.
-        [self setInitialFirstResponder:_nameField];
-        NSButton *create = [[NSButton alloc] initWithFrame:NSMakeRect(265, 15, 95, 32)];
-        [create setTitle:@"Create"];
-        [create setBezelStyle:NSRoundedBezelStyle];
-        [create setTarget:self];
-        [create setAction:@selector(acceptName:)];
-        [create setKeyEquivalent:@"\r"];
-        [[self contentView] addSubview:create];
-        [self setDefaultButtonCell:[create cell]];
-        RELEASE(create);
-        NSButton *cancel = [[NSButton alloc] initWithFrame:NSMakeRect(160, 15, 95, 32)];
-        [cancel setTitle:@"Cancel"];
-        [cancel setBezelStyle:NSRoundedBezelStyle];
-        [cancel setTarget:self];
-        [cancel setAction:@selector(cancelOperation:)];
-        [cancel setKeyEquivalent:@"\033"];
-        [[self contentView] addSubview:cancel];
-        RELEASE(cancel);
-        [self center];
-        [_nameField selectText:self];
-    }
-    return self;
-}
-- (NSString *)projectName
-{
-    return [[_nameField stringValue] stringByTrimmingCharactersInSet:
-        [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-}
-- (void)acceptName:(id)sender
-{
-    NSString *name = [self projectName];
-    if (![name length] || [name isEqual:@"."] || [name isEqual:@".."] ||
-        [name rangeOfString:@"/"].location != NSNotFound ||
-        [name rangeOfString:@"\\"].location != NSNotFound) {
-        NSBeep();
-        [_nameField selectText:self];
-        return;
-    }
-    [NSApp stopModalWithCode:NSModalResponseOK];
-}
-- (void)cancelOperation:(id)sender
-{
-    [NSApp stopModalWithCode:NSModalResponseCancel];
-}
-- (BOOL)windowShouldClose:(id)sender
-{
-    [self cancelOperation:sender];
-    return NO;
-}
+- (NSView *)newProjectAccessoryView;
+- (void)createNewProjectAtURL:(NSURL *)url format:(NSString *)format productType:(NSString *)productType;
 @end
 
 static NSMenuItem *
@@ -394,24 +315,63 @@ YCodeFileURLFromPath(NSString *path)
     }
 }
 
+- (NSView *)newProjectAccessoryView
+{
+    NSView *view = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 76)]);
+    NSUInteger index;
+    for (index = 0; index < 2; index++) {
+        CGFloat y = index == 0 ? 42 : 8;
+        NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(12, y, 104, 24)]);
+        [label setStringValue:index == 0 ? @"Project type:" : @"Format:"];
+        [label setEditable:NO];
+        [label setBezeled:NO];
+        [label setDrawsBackground:NO];
+        [view addSubview:label];
+        NSPopUpButton *popup = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(120, y, 228, 26) pullsDown:NO]);
+        [popup setTag:100 + index];
+        NSArray *values = index == 0 ? [YCodeProject newProjectTypes] :
+            [NSArray arrayWithObjects:@"Xcode", @"ProjectCenter", nil];
+        NSEnumerator *enumerator = [values objectEnumerator];
+        NSString *value;
+        while ((value = [enumerator nextObject]) != nil) {
+            NSString *title = [value isEqual:@"Library"] ? @"Dynamic Library" :
+                [value isEqual:@"StaticLibrary"] ? @"Static Library" : value;
+            [popup addItemWithTitle:title];
+            [[popup lastItem] setRepresentedObject:value];
+        }
+        [view addSubview:popup];
+    }
+    return view;
+}
+
 - (IBAction) newProject: (id)sender
 {
-    // Show new project dialog
-    NSOpenPanel *panel = [NSOpenPanel openPanel];
-    [panel setCanChooseDirectories:YES];
-    [panel setCanChooseFiles:NO];
+    // A save panel accepts a new folder name; an open panel requires an
+    // existing item and disables its confirmation button for a new name.
+    NSSavePanel *panel = [NSSavePanel savePanel];
     [panel setCanCreateDirectories:YES];
-    [panel setAllowsMultipleSelection:NO];
+    [panel setAllowedFileTypes:nil];
+    [panel setNameFieldStringValue:@"MyProject"];
     [panel setTitle:@"Create New Project"];
     [panel setPrompt:@"Create"];
-    [panel setMessage:@"Choose location for new project:"];
+    [panel setNameFieldLabel:@"Project name:"];
+    [panel setMessage:@"Choose a location and name for the new project folder."];
     
+    NSView *accessory = [self newProjectAccessoryView];
+    [panel setAccessoryView:accessory];
+#ifdef GNUSTEP
+    // GNUstep's runModal uses the previous filename, not nameFieldStringValue.
+    NSInteger result = [panel runModalForDirectory:[panel directory] file:@"MyProject"];
+#else
     NSInteger result = [panel runModal];
+#endif
+    NSString *productType = [[(NSPopUpButton *)[accessory viewWithTag:100] selectedItem] representedObject];
+    NSString *format = [[(NSPopUpButton *)[accessory viewWithTag:101] selectedItem] representedObject];
+    [panel setAccessoryView:nil];
     if (result == NSModalResponseOK) {
-        NSArray *urls = [panel URLs];
-        NSURL *selectedURL = ([urls count] > 0) ? [urls objectAtIndex:0] : nil;
+        NSURL *selectedURL = [panel URL];
         if (selectedURL) {
-            [self createNewProjectAtURL:selectedURL];
+            [self createNewProjectAtURL:selectedURL format:format productType:productType];
         }
     }
 }
@@ -428,34 +388,18 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void) createNewProjectAtURL:(NSURL *)projectURL
 {
-    // Show project type selection dialog
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert setMessageText:@"Choose Project Type"];
-    [alert setInformativeText:@"Select the type of project you want to create:"];
-    [alert addButtonWithTitle:@"Xcode Project"];
-    [alert addButtonWithTitle:@"ProjectCenter Project"];
-    [alert addButtonWithTitle:@"Cancel"];
-    
-    NSInteger choice = [alert runModal];
-    RELEASE(alert);
-    
-    if (choice == NSAlertThirdButtonReturn) {
-        return; // Cancel
-    }
-    
-    // Get project name
-    NSString *projectName = [self getProjectNameFromUser];
-    if (!projectName || [projectName length] == 0) {
-        return;
-    }
-    
-    BOOL isXcodeProject = (choice == NSAlertFirstButtonReturn);
-    NSString *projectPath = [[projectURL path] stringByAppendingPathComponent:projectName];
-    
+    [self createNewProjectAtURL:projectURL format:@"Xcode" productType:@"Application"];
+}
+
+- (void)createNewProjectAtURL:(NSURL *)projectURL format:(NSString *)format productType:(NSString *)productType
+{
+    NSString *projectPath = [[projectURL path] stringByStandardizingPath];
+    NSString *projectName = [projectPath lastPathComponent];
+
     // Create the project
     YCodeProject *newProject = [YCodeProject createNewProjectAtPath:projectPath 
                                                                name:projectName 
-                                                               type:isXcodeProject ? @"Xcode" : @"ProjectCenter"];
+                                                               type:format productType:productType];
     
     if (newProject) {
         NSURL *fileURL = YCodeFileURLFromPath([newProject projectPath]);
@@ -470,7 +414,7 @@ YCodeFileURLFromPath(NSString *path)
     } else {
         NSAlert *errorAlert = [[NSAlert alloc] init];
         [errorAlert setMessageText:@"Project Creation Failed"];
-        [errorAlert setInformativeText:@"Could not create the new project. Please check the selected location and try again."];
+        [errorAlert setInformativeText:@"Could not create the project. Choose an empty, writable folder and try again."];
         [errorAlert addButtonWithTitle:@"OK"];
         [errorAlert runModal];
         RELEASE(errorAlert);
@@ -584,18 +528,6 @@ YCodeFileURLFromPath(NSString *path)
 
     [[project windowControllers] makeObjectsPerformSelector:@selector(synchronizeWindowTitleWithDocumentName)];
     return YES;
-}
-
-- (NSString *) getProjectNameFromUser
-{
-    YCodeProjectNamePanel *panel = [[YCodeProjectNamePanel alloc] init];
-    NSInteger result = [NSApp runModalForWindow:panel];
-    NSString *projectName = nil;
-    if (result == NSModalResponseOK)
-        projectName = AUTORELEASE([[panel projectName] copy]);
-    [panel orderOut:self];
-    RELEASE(panel);
-    return projectName;
 }
 
 - (BOOL) application: (NSApplication *)application

@@ -283,197 +283,130 @@ YCodeProjectPackagePathForPath(NSString *path)
 
 #pragma mark - Class Methods
 
++ (NSArray *)newProjectTypes
+{
+    return [NSArray arrayWithObjects:@"Application", @"Tool", @"Bundle", @"Framework", @"Library", @"StaticLibrary", nil];
+}
+
 + (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name type:(NSString *)type
 {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    
-    // Create project directory if it doesn't exist
-    if (![fileManager fileExistsAtPath:path]) {
-        NSError *error;
-        if (![fileManager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:&error]) {
-            NSLog(@"Failed to create project directory: %@", [error localizedDescription]);
-            return nil;
+    return [self createNewProjectAtPath:path name:name type:type productType:@"Application"];
+}
+
++ (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name
+                                 type:(NSString *)type productType:(NSString *)productType
+{
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if (![[self newProjectTypes] containsObject:productType] || ![path length] || ![name length]
+        || ![[name lastPathComponent] isEqual:name] || [name isEqual:@"."] || [name isEqual:@".."]
+        || [name rangeOfString:@"\\"].location != NSNotFound
+        || (![type isEqual:@"Xcode"] && ![type isEqual:@"ProjectCenter"])) return nil;
+    NSMutableString *productName = [NSMutableString string];
+    NSCharacterSet *allowed = [NSCharacterSet characterSetWithCharactersInString:
+        @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"];
+    NSUInteger characterIndex;
+    for (characterIndex = 0; characterIndex < [name length]; characterIndex++) {
+        unichar character = [name characterAtIndex:characterIndex];
+        if ([allowed characterIsMember:character]) [productName appendFormat:@"%C", character];
+        else [productName appendString:@"_"];
+    }
+    BOOL isDirectory = NO;
+    if ([manager fileExistsAtPath:path isDirectory:&isDirectory]) {
+        NSArray *contents = [manager contentsOfDirectoryAtPath:path error:NULL];
+        if (!isDirectory || !contents || [contents count]) return nil;
+    }
+    if (![manager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:NULL]) return nil;
+
+    BOOL application = [productType isEqual:@"Application"];
+    BOOL tool = [productType isEqual:@"Tool"];
+    BOOL bundle = [productType isEqual:@"Bundle"];
+    BOOL framework = [productType isEqual:@"Framework"];
+    NSMutableDictionary *files = [NSMutableDictionary dictionary];
+    NSArray *sources;
+    NSArray *headers;
+    NSArray *resources = [NSArray array];
+    if (application) {
+        NSString *templates = [[NSBundle mainBundle] pathForResource:@"Templates" ofType:nil];
+        if (!templates) return nil;
+        NSEnumerator *enumerator = [[NSArray arrayWithObjects:@"main.m", @"AppController.h",
+            @"AppController.m", @"MainMenu.xib", nil] objectEnumerator];
+        NSString *file;
+        while ((file = [enumerator nextObject]) != nil) {
+            NSString *source = [[templates stringByAppendingPathComponent:@"Application"] stringByAppendingPathComponent:file];
+            if (![manager copyItemAtPath:source toPath:[path stringByAppendingPathComponent:file] error:NULL]) return nil;
         }
-    }
-    
-    // Create project instance
-    YCodeProject *project = [[YCodeProject alloc] init];
-    [project setProjectPath:path];
-    
-    if ([type isEqualToString:@"Xcode"]) {
-        [project createXcodeProjectWithName:name atPath:path];
+        sources = [NSArray arrayWithObjects:@"main.m", @"AppController.m", nil];
+        headers = [NSArray arrayWithObject:@"AppController.h"];
+        resources = [NSArray arrayWithObject:@"MainMenu.xib"];
+    } else if (tool) {
+        [files setObject:@"#import <Foundation/Foundation.h>\n\nint main(int argc, const char *argv[])\n{\n  NSAutoreleasePool *pool = [NSAutoreleasePool new];\n  NSLog(@\"Hello, world!\");\n  [pool drain];\n  return 0;\n}\n" forKey:@"main.m"];
+        sources = [NSArray arrayWithObject:@"main.m"];
+        headers = [NSArray array];
     } else {
-        [project createProjectCenterProjectWithName:name atPath:path];
+        [files setObject:@"#import <Foundation/Foundation.h>\n\n@interface ProjectObject : NSObject\n@end\n" forKey:@"ProjectObject.h"];
+        [files setObject:@"#import \"ProjectObject.h\"\n\n@implementation ProjectObject\n@end\n" forKey:@"ProjectObject.m"];
+        sources = [NSArray arrayWithObject:@"ProjectObject.m"];
+        headers = [NSArray arrayWithObject:@"ProjectObject.h"];
     }
-    
-    return AUTORELEASE(project);
-}
+    NSMutableDictionary *info = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+        productName, @"CFBundleExecutable", productName, @"NSExecutable",
+        name, @"CFBundleName", @"1.0", @"CFBundleVersion", nil];
+    if (application) {
+        [info setObject:@"NSApplication" forKey:@"NSPrincipalClass"];
+        [info setObject:@"MainMenu" forKey:@"NSMainNibFile"];
+        [info setObject:@"APPL" forKey:@"CFBundlePackageType"];
+    } else if (bundle) [info setObject:@"ProjectObject" forKey:@"NSPrincipalClass"];
+    NSString *infoFile = [productName stringByAppendingString:@"Info.plist"];
+    if (![info writeToFile:[path stringByAppendingPathComponent:infoFile] atomically:YES]) return nil;
+    NSEnumerator *enumerator = [files keyEnumerator];
+    NSString *file;
+    while ((file = [enumerator nextObject]) != nil)
+        if (![[files objectForKey:file] writeToFile:[path stringByAppendingPathComponent:file]
+            atomically:YES encoding:NSUTF8StringEncoding error:NULL]) return nil;
 
-- (BOOL)createXcodeProjectWithName:(NSString *)name atPath:(NSString *)path
-{
-    NSString *projectFile = [NSString stringWithFormat:@"%@.xcodeproj", name];
-    NSString *projectPath = [path stringByAppendingPathComponent:projectFile];
-    NSString *projectPBXPath = [projectPath stringByAppendingPathComponent:@"project.pbxproj"];
-    NSString *productPath = [NSString stringWithFormat:@"%@.app", name];
-    PBXFileReference *mainFile = nil;
-    PBXFileReference *productReference = nil;
-    PBXBuildFile *mainBuildFile = nil;
-    PBXSourcesBuildPhase *sourcesPhase = nil;
-    PBXResourcesBuildPhase *resourcesPhase = nil;
-    PBXFrameworksBuildPhase *frameworksPhase = nil;
-    NSMutableArray *mainChildren = nil;
-    NSMutableArray *productChildren = nil;
-    NSMutableArray *targets = nil;
-    NSMutableArray *buildPhases = nil;
-    
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if (![fileManager createDirectoryAtPath:projectPath withIntermediateDirectories:YES attributes:nil error:nil]) {
-        return NO;
+    NSMutableDictionary *metadata = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+        productName, @"PROJECT_NAME", productType, @"PROJECT_TYPE",
+        sources, @"CLASS_FILES", headers, @"HEADER_FILES", resources, @"INTERFACES",
+        [NSArray arrayWithObject:infoFile], @"SUPPORTING_FILES",
+        [NSArray arrayWithObject:application ? @"AppKit" : @"Foundation"], @"FRAMEWORKS", nil];
+    if (framework) [metadata setObject:headers forKey:@"PUBLIC_HEADERS"];
+    if (application) [metadata setObject:@"NSApplication" forKey:@"PRINCIPAL_CLASS"];
+    else if (bundle) [metadata setObject:@"ProjectObject" forKey:@"PRINCIPAL_CLASS"];
+    NSString *package = [path stringByAppendingPathComponent:[name stringByAppendingPathExtension:
+        [type isEqual:@"Xcode"] ? @"xcodeproj" : @"pcproj"]];
+    YCodeProject *document = AUTORELEASE([[self alloc] init]);
+    if (![document convertProjectCenterProject:metadata fromPath:package]) return nil;
+    [[[document project] mainGroup] setName:name];
+    PBXTarget *target = [[[document project] targets] objectAtIndex:0];
+    enumerator = [[[target buildConfigurationList] buildConfigurations] objectEnumerator];
+    XCBuildConfiguration *configuration;
+    while ((configuration = [enumerator nextObject]) != nil) {
+        [[configuration buildSettings] setObject:@"NO" forKey:@"CLANG_ENABLE_OBJC_ARC"];
     }
-    
-    // Create project structure
-    PBXProject *pbxProject = [[PBXProject alloc] init];
-    [pbxProject setProjectDirPath:@""];
-    [pbxProject setProjectRoot:@""];
-    [pbxProject setCompatibilityVersion:@"Xcode 15.0"];
-    [pbxProject setDevelopmentRegion:@"en"];
-    [pbxProject setKnownRegions:[NSMutableArray arrayWithObjects:@"en", @"Base", nil]];
-    [pbxProject setBuildConfigurationList:YCodeConfigurationList(name)];
-    
-    // Create main group
-    PBXGroup *mainGroup = [[PBXGroup alloc] init];
-    [mainGroup setName:name];
-    [mainGroup setSourceTree:@"<group>"];
-    [pbxProject setMainGroup:mainGroup];
+    if ([type isEqual:@"Xcode"]) {
+        if (![document saveProjectToPath:package]) return nil;
+    } else {
+        if (![manager createDirectoryAtPath:package withIntermediateDirectories:YES attributes:nil error:NULL]
+            || ![metadata writeToFile:[package stringByAppendingPathComponent:@"PC.project"] atomically:YES]) return nil;
+        [[document settings] setObject:metadata forKey:@"ProjectCenterMetadata"];
+        NSString *kind = application ? @"APP" : tool ? @"TOOL" : bundle ? @"BUNDLE" : framework ? @"FRAMEWORK" : @"LIBRARY";
+        NSString *makeType = application ? @"application" : tool ? @"tool" : bundle ? @"bundle" : framework ? @"framework" : @"library";
+        NSMutableString *makefile = [NSMutableString stringWithFormat:
+            @"ifeq ($(GNUSTEP_MAKEFILES),)\n GNUSTEP_MAKEFILES := $(shell gnustep-config --variable=GNUSTEP_MAKEFILES)\nendif\n"
+             "include $(GNUSTEP_MAKEFILES)/common.make\n\n%@_NAME = %@\n%@_OBJC_FILES = %@\n%@_HEADER_FILES = %@\n%@_RESOURCE_FILES = %@\n",
+            kind, productName, productName, [sources componentsJoinedByString:@" "], productName,
+            [headers componentsJoinedByString:@" "], productName, [resources componentsJoinedByString:@" "]];
 
-    PBXGroup *productsGroup = [[PBXGroup alloc] init];
-    [productsGroup setName:@"Products"];
-    [productsGroup setSourceTree:@"<group>"];
-    [pbxProject setProductRefGroup:productsGroup];
-    
-    // Create a simple target
-    PBXNativeTarget *target = [[PBXNativeTarget alloc] init];
-    [target setName:name];
-    [target setProductName:name];
-    [target setProductType:@"com.apple.product-type.application"];
-    [target setBuildConfigurationList:YCodeConfigurationList(name)];
-    [target setDependencies:[NSMutableArray array]];
-    [target setBuildRules:[NSMutableArray array]];
-
-    productReference = YCodeFileReference(productPath);
-    [productReference setExplicitFileType:@"wrapper.application"];
-    [productReference setSourceTree:@"BUILT_PRODUCTS_DIR"];
-    [target setProductReference:productReference];
-
-    mainFile = YCodeFileReference(@"main.m");
-    mainBuildFile = YCodeBuildFile(mainFile);
-
-    sourcesPhase = (PBXSourcesBuildPhase *)YCodeBuildPhase([PBXSourcesBuildPhase class],
-        [NSMutableArray arrayWithObject:mainBuildFile], target, @"Sources");
-    resourcesPhase = (PBXResourcesBuildPhase *)YCodeBuildPhase([PBXResourcesBuildPhase class],
-        [NSMutableArray array], target, @"Resources");
-    frameworksPhase = (PBXFrameworksBuildPhase *)YCodeBuildPhase([PBXFrameworksBuildPhase class],
-        [NSMutableArray array], target, @"Frameworks");
-
-    buildPhases = [NSMutableArray arrayWithObjects:
-        sourcesPhase, resourcesPhase, frameworksPhase, nil];
-    [target setBuildPhases:buildPhases];
-
-    mainChildren = [NSMutableArray arrayWithObjects:mainFile, productsGroup, nil];
-    productChildren = [NSMutableArray arrayWithObject:productReference];
-    [mainGroup setChildren:mainChildren];
-    [productsGroup setChildren:productChildren];
-
-    targets = [NSMutableArray arrayWithObject:target];
-    [pbxProject setTargets:targets];
-    
-    // Create container
-    PBXContainer *container = [[PBXContainer alloc] initWithRootObject:pbxProject];
-    [container setFilename:projectPBXPath];
-    [container setParameter:projectPath];
-    [pbxProject setContainer:container];
-    
-    [self setProject:pbxProject];
-    [self setContainer:container];
-    
-    // Create basic main.m file
-    [self createMainFileAtPath:path];
-    [self saveProjectToPath:projectPath];
-    
-    RELEASE(pbxProject);
-    RELEASE(mainGroup);
-    RELEASE(productsGroup);
-    RELEASE(target);
-    RELEASE(container);
-    
-    return YES;
-}
-
-- (BOOL)createProjectCenterProjectWithName:(NSString *)name atPath:(NSString *)path
-{
-    // Create ProjectCenter project file
-    NSString *projectFile = [NSString stringWithFormat:@"%@.pcproj", name];
-    NSString *projectPath = [path stringByAppendingPathComponent:projectFile];
-    NSString *projectInfoPath = [projectPath stringByAppendingPathComponent:@"PC.project"];
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    
-    NSMutableDictionary *projectDict = [NSMutableDictionary dictionary];
-    [projectDict setObject:name forKey:@"PROJECT_NAME"];
-    [projectDict setObject:@"Application" forKey:@"PROJECT_TYPE"];
-    [projectDict setObject:name forKey:@"PRINCIPAL_CLASS"];
-    [projectDict setObject:[NSArray array] forKey:@"CLASS_FILES"];
-    [projectDict setObject:[NSArray array] forKey:@"HEADER_FILES"];
-    [projectDict setObject:[NSArray array] forKey:@"LOCALIZED_RESOURCES"];
-    [projectDict setObject:[NSArray array] forKey:@"LIBRARIES"];
-    
-    if (![fileManager createDirectoryAtPath:projectPath
-                withIntermediateDirectories:YES
-                                 attributes:nil
-                                      error:nil]) {
-        return NO;
+        if (application) [makefile appendFormat:@"%@_MAIN_MODEL_FILE = MainMenu\n", productName];
+        if (bundle) [makefile appendFormat:@"%@_PRINCIPAL_CLASS = ProjectObject\n", productName];
+        if ([productType isEqual:@"StaticLibrary"]) [makefile appendString:@"shared = no\n"];
+        [makefile appendFormat:@"\ninclude $(GNUSTEP_MAKEFILES)/%@.make\n", makeType];
+        if (![makefile writeToFile:[path stringByAppendingPathComponent:@"GNUmakefile"]
+            atomically:YES encoding:NSUTF8StringEncoding error:NULL]) return nil;
     }
-
-    BOOL success = [projectDict writeToFile:projectInfoPath atomically:YES];
-    
-    if (success) {
-        // Load the project we just created
-        [self convertProjectCenterProject:projectDict fromPath:projectPath];
-        
-        // Create basic main.m file
-        [self createMainFileAtPath:path];
-        
-        // Create basic GNUmakefile
-        [self createGNUMakefileAtPath:path withName:name];
-    }
-    
-    return success;
-}
-
-- (void)createMainFileAtPath:(NSString *)path
-{
-    NSString *mainContent = @"#import <Foundation/Foundation.h>\n"
-                           @"#import <AppKit/AppKit.h>\n\n"
-                           @"int main(int argc, const char *argv[])\n"
-                           @"{\n"
-                           @"    return NSApplicationMain(argc, argv);\n"
-                           @"}\n";
-    
-    NSString *mainPath = [path stringByAppendingPathComponent:@"main.m"];
-    [mainContent writeToFile:mainPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
-}
-
-- (void)createGNUMakefileAtPath:(NSString *)path withName:(NSString *)name
-{
-    NSString *makefileContent = [NSString stringWithFormat:
-        @"include $(GNUSTEP_MAKEFILES)/common.make\n\n"
-        @"APP_NAME = %@\n"
-        @"%@_OBJC_FILES = main.m\n"
-        @"%@_RESOURCE_FILES = \n\n"
-        @"include $(GNUSTEP_MAKEFILES)/application.make\n",
-        name, name, name];
-    
-    NSString *makefilePath = [path stringByAppendingPathComponent:@"GNUmakefile"];
-    [makefileContent writeToFile:makefilePath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    [document setFileURL:[NSURL fileURLWithPath:package]];
+    [document setFileType:[type isEqual:@"Xcode"] ? @"YCodeXcodeProjectType" : @"YCodeProjectCenterProjectType"];
+    return document;
 }
 
 - (PBXContainer *)convertProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path

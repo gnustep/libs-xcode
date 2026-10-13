@@ -58,14 +58,9 @@
 - (IBAction) newProject: (id)sender;
 
 /**
- * Creates a new project at the specified URL.
+ * Creates a new project in the specified directory, using its name.
  */
 - (void) createNewProjectAtURL:(NSURL *)projectURL;
-
-/**
- * Gets project name from user input.
- */
-- (NSString *) getProjectNameFromUser;
 
 /**
  * Saves the active source file, or the project when no source file is open.

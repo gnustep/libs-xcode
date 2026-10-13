@@ -4,6 +4,8 @@
     };
     objectVersion = 56;
     objects = {
+        YCODE_TEMPLATES = { isa = PBXFileReference; lastKnownFileType = folder; path = Resources/Templates; sourceTree = "<group>"; };
+        YCODE_TEMPLATES_BUILD = { isa = PBXBuildFile; fileRef = YCODE_TEMPLATES; };
         YCODE_FILE_ICONS = { isa = PBXFileReference; lastKnownFileType = folder; path = Resources/ProjectCenterIcons; sourceTree = "<group>"; };
         YCODE_FILE_ICONS_BUILD = { isa = PBXBuildFile; fileRef = YCODE_FILE_ICONS; };
         YCODE_FILE_INSPECTOR_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCFileInspectorView.m"; sourceTree = "<group>"; };
@@ -67,6 +69,7 @@
         YCODE_FILE_INSPECTOR_HEADER,
         YCODE_IMAGE_INSPECTOR_HEADER,
         YCODE_FILE_ICONS,
+        YCODE_TEMPLATES,
         YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
         YCODE_DEBUGGER_SOURCE,
@@ -148,7 +151,7 @@
 	};
 	"A5517E5A-3371-9A0A-79AA-5D307EFF3750" = {
 	    files = (
-                YCODE_FILE_ICONS_BUILD,
+                YCODE_FILE_ICONS_BUILD, YCODE_TEMPLATES_BUILD,
 	    );
 	    isa = PBXResourcesBuildPhase;
 	};
