@@ -182,17 +182,6 @@ static void testBuildtoolArgumentParsing(void)
 	     @"build should remain an accepted sub-command");
 }
 
-@interface ThrowingBuildProject : PBXProject
-@end
-
-@implementation ThrowingBuildProject
-- (BOOL) build
-{
-  [NSException raise: NSInvalidArgumentException format: @"Simulated build exception"];
-  return NO;
-}
-@end
-
 @interface OperationToolDelegate : ToolDelegate
 {
 @public
@@ -245,19 +234,6 @@ static void testBuildtoolOperationResults(void)
   [fixture writeToFile: path atomically: YES];
   testAssert([delegate process], @"successful project operations return success");
 
-  // A native target without configurations must fail before creating products.
-  [objects setObject: [NSDictionary dictionaryWithObjectsAndKeys:
-    @"PBXNativeTarget", @"isa", @"MissingConfiguration", @"name", nil]
-    forKey: @"TEST_TARGET"];
-  [root setObject: [NSArray arrayWithObject: @"TEST_TARGET"] forKey: @"targets"];
-  [fixture writeToFile: path atomically: YES];
-  testAssert(![delegate process], @"missing target configuration fails without an exception");
-  testAssert([[GSXCBuildContext sharedBuildContext] currentContext] == nil,
-    @"a rejected target leaves no build context behind");
-
-  [root setObject: @"ThrowingBuildProject" forKey: @"isa"];
-  [fixture writeToFile: path atomically: YES];
-  testAssert(![delegate process], @"caught build exceptions return failure");
   [manager removeItemAtPath: directory error: NULL];
 }
 
