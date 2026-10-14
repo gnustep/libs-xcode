@@ -219,6 +219,9 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)restoreSidebarWidths;
 - (void)fontsChanged:(NSNotification *)notification;
 - (void)refreshTargetSelectors;
+- (void)updateBuildStatus:(id)sender;
+- (void)stopBuildClock:(id)sender;
+- (NSString *)buildStatusText;
 - (void)populateTargetSelector:(NSPopUpButton *)selector;
 - (void)appendConsoleOutput:(NSString *)output;
 - (NSAttributedString *)decodeOutput:(NSString *)output stream:(NSString *)stream;
@@ -269,6 +272,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         // Share the last position across projects. A frame autosave name can
         // only be owned by one live window, so save each window explicitly.
         NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(stopBuildClock:)
+            name:NSWindowWillCloseNotification object:[self window]];
         [center addObserver:self selector:@selector(fontsChanged:) name:@"YCodeFontsDidChange" object:nil];
         [center addObserver:self selector:@selector(sidebarResized:) name:NSSplitViewDidResizeSubviewsNotification object:_mainSplitView];
         [center addObserver:self selector:@selector(sidebarResized:) name:NSSplitViewDidResizeSubviewsNotification object:_contentSplitView];
@@ -361,6 +366,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self stopBuildClock:nil];
     [[_project buildSystem] setDelegate:nil];
     [[_project buildSystem] stop];
     RELEASE(_project);
@@ -405,6 +411,9 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)setProject:(YCodeProject *)project
 {
     if (_project != project) {
+        [self stopBuildClock:nil];
+        _hasBuildDuration = NO;
+        _buildDuration = 0;
         [[_project buildSystem] setDelegate:nil];
         [[_project buildSystem] stop];
         _collectingTests = NO;
@@ -659,6 +668,23 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             [defaults setBool:YES forKey:@"YCodeArchitectureToolbarItemAdded"];
             [defaults synchronize];
         }
+        if (![defaults boolForKey:@"YCodeBuildStatusToolbarItemAdded"]) {
+            NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
+            if (![identifiers containsObject:@"buildStatus"]) {
+                NSUInteger index = [identifiers indexOfObject:@"architecture"];
+                index = index == NSNotFound ? [identifiers count] : index + 1;
+                [_toolbar insertItemWithItemIdentifier:@"buildStatus" atIndex:index];
+                [_toolbar insertItemWithItemIdentifier:NSToolbarSeparatorItemIdentifier atIndex:index + 1];
+            }
+#ifdef GNUSTEP
+            NSMutableDictionary *configuration = [NSMutableDictionary dictionaryWithDictionary:
+                [defaults dictionaryForKey:@"NSToolbar Config YCodeMainToolbar"] ?: [NSDictionary dictionary]];
+            [configuration setObject:[[_toolbar items] valueForKey:@"itemIdentifier"] forKey:@"items"];
+            [defaults setObject:configuration forKey:@"NSToolbar Config YCodeMainToolbar"];
+#endif
+            [defaults setBool:YES forKey:@"YCodeBuildStatusToolbarItemAdded"];
+            [defaults synchronize];
+        }
         // Add the bottom-pane control to existing layouts once.
         if (![defaults boolForKey:@"YCodeBottomToolbarItemAdded"]) {
             NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
@@ -722,8 +748,59 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [self refreshTargetSelectors];
 }
 
+- (void)stopBuildClock:(id)sender
+{
+    if (_buildStartedAt > 0) {
+        _buildDuration = MAX(0, [NSDate timeIntervalSinceReferenceDate] - _buildStartedAt);
+        _hasBuildDuration = YES;
+        _buildStartedAt = 0;
+    }
+    [_buildStatusTimer invalidate];
+    DESTROY(_buildStatusTimer);
+}
+
+- (NSString *)buildStatusText
+{
+    NSString *name = [[_project projectPath] lastPathComponent];
+    if ([[name pathExtension] isEqual:@"xcodeproj"] || [[name pathExtension] isEqual:@"pcproj"])
+        name = [name stringByDeletingPathExtension];
+    if (![name length]) name = @"No Project";
+    NSString *activity = @"Ready";
+    switch ([[_project buildSystem] status]) {
+        case YCodeBuildStatusBuilding: activity = @"Building"; break;
+        case YCodeBuildStatusRunning:
+            activity = [[_project buildSystem] isDebugging] ? @"Debugging" : @"Running"; break;
+        case YCodeBuildStatusCleaning: activity = @"Cleaning"; break;
+        case YCodeBuildStatusTesting: activity = @"Testing"; break;
+        case YCodeBuildStatusFailed: activity = @"Failed"; break;
+        case YCodeBuildStatusCancelled: activity = @"Cancelled"; break;
+        default: break;
+    }
+    NSTimeInterval duration = _buildStartedAt > 0
+        ? MAX(0, [NSDate timeIntervalSinceReferenceDate] - _buildStartedAt) : _buildDuration;
+    NSString *time = (_hasBuildDuration || _buildStartedAt > 0)
+        ? [NSString stringWithFormat:@"%.1fs", duration] : @"—";
+    return [NSString stringWithFormat:@"%@ - %@ - %@", name, activity, time];
+}
+
+- (void)updateBuildStatus:(id)sender
+{
+    if ([[_project buildSystem] status] != YCodeBuildStatusBuilding)
+        [self stopBuildClock:nil];
+    NSString *text = [self buildStatusText];
+    NSEnumerator *enumerator = [[_toolbar items] objectEnumerator];
+    NSToolbarItem *item;
+    while ((item = [enumerator nextObject]) != nil) {
+        if ([[item itemIdentifier] isEqual:@"buildStatus"]) {
+            [(NSTextField *)[item view] setStringValue:text];
+            [[item view] setToolTip:text];
+        }
+    }
+}
+
 - (void)refreshTargetSelectors
 {
+    [self updateBuildStatus:nil];
     NSEnumerator *enumerator = [[_toolbar items] objectEnumerator];
     NSToolbarItem *item;
     while ((item = [enumerator nextObject]) != nil) {
@@ -1322,6 +1399,10 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidStartBuild:(id)buildSystem
 {
+    [self stopBuildClock:nil];
+    _buildStartedAt = [NSDate timeIntervalSinceReferenceDate];
+    _buildStatusTimer = RETAIN([NSTimer scheduledTimerWithTimeInterval:0.1
+        target:self selector:@selector(updateBuildStatus:) userInfo:nil repeats:YES]);
     [self refreshTargetSelectors];
     [_ansiDecoders removeAllObjects];
     [_issuesTableView deselectAll:nil];
@@ -1969,13 +2050,13 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme", @"architecture",
+    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme", @"architecture", @"buildStatus",
              @"navigator", @"bottom", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", NSToolbarSeparatorItemIdentifier, @"scheme", @"architecture",
+    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", NSToolbarSeparatorItemIdentifier, @"scheme", @"architecture", @"buildStatus", NSToolbarSeparatorItemIdentifier,
              NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"bottom", @"inspector", nil];
 }
 
@@ -1986,7 +2067,20 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     
     NSArray *debugIdentifiers = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
     NSUInteger debugIndex = [debugIdentifiers indexOfObject:itemIdentifier];
-    if ([itemIdentifier isEqualToString:@"architecture"]) {
+    if ([itemIdentifier isEqualToString:@"buildStatus"]) {
+        NSTextField *field = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 280, 26)]);
+        [field setEditable:NO];
+        [field setSelectable:NO];
+        [field setFont:[NSFont systemFontOfSize:12]];
+        [field setStringValue:[self buildStatusText]];
+        [field setToolTip:[self buildStatusText]];
+        [item setLabel:@"Status"];
+        [item setPaletteLabel:@"Project Status"];
+        [item setView:field];
+        [item setMinSize:NSMakeSize(220, 26)];
+        [item setMaxSize:NSMakeSize(420, 26)];
+        [item setVisibilityPriority:NSToolbarItemVisibilityPriorityHigh];
+    } else if ([itemIdentifier isEqualToString:@"architecture"]) {
         NSPopUpButton *selector = AUTORELEASE([[NSPopUpButton alloc]
             initWithFrame:NSMakeRect(0, 0, 155, 26) pullsDown:NO]);
         [selector setTarget:self]; [selector setAction:@selector(selectArchitecture:)];

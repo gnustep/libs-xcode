@@ -197,6 +197,12 @@ sources and dependencies. Project Save As does not convert or move this folder.
 
 ## Architecture selection
 
+The status field after Architecture shows `Project Name - Activity - Build Time`,
+followed by a separator. Build time updates in seconds while building and retains
+the completed duration until the next build or project change. Activity reflects
+building, running, debugging, testing, cleaning, failure, or cancellation; otherwise
+it shows Ready. Before the first build, the duration is shown as a dash.
+
 The **Architecture** toolbar selector follows Target. Native leaves the build
 command and environment unchanged. Explicit selections are saved per project;
 controls are disabled while a build or debug session is active.

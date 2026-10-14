@@ -39,6 +39,10 @@
 @interface YCodeWindowController : NSWindowController <YCodeBuildSystemDelegate>
 {
     YCodeProject *_project;
+    NSTimer *_buildStatusTimer;
+    NSTimeInterval _buildStartedAt;
+    NSTimeInterval _buildDuration;
+    BOOL _hasBuildDuration;
     
     // Main interface elements
     IBOutlet NSToolbar *_toolbar;

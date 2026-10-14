@@ -1405,6 +1405,13 @@ static void testArchitectureSelection(NSString *temporaryDirectory)
   testAssert(index != NSNotFound && index == [identifiers indexOfObject:@"scheme"] + 1,
     @"Architecture selector is immediately after Target");
   if (index == NSNotFound) { [window close]; [window release]; [project release]; return; }
+  NSUInteger statusIndex = [identifiers indexOfObject:@"buildStatus"];
+  testAssert(statusIndex == index + 1 && statusIndex + 1 < [identifiers count] &&
+    [[identifiers objectAtIndex:statusIndex + 1] isEqual:NSToolbarSeparatorItemIdentifier],
+    @"Project status follows Architecture with a separator after it");
+  NSTextField *statusField = statusIndex == NSNotFound ? nil : [[[toolbar items] objectAtIndex:statusIndex] view];
+  testAssert([[statusField stringValue] isEqual:@"Architecture Project - Ready - —"],
+    @"Status starts with the project name and Ready before any build");
   NSPopUpButton *selector = [[[toolbar items] objectAtIndex:index] view];
   YCodeBuildSystem *build = [project buildSystem];
   testAssert([build architecture] == nil && [selector indexOfSelectedItem] == 0,
@@ -1412,7 +1419,17 @@ static void testArchitectureSelection(NSString *temporaryDirectory)
   NSString *native = [YCodeBuildSystem hostArchitecture];
   [selector selectItemWithTitle:native]; [selector sendAction:[selector action] to:[selector target]];
   testAssert([[build architecture] isEqual:native] && [build build], @"Toolbar architecture selection starts a native build");
+  testAssert([[statusField stringValue] rangeOfString:@" - Building - "].location != NSNotFound,
+    @"Status changes immediately when a build starts");
   waitForBuild(build, NO);
+  testAssert([[statusField stringValue] hasPrefix:@"Architecture Project - Ready - "] &&
+    [[statusField stringValue] hasSuffix:@"s"],
+    @"Completed build displays Ready and elapsed build seconds");
+  NSString *completedStatus = [[statusField stringValue] copy];
+  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
+  testAssert([[statusField stringValue] isEqual:completedStatus],
+    @"Elapsed build time stops advancing when the build finishes");
+  [completedStatus release];
   testAssert([build status] == YCodeBuildStatusSuccess && [[build buildOutput]
     rangeOfString:[@"arch=" stringByAppendingString:native]].location != NSNotFound,
     @"Architecture reaches make as a command-line variable");
@@ -1421,6 +1438,9 @@ static void testArchitectureSelection(NSString *temporaryDirectory)
   testAssert(![build build] && [build status] == YCodeBuildStatusFailed &&
     [[build buildErrors] rangeOfString:@"toolchain"].location != NSNotFound,
     @"An unconfigured cross-build fails instead of silently using the host toolchain");
+  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
+  testAssert([[statusField stringValue] rangeOfString:@" - Failed - "].location != NSNotFound,
+    @"Failed build appears in the toolbar status");
   NSDictionary *environment = [NSDictionary dictionaryWithObject:@"selected" forKey:@"YCODE_TOOLCHAIN_TEST"];
   [[NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObject:environment forKey:foreign]
     forKey:@"ArchitectureEnvironments"] writeToFile:[directory stringByAppendingPathComponent:@".ycode.plist"] atomically:YES];
@@ -1436,6 +1456,23 @@ static void testArchitectureSelection(NSString *temporaryDirectory)
   testAssert([[build buildOutput] rangeOfString:@"arch=make-default toolchain=\n"].location != NSNotFound &&
     [[build buildEnvironment] objectForKey:@"YCODE_TOOLCHAIN_TEST"] == nil,
     @"Returning to Native restores original arguments and environment without leaking overrides");
+  [@"all:\n\t@sleep 1\nclean:\n\t@echo cleaned\ntest:\n\t@echo tested\n" writeToFile:
+    [directory stringByAppendingPathComponent:@"Makefile"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([build clean], @"Status fixture can start cleaning");
+  testAssert([[statusField stringValue] rangeOfString:@" - Cleaning - "].location != NSNotFound,
+    @"Cleaning appears in toolbar status");
+  waitForBuild(build, NO);
+  testAssert([build build], @"Status fixture can start a timed build");
+  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.25]];
+  testAssert([[statusField stringValue] rangeOfString:@" - Building - "].location != NSNotFound &&
+    ![[statusField stringValue] hasSuffix:@"0.0s"], @"Build elapsed time advances live");
+  [build stop];
+  testAssert([[statusField stringValue] rangeOfString:@" - Cancelled - "].location != NSNotFound,
+    @"Stopped builds show Cancelled");
+  waitForBuild(build, NO);
+  [window setProject:nil];
+  testAssert([[statusField stringValue] isEqual:@"No Project - Ready - —"],
+    @"Closing a project clears its status and duration");
   [window close]; [window release]; [project release];
 }
 
