@@ -601,7 +601,8 @@
 {
     ASSIGN(_debugger, debugger);
     ASSIGN(_debugFile, file);
-    _debugGutterVisible = active || [[debugger breakpointLinesForFile:file] count] > 0;
+    _debugGutterVisible = [YCodeDebugger canSetBreakpointAtFile:file] &&
+        (active || [[debugger breakpointLinesForFile:file] count] > 0);
     [self updateRulerVisibility];
     [self setToolTip:_debugGutterVisible ?
         @"Click to add/remove a breakpoint. Shift-click to enable/disable it." : nil];
@@ -771,7 +772,9 @@
         [NSGraphicsContext restoreGraphicsState];
     } else {
         if (_debugGutterVisible) {
-            [[[NSColor controlBackgroundColor] blendedColorWithFraction:0.1 ofColor:[NSColor grayColor]] set];
+            NSColor *background = [[self window] backgroundColor];
+            if (!background) background = [NSColor windowBackgroundColor];
+            [[background blendedColorWithFraction:0.1 ofColor:[NSColor whiteColor]] set];
             NSRectFill(NSIntersectionRect(rect, NSMakeRect(0, NSMinY(rect), 22, NSHeight(rect))));
             [[NSColor grayColor] set];
             NSRectFill(NSIntersectionRect(rect, NSMakeRect(22, NSMinY(rect), 1, NSHeight(rect))));

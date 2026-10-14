@@ -735,6 +735,53 @@ static void testFontAndSidebarPreferences(void)
   [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeFontsDidChange" object:nil];
 }
 
+static void testBreakpointFileTypes(void)
+{
+  YCodeProject *project = [YCodeProject new];
+  YCodeWindowController *window = [YCodeWindowController new];
+  [window setProject:project];
+  YCodeDebugger *debugger = [[project buildSystem] debugger];
+  NSArray *files = [NSArray arrayWithObjects:@"Example.m", @"Example.mm", @"Example.cpp",
+    @"Example.h", @"Example.hpp", @"Example.hxx", @"Info.plist", @"README.md", @"GNUmakefile", nil];
+  NSUInteger index;
+  for (index = 0; index < [files count]; index++) {
+    NSString *file = [@"/tmp/YcodeBreakpointTypes" stringByAppendingPathComponent:[files objectAtIndex:index]];
+    BOOL allowed = index < 3;
+    YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+      initWithFilePath:file content:@"first line\n"];
+    [[project editorController] setCurrentDocument:document];
+    [[document textView] setSelectedRange:NSMakeRange(0, 0)];
+    testAssert([window validateDebuggerAction:@selector(toggleBreakpoint:) tag:0] == allowed,
+      [NSString stringWithFormat:@"Breakpoint menu eligibility for %@", file]);
+    [window toggleBreakpoint:nil];
+    testAssert([debugger breakpointStateAtFile:file line:1] ==
+      (allowed ? YCodeBreakpointEnabled : YCodeBreakpointNone),
+      @"Breakpoint menu action rejects headers and non-source files");
+    [debugger toggleBreakpointAtFile:file line:2];
+    testAssert([debugger breakpointStateAtFile:file line:2] ==
+      (allowed ? YCodeBreakpointEnabled : YCodeBreakpointNone),
+      @"Debugger also enforces source-only breakpoint creation");
+    YCEditorRulerView *ruler = (YCEditorRulerView *)[[document scrollView] verticalRulerView];
+    [ruler setDebugger:debugger file:file active:YES];
+    testAssert([ruler debugGutterVisible] == allowed,
+      @"Breakpoint gutter is hidden for headers and non-source files even during debugging");
+    [[project editorController] setCurrentDocument:nil];
+    [document release];
+  }
+  NSString *storage = [[NSProcessInfo processInfo] globallyUniqueString];
+  [[NSUserDefaults standardUserDefaults] setObject:[NSArray arrayWithObjects:
+    @"/tmp/Example.m:1", @"/tmp/Example.h:1", @"/tmp/Info.plist:1", nil] forKey:storage];
+  [debugger setBreakpointStorageKey:storage];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/Example.m" line:1] == YCodeBreakpointEnabled &&
+    [debugger breakpointStateAtFile:@"/tmp/Example.h" line:1] == YCodeBreakpointNone &&
+    [debugger breakpointStateAtFile:@"/tmp/Info.plist" line:1] == YCodeBreakpointNone,
+    @"Restoring saved breakpoints skips headers and non-source files");
+  [debugger setBreakpointStorageKey:nil];
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:storage];
+  [window setProject:nil];
+  [window close]; [window release]; [project release];
+}
+
 static void testHiddenRulersDebugGutter(void)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -1364,10 +1411,18 @@ static void testDebuggerRecords(void)
   testAssert([debugger breakpointStateAtFile:@"/tmp/Source Folder/main.c" line:3] == YCodeBreakpointNone,
     @"GDB deletion removes its source marker");
   [debugger toggleBreakpointAtFile:@"/tmp/later.c" line:5];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
+    @"New enabled breakpoints stay red while awaiting GDB confirmation");
   [debugger receiveData:[@"^done,bkpt={number=\"8\",addr=\"<PENDING>\",pending=\"/tmp/later.c:5\",original-location=\"/tmp/later.c:5\",enabled=\"y\"}\n"
     dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
+    @"Enabled unresolved breakpoints remain red");
+  [debugger toggleBreakpointEnabledAtFile:@"/tmp/later.c" line:5];
   testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointInactive,
-    @"Unresolved breakpoints are grey until GDB resolves them");
+    @"Disabling an unresolved breakpoint makes it grey");
+  [debugger toggleBreakpointEnabledAtFile:@"/tmp/later.c" line:5];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
+    @"Re-enabling an unresolved breakpoint makes it red again");
   [debugger receiveData:[@"=breakpoint-modified,bkpt={number=\"8\",fullname=\"/tmp/later.c\",line=\"5\",addr=\"0x1234\",enabled=\"y\"}\n"
     dataUsingEncoding:NSUTF8StringEncoding]];
   testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
@@ -2701,7 +2756,9 @@ int main(void)
     [pool drain]; return failures ? 1 : 0;
   }
   if ([arguments count] == 2 && [[arguments objectAtIndex:1] isEqual:@"--check-debug-gutter"]) {
+    testBreakpointFileTypes();
     testHiddenRulersDebugGutter();
+    testDebuggerRecords();
     NSLog(@"Ycode debugger gutter checks: %lu failures", (unsigned long)failures);
     [pool drain];
     return failures ? 1 : 0;
@@ -2753,6 +2810,7 @@ int main(void)
   testEditorColorPreferences();
   testEditorColors();
   testHiddenRulersDebugGutter();
+  testBreakpointFileTypes();
   testSyntaxHighlighting();
   testDebuggerRecords();
   testAssert([manager createDirectoryAtPath:temporaryDirectory

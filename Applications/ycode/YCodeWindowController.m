@@ -1294,7 +1294,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (action == @selector(debugProject:)) return _project && ![build isBusy];
     YCodeDebugger *debugger = [build debugger];
     if (action == @selector(toggleBreakpoint:))
-        return [_editorController currentDocument] != nil && ![debugger isRunning];
+        return [YCodeDebugger canSetBreakpointAtFile:[[_editorController currentDocument] filePath]] &&
+            ![debugger isRunning];
     if (![build isDebugging] || ![debugger isReady]) return NO;
     if (tag == 1) return [debugger isRunning];
     if (tag == 3) return YES;
@@ -1333,7 +1334,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (IBAction)toggleBreakpoint:(id)sender
 {
     YCodeEditorDocument *document = [_editorController currentDocument];
-    if (!document) return;
+    if (![self validateDebuggerAction:@selector(toggleBreakpoint:) tag:0]) return;
     NSString *text = [document content];
     NSUInteger position = [[document textView] selectedRange].location;
     NSUInteger offset = 0, line = 1;

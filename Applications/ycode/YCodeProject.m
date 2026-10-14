@@ -1498,7 +1498,8 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
       while ((entry = [entryEnumerator nextObject]) != nil)
         {
           if ([references containsObject:[entry objectForKey:@"file"]]) {
-              [[[entry objectForKey:@"group"] children] removeObjectIdenticalTo:[entry objectForKey:@"file"]];
+              PBXGroup *group = [entry objectForKey:@"group"];
+              [[group children] removeObjectIdenticalTo:[entry objectForKey:@"file"]];
               changed = YES;
           }
         }

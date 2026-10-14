@@ -164,7 +164,11 @@ or stopping at a source location selects the Debugger tab.
 
 While debugging, a gutter appears beside the source line numbers. Click it to
 add or remove a breakpoint; Shift-click a breakpoint to enable or disable it.
-Enabled breakpoints are red dots; disabled or unresolved breakpoints are grey.
+Breakpoints can only be set in source implementation files, not headers or
+resource/configuration files. The breakpoint gutter and menu command follow
+this restriction.
+Enabled breakpoints are red dots, including those awaiting resolution by GDB;
+disabled breakpoints are grey.
 A yellow arrow marks the current stopped line, drawn behind the breakpoint dot
 when both occupy that line. The arrow clears on resume, exit, or session end.
 GDB breakpoint commands also update the markers. Breakpoints relocated by GDB

@@ -52,7 +52,6 @@ typedef enum {
   NSMutableDictionary *_breakpoints;
   NSMutableSet *_disabledBreakpoints;
   NSMutableDictionary *_resolvedLocations;
-  NSMutableSet *_pendingBreakpoints;
   NSString *_sourceDirectory;
   NSString *_executionFile;
   NSUInteger _executionLine;
@@ -79,6 +78,8 @@ typedef enum {
 - (void)command:(NSString *)command;
 - (void)consoleCommand:(NSString *)command;
 - (void)toggleBreakpointAtFile:(NSString *)file line:(NSUInteger)line;
+/** Whether the path names a source implementation file, excluding headers. */
++ (BOOL)canSetBreakpointAtFile:(NSString *)file;
 + (NSString *)quote:(NSString *)string;
 + (NSDictionary *)parseRecord:(NSString *)record;
 @end
