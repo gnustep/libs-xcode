@@ -1389,6 +1389,56 @@ static void testSearchAndTestNavigator(NSString *temporaryDirectory)
   [document release];
 }
 
+static void testArchitectureSelection(NSString *temporaryDirectory)
+{
+  NSString *directory = [temporaryDirectory stringByAppendingPathComponent:@"Architecture Project"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  [@"ARCH = make-default\nall:\n\t@echo arch=$(ARCH) toolchain=$$YCODE_TOOLCHAIN_TEST\n" writeToFile:
+    [directory stringByAppendingPathComponent:@"Makefile"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  YCodeProject *project = [YCodeProject new];
+  [project readFromURL:[NSURL fileURLWithPath:directory] ofType:@"YCodeMakeProjectType" error:NULL];
+  YCodeWindowController *window = [YCodeWindowController new]; [window setProject:project];
+  NSToolbar *toolbar = [[window window] toolbar];
+  NSArray *identifiers = [[toolbar items] valueForKey:@"itemIdentifier"];
+  NSUInteger index = [identifiers indexOfObject:@"architecture"];
+  testAssert(index != NSNotFound && index == [identifiers indexOfObject:@"scheme"] + 1,
+    @"Architecture selector is immediately after Target");
+  if (index == NSNotFound) { [window close]; [window release]; [project release]; return; }
+  NSPopUpButton *selector = [[[toolbar items] objectAtIndex:index] view];
+  YCodeBuildSystem *build = [project buildSystem];
+  testAssert([build architecture] == nil && [selector indexOfSelectedItem] == 0,
+    @"Architecture defaults to Native");
+  NSString *native = [YCodeBuildSystem hostArchitecture];
+  [selector selectItemWithTitle:native]; [selector sendAction:[selector action] to:[selector target]];
+  testAssert([[build architecture] isEqual:native] && [build build], @"Toolbar architecture selection starts a native build");
+  waitForBuild(build, NO);
+  testAssert([build status] == YCodeBuildStatusSuccess && [[build buildOutput]
+    rangeOfString:[@"arch=" stringByAppendingString:native]].location != NSNotFound,
+    @"Architecture reaches make as a command-line variable");
+  NSString *foreign = [native isEqual:@"arm64"] ? @"x86_64" : @"arm64";
+  [selector selectItemWithTitle:foreign]; [selector sendAction:[selector action] to:[selector target]];
+  testAssert(![build build] && [build status] == YCodeBuildStatusFailed &&
+    [[build buildErrors] rangeOfString:@"toolchain"].location != NSNotFound,
+    @"An unconfigured cross-build fails instead of silently using the host toolchain");
+  NSDictionary *environment = [NSDictionary dictionaryWithObject:@"selected" forKey:@"YCODE_TOOLCHAIN_TEST"];
+  [[NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObject:environment forKey:foreign]
+    forKey:@"ArchitectureEnvironments"] writeToFile:[directory stringByAppendingPathComponent:@".ycode.plist"] atomically:YES];
+  testAssert([build build], @"Configured architecture environment can launch make"); waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:[NSString stringWithFormat:@"arch=%@ toolchain=selected", foreign]].location != NSNotFound,
+    @"Selected architecture and its environment reach the build process");
+  YCodeProject *reopened = [YCodeProject new];
+  [reopened setProjectPath:directory];
+  testAssert([[[reopened buildSystem] architecture] isEqual:foreign], @"Architecture is persisted per project");
+  [reopened release];
+  [selector selectItemAtIndex:0]; [selector sendAction:[selector action] to:[selector target]];
+  testAssert([build build], @"Native remains available after a cross-toolchain selection"); waitForBuild(build, NO);
+  testAssert([[build buildOutput] rangeOfString:@"arch=make-default toolchain=\n"].location != NSNotFound &&
+    [[build buildEnvironment] objectForKey:@"YCODE_TOOLCHAIN_TEST"] == nil,
+    @"Returning to Native restores original arguments and environment without leaking overrides");
+  [window close]; [window release]; [project release];
+}
+
 static void testMakeDirectory(NSString *temporaryDirectory)
 {
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -2313,6 +2363,12 @@ int main(void)
     NSLog(@"Ycode test navigation checks: %lu failures", (unsigned long)failures);
     [pool drain]; return failures ? 1 : 0;
   }
+  if ([arguments containsObject:@"--check-architecture"]) {
+    testArchitectureSelection(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode architecture checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-make-directory"]) {
     testMakeDirectory(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -2635,6 +2691,7 @@ int main(void)
   testProjectCenterExport(temporaryDirectory);
   testResultNavigation(temporaryDirectory);
   testSearchAndTestNavigator(temporaryDirectory);
+  testArchitectureSelection(temporaryDirectory);
   testMakeDirectory(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);

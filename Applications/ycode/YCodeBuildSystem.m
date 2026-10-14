@@ -187,6 +187,98 @@
     ASSIGN(_scheme, scheme);
 }
 
++ (NSString *)hostArchitecture
+{
+#if defined(__aarch64__) || defined(__arm64__)
+    return @"arm64";
+#elif defined(__x86_64__) || defined(_M_X64)
+    return @"x86_64";
+#elif defined(__i386__) || defined(_M_IX86)
+    return @"i386";
+#elif defined(__arm__)
+    return @"armv7";
+#elif defined(__riscv) && __riscv_xlen == 64
+    return @"riscv64";
+#else
+    return @"native";
+#endif
+}
+
+- (NSString *)architecturePreferenceKey
+{
+    return [@"YCodeArchitecture:" stringByAppendingString:[[_project projectPath] stringByStandardizingPath] ?: @""];
+}
+
+- (NSString *)architecture
+{
+    return [[NSUserDefaults standardUserDefaults] stringForKey:[self architecturePreferenceKey]];
+}
+
+- (void)setArchitecture:(NSString *)architecture
+{
+    if ([self isBusy] || ![_project projectPath]) return;
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([architecture length]) [defaults setObject:architecture forKey:[self architecturePreferenceKey]];
+    else [defaults removeObjectForKey:[self architecturePreferenceKey]];
+    [defaults synchronize];
+}
+
+- (NSDictionary *)architectureEnvironments
+{
+    NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:
+        [[_project projectDirectoryPath] stringByAppendingPathComponent:@".ycode.plist"]];
+    id environments = [settings objectForKey:@"ArchitectureEnvironments"];
+    return [environments isKindOfClass:[NSDictionary class]] ? environments : nil;
+}
+
+- (NSArray *)availableArchitectures
+{
+    NSMutableArray *names = [NSMutableArray arrayWithObjects:@"x86_64", @"arm64", @"i386", @"armv7", @"riscv64", nil];
+    NSEnumerator *keys = [[[self architectureEnvironments] allKeys] objectEnumerator];
+    id key;
+    while ((key = [keys nextObject]) != nil)
+        if ([key isKindOfClass:[NSString class]] && [key length] && ![names containsObject:key]) [names addObject:key];
+    NSString *selection = [self architecture];
+    if ([selection length] && ![names containsObject:selection]) [names addObject:selection];
+    return names;
+}
+
+- (NSDictionary *)environmentForArchitecture
+{
+    NSMutableDictionary *environment = [NSMutableDictionary dictionaryWithDictionary:_buildEnvironment];
+    NSString *architecture = [self architecture];
+    if (![architecture length]) return environment;
+    id overrides = [[self architectureEnvironments] objectForKey:architecture];
+    BOOL configured = [overrides isKindOfClass:[NSDictionary class]] && [overrides count] > 0;
+    BOOL needsToolchain = ![architecture isEqual:[[self class] hostArchitecture]];
+#ifndef GNUSTEP
+    if ([[self detectedBuildSystem] isEqual:@"xcode"]) needsToolchain = NO;
+#endif
+    if (needsToolchain && !configured) {
+        [self reportError:[NSString stringWithFormat:
+            @"No %@ toolchain is configured. Add ArchitectureEnvironments.%@ to .ycode.plist in the project folder, or select Native.\n",
+            architecture, architecture]];
+        return nil;
+    }
+    if (configured) {
+        NSEnumerator *keys = [overrides keyEnumerator];
+        id key;
+        while ((key = [keys nextObject]) != nil) {
+            id value = [overrides objectForKey:key];
+            if (![key isKindOfClass:[NSString class]] || ![value isKindOfClass:[NSString class]]) {
+                [self reportError:@"Architecture environment keys and values must be strings.\n"];
+                return nil;
+            }
+            [environment setObject:value forKey:key];
+        }
+    }
+    [environment setObject:architecture forKey:@"ARCH"];
+    [environment setObject:architecture forKey:@"ARCHS"];
+    [environment setObject:architecture forKey:@"CURRENT_ARCH"];
+    [environment setObject:architecture forKey:@"YCODE_ARCH"];
+    return environment;
+}
+
 #pragma mark - Build Operations
 
 - (BOOL)build
@@ -671,6 +763,30 @@
     }
     
     if (_currentTask) return NO;
+    NSDictionary *environment = [self environmentForArchitecture];
+    if (!environment) {
+        BOOL testing = _status == YCodeBuildStatusTesting || _testAfterBuild;
+        BOOL cleaning = _status == YCodeBuildStatusCleaning;
+        _status = YCodeBuildStatusFailed;
+        _runAfterBuild = _debugAfterBuild = _testAfterBuild = NO;
+        if (testing && [_delegate respondsToSelector:@selector(buildSystemDidFinishTests:success:)])
+            [(id)_delegate buildSystemDidFinishTests:self success:NO];
+        else if (cleaning && [_delegate respondsToSelector:@selector(buildSystemDidFinishClean:)])
+            [(id)_delegate buildSystemDidFinishClean:self];
+        else if ([_delegate respondsToSelector:@selector(buildSystemDidFinishBuild:success:)])
+            [(id)_delegate buildSystemDidFinishBuild:self success:NO];
+        return NO;
+    }
+    if ([[self architecture] length]) {
+        NSMutableArray *selectedArguments = [NSMutableArray arrayWithArray:arguments];
+        if ([command isEqual:@"make"])
+            [selectedArguments insertObject:[@"ARCH=" stringByAppendingString:[self architecture]] atIndex:0];
+#ifndef GNUSTEP
+        if ([command isEqual:@"xcodebuild"])
+            [selectedArguments addObjectsFromArray:[NSArray arrayWithObjects:@"-arch", [self architecture], nil]];
+#endif
+        arguments = selectedArguments;
+    }
     _taskTerminated = _outputClosed = _errorClosed = NO;
     
     _currentTask = [[NSTask alloc] init];
@@ -689,7 +805,7 @@
         [_currentTask setArguments:resolvedArguments];
     }
 #endif
-    [_currentTask setEnvironment:_buildEnvironment];
+    [_currentTask setEnvironment:environment];
     
     if (_project) {
         [_currentTask setCurrentDirectoryPath:[_project projectDirectoryPath]];

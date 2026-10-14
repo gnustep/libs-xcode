@@ -194,3 +194,30 @@ For an application bundle, specify the executable inside the bundle. Ycode does
 not guess executable paths or parse arbitrary makefiles to discover targets.
 Save Project writes only `.ycode.plist`; makefiles remain authoritative for
 sources and dependencies. Project Save As does not convert or move this folder.
+
+## Architecture selection
+
+The **Architecture** toolbar selector follows Target. Native leaves the build
+command and environment unchanged. Explicit selections are saved per project;
+controls are disabled while a build or debug session is active.
+
+For Makefile projects, Ycode passes `ARCH=<selection>` to make. All selected
+builds receive `ARCH`, `ARCHS`, `CURRENT_ARCH`, and `YCODE_ARCH` in their child
+process environment. On macOS, xcodebuild additionally receives `-arch`.
+GNUstep buildtool does not implement `-arch`; its compiler and linker must instead
+come from a configured toolchain environment.
+
+Configure non-native toolchains in the project folder's `.ycode.plist`, under
+`ArchitectureEnvironments`. Each architecture maps to a dictionary of environment
+variable names and string values (for example `PATH`, `GNUSTEP_MAKEFILES`, and
+compiler/sysroot settings appropriate to your toolchain). These overrides apply
+only to that project's child processes. Additional architecture keys appear in
+the selector. Native does not apply any overrides.
+
+Ycode rejects a non-native GNUstep build when its environment entry is missing
+or empty. Supplying an entry does not install or validate the cross-compiler,
+SDK, runtime, or target libraries: configure those first, and ensure your
+makefile or buildtool setup uses them. The build scripts must honor the selected
+architecture and isolate their output directories, or you must Clean before
+switching architectures to prevent reuse of incompatible objects. Running and
+debugging foreign binaries still require an appropriate execution environment.

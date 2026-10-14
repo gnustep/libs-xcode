@@ -102,6 +102,12 @@ typedef enum {
 /**
  * Initialization
  */
+/** Architecture selection is persisted per project; nil uses the native toolchain. */
++ (NSString *)hostArchitecture;
+- (NSString *)architecture;
+- (void)setArchitecture:(NSString *)architecture;
+- (NSArray *)availableArchitectures;
+
 - (id)initWithProject:(YCodeProject *)project;
 
 /**

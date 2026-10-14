@@ -643,6 +643,22 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             [defaults setBool:YES forKey:@"YCodeCleanAndStepToolbarItemsAdded"];
             [defaults synchronize];
         }
+        if (![defaults boolForKey:@"YCodeArchitectureToolbarItemAdded"]) {
+            NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
+            if (![identifiers containsObject:@"architecture"]) {
+                NSUInteger index = [identifiers indexOfObject:@"scheme"];
+                [_toolbar insertItemWithItemIdentifier:@"architecture"
+                    atIndex:index == NSNotFound ? [identifiers count] : index + 1];
+            }
+#ifdef GNUSTEP
+            NSMutableDictionary *configuration = [NSMutableDictionary dictionaryWithDictionary:
+                [defaults dictionaryForKey:@"NSToolbar Config YCodeMainToolbar"] ?: [NSDictionary dictionary]];
+            [configuration setObject:[[_toolbar items] valueForKey:@"itemIdentifier"] forKey:@"items"];
+            [defaults setObject:configuration forKey:@"NSToolbar Config YCodeMainToolbar"];
+#endif
+            [defaults setBool:YES forKey:@"YCodeArchitectureToolbarItemAdded"];
+            [defaults synchronize];
+        }
         // Add the bottom-pane control to existing layouts once.
         if (![defaults boolForKey:@"YCodeBottomToolbarItemAdded"]) {
             NSArray *identifiers = [[_toolbar items] valueForKey:@"itemIdentifier"];
@@ -685,6 +701,27 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [selector setEnabled:[selector numberOfItems] > 1 && ![[_project buildSystem] isBusy]];
 }
 
+- (void)populateArchitectureSelector:(NSPopUpButton *)selector
+{
+    [selector removeAllItems];
+    [selector addItemWithTitle:[NSString stringWithFormat:@"Native (%@)", [YCodeBuildSystem hostArchitecture]]];
+    NSEnumerator *names = [[[_project buildSystem] availableArchitectures] objectEnumerator];
+    NSString *name;
+    while ((name = [names nextObject]) != nil) {
+        [selector addItemWithTitle:name];
+        [[selector lastItem] setRepresentedObject:name];
+        if ([name isEqual:[[_project buildSystem] architecture]]) [selector selectItem:[selector lastItem]];
+    }
+    [selector setEnabled:_project != nil && ![[_project buildSystem] isBusy]];
+}
+
+- (void)selectArchitecture:(NSPopUpButton *)sender
+{
+    if (_project && ![[_project buildSystem] isBusy])
+        [[_project buildSystem] setArchitecture:[[sender selectedItem] representedObject]];
+    [self refreshTargetSelectors];
+}
+
 - (void)refreshTargetSelectors
 {
     NSEnumerator *enumerator = [[_toolbar items] objectEnumerator];
@@ -692,6 +729,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     while ((item = [enumerator nextObject]) != nil) {
         if ([[item itemIdentifier] isEqual:@"scheme"] && [[item view] isKindOfClass:[NSPopUpButton class]])
             [self populateTargetSelector:(NSPopUpButton *)[item view]];
+        if ([[item itemIdentifier] isEqual:@"architecture"] && [[item view] isKindOfClass:[NSPopUpButton class]])
+            [self populateArchitectureSelector:(NSPopUpButton *)[item view]];
     }
 }
 
@@ -1267,6 +1306,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (BOOL)validateToolbarItem:(NSToolbarItem *)item
 {
+    if ([item action] == @selector(selectArchitecture:))
+        return _project != nil && ![[_project buildSystem] isBusy];
     if ([item action] == @selector(selectBuildTarget:))
         return [[[_project project] targets] count] > 0 && ![[_project buildSystem] isBusy];
     if ([item action] == @selector(debugProject:) || [item action] == @selector(debugAction:))
@@ -1928,24 +1969,34 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme",
+    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", @"restart", @"go", @"up", @"down", NSToolbarSeparatorItemIdentifier, @"scheme", @"architecture",
              @"navigator", @"bottom", @"inspector", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", NSToolbarSeparatorItemIdentifier, @"scheme",
+    return [NSArray arrayWithObjects:@"clean", @"build", @"run", @"debug", @"stop", @"pause", @"continue", @"next", @"stepInto", @"stepOut", NSToolbarSeparatorItemIdentifier, @"scheme", @"architecture",
              NSToolbarFlexibleSpaceItemIdentifier, @"navigator", @"bottom", @"inspector", nil];
 }
 
 - (NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSString *)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag
 {
-    Class itemClass = [itemIdentifier isEqual:@"scheme"] ? [YCodeTargetToolbarItem class] : [NSToolbarItem class];
+    Class itemClass = ([itemIdentifier isEqual:@"scheme"] || [itemIdentifier isEqual:@"architecture"]) ? [YCodeTargetToolbarItem class] : [NSToolbarItem class];
     NSToolbarItem *item = [[itemClass alloc] initWithItemIdentifier:itemIdentifier];
     
     NSArray *debugIdentifiers = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
     NSUInteger debugIndex = [debugIdentifiers indexOfObject:itemIdentifier];
-    if ([itemIdentifier isEqualToString:@"scheme"]) {
+    if ([itemIdentifier isEqualToString:@"architecture"]) {
+        NSPopUpButton *selector = AUTORELEASE([[NSPopUpButton alloc]
+            initWithFrame:NSMakeRect(0, 0, 155, 26) pullsDown:NO]);
+        [selector setTarget:self]; [selector setAction:@selector(selectArchitecture:)];
+        [selector setToolTip:@"Build architecture; cross-builds require a configured toolchain"];
+        [self populateArchitectureSelector:selector];
+        [item setTarget:self]; [item setAction:@selector(selectArchitecture:)];
+        [item setLabel:@"Architecture"]; [item setPaletteLabel:@"Architecture"];
+        [item setView:selector];
+        [item setMinSize:NSMakeSize(130, 26)]; [item setMaxSize:NSMakeSize(190, 26)];
+    } else if ([itemIdentifier isEqualToString:@"scheme"]) {
         NSPopUpButton *selector = AUTORELEASE([[NSPopUpButton alloc]
             initWithFrame:NSMakeRect(0, 0, 190, 26) pullsDown:NO]);
         [selector setTarget:self];
