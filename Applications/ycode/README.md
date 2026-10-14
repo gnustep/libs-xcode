@@ -95,6 +95,21 @@ missing files are skipped when reopening the project.
 Choose an entry to reopen it, or **Clear Menu** to clear the saved history.
 Missing projects remain listed but disabled.
 
+Sound resources have an oscilloscope waveform icon in the navigator. Selecting one opens
+a read-only preview and selects the **Sound** inspector, which shows a waveform,
+duration, sample rate, and channel count. Use **Play**, **Pause/Resume**, and
+**Stop** to audition it. Switching files or closing the window stops playback.
+Supported playback formats depend on the installed NSSound codecs. GNUstep builds
+enable background waveform decoding when `pkg-config sndfile` is available
+(install the libsndfile development package before building); without it, playback
+remains available and the inspector explains that waveform support is unavailable.
+
+**Preferences > Tabs** controls tab and indentation width (1–16 spaces, default 2)
+and whether indentation inserts spaces (the default) or literal tabs. Settings
+are saved and update open editors immediately without rewriting existing whitespace.
+The **Honor project .clang-format settings** option is enabled by default; turn
+it off to use your chosen width and indentation style even in configured projects.
+
 The editor highlights keywords, types, function and method names, constants,
 numbers, strings, and comments in Objective-C, C, C++, Swift, JavaScript,
 TypeScript, and Python. Highlighting also covers GNUmakefiles, CMake files,

@@ -862,6 +862,46 @@ YCodeFileURLFromPath(NSString *path)
     [self refreshEditorColorWells];
 }
 
+- (void)changeTabPreferences:(id)sender
+{
+    [YCodePreferences setTabWidth:[_tabWidthChoice indexOfSelectedItem] + 1
+        useSpaces:[_spacesForTabs state] == NSOnState
+        useProjectSettings:[_projectIndentation state] == NSOnState];
+}
+
+- (void)setupTabPreferences
+{
+    _tabPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
+    [[_preferencesPanel contentView] addSubview:_tabPreferencesView];
+    NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 404, 190, 24)]);
+    [label setStringValue:@"Tab / indent width (spaces):"];
+    [label setEditable:NO]; [label setSelectable:NO];
+    [label setBezeled:NO]; [label setDrawsBackground:NO];
+    [_tabPreferencesView addSubview:label];
+    _tabWidthChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(260, 401, 110, 28) pullsDown:NO]);
+    NSUInteger width;
+    for (width = 1; width <= 16; width++)
+        [_tabWidthChoice addItemWithTitle:[NSString stringWithFormat:@"%lu", (unsigned long)width]];
+    [_tabWidthChoice setTarget:self]; [_tabWidthChoice setAction:@selector(changeTabPreferences:)];
+    [_tabPreferencesView addSubview:_tabWidthChoice];
+    _spacesForTabs = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 360, 350, 28)]);
+    [_spacesForTabs setButtonType:NSSwitchButton];
+    [_spacesForTabs setTitle:@"Insert spaces instead of tab characters"];
+    [_spacesForTabs setTarget:self]; [_spacesForTabs setAction:@selector(changeTabPreferences:)];
+    [_tabPreferencesView addSubview:_spacesForTabs];
+    _projectIndentation = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 320, 350, 28)]);
+    [_projectIndentation setButtonType:NSSwitchButton];
+    [_projectIndentation setTitle:@"Honor project .clang-format settings"];
+    [_projectIndentation setTarget:self]; [_projectIndentation setAction:@selector(changeTabPreferences:)];
+    [_tabPreferencesView addSubview:_projectIndentation];
+    NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 236, 350, 64)]);
+    [hint setStringValue:@"Changes are saved and applied immediately. Existing whitespace is preserved. Project settings override these defaults when enabled."];
+    [hint setEditable:NO]; [hint setSelectable:NO];
+    [hint setBezeled:NO]; [hint setDrawsBackground:NO];
+    [hint setFont:[NSFont systemFontOfSize:12]];
+    [_tabPreferencesView addSubview:hint];
+}
+
 - (void)selectPreferenceGroup:(id)sender
 {
     if ([_fontChoices containsObject:[_preferencesPanel firstResponder]])
@@ -870,6 +910,7 @@ YCodeFileURLFromPath(NSString *path)
     [_colorPreferencesView setHidden:!colors];
     [_editorPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 1];
     [_fontPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 2];
+    [_tabPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 3];
     if (!colors) {
         NSEnumerator *enumerator = [_editorColorWells objectEnumerator];
         NSColorWell *well;
@@ -962,7 +1003,7 @@ YCodeFileURLFromPath(NSString *path)
         NSView *content = [_preferencesPanel contentView];
         _preferencesGroup = AUTORELEASE([[NSPopUpButton alloc]
             initWithFrame:NSMakeRect(20, 458, 350, 28) pullsDown:NO]);
-        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", nil]];
+        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", @"Tabs", nil]];
         [_preferencesGroup setTarget:self];
         [_preferencesGroup setAction:@selector(selectPreferenceGroup:)];
         [content addSubview:_preferencesGroup];
@@ -977,6 +1018,7 @@ YCodeFileURLFromPath(NSString *path)
         [_showEditorRulers setAction:@selector(changeEditorRulers:)];
         [_editorPreferencesView addSubview:_showEditorRulers];
         [self setupFontPreferences];
+        [self setupTabPreferences];
         _editorColorWells = [NSMutableArray new];
         NSArray *labels = [NSArray arrayWithObjects:@"Editor background", @"Plain text", @"Keywords",
             @"Strings", @"Comments", @"Numbers", @"Preprocessor directives", @"Types",
@@ -1015,6 +1057,9 @@ YCodeFileURLFromPath(NSString *path)
     }
     [self refreshEditorColorWells];
     [self refreshFontPreferences];
+    [_tabWidthChoice selectItemAtIndex:[YCodePreferences tabWidth] - 1];
+    [_spacesForTabs setState:[YCodePreferences useSpacesForTabs] ? NSOnState : NSOffState];
+    [_projectIndentation setState:[YCodePreferences useProjectIndentation] ? NSOnState : NSOffState];
     [_showEditorRulers setState:[[NSUserDefaults standardUserDefaults]
         boolForKey:@"YCodeHideEditorRulers"] ? NSOffState : NSOnState];
     [self selectPreferenceGroup:nil];

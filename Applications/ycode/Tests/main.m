@@ -51,11 +51,16 @@
 #import "YCodeTextView.h"
 #import "AppController.h"
 #import "YCodePreferences.h"
+#import "YCSoundInspectorView.h"
 #include <math.h>
 
 @interface YCodeProjectNavigatorController (Testing)
 - (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item;
 - (void)updateThumbnailForItem:(YCodeProjectNavigatorItem *)item;
+@end
+
+@interface YCodeProjectNavigatorItem (SoundIconTesting)
+- (NSImage *)iconForFileExtension:(NSString *)extension;
 @end
 
 @interface NSTabViewItem (CloseButtonTesting)
@@ -398,7 +403,7 @@ static void testEditorColorPreferences(void)
   NSView *colorsGroup = [app valueForKey:@"_colorPreferencesView"];
   NSView *editorGroup = [app valueForKey:@"_editorPreferencesView"];
   NSButton *rulers = [app valueForKey:@"_showEditorRulers"];
-  testAssert([groups numberOfItems] == 3 && ![colorsGroup isHidden] && [editorGroup isHidden],
+  testAssert([groups numberOfItems] == 4 && ![colorsGroup isHidden] && [editorGroup isHidden],
     @"Preferences starts with the color group selected");
   [groups selectItemAtIndex:1];
   [groups sendAction:[groups action] to:[groups target]];
@@ -455,6 +460,185 @@ static void testEditorColorPreferences(void)
   if (saved) [defaults setObject:saved forKey:@"YCodeEditorColors"];
   [saved release];
   [defaults synchronize];
+}
+
+@interface YCodeTestSound : NSSound
+{
+  BOOL _playing;
+}
+@end
+@implementation YCodeTestSound
+- (BOOL)play { _playing = YES; return YES; }
+- (BOOL)pause { _playing = NO; return YES; }
+- (BOOL)resume { _playing = YES; return YES; }
+- (BOOL)stop { _playing = NO; return YES; }
+- (BOOL)isPlaying { return _playing; }
+@end
+
+static void testSoundInspector(NSString *directory)
+{
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  [@"all:\n\t@true\n" writeToFile:[directory stringByAppendingPathComponent:@"Makefile"]
+    atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  unsigned char header[] = {'R','I','F','F',0xa4,0x3e,0,0,'W','A','V','E',
+    'f','m','t',' ',16,0,0,0,1,0,1,0,0x40,0x1f,0,0,0x80,0x3e,0,0,2,0,16,0,
+    'd','a','t','a',0x80,0x3e,0,0};
+  NSMutableData *wave = [NSMutableData dataWithBytes:header length:sizeof(header)];
+  NSUInteger i;
+  for (i = 0; i < 8000; i++) {
+    unsigned char sample[] = {0, i % 2 ? 0x40 : 0xc0};
+    [wave appendBytes:sample length:2];
+  }
+  NSString *path = [directory stringByAppendingPathComponent:@"Tone.WAV"];
+  [wave writeToFile:path atomically:YES];
+  YCodeProject *project = [YCodeProject new];
+  [project readFromURL:[NSURL fileURLWithPath:directory] ofType:@"YCodeMakeProjectType" error:NULL];
+  YCodeWindowController *window = [YCodeWindowController new]; [window setProject:project];
+  [[window window] setContentSize:NSMakeSize(1200, 760)];
+  [[window window] makeKeyAndOrderFront:nil];
+  testAssert([[project editorController] openFile:path], @"Sound files open as project resources");
+  YCodeEditorDocument *document = [[project editorController] currentDocument];
+  testAssert([document isSoundDocument] && [document textView] == nil && ![document isModified],
+    @"Sound previews are read-only, not binary text editors");
+  NSTabView *tabs = [window valueForKey:@"_inspectorTabView"];
+  testAssert([[[tabs selectedTabViewItem] identifier] isEqual:@"sound"],
+    @"Selecting sound files selects the Sound inspector");
+  YCSoundInspectorView *inspector = (id)[[tabs selectedTabViewItem] view];
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5];
+  while (![inspector valueForKey:@"_peaks"] && [deadline timeIntervalSinceNow] > 0)
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+#ifdef YCODE_HAVE_SNDFILE
+  NSData *peaks = [inspector valueForKey:@"_peaks"];
+  testAssert([peaks length] == 1024 * sizeof(float) &&
+    fabs(((const float *)[peaks bytes])[100] - 0.5) < 0.01 &&
+    fabs([[inspector valueForKey:@"_duration"] doubleValue] - 1) < 0.01,
+    @"Waveform decodes actual PCM peaks and duration");
+#endif
+  [document saveToFile];
+  testAssert([[NSData dataWithContentsOfFile:path] isEqual:wave], @"Save never alters sound bytes");
+  YCodeProjectNavigatorItem *item = [[YCodeProjectNavigatorItem alloc]
+    initWithRepresentedObject:nil type:YCodeNavigatorItemTypeFile];
+  testAssert([[item iconForFileExtension:@"WAV"] isValid] &&
+    [item iconForFileExtension:@"WAV"] == [item iconForFileExtension:@"flac"],
+    @"Audio extensions share a dedicated sound icon");
+  PBXFileReference *audioFile = [PBXFileReference new];
+  [audioFile setPath:path];
+  [item setRepresentedObject:audioFile];
+  NSBitmapImageRep *iconPixels = [NSBitmapImageRep imageRepWithData:[[item icon] TIFFRepresentation]];
+  testAssert(iconPixels != nil && [[item icon] isValid] &&
+    [[iconPixels colorAtX:8 y:8] alphaComponent] > 0,
+    @"Sound icon retains visible pixels after the navigator copies it");
+  NSString *iconPath = [[[NSProcessInfo processInfo] environment] objectForKey:@"YCODE_TEST_ICON_PATH"];
+  if (iconPath) [[iconPixels representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]]
+    writeToFile:iconPath atomically:YES];
+  [audioFile release];
+  [item release];
+  NSSound *realSound = [[NSSound alloc] initWithContentsOfFile:path byReference:YES];
+  testAssert(realSound != nil && fabs([realSound duration] - 1) < 0.01,
+    @"System audio decodes the selected sound");
+  [realSound setVolume:0];
+  testAssert([realSound play], @"System audio can start muted preview playback");
+  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+  [realSound stop]; [realSound release];
+  YCodeTestSound *sound = [YCodeTestSound new];
+  [inspector setValue:sound forKey:@"_sound"];
+  [inspector togglePlayback:nil];
+  testAssert([sound isPlaying] && [[[inspector valueForKey:@"_play"] title] isEqual:@"Pause"],
+    @"Play starts audio and presents Pause");
+  [inspector togglePlayback:nil];
+  testAssert(![sound isPlaying] && [[[inspector valueForKey:@"_play"] title] isEqual:@"Resume"],
+    @"Pause presents Resume");
+  [inspector togglePlayback:nil];
+  testAssert([sound isPlaying], @"Resume restarts paused playback");
+  [inspector inspectDocument:nil];
+  testAssert(![sound isPlaying] && ![[inspector valueForKey:@"_play"] isEnabled],
+    @"Changing selection stops playback and disables controls");
+  [sound release];
+  NSString *bad = [directory stringByAppendingPathComponent:@"Invalid.wav"];
+  [@"not audio" writeToFile:bad atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([[project editorController] openFile:bad], @"Invalid audio still opens a safe read-only preview");
+  [inspector togglePlayback:nil];
+  testAssert([[[inspector valueForKey:@"_status"] stringValue] rangeOfString:@"Unable to play"].location != NSNotFound,
+    @"Unsupported or corrupt audio has a visible playback error");
+  [inspector inspectDocument:document];
+  YCodeTestSound *closingSound = [YCodeTestSound new];
+  [inspector setValue:closingSound forKey:@"_sound"];
+  [inspector togglePlayback:nil];
+  [window close];
+  testAssert(![closingSound isPlaying], @"Closing the project window stops preview playback");
+  [closingSound release];
+  [window setProject:nil]; [window release]; [project release];
+}
+
+static void testTabPreferences(NSString *directory)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  NSArray *keys = [NSArray arrayWithObjects:@"YCodeTabWidth", @"YCodeUseTabCharacters",
+    @"YCodeIgnoreProjectIndentation", nil];
+  NSMutableDictionary *saved = [NSMutableDictionary dictionary];
+  NSEnumerator *e = [keys objectEnumerator]; NSString *key;
+  while ((key = [e nextObject])) {
+    if ([defaults objectForKey:key]) [saved setObject:[defaults objectForKey:key] forKey:key];
+    [defaults removeObjectForKey:key];
+  }
+  testAssert([YCodePreferences tabWidth] == 2 && [YCodePreferences useSpacesForTabs],
+    @"Tabs default to two spaces");
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:[directory stringByAppendingPathComponent:@"Tabs.m"] content:@"\t{\n    {"];
+  YCodeTextView *view = (YCodeTextView *)[document textView];
+  [document setModified:NO];
+  AppController *app = [AppController new];
+  [app showPrefPanel:nil];
+  NSPopUpButton *group = [app valueForKey:@"_preferencesGroup"];
+  [group selectItemWithTitle:@"Tabs"]; [group sendAction:[group action] to:[group target]];
+  testAssert(![[app valueForKey:@"_tabPreferencesView"] isHidden],
+    @"Tabs group is available in Preferences");
+  NSPopUpButton *width = [app valueForKey:@"_tabWidthChoice"];
+  [width selectItemAtIndex:3]; [width sendAction:[width action] to:[width target]];
+  testAssert([view editorTabWidth] == 4 && [view editorIndentWidth] == 4,
+    @"Preference changes update open editors immediately");
+  testAssert(![document isModified] && [[view string] isEqual:@"\t{\n    {"],
+    @"Tab preferences preserve source whitespace and modified state");
+  NSLayoutManager *layout = [view layoutManager];
+  NSRect tabBrace = [layout boundingRectForGlyphRange:[layout glyphRangeForCharacterRange:NSMakeRange(1, 1)
+    actualCharacterRange:NULL] inTextContainer:[view textContainer]];
+  NSRect spaceBrace = [layout boundingRectForGlyphRange:[layout glyphRangeForCharacterRange:NSMakeRange(7, 1)
+    actualCharacterRange:NULL] inTextContainer:[view textContainer]];
+  testAssert(fabs(tabBrace.origin.x - spaceBrace.origin.x) < 0.1,
+    @"A tab and four spaces align braces at the same displayed column");
+  [document setContent:@""];
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"    "], @"Tab insertion uses the chosen space width");
+  NSButton *spaces = [app valueForKey:@"_spacesForTabs"];
+  [spaces setState:NSOffState]; [spaces sendAction:[spaces action] to:[spaces target]];
+  [document setContent:@""];
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"\t"], @"Tabs preference can insert literal tabs");
+  NSTask *reader = [NSTask new];
+  [reader setLaunchPath:[[[NSProcessInfo processInfo] arguments] objectAtIndex:0]];
+  [reader setArguments:[NSArray arrayWithObject:@"--read-tab-preferences"]];
+  [reader launch]; [reader waitUntilExit];
+  testAssert([reader terminationStatus] == 0, @"Fresh process restores tab preferences");
+  [reader release];
+  [@"TabWidth: 8\nIndentWidth: 8\nUseTab: Never\n" writeToFile:
+    [directory stringByAppendingPathComponent:@".clang-format"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [view setFilePath:[document filePath]];
+  testAssert([view editorTabWidth] == 8 && ![view editorUsesTabs],
+    @"Project formatting settings retain precedence by default");
+  NSButton *project = [app valueForKey:@"_projectIndentation"];
+  [project setState:NSOffState]; [project sendAction:[project action] to:[project target]];
+  testAssert([view editorTabWidth] == 4 && [view editorUsesTabs],
+    @"Disabling project settings applies the user's choices to the open file");
+  [[app valueForKey:@"_preferencesPanel"] close];
+  [app release]; [document release];
+  e = [keys objectEnumerator];
+  while ((key = [e nextObject])) {
+    if ([saved objectForKey:key]) [defaults setObject:[saved objectForKey:key] forKey:key];
+    else [defaults removeObjectForKey:key];
+  }
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeTabsDidChange" object:nil];
 }
 
 static void testFontAndSidebarPreferences(void)
@@ -1476,6 +1660,62 @@ static void testArchitectureSelection(NSString *temporaryDirectory)
   [window close]; [window release]; [project release];
 }
 
+static void testNavigatorFolderOrder(void)
+{
+  YCodeProject *document = [[YCodeProject alloc] init];
+  PBXProject *project = AUTORELEASE([PBXProject new]);
+  PBXGroup *root = AUTORELEASE([PBXGroup new]);
+  PBXGroup *first = AUTORELEASE([PBXGroup new]);
+  PBXGroup *second = AUTORELEASE([PBXGroup new]);
+  PBXGroup *nested = AUTORELEASE([PBXGroup new]);
+  PBXFileReference *a = AUTORELEASE([[PBXFileReference alloc] initWithPath:@"a.c"]);
+  PBXFileReference *b = AUTORELEASE([[PBXFileReference alloc] initWithPath:@"b.c"]);
+  PBXFileReference *c = AUTORELEASE([[PBXFileReference alloc] initWithPath:@"c.c"]);
+  [first setName:@"Z Sources"];
+  [second setName:@"Y Resources"];
+  [nested setName:@"Nested"];
+  NSMutableArray *original = [NSMutableArray arrayWithObjects:a, first, b, second, nil];
+  [root setChildren:original];
+  [first setChildren:[NSMutableArray arrayWithObjects:c, nested, nil]];
+  [project setMainGroup:root];
+  [document setProject:project];
+  YCodeProjectNavigatorController *navigator = [document navigatorController];
+  [navigator projectDidChange];
+  NSArray *expected = [NSArray arrayWithObjects:first, second, a, b, nil];
+  NSUInteger pass;
+  for (pass = 0; pass < 2; pass++) {
+    NSArray *items = [[navigator itemForObject:root] children];
+    testAssert([[items valueForKey:@"representedObject"] isEqual:expected],
+      @"Navigator puts folders before files and preserves order within each kind");
+    testAssert([[[[navigator itemForObject:first] children] valueForKey:@"representedObject"]
+      isEqual:[NSArray arrayWithObjects:nested, c, nil]],
+      @"Navigator puts folders first inside nested groups too");
+    testAssert([[root children] isEqual:[NSArray arrayWithObjects:a, first, b, second, nil]],
+      @"Navigator sorting does not reorder the stored project");
+    [navigator projectDidChange];
+  }
+  [navigator setProject:nil];
+  [document release];
+}
+
+static void testNavigatorContextMenu(YCodeProject *project)
+{
+  YCodeProjectNavigatorController *navigator = [project navigatorController];
+  NSMenu *menu = [[navigator outlineView] menu];
+  BOOL current = menu != nil && menu == [navigator contextMenu];
+  testAssert(current, @"Navigator context menu follows the project's controller");
+  if (!current) return; // Do not message a stale menu's deallocated targets.
+  NSEnumerator *items = [[menu itemArray] objectEnumerator];
+  NSMenuItem *item;
+  while ((item = [items nextObject]) != nil) {
+    if (![item isSeparatorItem])
+      testAssert([item target] == navigator, @"Navigator menu actions target the live controller");
+  }
+  [menu update];
+  testAssert([[menu itemAtIndex:0] isEnabled] == [project isDirectoryProject],
+    @"Context menu validates Refresh Folder against the current project");
+}
+
 static void testMakeDirectory(NSString *temporaryDirectory)
 {
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -1498,9 +1738,23 @@ static void testMakeDirectory(NSString *temporaryDirectory)
   testAssert(project != nil && [project isDirectoryProject] && error == nil,
     @"Open a Makefile directory through the document controller");
   if (!project) return;
+  testNavigatorContextMenu(project);
+  YCodeWindowController *menuWindow = [[YCodeWindowController alloc] init];
+  YCodeProject *otherProject = [[YCodeProject alloc] init];
+  [menuWindow setProject:otherProject];
+  testNavigatorContextMenu(otherProject);
+  YCodeProject *nextProject = [[YCodeProject alloc] init];
+  [menuWindow setProject:nextProject];
+  testNavigatorContextMenu(nextProject);
+  [menuWindow close];
+  [menuWindow release];
+  [otherProject release];
+  [nextProject release];
   testAssert([[project projectDirectoryPath] isEqual:directory], @"Make commands use the selected directory");
   PBXGroup *group = [[project project] mainGroup];
   testAssert([[group children] count] == 3, @"Navigator includes files, subdirectories and non-recursive symlinks");
+  testAssert([[[[[project navigatorController] itemForObject:group] children] objectAtIndex:0] isGroup],
+    @"Makefile navigator displays directories before files");
   testAssert([project addGroupToProject:@"New Folder"] &&
     [manager fileExistsAtPath:[directory stringByAppendingPathComponent:@"New Folder"]],
     @"Adding a directory-project group creates a real folder");
@@ -2393,6 +2647,23 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-sound"]) {
+    testSoundInspector(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode sound inspector checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
+  if ([arguments containsObject:@"--read-tab-preferences"]) {
+    BOOL passed = [YCodePreferences tabWidth] == 4 && ![YCodePreferences useSpacesForTabs];
+    [pool drain]; return passed ? 0 : 1;
+  }
+  if ([arguments containsObject:@"--check-tabs"]) {
+    testTabPreferences(temporaryDirectory);
+    testEditorColorPreferences();
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode tab preference checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-test-navigation"]) {
     testResultNavigation(temporaryDirectory);
     testSearchAndTestNavigator(temporaryDirectory);
@@ -2407,6 +2678,7 @@ int main(void)
     [pool drain]; return failures ? 1 : 0;
   }
   if ([arguments containsObject:@"--check-make-directory"]) {
+    testNavigatorFolderOrder();
     testMakeDirectory(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
     NSLog(@"Ycode Makefile directory checks: %lu failures", (unsigned long)failures);
@@ -2470,11 +2742,14 @@ int main(void)
   id savedWindowFrame = [[[NSUserDefaults standardUserDefaults]
     objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
   testPanelVisibilityPersistence();
+  testNavigatorFolderOrder();
   testWindowFramePersistence();
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
   testFontAndSidebarPreferences();
+  testSoundInspector([temporaryDirectory stringByAppendingPathComponent:@"Sound Inspector"]);
+  testTabPreferences([temporaryDirectory stringByAppendingPathComponent:@"Tab Preferences"]);
   testEditorColorPreferences();
   testEditorColors();
   testHiddenRulersDebugGutter();
@@ -2503,6 +2778,7 @@ int main(void)
   testRecentDocuments(document, temporaryDirectory);
   YCodeProjectNavigatorController *navigator = [document navigatorController];
   testAssert([[navigator rootItems] count] == 1, @"Populate project navigator");
+  testNavigatorContextMenu(document);
   testAssert([[navigator outlineView] numberOfRows] > 1, @"Display and expand project in window");
   testAssert([[document windowControllers] count] == 1, @"Create project window");
   NSOutlineView *outline = [navigator outlineView];
@@ -2581,12 +2857,12 @@ int main(void)
   [navigatorTabs selectTabViewItemWithIdentifier:@"project"];
   [windowController setupInspectorArea];
   [windowController setupNavigatorArea];
-  testAssert([inspectorTabs numberOfTabViewItems] == 2,
-    @"Repeated setup keeps File and Image inspectors without duplicates");
+  testAssert([inspectorTabs numberOfTabViewItems] == 3,
+    @"Repeated setup keeps File, Image and Sound inspectors without duplicates");
   YCInspectorView *extra = [[YCInspectorView alloc] initWithFrame:NSZeroRect];
   [windowController registerInspectorView:extra];
   [windowController registerInspectorView:extra];
-  testAssert([inspectorTabs numberOfTabViewItems] == 3, @"Inspectors register uniquely");
+  testAssert([inspectorTabs numberOfTabViewItems] == 4, @"Inspectors register uniquely");
   [extra release];
   NSString *inspectedPath = [temporaryDirectory stringByAppendingPathComponent:@"Inspector.m"];
   [@"int main(void) { return 0; }" writeToFile:inspectedPath atomically:YES

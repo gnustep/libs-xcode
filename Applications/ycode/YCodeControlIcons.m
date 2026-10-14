@@ -60,6 +60,37 @@ NSImage *YCodeControlIcon(NSString *name, CGFloat size)
       YCPlay([name isEqual:@"continue"] ? 9 : 6);
       if ([name isEqual:@"continue"]) NSRectFill(NSMakeRect(3, 4, 3, 16));
     }
+  else if ([name isEqual:@"sound"])
+    {
+      [[NSColor colorWithCalibratedRed:0.04 green:0.12 blue:0.14 alpha:1] set];
+      [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(1, 2, 22, 20)
+          xRadius:2 yRadius:2] fill];
+      [[NSColor colorWithCalibratedRed:0.16 green:0.29 blue:0.30 alpha:1] set];
+      NSBezierPath *grid = [NSBezierPath bezierPath];
+      [grid setLineWidth:0.6];
+      NSInteger position;
+      for (position = 6; position <= 18; position += 6) {
+        [grid moveToPoint:NSMakePoint(position, 3)];
+        [grid lineToPoint:NSMakePoint(position, 21)];
+        [grid moveToPoint:NSMakePoint(2, position)];
+        [grid lineToPoint:NSMakePoint(22, position)];
+      }
+      [grid stroke];
+      [[NSColor colorWithCalibratedRed:0.25 green:1.0 blue:0.50 alpha:1] set];
+      NSBezierPath *wave = [NSBezierPath bezierPath];
+      [wave setLineWidth:1.8];
+      [wave setLineCapStyle:NSRoundLineCapStyle];
+      [wave moveToPoint:NSMakePoint(3, 12)];
+      [wave curveToPoint:NSMakePoint(7.5, 12)
+          controlPoint1:NSMakePoint(4, 21) controlPoint2:NSMakePoint(6.5, 21)];
+      [wave curveToPoint:NSMakePoint(12, 12)
+          controlPoint1:NSMakePoint(8.5, 3) controlPoint2:NSMakePoint(11, 3)];
+      [wave curveToPoint:NSMakePoint(16.5, 12)
+          controlPoint1:NSMakePoint(13, 21) controlPoint2:NSMakePoint(15.5, 21)];
+      [wave curveToPoint:NSMakePoint(21, 12)
+          controlPoint1:NSMakePoint(17.5, 3) controlPoint2:NSMakePoint(20, 3)];
+      [wave stroke];
+    }
   else if ([name isEqual:@"stop"])
     {
       [[NSColor colorWithCalibratedRed:0.77 green:0.23 blue:0.22 alpha:1] set];
@@ -137,6 +168,12 @@ NSImage *YCodeControlIcon(NSString *name, CGFloat size)
         NSRectFill(NSMakeRect([name isEqual:@"navigator"] ? 4 : 15, 5, 5, 14));
     }
   [image unlockFocus];
+  if ([name isEqual:@"sound"]) {
+    // GNUstep NSImage copies omit cached drawing representations. Materialize
+    // pixels so the navigator's private, resized copy retains the waveform.
+    NSImage *bitmap = AUTORELEASE([[NSImage alloc] initWithData:[image TIFFRepresentation]]);
+    if (bitmap) image = bitmap;
+  }
   [image setName:key];
   return image;
 }

@@ -31,6 +31,12 @@
 + (NSFont *)fontForPane:(NSString *)pane;
 + (void)setFont:(NSFont *)font forPane:(NSString *)pane;
 + (void)resetFonts;
+/** Saved indentation defaults, used when project formatting does not override them. */
++ (NSUInteger)tabWidth;
++ (BOOL)useSpacesForTabs;
++ (BOOL)useProjectIndentation;
++ (void)setTabWidth:(NSUInteger)width useSpaces:(BOOL)spaces useProjectSettings:(BOOL)project;
+
 /** Change the base font while retaining ANSI bold and italic traits. */
 + (void)applyFont:(NSFont *)font toText:(NSMutableAttributedString *)text;
 @end

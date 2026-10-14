@@ -25,6 +25,32 @@
 #import "YCodePreferences.h"
 #include <math.h>
 @implementation YCodePreferences
++ (NSUInteger)tabWidth
+{
+    NSInteger width = [[NSUserDefaults standardUserDefaults] integerForKey:@"YCodeTabWidth"];
+    return width >= 1 && width <= 16 ? width : 2;
+}
+
++ (BOOL)useSpacesForTabs
+{
+    return ![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeUseTabCharacters"];
+}
+
++ (BOOL)useProjectIndentation
+{
+    return ![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeIgnoreProjectIndentation"];
+}
+
++ (void)setTabWidth:(NSUInteger)width useSpaces:(BOOL)spaces useProjectSettings:(BOOL)project
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setInteger:MAX(1, MIN(16, width)) forKey:@"YCodeTabWidth"];
+    [defaults setBool:!spaces forKey:@"YCodeUseTabCharacters"];
+    [defaults setBool:!project forKey:@"YCodeIgnoreProjectIndentation"];
+    [defaults synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeTabsDidChange" object:nil];
+}
+
 + (NSArray *)fontPanes
 {
     return [NSArray arrayWithObjects:@"Editor", @"Console", @"Issues", @"Debugger", nil];

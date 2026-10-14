@@ -23,6 +23,8 @@
 */
 
 #import "YCodeProjectNavigatorItem.h"
+#import "YCodeEditorDocument.h"
+#import "YCodeControlIcons.h"
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXGroup.h>
 
@@ -111,6 +113,8 @@ static NSImage *YCodeProjectCenterIcon(NSString *name)
 - (NSImage *)iconForFileExtension:(NSString *)extension
 {
     NSString *ext = [extension lowercaseString];
+    if ([YCodeEditorDocument isSoundFilePath:[@"sound." stringByAppendingString:ext ?: @""]])
+        return YCodeControlIcon(@"sound", 16);
     NSString *name = nil;
     if ([ext isEqualToString:@"m"])
         name = @"FileM";

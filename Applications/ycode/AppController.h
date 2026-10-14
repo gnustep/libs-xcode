@@ -26,6 +26,10 @@
   NSView *_editorPreferencesView;
   NSButton *_showEditorRulers;
   NSView *_fontPreferencesView;
+  NSView *_tabPreferencesView;
+  NSPopUpButton *_tabWidthChoice;
+  NSButton *_spacesForTabs;
+  NSButton *_projectIndentation;
   NSMutableArray *_fontChoices;
 }
 

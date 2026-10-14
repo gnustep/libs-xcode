@@ -43,6 +43,7 @@
     NSTextView *_textView;
     NSRulerView *_lineNumberRuler;
     NSImage *_image;
+    BOOL _soundDocument;
     
     // Syntax highlighting
     YCodeSyntaxHighlighter *_syntaxHighlighter;
@@ -79,6 +80,8 @@
  */
 /** Image previews are read-only; textView is nil for image documents. */
 - (BOOL)isImageDocument;
++ (BOOL)isSoundFilePath:(NSString *)path;
+- (BOOL)isSoundDocument;
 - (NSImage *)image;
 - (NSView *)editorView;
 - (NSTextView *)textView;

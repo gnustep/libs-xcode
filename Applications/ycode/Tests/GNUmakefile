@@ -4,6 +4,15 @@ endif
 
 include $(GNUSTEP_MAKEFILES)/common.make
 
+# Waveform decoding uses the same portable library as GNUstep NSSound.
+YCODE_SNDFILE_LIBS := $(shell pkg-config --libs sndfile 2>/dev/null)
+ifneq ($(strip $(YCODE_SNDFILE_LIBS)),)
+ycode_tests_OBJCFLAGS += -DYCODE_HAVE_SNDFILE $(shell pkg-config --cflags sndfile 2>/dev/null)
+ycode_tests_TOOL_LIBS += $(YCODE_SNDFILE_LIBS)
+endif
+
+
+
 TEST_TOOL_NAME = ycode_tests
 ycode_tests_HAS_RESOURCE_BUNDLE = yes
 ycode_tests_RESOURCE_FILES = ../Resources/Templates ../Resources/ProjectCenterIcons ../TestHost/YCodeTestHost.bundle

@@ -21,10 +21,13 @@
         YCODE_FILE_ICONS_BUILD = { isa = PBXBuildFile; fileRef = YCODE_FILE_ICONS; };
         YCODE_FILE_INSPECTOR_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCFileInspectorView.m"; sourceTree = "<group>"; };
         YCODE_IMAGE_INSPECTOR_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCImageInspectorView.m"; sourceTree = "<group>"; };
+        YCODE_SOUND_INSPECTOR_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCSoundInspectorView.m"; sourceTree = "<group>"; };
         YCODE_FILE_INSPECTOR_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCFileInspectorView.h"; sourceTree = "<group>"; };
         YCODE_IMAGE_INSPECTOR_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCImageInspectorView.h"; sourceTree = "<group>"; };
+        YCODE_SOUND_INSPECTOR_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCSoundInspectorView.h"; sourceTree = "<group>"; };
         YCODE_FILE_INSPECTOR_BUILD = { isa = PBXBuildFile; fileRef = YCODE_FILE_INSPECTOR_SOURCE; };
         YCODE_IMAGE_INSPECTOR_BUILD = { isa = PBXBuildFile; fileRef = YCODE_IMAGE_INSPECTOR_SOURCE; };
+        YCODE_SOUND_INSPECTOR_BUILD = { isa = PBXBuildFile; fileRef = YCODE_SOUND_INSPECTOR_SOURCE; };
         YCODE_TEXT_SOURCE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTextView.m"; sourceTree = "<group>"; };
         YCODE_TEXT_HEADER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTextView.h"; sourceTree = "<group>"; };
         YCODE_TEXT_BUILD = { isa = PBXBuildFile; fileRef = YCODE_TEXT_SOURCE; };
@@ -77,8 +80,10 @@
         YCODE_TEXT_HEADER,
         YCODE_FILE_INSPECTOR_SOURCE,
         YCODE_IMAGE_INSPECTOR_SOURCE,
+        YCODE_SOUND_INSPECTOR_SOURCE,
         YCODE_FILE_INSPECTOR_HEADER,
         YCODE_IMAGE_INSPECTOR_HEADER,
+        YCODE_SOUND_INSPECTOR_HEADER,
         YCODE_PREFERENCES_H, YCODE_PREFERENCES_M,
         YCODE_FILE_ICONS,
         YCODE_DOCUMENT_ICON_H, YCODE_DOCUMENT_ICON_C, YCODE_DOCUMENT_ICON_M, YCODE_DOCUMENT_ICON_MM,
@@ -118,6 +123,7 @@
         YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD,
         YCODE_FILE_INSPECTOR_BUILD,
         YCODE_IMAGE_INSPECTOR_BUILD,
+        YCODE_SOUND_INSPECTOR_BUILD,
         YCODE_DEBUGGER_BUILD,
         "60D3A5A8-4695-CB0B-5738-AEC068B0253F",
 		"38118205-AC17-F000-48CB-7D0B67582EA2",

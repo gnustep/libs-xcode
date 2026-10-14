@@ -25,6 +25,7 @@
 
 // Editing algorithms adapted from apps-projectcenter/Modules/Editors/ProjectCenter/PCEditorView.m.
 #import "YCodeTextView.h"
+#import "YCodePreferences.h"
 
 #define EDITOR_TAB_WIDTH 2
 
@@ -64,6 +65,7 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 - (NSUInteger)editorIndentWidth;
 - (BOOL)editorUsesTabs;
 - (void)loadIndentSettingsIfNeeded;
+- (void)tabPreferencesChanged:(NSNotification *)notification;
 - (NSString *)clangFormatPathForFilePath:(NSString *)filePath;
 - (void)loadIndentSettingsFromClangFormatAtPath:(NSString *)path;
 - (NSString *)indentStringForColumnCount:(NSUInteger)columns;
@@ -116,6 +118,14 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
   return editorUsesTabs;
 }
 
+- (void)tabPreferencesChanged:(NSNotification *)notification
+{
+  editorIndentSettingsLoaded = NO;
+  [self updateEditorParagraphStyle];
+  [self setNeedsDisplay:YES];
+  [[[self enclosingScrollView] horizontalRulerView] setNeedsDisplay:YES];
+}
+
 - (void)loadIndentSettingsIfNeeded
 {
   NSString *filePath;
@@ -127,12 +137,15 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
     }
 
   editorIndentSettingsLoaded = YES;
-  editorIndentWidth = EDITOR_TAB_WIDTH;
-  editorTabWidth = EDITOR_TAB_WIDTH;
-  editorUsesTabs = NO;
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:@"YCodeTabsDidChange" object:nil];
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(tabPreferencesChanged:)
+    name:@"YCodeTabsDidChange" object:nil];
+  editorIndentWidth = [YCodePreferences tabWidth];
+  editorTabWidth = [YCodePreferences tabWidth];
+  editorUsesTabs = ![YCodePreferences useSpacesForTabs];
 
   filePath = _filePath;
-  if (filePath == nil)
+  if (filePath == nil || ![YCodePreferences useProjectIndentation])
     {
       return;
     }

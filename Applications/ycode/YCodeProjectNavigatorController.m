@@ -300,7 +300,7 @@
     [parentItem addChild:groupItem];
     [_itemCache setObject:groupItem forKey:[NSValue valueWithPointer:group]];
     
-    // Add children
+    // Display groups first without changing the project's stored child order.
     NSArray *children = [group children];
     NSEnumerator *childEnum = [children objectEnumerator];
     id child;
@@ -308,7 +308,11 @@
     while ((child = [childEnum nextObject]) != nil) {
         if ([child isKindOfClass:[PBXGroup class]]) {
             [self addGroupItem:child toParent:groupItem];
-        } else if ([child isKindOfClass:[PBXFileReference class]]) {
+        }
+    }
+    childEnum = [children objectEnumerator];
+    while ((child = [childEnum nextObject]) != nil) {
+        if ([child isKindOfClass:[PBXFileReference class]]) {
             YCodeProjectNavigatorItem *fileItem = 
                 [[YCodeProjectNavigatorItem alloc] initWithRepresentedObject:child 
                                                                        type:YCodeNavigatorItemTypeFile];

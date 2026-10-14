@@ -257,9 +257,43 @@
 
 #pragma mark - File Operations
 
++ (BOOL)isSoundFilePath:(NSString *)path
+{
+    NSString *extension = [[path pathExtension] lowercaseString];
+    return [[NSSound soundUnfilteredFileTypes] containsObject:extension] ||
+        [[NSArray arrayWithObjects:@"wav", @"wave", @"aif", @"aiff", @"aifc", @"au", @"snd",
+          @"mp3", @"flac", @"ogg", @"oga", @"m4a", @"aac", @"caf", @"opus", nil] containsObject:extension];
+}
+
+- (BOOL)isSoundDocument
+{
+    return _soundDocument;
+}
+
 - (BOOL)loadFromFile
 {
     NSString *extension = [[self fileExtension] lowercaseString];
+    if ([[self class] isSoundFilePath:_filePath]) {
+        BOOL directory = NO;
+        if (![[NSFileManager defaultManager] fileExistsAtPath:_filePath isDirectory:&directory] || directory)
+            return NO;
+        _soundDocument = YES;
+        [NSObject cancelPreviousPerformRequestsWithTarget:self];
+        [_textView setDelegate:nil];
+        DESTROY(_syntaxHighlighter);
+        [_scrollView setRulersVisible:NO];
+        [_scrollView setVerticalRulerView:nil];
+        [_scrollView setHorizontalRulerView:nil];
+        DESTROY(_lineNumberRuler);
+        NSTextField *preview = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 380, 100)];
+        [preview setStringValue:[NSString stringWithFormat:@"%@\n\nUse the Sound inspector to view the waveform and play this file.", [self fileName]]];
+        [preview setEditable:NO]; [preview setBezeled:NO]; [preview setDrawsBackground:NO];
+        [preview setFont:[NSFont systemFontOfSize:14]];
+        [_scrollView setDocumentView:preview]; RELEASE(preview);
+        DESTROY(_textView);
+        [self setModified:NO];
+        return YES;
+    }
     if (_image || [[NSImage imageFileTypes] containsObject:extension] ||
         [[NSArray arrayWithObjects:@"png", @"jpg", @"jpeg", @"gif", @"tif",
           @"tiff", @"bmp", @"ico", @"icns", @"webp", nil] containsObject:extension]) {
@@ -323,7 +357,7 @@
 - (BOOL)saveToFile
 {
     // Previewing an image must never overwrite its bytes with text.
-    if (_image) return YES;
+    if (_image || _soundDocument) return YES;
     NSString *content = [self content];
     NSError *error = nil;
     
@@ -422,7 +456,7 @@
 
 - (void)editorRulersChanged:(NSNotification *)notification
 {
-    if (!_image) [(YCEditorRulerView *)_lineNumberRuler updateRulerVisibility];
+    if (!_image && !_soundDocument) [(YCEditorRulerView *)_lineNumberRuler updateRulerVisibility];
 }
 
 - (void)editorColorsChanged:(NSNotification *)notification

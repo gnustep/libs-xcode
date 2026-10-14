@@ -19,6 +19,15 @@ endif
 
 include $(GNUSTEP_MAKEFILES)/common.make
 
+# Waveform decoding uses the same portable library as GNUstep NSSound.
+YCODE_SNDFILE_LIBS := $(shell pkg-config --libs sndfile 2>/dev/null)
+ifneq ($(strip $(YCODE_SNDFILE_LIBS)),)
+Ycode_OBJCFLAGS += -DYCODE_HAVE_SNDFILE $(shell pkg-config --cflags sndfile 2>/dev/null)
+Ycode_GUI_LIBS += $(YCODE_SNDFILE_LIBS)
+endif
+
+
+
 #
 # Application
 #
@@ -64,6 +73,7 @@ YCodeTextView.h \
 YCInspectorView.h \
 YCFileInspectorView.h \
 YCImageInspectorView.h \
+YCSoundInspectorView.h \
 YCodeWindowController.h \
 YCodeProject.h \
 YCodeProjectNavigatorController.h \
@@ -88,6 +98,7 @@ YCodeTextView.m \
 YCInspectorView.m \
 YCFileInspectorView.m \
 YCImageInspectorView.m \
+YCSoundInspectorView.m \
 YCodeWindowController.m \
 YCodeProject.m \
 YCodeProjectNavigatorController.m \

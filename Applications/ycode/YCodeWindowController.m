@@ -37,6 +37,7 @@
 #import "YCInspectorView.h"
 #import "YCFileInspectorView.h"
 #import "YCImageInspectorView.h"
+#import "YCSoundInspectorView.h"
 
 /* Stateful ANSI transcript decoder. Cursor controls are consumed: these panes
    are append-only transcripts, rather than terminal emulators. */
@@ -444,6 +445,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
     if (_navigatorOutlineView) {
         [_navigatorController setOutlineView:_navigatorOutlineView];
+        // Menu item targets belong to the controller, which changes with the project.
+        [_navigatorOutlineView setMenu:[_navigatorController contextMenu]];
     }
 
     if (_editorTabView) {
@@ -926,6 +929,10 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             initWithFrame:[_inspectorTabView contentRect]];
         [self registerInspectorView:imageInspector];
         RELEASE(imageInspector);
+        YCSoundInspectorView *soundInspector = [[YCSoundInspectorView alloc]
+            initWithFrame:[_inspectorTabView contentRect]];
+        [self registerInspectorView:soundInspector];
+        RELEASE(soundInspector);
     }
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     [center removeObserver:self name:YCodeCurrentDocumentDidChangeNotification object:nil];
@@ -957,6 +964,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (notification && [notification object] != _editorController) return;
     [self updateDebuggerViews];
     NSString *identifier = [[_editorController currentDocument] isImageDocument] ? @"image" : @"file";
+    if ([[_editorController currentDocument] isSoundDocument]) identifier = @"sound";
     [_inspectorTabView selectTabViewItemWithIdentifier:identifier];
     {
       NSEnumerator *itemEnumerator = [[_inspectorTabView tabViewItems] objectEnumerator];
