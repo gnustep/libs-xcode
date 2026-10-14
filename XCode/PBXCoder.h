@@ -75,7 +75,7 @@
 /**
  * Resolves array members for the given array.
  */
-- (NSMutableArray *) resolveArrayMembers: (NSMutableArray *)array;
+- (NSMutableArray *) resolveArrayMembers: (NSArray *)array;
 
 /**
  * Applies keys and values from the dictionary to the object.

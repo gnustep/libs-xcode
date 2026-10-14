@@ -294,6 +294,32 @@ static void testProjectUnarchive(void)
   testAssert(project != nil, @"unarchived container should have a root project");
   testAssert([[project targets] count] > 0,
 	     @"unarchived project should contain targets");
+
+  NSDictionary *root = [[coder objects] objectForKey:
+    [[coder dictionary] objectForKey: @"rootObject"]];
+  NSDictionary *list = [[coder objects] objectForKey:
+    [root objectForKey: @"buildConfigurationList"]];
+  NSArray *references = [list objectForKey: @"buildConfigurations"];
+  testAssert([references count] > 0, @"configuration reference fixture is nonempty");
+  NSUInteger i;
+  for (i = 0; i < 2; i++)
+    {
+      NSArray *array = i == 0 ? AUTORELEASE([references copy]) :
+        AUTORELEASE([references mutableCopy]);
+      NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithDictionary: list];
+      [dictionary setObject: array forKey: @"buildConfigurations"];
+      XCConfigurationList *decoded = [coder unarchiveFromDictionary: dictionary];
+      NSArray *configurations = [decoded buildConfigurations];
+      testAssert([configurations isKindOfClass: [NSMutableArray class]],
+        @"decoded reference arrays remain editable regardless of input mutability");
+      testAssert([configurations count] == [references count],
+        @"decoding retains every configuration reference");
+      NSEnumerator *enumerator = [configurations objectEnumerator];
+      id value;
+      while ((value = [enumerator nextObject]) != nil)
+        testAssert([value isKindOfClass: [XCBuildConfiguration class]],
+          @"mutable and immutable reference arrays both decode configuration objects");
+    }
 }
 
 int main(int argc, const char **argv, char **env)

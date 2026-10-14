@@ -148,7 +148,7 @@
   return obj;
 }
 
-- (NSMutableArray *) resolveArrayMembers: (NSMutableArray *)array
+- (NSMutableArray *) resolveArrayMembers: (NSArray *)array
 {
   NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity: 10];
   NSEnumerator *en = [array objectEnumerator];
@@ -186,7 +186,7 @@
 	  NS_DURING
 	    {
 	      // if it's an array, resolve the indexes of the array....
-	      if([value isKindOfClass: [NSMutableArray class]])
+      if([value isKindOfClass: [NSArray class]])
 		{
 		  value = [self resolveArrayMembers: value];
 		}
