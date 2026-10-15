@@ -29,9 +29,55 @@
 
 #define EDITOR_TAB_WIDTH 2
 
-static BOOL IsOpeningDelimiter(unichar c)
+/* Keep offsets intact while ignoring punctuation in comments and literals. */
+static NSString *YCodeIndentationCode(NSString *string)
 {
-  return c == '{' || c == '[' || c == '(';
+  NSMutableString *code = [NSMutableString stringWithString:string];
+  NSUInteger i, length = [string length];
+  BOOL lineComment = NO, blockComment = NO, escaped = NO;
+  unichar quote = 0;
+  for (i = 0; i < length; i++)
+    {
+      unichar c = [string characterAtIndex:i];
+      unichar next = i + 1 < length ? [string characterAtIndex:i + 1] : 0;
+      if (lineComment)
+        {
+          if (c == '\n' || c == '\r') lineComment = NO;
+          else [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@" "];
+        }
+      else if (blockComment)
+        {
+          if (c == '*' && next == '/')
+            {
+              [code replaceCharactersInRange:NSMakeRange(i, 2) withString:@"  "];
+              i++;
+              blockComment = NO;
+            }
+          else if (c != '\n' && c != '\r')
+            [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@" "];
+        }
+      else if (quote)
+        {
+          if (c != '\n' && c != '\r')
+            [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@"x"];
+          if (escaped) escaped = NO;
+          else if (c == '\\') escaped = YES;
+          else if (c == quote) quote = 0;
+        }
+      else if (c == '/' && (next == '/' || next == '*'))
+        {
+          lineComment = next == '/';
+          blockComment = next == '*';
+          [code replaceCharactersInRange:NSMakeRange(i, 2) withString:@"  "];
+          i++;
+        }
+      else if (c == '"' || c == '\'')
+        {
+          quote = c;
+          [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@"x"];
+        }
+    }
+  return code;
 }
 
 static BOOL IsClosingDelimiter(unichar c)
@@ -318,30 +364,24 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 
 - (NSInteger)indentForLineAtIndex:(NSInteger)index forString:(NSString *)string
 {
-  NSInteger levels[3] = { 0, 0, 0 };
-  NSString *opening = @"{[(";
-  NSString *closing = @"}])";
+  NSInteger depth = 0;
+  NSString *code = YCodeIndentationCode(string);
   NSInteger offset;
   index = MIN(index, (NSInteger)[string length]);
   for (offset = index - 1; offset >= 0; offset--)
     {
-      unichar c = [string characterAtIndex:offset];
-      NSUInteger i;
-      for (i = 0; i < 3; i++)
+      unichar c = [code characterAtIndex:offset];
+      if (c == '}') depth++;
+      else if (c == '{')
         {
-          if (c == [closing characterAtIndex:i]) levels[i]++;
-          else if (c == [opening characterAtIndex:i])
+          if (depth == 0)
             {
-              if (levels[i] == 0)
-                {
-                  NSInteger indent = [self indentColumnsForLineAtIndex:offset
-                                                                       forString:string];
-                  if ([self lineStartIndexForIndex:offset forString:string] ==
-                      [self lineStartIndexForIndex:index forString:string]) return indent;
-                  return indent + [self editorIndentWidth];
-                }
-              levels[i]--;
+              NSInteger indent = [self indentColumnsForLineAtIndex:offset forString:string];
+              if ([self lineStartIndexForIndex:offset forString:string] ==
+                  [self lineStartIndexForIndex:index forString:string]) return indent;
+              return indent + [self editorIndentWidth];
             }
+          depth--;
         }
     }
   // In the absence of an enclosing delimiter, retain the last nonblank indent.
@@ -355,17 +395,17 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 - (NSInteger)indentAfterNewlineAtIndex:(NSInteger)index
                              forString:(NSString *)string
 {
-  NSInteger offset;
+  NSInteger offset = [self indentForLineAtIndex:index forString:string];
+  NSString *code = YCodeIndentationCode([string substringToIndex:index]);
+  NSString *line = [[code substringFromIndex:
+      [self lineStartIndexForIndex:index forString:string]]
+      stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 
-  offset = [self indentForLineAtIndex:index forString:string];
-  if (index > 0 && index <= [string length]
-      && IsOpeningDelimiter([string characterAtIndex:index - 1]))
+  if ([line hasSuffix:@"{"] ||
+      [self lineBeforeIndexIsControlStatement:index forString:code])
     {
-      offset += [self editorIndentWidth];
-    }
-  else if ([self lineBeforeIndexIsControlStatement:index forString:string])
-    {
-      offset += [self editorIndentWidth];
+      offset = [self indentColumnsForLineAtIndex:index forString:string]
+          + [self editorIndentWidth];
     }
 
   return offset;
@@ -443,6 +483,7 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
   NSString *keyword;
   NSEnumerator *e;
 
+  string = YCodeIndentationCode(string);
   string_length = [string length];
   if (string_length == 0 || index <= 0)
     {
@@ -480,28 +521,32 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
       return NO;
     }
 
-  keywords = [NSArray arrayWithObjects:@"if", @"else", @"while", @"for",
-				      @"switch", @"do", @"@try", @"@catch",
-				      @"@finally", @"@synchronized", nil];
+  if ([line isEqual:@"else"] || [line isEqual:@"do"] ||
+      [line isEqual:@"@try"] || [line isEqual:@"@finally"]) return YES;
+  if ([line hasPrefix:@"else "] || [line hasPrefix:@"else\t"])
+    line = [[line substringFromIndex:4] stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceCharacterSet]];
+  keywords = [NSArray arrayWithObjects:@"if", @"while", @"for", @"switch",
+      @"@catch", @"@synchronized", nil];
   e = [keywords objectEnumerator];
   while ((keyword = [e nextObject]) != nil)
     {
-      NSUInteger length = [keyword length];
-
-      if ([line isEqualToString:keyword])
-	{
-	  return YES;
-	}
-      if ([line hasPrefix:[keyword stringByAppendingString:@" "]])
-	{
-	  return YES;
-	}
-      if ([line length] > length
-	  && [line hasPrefix:keyword]
-	  && [line characterAtIndex:length] == '(')
-	{
-	  return YES;
-	}
+      if (![line hasPrefix:keyword]) continue;
+      NSString *condition = [[line substringFromIndex:[keyword length]]
+          stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+      if (![condition hasPrefix:@"("]) continue;
+      NSInteger depth = 0;
+      NSUInteger i;
+      for (i = 0; i < [condition length]; i++)
+        {
+          unichar c = [condition characterAtIndex:i];
+          if (c == '(') depth++;
+          else if (c == ')')
+            {
+              depth--;
+              if (depth == 0) return i == [condition length] - 1;
+            }
+        }
     }
 
   return NO;

@@ -553,6 +553,9 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
 {
     self = [super init];
     if (self) {
+        // UI fields must not register changes against the project document.
+        // Each source/supporting file owns its own undo history.
+        [self setHasUndoManager:NO];
         _settings = [[NSMutableDictionary alloc] init];
         _fileWatchers = [[NSMutableDictionary alloc] init];
         

@@ -735,6 +735,64 @@ static void testFontAndSidebarPreferences(void)
   [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeFontsDidChange" object:nil];
 }
 
+static void testFileModificationTracking(NSString *directory)
+{
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory
+    withIntermediateDirectories:YES attributes:nil error:NULL];
+  YCodeProject *project = [YCodeProject new];
+  [project makeWindowControllers];
+  YCodeWindowController *controller = [[project windowControllers] objectAtIndex:0];
+  NSWindow *window = [controller window];
+  YCodeEditorController *editor = [project editorController];
+  NSUndoManager *uiUndo = [window undoManager];
+  [uiUndo beginUndoGrouping];
+  [[uiUndo prepareWithInvocationTarget:window] setTitle:[window title]];
+  [uiUndo endUndoGrouping];
+  testAssert(![project isDocumentEdited] && ![window isDocumentEdited],
+    @"UI undo groups do not mark the project changed");
+  [uiUndo removeAllActions];
+  NSArray *names = [NSArray arrayWithObjects:@"main.m", @"README.md", nil];
+  NSEnumerator *enumerator = [names objectEnumerator];
+  NSString *name;
+  while ((name = [enumerator nextObject]) != nil) {
+    NSString *path = [directory stringByAppendingPathComponent:name];
+    [@"original\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    testAssert([editor openFile:path], @"Open modification fixture");
+    YCodeEditorDocument *file = [editor currentDocument];
+    NSTextView *text = [file textView];
+    [file applySyntaxHighlighting];
+    [text didChangeText];
+    [controller buildSystem:[project buildSystem] didReceiveOutput:@"Build output\n"];
+    [controller buildSystem:nil didReceiveDebuggerOutput:@"Debugger output\n"];
+    testAssert(![file isModified] && ![window isDocumentEdited],
+      @"Opening, highlighting, and output leave unchanged files clean");
+    NSUndoManager *undo = [text undoManager];
+    testAssert(undo != uiUndo, @"File undo history is isolated from UI fields");
+    [undo beginUndoGrouping];
+    [text setSelectedRange:NSMakeRange(0, 0)];
+    [text insertText:@"edit "];
+    [undo endUndoGrouping];
+    testAssert([file isModified] && [window isDocumentEdited] && ![project isDocumentEdited],
+      @"Source and supporting file edits mark the window without dirtying project metadata");
+    [undo undo];
+    testAssert(![file isModified] && ![window isDocumentEdited],
+      @"Undoing to saved text clears the edited indicator");
+    [undo redo];
+    testAssert([file isModified] && [window isDocumentEdited], @"Redo marks the file changed again");
+    testAssert([file saveToFile] && ![file isModified] && ![window isDocumentEdited],
+      @"Saving clears file and window modification state");
+    [text didChangeText];
+    testAssert(![file isModified], @"Saving updates the text baseline");
+    [file setContent:@"replacement\n"];
+    [file setModified:YES];
+    testAssert([file isModified], @"Replacing content does not replace the saved baseline");
+    [file saveToFile];
+    [editor closeFile:path];
+  }
+  [project close];
+  [project release];
+}
+
 static void testTranscriptCopy(void)
 {
   [NSApp finishLaunching];
@@ -792,6 +850,7 @@ static void testBreakpointFileTypes(void)
   YCodeWindowController *window = [YCodeWindowController new];
   [window setProject:project];
   YCodeDebugger *debugger = [[project buildSystem] debugger];
+  [debugger receiveData:[@"(gdb)\n*running,thread-id=\"all\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
   NSArray *files = [NSArray arrayWithObjects:@"Example.m", @"Example.mm", @"Example.cpp",
     @"Example.h", @"Example.hpp", @"Example.hxx", @"Info.plist", @"README.md", @"GNUmakefile", nil];
   NSUInteger index;
@@ -1037,6 +1096,37 @@ static void testEditorEditing(NSString *directory)
   testAssert([[view string] isEqual:@"if (ready)\n  {\n    "], @"Return indents inside an opening delimiter");
   [view insertText:@"}"];
   testAssert([[view string] isEqual:@"if (ready)\n  {\n  }"], @"Closing delimiter aligns with its opening line");
+  NSArray *newlineCases = [NSArray arrayWithObjects:
+    [NSArray arrayWithObjects:@"if (ready) {}", @"", nil],
+    [NSArray arrayWithObjects:@"while (ready) { work(); }", @"", nil],
+    [NSArray arrayWithObjects:@"if (ready) work();", @"", nil],
+    [NSArray arrayWithObjects:@"if (ready);", @"", nil],
+    [NSArray arrayWithObjects:@"call(", @"", nil],
+    [NSArray arrayWithObjects:@"[object call:", @"", nil],
+    [NSArray arrayWithObjects:@"// {", @"", nil],
+    [NSArray arrayWithObjects:@"/* { */", @"", nil],
+    [NSArray arrayWithObjects:@"NSString *s = @\"{\";", @"", nil],
+    [NSArray arrayWithObjects:@"{   ", @"  ", nil],
+    [NSArray arrayWithObjects:@"{ // body", @"  ", nil],
+    [NSArray arrayWithObjects:@"if (ready) // body", @"  ", nil],
+    [NSArray arrayWithObjects:@"while (ready)", @"  ", nil],
+    [NSArray arrayWithObjects:@"for (i = 0; i < 3; i++)", @"  ", nil],
+    [NSArray arrayWithObjects:@"else if (ready)", @"  ", nil],
+    [NSArray arrayWithObjects:@"else", @"  ", nil],
+    [NSArray arrayWithObjects:@"{\n  if (ready) {}", @"  ", nil],
+    [NSArray arrayWithObjects:@"{\n  if (ready)\n    work();", @"  ", nil],
+    [NSArray arrayWithObjects:@"{\n  if (ready)\n    {\n    }", @"  ", nil],
+    [NSArray arrayWithObjects:@"{\n  // {\n  work();", @"  ", nil], nil];
+  NSEnumerator *newlineEnumerator = [newlineCases objectEnumerator];
+  NSArray *newlineCase;
+  while ((newlineCase = [newlineEnumerator nextObject]) != nil) {
+    NSString *input = [newlineCase objectAtIndex:0];
+    [document setContent:input];
+    [view setSelectedRange:NSMakeRange([input length], 0)];
+    [view insertNewline:nil];
+    testAssert([[view string] isEqual:[NSString stringWithFormat:@"%@\n%@", input,
+      [newlineCase objectAtIndex:1]]], [NSString stringWithFormat:@"Return indentation after %@", input]);
+  }
   [document setContent:@"{\n      value;\n}"];
   [view setSelectedRange:NSMakeRange(8, 0)];
   [view insertTab:nil];
@@ -1267,7 +1357,7 @@ static void testEditorFiles(NSString *directory)
     && [editor documentForFilePath:backgroundPath] == nil,
     @"Closing a background tab preserves the selected document");
   NSTabViewItem *selectedTab = [editor tabForDocument:selectedDocument];
-  [selectedDocument setModified:YES];
+  [selectedDocument insertText:@"// changed\n" atLocation:0];
   answerCloseAlert(NSAlertThirdButtonReturn);
   [[selectedTab closeButton] performClick:nil];
   testAssert([[editor openDocuments] count] == 1 && [selectedDocument isModified],
@@ -1280,7 +1370,7 @@ static void testEditorFiles(NSString *directory)
   testAssert([editor openFile:first], @"Reopen source after closing tabs");
   [editor openFile:second];
   [editor openFile:first];
-  [[editor currentDocument] setModified:YES];
+  [[editor currentDocument] insertText:@"// changed\n" atLocation:0];
   answerCloseAlert(NSAlertFirstButtonReturn);
   [[[editor tabForDocument:[editor currentDocument]] closeButton] performClick:nil];
   testAssert([editor documentForFilePath:first] == nil
@@ -1443,6 +1533,24 @@ static void testDebuggerRecords(void)
   [debugger receiveData:[@"*running,thread-id=\"all\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
   testAssert([debugger executionFile] == nil && [debugger executionLine] == 0,
     @"Resuming removes the old execution arrow");
+  [debugger toggleBreakpointAtFile:@"/tmp/live.m" line:5];
+  testAssert([debugger isRunning] &&
+    [debugger breakpointStateAtFile:@"/tmp/live.m" line:5] == YCodeBreakpointEnabled &&
+    [probe->commands hasSuffix:@"-break-insert -f \"/tmp/live.m:5\"\n"],
+    @"Running programs accept new source breakpoints without pausing first");
+  [debugger receiveData:[@"^done,bkpt={number=\"9\",fullname=\"/tmp/live.m\",line=\"5\",enabled=\"y\"}\n"
+    dataUsingEncoding:NSUTF8StringEncoding]];
+  [debugger toggleBreakpointEnabledAtFile:@"/tmp/live.m" line:5];
+  testAssert([debugger isRunning] &&
+    [debugger breakpointStateAtFile:@"/tmp/live.m" line:5] == YCodeBreakpointInactive &&
+    [probe->commands hasSuffix:@"-break-disable 9\n"], @"Running programs accept breakpoint disabling");
+  [debugger toggleBreakpointEnabledAtFile:@"/tmp/live.m" line:5];
+  testAssert([debugger breakpointStateAtFile:@"/tmp/live.m" line:5] == YCodeBreakpointEnabled &&
+    [probe->commands hasSuffix:@"-break-enable 9\n"], @"Running programs accept breakpoint re-enabling");
+  [debugger toggleBreakpointAtFile:@"/tmp/live.m" line:5];
+  testAssert([debugger isRunning] &&
+    [debugger breakpointStateAtFile:@"/tmp/live.m" line:5] == YCodeBreakpointNone &&
+    [probe->commands hasSuffix:@"-break-delete 9\n"], @"Running programs accept breakpoint removal");
   [debugger restart];
   testAssert([probe->commands hasSuffix:@"-exec-interrupt --all\n"], @"Restart interrupts a running inferior first");
   [debugger receiveData:[@"*stopped,reason=\"signal-received\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
@@ -2756,6 +2864,18 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-editing"]) {
+    testEditorEditing(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode editing checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
+  if ([arguments containsObject:@"--check-file-modification"]) {
+    testFileModificationTracking(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode file modification checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-output"]) {
     testTranscriptCopy();
     testDebuggerRecords();
@@ -2872,6 +2992,7 @@ int main(void)
   testHiddenRulersDebugGutter();
   testBreakpointFileTypes();
   testSyntaxHighlighting();
+  testFileModificationTracking(temporaryDirectory);
   testTranscriptCopy();
   testDebuggerRecords();
   testAssert([manager createDirectoryAtPath:temporaryDirectory

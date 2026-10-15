@@ -54,7 +54,9 @@
     if (self) {
         ASSIGN(_filePath, filePath);
         _content = [[NSString alloc] init];
+        _savedContent = [[NSString alloc] init];
         _modified = NO;
+        _undoManager = [[NSUndoManager alloc] init];
         _lastModified = [[NSDate date] retain];
         
         [self setupEditorView];
@@ -74,6 +76,7 @@
     self = [self initWithFilePath:filePath];
     if (self && content) {
         [self setContent:content];
+        [self setModified:NO];
     }
     return self;
 }
@@ -84,6 +87,8 @@
     RELEASE(_image);
     RELEASE(_filePath);
     RELEASE(_content);
+    RELEASE(_savedContent);
+    RELEASE(_undoManager);
     RELEASE(_lastModified);
     RELEASE(_scrollView);
     RELEASE(_textView);
@@ -201,7 +206,9 @@
 - (void)setContent:(NSString *)content
 {
     if (content && !_image) {
-        ASSIGN(_content, content);
+        NSString *snapshot = [content copy];
+        RELEASE(_content);
+        _content = snapshot;
         if (_textView) {
             [_textView setString:content];
             [self applySyntaxHighlighting];
@@ -219,8 +226,17 @@
 
 - (void)setModified:(BOOL)modified
 {
-    _modified = _image ? NO : modified;
-    // TODO: Update tab title to show modification state
+    if (!modified) {
+        NSString *snapshot = [[self content] copy];
+        RELEASE(_savedContent);
+        _savedContent = snapshot;
+    }
+    BOOL changed = !_image && !_soundDocument && modified &&
+        ![[self content] isEqualToString:_savedContent];
+    if (_modified == changed) return;
+    _modified = changed;
+    [[NSNotificationCenter defaultCenter] postNotificationName:
+        @"YCodeFileModificationDidChange" object:_editorController];
 }
 
 - (NSDate *)lastModified
@@ -491,8 +507,14 @@
 
 #pragma mark - NSTextViewDelegate
 
+- (NSUndoManager *)undoManagerForTextView:(NSTextView *)textView
+{
+    return _undoManager;
+}
+
 - (void)textDidChange:(NSNotification *)notification
 {
+    if ([notification object] != _textView) return;
     [self setModified:YES];
     
     // Apply syntax highlighting with a delay to avoid performance issues

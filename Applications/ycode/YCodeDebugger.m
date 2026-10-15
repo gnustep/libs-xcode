@@ -239,7 +239,7 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
 }
 - (void)toggleBreakpointEnabledAtFile:(NSString *)file line:(NSUInteger)line
 {
-  if (![[self class] canSetBreakpointAtFile:file] || line == 0 || _running) return;
+  if (![[self class] canSetBreakpointAtFile:file] || line == 0) return;
   NSString *location = [self storedLocationAtFile:file line:line];
   NSString *number = [_breakpoints objectForKey:location];
   if (!number) return;
@@ -307,7 +307,7 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
 }
 - (void)toggleBreakpointAtFile:(NSString *)file line:(NSUInteger)line
 {
-  if (![[self class] canSetBreakpointAtFile:file] || line == 0 || _running) return;
+  if (![[self class] canSetBreakpointAtFile:file] || line == 0) return;
   NSString *location = [self storedLocationAtFile:file line:line];
   NSString *number = [_breakpoints objectForKey:location];
   BOOL removing = (number != nil);

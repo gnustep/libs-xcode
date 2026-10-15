@@ -983,7 +983,26 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     [center removeObserver:self name:YCodeCurrentDocumentDidChangeNotification object:nil];
     [center addObserver:self selector:@selector(updateInspectors:)
         name:YCodeCurrentDocumentDidChangeNotification object:nil];
+    [center removeObserver:self name:@"YCodeFileModificationDidChange" object:nil];
+    [center addObserver:self selector:@selector(fileModificationChanged:)
+        name:@"YCodeFileModificationDidChange" object:nil];
     [self updateInspectors:nil];
+}
+
+- (void)setDocumentEdited:(BOOL)edited
+{
+    NSEnumerator *documents = [[_editorController openDocuments] objectEnumerator];
+    YCodeEditorDocument *document;
+    while ((document = [documents nextObject]) != nil) {
+        if ([document isModified]) edited = YES;
+    }
+    [super setDocumentEdited:edited];
+}
+
+- (void)fileModificationChanged:(NSNotification *)notification
+{
+    if (notification && [notification object] != _editorController) return;
+    [self setDocumentEdited:[_project isDocumentEdited]];
 }
 
 - (void)registerInspectorView:(YCInspectorView *)inspector
@@ -1007,6 +1026,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)updateInspectors:(NSNotification *)notification
 {
     if (notification && [notification object] != _editorController) return;
+    [self fileModificationChanged:nil];
     [self updateDebuggerViews];
     NSString *identifier = [[_editorController currentDocument] isImageDocument] ? @"image" : @"file";
     if ([[_editorController currentDocument] isSoundDocument]) identifier = @"sound";
@@ -1339,8 +1359,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (action == @selector(debugProject:)) return _project && ![build isBusy];
     YCodeDebugger *debugger = [build debugger];
     if (action == @selector(toggleBreakpoint:))
-        return [YCodeDebugger canSetBreakpointAtFile:[[_editorController currentDocument] filePath]] &&
-            ![debugger isRunning];
+        return [YCodeDebugger canSetBreakpointAtFile:[[_editorController currentDocument] filePath]];
     if (![build isDebugging] || ![debugger isReady]) return NO;
     if (tag == 1) return [debugger isRunning];
     if (tag == 3) return YES;

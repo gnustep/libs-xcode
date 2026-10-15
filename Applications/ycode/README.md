@@ -132,8 +132,10 @@ the top level. Build and run commands are in Project; window commands are in
 Windows. The editor rulers show character columns across the top and source
 line numbers down the side, following the font size and scroll position.
 The editable area fills the window as it grows while long lines remain
-horizontally scrollable. Editing follows ProjectCenter: Return indents new
-lines, Tab reindents the current line or shifts selected lines, Shift-Tab
+horizontally scrollable. Return adds an indentation level after an opening
+brace or a control statement awaiting its body, ignoring punctuation in comments
+and strings. Closing braces and completed statements do not add a level.
+Tab reindents the current line or shifts selected lines, Shift-Tab
 unindents selected lines, and closing delimiters align with their opening
 line. Shift-arrow keys extend or contract the selection from its anchor.
 Indentation defaults to two spaces and reads `IndentWidth`, `TabWidth`, and
@@ -164,6 +166,8 @@ or stopping at a source location selects the Debugger tab.
 
 While debugging, a gutter appears beside the source line numbers. Click it to
 add or remove a breakpoint; Shift-click a breakpoint to enable or disable it.
+These actions also work while the program is running under GDB; pausing first
+is not required.
 Breakpoints can only be set in source implementation files, not headers or
 resource/configuration files. The breakpoint gutter and menu command follow
 this restriction.

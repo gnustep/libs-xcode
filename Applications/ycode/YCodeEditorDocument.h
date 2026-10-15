@@ -35,7 +35,9 @@
 {
     NSString *_filePath;
     NSString *_content;
+    NSString *_savedContent;
     BOOL _modified;
+    NSUndoManager *_undoManager;
     NSDate *_lastModified;
     
     // UI Components
