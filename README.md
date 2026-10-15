@@ -20,7 +20,11 @@ more information.
 For Applications we are using the LICENSE file (GPLv3) and we use COPYING.LIB
 which is (LGPLv2.1) for the libraries/framworks.
 
-### 1.2 How to use
+### 1.2 Screenshot
+
+<img width="3768" height="2096" alt="Untitled 2" src="https://github.com/user-attachments/assets/0fa131b6-b02a-4870-bfd1-d2d78d511e27" />
+
+### 1.3 How to use
 
 To use this library you need to build it and install it and then compile
 the front-end which is in the Tools directory and is called buildtool.  
@@ -61,7 +65,7 @@ Buildtool exits with status 0 on success and nonzero on a failed operation,
 invalid project path, or exception. An explicit project path never falls back
 to another project in the current directory.
 
-#### 1.2.1 Native macOS build
+#### 1.3.1 Native macOS build
 
 With full Xcode installed and selected as the active developer directory,
 build the framework and command-line tools against Apple's frameworks:
@@ -95,7 +99,7 @@ This native build supports using the project parsing library and tools on
 macOS. Buildtool's project-building backend still uses GNUstep tools and
 framework mappings; it is not a replacement for Apple's SDK build pipeline.
 
-#### 1.2.2 Plans for the future
+#### 1.3.2 Plans for the future
 
 * Create delegate which will provide a way for the library to
   execute callbacks into the caller so that information can be shown.
@@ -106,13 +110,13 @@ framework mappings; it is not a replacement for Apple's SDK build pipeline.
   which target should be built.
 * Add support for translated to .pcproj files.
   
-#### 1.2.3 Documentation
+#### 1.3.3 Documentation
 
 I am working on a manual as well as gsdocs for the code so that the library is
 properly documented.  There is a manual for buildtool.plist settings and other
 information in the Documentation directory of this project.
 
-## 1.3 How can you help?
+## 1.4 How can you help?
 
 * Give us feedback!  Tell us what you like; tell us what you think
 could be better.
