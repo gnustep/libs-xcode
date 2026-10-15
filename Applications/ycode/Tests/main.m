@@ -2341,9 +2341,35 @@ static void testMakeDirectory(NSString *temporaryDirectory)
     @"Creating settings never replaces an existing file");
   testAssert([project isDocumentEdited] == wasEdited, @"Creating settings preserves document change state");
   YCodeProject *nativeProject = [[YCodeProject alloc] init];
+  [nativeProject setProjectPath:[directory stringByAppendingPathComponent:@"Native.xcodeproj"]];
   testAssert(![nativeProject canCreateSettingsFile] && ![nativeProject createSettingsFile:NULL],
     @"Native projects do not offer directory project settings creation");
   [nativeProject release];
+  NSString *pcDirectory = [temporaryDirectory stringByAppendingPathComponent:@"PC Settings"];
+  [manager createDirectoryAtPath:pcDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  YCodeProject *pcProject = [[YCodeProject alloc] init];
+  NSString *pcSettingsPath = [pcDirectory stringByAppendingPathComponent:@".ycode.plist"];
+  NSString *pcPath = [pcDirectory stringByAppendingPathComponent:@"Example.pcproj"];
+  [manager createDirectoryAtPath:pcPath withIntermediateDirectories:YES attributes:nil error:NULL];
+  [pcProject setProjectPath:pcPath];
+  [[pcProject settings] setObject:[NSDictionary dictionaryWithObject:@"Example" forKey:@"PROJECTNAME"]
+    forKey:@"ProjectCenterMetadata"];
+  testAssert([pcProject canCreateSettingsFile] && [pcProject createSettingsFile:&error] &&
+      [manager fileExistsAtPath:pcSettingsPath] &&
+      ![manager fileExistsAtPath:[pcPath stringByAppendingPathComponent:@".ycode.plist"]],
+    @"ProjectCenter settings are created beside the package");
+  testAssert([[NSDictionary dictionaryWithContentsOfFile:pcSettingsPath]
+      objectForKey:@"ProjectCenterMetadata"] == nil &&
+      [[pcProject settings] objectForKey:@"ProjectCenterMetadata"] != nil,
+    @"Settings omit internal import metadata while preserving it in the project");
+  testAssert(![pcProject canCreateSettingsFile], @"Existing ProjectCenter settings disable creation");
+  [manager removeItemAtPath:pcSettingsPath error:NULL];
+  NSString *flatPath = [pcDirectory stringByAppendingPathComponent:@"Flat.pcproj"];
+  [@"{}" writeToFile:flatPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [pcProject setProjectPath:flatPath];
+  testAssert([pcProject canCreateSettingsFile] && [pcProject createSettingsFile:&error] &&
+      [manager fileExistsAtPath:pcSettingsPath], @"Flat ProjectCenter projects also support settings creation");
+  [pcProject release];
   YCodeBuildSystem *build = [project buildSystem];
   testAssert([build build], @"Start a directory make build"); waitForBuild(build, NO);
   testAssert([build status] == YCodeBuildStatusSuccess && [[build buildOutput] rangeOfString:@"default-build"].location != NSNotFound,

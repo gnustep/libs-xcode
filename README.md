@@ -41,8 +41,8 @@ and folders containing a GNUmakefile or Makefile.
   transcript. A resizable, hideable variables pane shows locals and globals
   from the selected frame's source file. Both Console and Debugger output can
   be selected and copied.
-- Use **File > Create .ycode.plist** for a Makefile folder without an existing
-  settings file. The command creates and opens the file, preserving current
+- Use **File > Create .ycode.plist** for a directory or ProjectCenter project
+  without an existing settings file. Xcode projects do not use this command. The command creates and opens the file, preserving current
   settings and supplying default Clean and Test targets. Add build targets,
   an executable path, or architecture environments as needed.
 

@@ -1244,9 +1244,10 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
 
 - (BOOL)canCreateSettingsFile
 {
-    return _directoryProject && [_projectPath length] > 0 &&
+    return (_directoryProject || [[[_projectPath pathExtension] lowercaseString] isEqual:@"pcproj"]) &&
+        [_projectPath length] > 0 &&
         ![[NSFileManager defaultManager] fileExistsAtPath:
-            [_projectPath stringByAppendingPathComponent:@".ycode.plist"]];
+            [[self projectDirectoryPath] stringByAppendingPathComponent:@".ycode.plist"]];
 }
 
 - (BOOL)createSettingsFile:(NSError **)error
@@ -1254,20 +1255,21 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     if (![self canCreateSettingsFile]) {
         if (error) *error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteUnknownError
             userInfo:[NSDictionary dictionaryWithObject:
-                @"Settings can only be created for a Makefile folder without an existing .ycode.plist."
+                @"Settings can only be created for a directory or ProjectCenter project without an existing .ycode.plist."
                 forKey:NSLocalizedDescriptionKey]];
         return NO;
     }
     NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithDictionary:_settings];
+    [settings removeObjectForKey:@"ProjectCenterMetadata"];
     if (![settings objectForKey:@"CleanTarget"]) [settings setObject:@"clean" forKey:@"CleanTarget"];
     if (![settings objectForKey:@"TestTarget"]) {
         BOOL gnumake = [[NSFileManager defaultManager] fileExistsAtPath:
-            [_projectPath stringByAppendingPathComponent:@"GNUmakefile"]];
+            [[self projectDirectoryPath] stringByAppendingPathComponent:@"GNUmakefile"]];
         [settings setObject:gnumake ? @"check" : @"test" forKey:@"TestTarget"];
     }
     NSData *data = [NSPropertyListSerialization dataWithPropertyList:settings
         format:NSPropertyListXMLFormat_v1_0 options:0 error:error];
-    if (!data || ![data writeToFile:[_projectPath stringByAppendingPathComponent:@".ycode.plist"]
+    if (!data || ![data writeToFile:[[self projectDirectoryPath] stringByAppendingPathComponent:@".ycode.plist"]
         options:NSDataWritingAtomic error:error]) return NO;
     [_settings addEntriesFromDictionary:settings];
     return YES;

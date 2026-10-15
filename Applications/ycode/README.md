@@ -268,10 +268,12 @@ Tests invokes `make check` for GNUmakefile projects or `make test` otherwise.
 Compiler output appears in the console and issues panes as usual.
 
 Optional settings live in `.ycode.plist` inside the folder. Use **File > Create .ycode.plist** to create and open this file for editing. The command is enabled
-for Makefile folders without an existing settings file. It preserves current
+for directory and ProjectCenter (`.pcproj`) projects without an existing settings file.
+For `.pcproj` projects it writes beside the project, in the source directory,
+not inside the project package. It preserves current
 settings and supplies `CleanTarget = clean` and `TestTarget = check` for
 GNUmakefile projects (`test` otherwise). The command sits below **Save Project**
-and is disabled for Xcode/ProjectCenter projects or when the file already exists.
+and is disabled for Xcode (`.xcodeproj`) projects or when the file already exists.
 It does not guess build targets or executable paths; add those as needed. For example:
 
 ```plist
