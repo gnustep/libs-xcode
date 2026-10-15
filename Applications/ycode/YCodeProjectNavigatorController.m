@@ -435,17 +435,10 @@
 
 - (void)openNavigatorFile:(NSString *)filePath
 {
-    // Interface document formats declared by Gorm's application bundle.
-    NSArray *interfaceTypes = [NSArray arrayWithObjects:@"gorm", @"nib", @"xib",
-        @"nix", @"storyboard", @"gmodel", @"cib", nil];
-    if ([interfaceTypes containsObject:[[filePath pathExtension] lowercaseString]]) {
-        if (![[NSWorkspace sharedWorkspace] openFile:filePath withApplication:@"Gorm"]) {
-            NSRunAlertPanel(@"Unable to Open Interface File",
-                @"Gorm could not open %@. Check that Gorm is installed and the file is accessible.",
-                @"OK", nil, nil, filePath);
-        }
-    } else {
-        [[_project editorController] openFile:filePath];
+    if (![[NSWorkspace sharedWorkspace] openFile:filePath]) {
+        NSRunAlertPanel(@"Unable to Open File",
+            @"The default application could not open %@. Check the file's application association and that the file is accessible.",
+            @"OK", nil, nil, filePath);
     }
 }
 
@@ -458,10 +451,14 @@
             YCodeProjectNavigatorItem *navItem = (YCodeProjectNavigatorItem *)selectedItem;
             
             if ([navItem isFile]) {
-                // Open interface documents in Gorm and other files in the editor
+                // Single-click previews files internally. Interface documents
+                // wait for a double-click rather than launching an application
+                // while the user is only changing the navigator selection.
                 NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
-                if (filePath) {
-                    [self openNavigatorFile:filePath];
+                NSArray *interfaceTypes = [NSArray arrayWithObjects:@"gorm", @"nib", @"xib",
+                    @"nix", @"storyboard", @"gmodel", @"cib", nil];
+                if (filePath && ![interfaceTypes containsObject:[[filePath pathExtension] lowercaseString]]) {
+                    [[_project editorController] openFile:filePath];
                 }
             }
         }
@@ -477,7 +474,7 @@
             YCodeProjectNavigatorItem *navItem = (YCodeProjectNavigatorItem *)clickedItem;
             
             if ([navItem isFile]) {
-                // Open interface documents in Gorm and other files in the editor
+                // Respect the workspace association for every file type.
                 NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
                 if (filePath) {
                     [self openNavigatorFile:filePath];

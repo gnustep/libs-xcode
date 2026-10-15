@@ -49,6 +49,12 @@ its `project.pbxproj` through libs-xcode and displays its groups, files, and
 targets in the project navigator. Missing or invalid project contents produce
 an error instead of opening an empty project.
 
+Double-click a file in the navigator to open it with the system's default
+application for that file type. This includes Gorm/XIB interface documents and
+source, image, sound, and other supporting files. Single-click continues to open
+ordinary files in Ycode; interface documents wait for a double-click. Double-click
+a group or directory to expand or collapse it.
+
 The same **Open Project...** dialog imports ProjectCenter `.pcproj` packages
 containing `PC.project` and older single-file `.pcproj` projects. Imported
 groups expand immediately to show their files. Resource references resolve
