@@ -20,9 +20,47 @@ more information.
 For Applications we are using the LICENSE file (GPLv3) and we use COPYING.LIB
 which is (LGPLv2.1) for the libraries/framworks.
 
-### 1.2 Screenshot
+### 1.2 Ycode
 
-<img width="3768" height="2096" alt="Untitled 2" src="https://github.com/user-attachments/assets/0fa131b6-b02a-4870-bfd1-d2d78d511e27" />
+Ycode is the GNUstep graphical IDE included in this repository. It uses
+libs-xcode to work with Xcode projects and also opens ProjectCenter projects
+and folders containing a GNUmakefile or Makefile.
+
+- Create applications, tools, bundles, frameworks, and libraries from templates;
+  import and export ProjectCenter projects.
+- Browse groups and files with directories first, image previews, and the icons
+  of compiled applications. Double-click a file to open its default application,
+  including Gorm for associated interface files.
+- Edit source with syntax highlighting, configurable indentation (two spaces by
+  default), project search, and a find/replace panel. **Edit > Convert Tabs to
+  Spaces** normalizes the current file as one undoable edit. Modified files
+  prompt to save when closing tabs, closing projects, or quitting.
+- Build, run, clean, and run tests with target, configuration, and architecture
+  selection. Console, Issues, and Test views show output and results.
+- Debug with GDB using source breakpoints, stepping controls, and a command
+  transcript. A resizable, hideable variables pane shows locals and globals
+  from the selected frame's source file. Both Console and Debugger output can
+  be selected and copied.
+- Use **File > Create .ycode.plist** for a Makefile folder without an existing
+  settings file. The command creates and opens the file, preserving current
+  settings and supplying default Clean and Test targets. Add build targets,
+  an executable path, or architecture environments as needed.
+
+![Ycode development environment](https://github.com/user-attachments/assets/0fa131b6-b02a-4870-bfd1-d2d78d511e27)
+
+Build Ycode with an installed GNUstep development environment, including
+GNUstep GUI:
+
+```sh
+make -C XCode
+make -C Applications/ycode
+```
+
+The top-level `make` also builds Ycode. GDB is required for debugging; test
+runners and toolchains depend on the project. See the [Ycode guide](Applications/ycode/README.md)
+for installation, project formats, editing, debugging, tests, and `.ycode.plist`
+configuration. Ycode uses GNUstep build tools and GDB; it does not provide
+Apple's SDKs, simulators, signing, or the full Xcode toolchain.
 
 ### 1.3 How to use
 
@@ -99,22 +137,19 @@ This native build supports using the project parsing library and tools on
 macOS. Buildtool's project-building backend still uses GNUstep tools and
 framework mappings; it is not a replacement for Apple's SDK build pipeline.
 
-#### 1.3.2 Plans for the future
+#### 1.3.2 Project generators and conversion
 
-* Create delegate which will provide a way for the library to
-  execute callbacks into the caller so that information can be shown.
-  This should eliminate the need to print anything in the library as all
-  of the printing will be done on the front end based on information sent
-  back by the library to the delegate.
-* Add more options to how the build is run so that the caller can specify
-  which target should be built.
-* Add support for translated to .pcproj files.
-  
+The library includes Makefile, CMake, ProjectCenter, and ProjectBuilder
+output generators. `buildtool generate` selects an output format; the `pc2xc`
+and `pcpg` tools provide additional project conversion and generation support.
+See the [buildtool guide](Tools/buildtool/README.md) for command usage and
+supported options.
+
 #### 1.3.3 Documentation
 
-I am working on a manual as well as gsdocs for the code so that the library is
-properly documented.  There is a manual for buildtool.plist settings and other
-information in the Documentation directory of this project.
+The [documentation guide](Documentation/README.md) covers `buildtool.plist`
+configuration and the manual. The [Ycode guide](Applications/ycode/README.md)
+covers the graphical IDE and its separate `.ycode.plist` settings.
 
 ## 1.4 How can you help?
 
@@ -132,5 +167,3 @@ Copyright (C) 2005 Free Software Foundation
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.
-
-</a>

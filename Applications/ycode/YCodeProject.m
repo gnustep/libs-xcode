@@ -1242,6 +1242,37 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     return success;
 }
 
+- (BOOL)canCreateSettingsFile
+{
+    return _directoryProject && [_projectPath length] > 0 &&
+        ![[NSFileManager defaultManager] fileExistsAtPath:
+            [_projectPath stringByAppendingPathComponent:@".ycode.plist"]];
+}
+
+- (BOOL)createSettingsFile:(NSError **)error
+{
+    if (![self canCreateSettingsFile]) {
+        if (error) *error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteUnknownError
+            userInfo:[NSDictionary dictionaryWithObject:
+                @"Settings can only be created for a Makefile folder without an existing .ycode.plist."
+                forKey:NSLocalizedDescriptionKey]];
+        return NO;
+    }
+    NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithDictionary:_settings];
+    if (![settings objectForKey:@"CleanTarget"]) [settings setObject:@"clean" forKey:@"CleanTarget"];
+    if (![settings objectForKey:@"TestTarget"]) {
+        BOOL gnumake = [[NSFileManager defaultManager] fileExistsAtPath:
+            [_projectPath stringByAppendingPathComponent:@"GNUmakefile"]];
+        [settings setObject:gnumake ? @"check" : @"test" forKey:@"TestTarget"];
+    }
+    NSData *data = [NSPropertyListSerialization dataWithPropertyList:settings
+        format:NSPropertyListXMLFormat_v1_0 options:0 error:error];
+    if (!data || ![data writeToFile:[_projectPath stringByAppendingPathComponent:@".ycode.plist"]
+        options:NSDataWritingAtomic error:error]) return NO;
+    [_settings addEntriesFromDictionary:settings];
+    return YES;
+}
+
 - (BOOL)saveProjectToPath:(NSString *)path
 {
     if (_directoryProject) {

@@ -1,9 +1,17 @@
-# apps-ycode
+# Ycode
 
-Xcode like application which combines the capabilities of gorm and projectecenter.  It's primary purpose
-is to provide an interface analogous to Xcode so that we can have a more modern development IDE where 
-all of the development happens in one place.  This will also help to unify our approach to dealing with
-certain types of interfaces which Gorm can't easily deal with.
+Ycode is a GNUstep IDE for editing, building, running, testing, and debugging
+projects. It uses libs-xcode to read Xcode projects, imports and exports
+ProjectCenter projects, and works directly with Makefile folders. Interface
+files open in their associated application, such as Gorm.
+
+This guide covers [installation](#build-and-installation),
+[projects and navigation](#projects-and-navigation), [editing](#editing-and-search),
+[tests](#running-tests), [debugging](#debugging),
+[Makefile settings](#makefile-folders), and [architectures](#architecture-selection).
+See the [repository README](../../README.md#12-ycode) for a screenshot and overview.
+
+## Build and installation
 
 Build the local libs-xcode framework and Ycode from the repository root:
 
@@ -30,6 +38,8 @@ the installed GNUstep environment in the root shell first (for example,
 the repository root. The default installation domain is Local; installing
 there does not replace an existing System copy. Quit and reopen Ycode after
 installation to load the updated executable.
+
+## Projects and navigation
 
 Use **File > New Project...** to choose a location, enter a project name, select
 the project type, and choose Xcode or ProjectCenter format in one panel. The
@@ -75,6 +85,13 @@ from an imported ProjectCenter project. Paths are adjusted for the export
 destination; source files stay where they are. Export leaves the active
 document and its unsaved state unchanged.
 
+Directories appear before files in the navigator. Compiled `.app` bundles
+show their application icon when available, including resolved Products
+references. Icons refresh after a successful build or clean; unbuilt products
+use the generic icon.
+
+## Editing and search
+
 The navigator's **Search** tab searches the contents of project file references,
 including referenced folders and files outside the project directory. Enter text
 and press Return for case-insensitive literal matches. Results show the file,
@@ -89,17 +106,6 @@ or Replace All. An empty replacement deletes matches. Replace operates on a
 selected match; otherwise it finds the next match first. Replace All affects
 only the current file and can be undone in one step. Switching tabs changes
 the panel's target file. Searching alone does not mark the file changed.
-
-In the **Test** tab, choose **Run Tests** to save edits and run the project's
-tests. Results update with each XCTest case and show passed, failed, and skipped
-states. On GNUstep, Xcode projects are built with `buildtool`, then their unit-test
-bundles run with `xctest`; both tools must be on `PATH`. Tests with `TEST_HOST`
-run inside their built application using Ycode's embedded test helper, so app
-classes, resources, and launch setup are available. Startup failures appear in
-the Test tab as well as Console. Native macOS uses
-`xcodebuild test`. GNUmakefile projects use `make check`, and other make projects
-use `make test`. Full output and build/runner errors appear in Console.
-**Project > Stop** cancels the operation. Each run replaces the previous results.
 
 Closing a tab or project, or quitting Ycode, asks whether to Save, Don’t Save,
 or Cancel for each modified file. Cancelling or a failed save prevents closure.
@@ -172,12 +178,27 @@ stops are wider. Shift-Tab also unindents the current line without a selection.
 configured tab stop, preserving line endings and the selected text. Conversion
 is one undoable edit and does not change indentation preferences.
 
+## Running tests
+
+In the **Test** tab, choose **Run Tests** to save edits and run the project's
+tests. Results update with each XCTest case and show passed, failed, and skipped
+states. On GNUstep, Xcode projects are built with `buildtool`, then their unit-test
+bundles run with `xctest`; both tools must be on `PATH`. Tests with `TEST_HOST`
+run inside their built application using Ycode's embedded test helper, so app
+classes, resources, and launch setup are available. Startup failures appear in
+the Test tab as well as Console. Native macOS uses
+`xcodebuild test`. GNUmakefile projects use `make check`, and other make projects
+use `make test`. Full output and build/runner errors appear in Console.
+**Project > Stop** cancels the operation. Each run replaces the previous results.
+
 Run the application regression checks with a working GUI display (or under
 `xvfb-run -a` on a headless GNUstep system):
 
 ```sh
 make -C Applications/ycode/Tests check
 ```
+
+## Debugging
 
 Choose **Project > Debug** to build the selected target and open a GDB session.
 GDB must be installed and available on `PATH`; set the `DebuggerPath` user
@@ -191,8 +212,8 @@ so you can set breakpoints before the program starts. Select a source line and
 choose **Toggle Breakpoint at Selection** to add or remove a breakpoint;
 Ycode remembers source breakpoints per project in its user preferences.
 The bottom pane has separate **Console**, **Issues**, and **Debugger** tabs.
-The Debugger tab contains the GDB transcript, execution controls, and command
-field. Build and program output remain in Console. Starting a debugger session
+The Debugger tab contains the GDB transcript, icon buttons for execution
+controls, and a command field. Hover over a button to see its action name. Build and program output remain in Console. Starting a debugger session
 or stopping at a source location selects the Debugger tab.
 
 While debugging, a gutter appears beside the source line numbers. Click it to
@@ -246,7 +267,12 @@ Build invokes `make` in the selected folder, Clean invokes `make clean`, and
 Tests invokes `make check` for GNUmakefile projects or `make test` otherwise.
 Compiler output appears in the console and issues panes as usual.
 
-Optional settings live in `.ycode.plist` inside the folder. For example:
+Optional settings live in `.ycode.plist` inside the folder. Use **File > Create .ycode.plist** to create and open this file for editing. The command is enabled
+for Makefile folders without an existing settings file. It preserves current
+settings and supplies `CleanTarget = clean` and `TestTarget = check` for
+GNUmakefile projects (`test` otherwise). The command sits below **Save Project**
+and is disabled for Xcode/ProjectCenter projects or when the file already exists.
+It does not guess build targets or executable paths; add those as needed. For example:
 
 ```plist
 {

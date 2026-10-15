@@ -2319,6 +2319,31 @@ static void testMakeDirectory(NSString *temporaryDirectory)
     atomically:YES encoding:NSUTF8StringEncoding error:NULL];
   [project refreshDirectoryFiles];
   testAssert([[[[project project] mainGroup] children] count] == 5, @"Refresh discovers externally added files");
+  NSString *settingsPath = [directory stringByAppendingPathComponent:@".ycode.plist"];
+  BOOL wasEdited = [project isDocumentEdited];
+  AppController *app = AUTORELEASE([[AppController alloc] init]);
+  [app buildMainMenu];
+  NSMenuItem *createItem = [[[[NSApp mainMenu] itemWithTitle:@"File"] submenu]
+    itemWithTitle:@"Create .ycode.plist"];
+  testAssert(createItem != nil && [createItem action] == @selector(createProjectSettings:) &&
+      [createItem target] == app, @"File menu contains the create-settings action");
+  testAssert([project canCreateSettingsFile], @"Makefile folder permits creating missing settings");
+  [[project settings] setObject:@"preserved" forKey:@"CustomSetting"];
+  testAssert([project createSettingsFile:&error], @"Create directory project settings");
+  NSDictionary *createdSettings = [NSDictionary dictionaryWithContentsOfFile:settingsPath];
+  testAssert([[createdSettings objectForKey:@"CleanTarget"] isEqual:@"clean"] &&
+      [[createdSettings objectForKey:@"TestTarget"] isEqual:@"test"] &&
+      [[createdSettings objectForKey:@"CustomSetting"] isEqual:@"preserved"],
+    @"Created settings preserve current values and make target defaults");
+  NSData *originalSettings = [NSData dataWithContentsOfFile:settingsPath];
+  testAssert(![project canCreateSettingsFile] && ![project createSettingsFile:NULL] &&
+      [[NSData dataWithContentsOfFile:settingsPath] isEqual:originalSettings],
+    @"Creating settings never replaces an existing file");
+  testAssert([project isDocumentEdited] == wasEdited, @"Creating settings preserves document change state");
+  YCodeProject *nativeProject = [[YCodeProject alloc] init];
+  testAssert(![nativeProject canCreateSettingsFile] && ![nativeProject createSettingsFile:NULL],
+    @"Native projects do not offer directory project settings creation");
+  [nativeProject release];
   YCodeBuildSystem *build = [project buildSystem];
   testAssert([build build], @"Start a directory make build"); waitForBuild(build, NO);
   testAssert([build status] == YCodeBuildStatusSuccess && [[build buildOutput] rangeOfString:@"default-build"].location != NSNotFound,
@@ -2348,7 +2373,11 @@ static void testMakeDirectory(NSString *temporaryDirectory)
   [project close];
   NSString *gnuPath = [directory stringByAppendingPathComponent:@"GNUmakefile"];
   [@"all:\n\t@echo gnu-build\ncheck:\n\t@echo gnu-tests\n" writeToFile:gnuPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [manager removeItemAtPath:settingsPath error:NULL];
   project = [controller openDocumentWithContentsOfURL:url display:NO error:&error];
+  testAssert([project createSettingsFile:&error] &&
+      [[[project settings] objectForKey:@"TestTarget"] isEqual:@"check"],
+    @"GNUmakefile settings default to the check target");
   build = [project buildSystem];
   testAssert([[build detectedBuildSystem] isEqual:@"gnumake"] && [build test], @"GNUmakefile selects the GNUstep check target");
   waitForBuild(build, NO);

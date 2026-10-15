@@ -84,6 +84,7 @@
 - (IBAction) saveAllDocuments: (id)sender;
 /** Saves project structure while keeping source-file Save independent. */
 - (IBAction) saveProject: (id)sender;
+- (IBAction) createProjectSettings: (id)sender;
 - (IBAction) exportProjectCenter: (id)sender;
 
 /**

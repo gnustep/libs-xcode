@@ -78,6 +78,8 @@
 /** Open a directory containing GNUmakefile, makefile, or Makefile. */
 + (BOOL)isMakeProjectDirectory:(NSString *)path;
 - (BOOL)isDirectoryProject;
+- (BOOL)canCreateSettingsFile;
+- (BOOL)createSettingsFile:(NSError **)error;
 - (void)refreshDirectoryFiles;
 
 /**

@@ -212,6 +212,7 @@ YCodeFileURLFromPath(NSString *path)
     [fileMenu addItem:YCodeMenuItem(@"Save As...", @selector(saveDocumentAs:), @"S", self)];
     [fileMenu addItem:YCodeMenuItem(@"Save All", @selector(saveAllDocuments:), @"", self)];
     [fileMenu addItem:YCodeMenuItem(@"Save Project", @selector(saveProject:), @"", self)];
+    [fileMenu addItem:YCodeMenuItem(@"Create .ycode.plist", @selector(createProjectSettings:), @"", self)];
     [fileMenu addItem:YCodeMenuItem(@"Export ProjectCenter Project...", @selector(exportProjectCenter:), @"", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"File" action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:fileMenu];
@@ -472,6 +473,19 @@ YCodeFileURLFromPath(NSString *path)
 - (IBAction)saveProject:(id)sender
 {
     [self saveActiveProjectShowingPanel:NO];
+}
+
+- (IBAction)createProjectSettings:(id)sender
+{
+    YCodeProject *project = [self currentProject];
+    if (![project canCreateSettingsFile]) return;
+    NSError *error = nil;
+    if (![project createSettingsFile:&error]) {
+        [[NSAlert alertWithError:error] runModal];
+        return;
+    }
+    [[project editorController] openFile:
+        [[project projectDirectoryPath] stringByAppendingPathComponent:@".ycode.plist"]];
 }
 
 - (IBAction)exportProjectCenter:(id)sender
@@ -776,6 +790,7 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
     SEL action = [item action];
+    if (action == @selector(createProjectSettings:)) return [[self currentProject] canCreateSettingsFile];
     if (action == @selector(convertTabsToSpaces:))
         return [[[[self currentEditorController] currentDocument] textView] isEditable];
     if (action == @selector(findInFile:) || action == @selector(replaceInFile:))
