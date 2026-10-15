@@ -59,6 +59,7 @@
  * Project tree management
  */
 - (void)projectDidChange;
+- (void)refreshApplicationIcons;
 - (void)reloadProjectTree;
 - (NSArray *)rootItems;
 - (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item;

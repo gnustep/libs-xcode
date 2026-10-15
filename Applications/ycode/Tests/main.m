@@ -3190,6 +3190,55 @@ static void testWindowFramePersistence(void)
   [first release];
 }
 
+static void testApplicationIcons(NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *appPath = [temporaryDirectory stringByAppendingPathComponent:@"build/Icon Test.app"];
+  NSString *resources = [appPath stringByAppendingPathComponent:@"Resources"];
+  [manager createDirectoryAtPath:resources withIntermediateDirectories:YES attributes:nil error:NULL];
+  [[NSDictionary dictionaryWithObject:@"AppIcon.png" forKey:@"NSIcon"]
+    writeToFile:[resources stringByAppendingPathComponent:@"Info-gnustep.plist"] atomically:YES];
+  NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
+    initWithBitmapDataPlanes:NULL pixelsWide:32 pixelsHigh:32 bitsPerSample:8
+    samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace
+    bytesPerRow:0 bitsPerPixel:0];
+  NSInteger x, y;
+  for (y = 0; y < 32; y++)
+    for (x = 0; x < 32; x++)
+      [bitmap setColor:[NSColor redColor] atX:x y:y];
+  [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]]
+    writeToFile:[resources stringByAppendingPathComponent:@"AppIcon.png"] atomically:YES];
+  [bitmap release];
+
+  YCodeProject *project = [[YCodeProject alloc] init];
+  [project setProjectPath:[temporaryDirectory stringByAppendingPathComponent:@"Icons.xcodeproj"]];
+  YCodeProjectNavigatorController *navigator = [[YCodeProjectNavigatorController alloc] init];
+  [navigator setProject:project];
+  PBXFileReference *file = [[PBXFileReference alloc] init];
+  [file setPath:appPath];
+  YCodeProjectNavigatorItem *item = [[YCodeProjectNavigatorItem alloc]
+    initWithRepresentedObject:file type:YCodeNavigatorItemTypeFile];
+  [navigator updateThumbnailForItem:item];
+  NSBitmapImageRep *pixels = [NSBitmapImageRep imageRepWithData:[[item icon] TIFFRepresentation]];
+  NSColor *color = [[pixels colorAtX:8 y:8] colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+  testAssert(color != nil && [color redComponent] > 0.9 && [color greenComponent] < 0.1,
+    @"Navigator uses the application bundle's own icon");
+  testAssert(NSEqualSizes([[item icon] size], NSMakeSize(16, 16)),
+    @"Application icon fits the navigator row");
+  [file setPath:@"Icon Test.app"];
+  [file setSourceTree:@"BUILT_PRODUCTS_DIR"];
+  testAssert([[navigator resolvedFilePathForNavigatorItem:item] isEqual:appPath],
+    @"Products references resolve an existing compiled application");
+  [file setPath:@"Missing.app"];
+  testAssert([navigator resolvedFilePathForNavigatorItem:item] == nil,
+    @"An unbuilt application has no resolved product path");
+  [item release];
+  [file release];
+  [navigator release];
+  [project release];
+}
+
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -3204,6 +3253,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-app-icons"]) {
+    testApplicationIcons(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode application icon checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-find-replace"]) {
     testFindReplace(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -3347,6 +3402,7 @@ int main(void)
   testTabPreferences([temporaryDirectory stringByAppendingPathComponent:@"Tab Preferences"]);
   testEditorColorPreferences();
   testEditorColors();
+  testApplicationIcons(temporaryDirectory);
   testHiddenRulersDebugGutter();
   testBreakpointFileTypes();
   testSyntaxHighlighting();

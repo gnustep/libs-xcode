@@ -25,10 +25,12 @@
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeProjectNavigatorItem.h"
 #import "YCodeProject.h"
+#import "YCodeBuildSystem.h"
 #import <XCode/PBXProject.h>
 #import <XCode/PBXGroup.h>
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXTarget.h>
+#import <XCode/PBXNativeTarget.h>
 
 /* NSTextFieldCell preserves the table's selection colors, including dark themes. */
 @interface YCodeNavigatorCell : NSTextFieldCell
@@ -107,8 +109,33 @@
         basePath = [self resolvedPathForNavigatorItem:[item parent]];
     } else if ([sourceTree isEqualToString:@"SOURCE_ROOT"]) {
         basePath = [_project projectDirectoryPath];
+    } else if ([sourceTree isEqualToString:@"BUILT_PRODUCTS_DIR"]) {
+        NSString *directory = [_project projectDirectoryPath];
+        if (!directory || ![path length]) return nil;
+        NSMutableArray *roots = [NSMutableArray array];
+        NSEnumerator *targets = [[[_project project] targets] objectEnumerator];
+        PBXTarget *target;
+        while ((target = [targets nextObject]) != nil) {
+            if ([target isKindOfClass:[PBXNativeTarget class]] &&
+                [(PBXNativeTarget *)target productReference] == object && [[target name] length])
+                [roots addObject:[directory stringByAppendingPathComponent:
+                    [NSString stringWithFormat:@"build/%@/Products", [target name]]]];
+        }
+        NSString *configuration = [[_project buildSystem] buildConfiguration];
+        if ([configuration length]) [roots addObject:[directory stringByAppendingPathComponent:
+            [@"build" stringByAppendingPathComponent:configuration]]];
+        [roots addObject:[directory stringByAppendingPathComponent:@"build"]];
+        [roots addObject:[directory stringByAppendingPathComponent:@"obj"]];
+        [roots addObject:directory];
+        NSEnumerator *enumerator = [roots objectEnumerator];
+        NSString *root;
+        while ((root = [enumerator nextObject]) != nil) {
+            NSString *candidate = [root stringByAppendingPathComponent:path];
+            if ([[NSFileManager defaultManager] fileExistsAtPath:candidate]) return candidate;
+        }
+        return nil;
     } else {
-        // SDK and build-product locations need a configured build context.
+        // SDK locations need a configured build context.
         return nil;
     }
 
@@ -130,6 +157,11 @@
 {
     NSString *path = [self resolvedFilePathForNavigatorItem:item];
     NSString *extension = [[path pathExtension] lowercaseString];
+    if ([extension isEqual:@"app"] && [[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        NSImage *icon = [[NSWorkspace sharedWorkspace] iconForFile:path];
+        if (icon) [item setIcon:icon];
+        return;
+    }
     if (!path || (![[NSImage imageFileTypes] containsObject:extension] &&
         ![[NSArray arrayWithObjects:@"png", @"jpg", @"jpeg", @"gif", @"tif",
             @"tiff", @"bmp", @"ico", @"icns", @"webp", nil] containsObject:extension]))
@@ -140,6 +172,24 @@
         [item setIcon:image];
     }
     RELEASE(image);
+}
+
+- (void)refreshApplicationIcons
+{
+    if ([_project isDirectoryProject]) {
+        // A successful build may have created a bundle absent from the old tree.
+        [_project refreshDirectoryFiles];
+        return;
+    }
+    NSEnumerator *items = [[_itemCache allValues] objectEnumerator];
+    YCodeProjectNavigatorItem *item;
+    while ((item = [items nextObject]) != nil) {
+        if ([item isFile] && [[[[[item representedObject] path] pathExtension] lowercaseString] isEqual:@"app"]) {
+            [item setRepresentedObject:[item representedObject]];
+            [self updateThumbnailForItem:item];
+        }
+    }
+    [_outlineView reloadData];
 }
 
 - (id)init

@@ -1511,6 +1511,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidFinishBuild:(id)buildSystem success:(BOOL)success
 {
+    if (success) [_navigatorController refreshApplicationIcons];
     [self refreshTargetSelectors];
     [self finishDiagnostics];
     [self appendConsoleOutput:success ? @"Build succeeded.\n" : @"Build failed.\n"];
@@ -1544,6 +1545,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (void)buildSystemDidFinishClean:(id)buildSystem
 {
+    [_navigatorController refreshApplicationIcons];
     [self refreshTargetSelectors];
 }
 
