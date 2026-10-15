@@ -39,6 +39,51 @@
 #import "YCImageInspectorView.h"
 #import "YCSoundInspectorView.h"
 
+/* Read-only output still supports selection and familiar copy shortcuts. */
+@interface YCTranscriptTextView : NSTextView
+@end
+
+@implementation YCTranscriptTextView
+- (id)initWithFrame:(NSRect)frame
+{
+  if ((self = [super initWithFrame:frame]))
+    {
+      [self setEditable:NO];
+      [self setSelectable:YES];
+      NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Output"];
+      NSMenuItem *copy = [[NSMenuItem alloc] initWithTitle:@"Copy"
+        action:@selector(copy:) keyEquivalent:@""];
+      [copy setTarget:self];
+      [menu addItem:copy];
+      RELEASE(copy);
+      NSMenuItem *select = [[NSMenuItem alloc] initWithTitle:@"Select All"
+        action:@selector(selectAll:) keyEquivalent:@""];
+      [select setTarget:self];
+      [menu addItem:select];
+      RELEASE(select);
+      [self setMenu:menu];
+      RELEASE(menu);
+    }
+  return self;
+}
+- (void)rightMouseDown:(NSEvent *)event
+{
+  [[self window] makeFirstResponder:self];
+  [NSMenu popUpContextMenu:[self menu] withEvent:event forView:self];
+}
+- (void)keyDown:(NSEvent *)event
+{
+  NSUInteger flags = [event modifierFlags];
+  if ((flags & NSControlKeyMask) && !(flags & (NSAlternateKeyMask | NSCommandKeyMask)))
+    {
+      NSString *key = [[event charactersIgnoringModifiers] lowercaseString];
+      if ([key isEqual:@"c"]) { [self copy:nil]; return; }
+      if ([key isEqual:@"a"]) { [self selectAll:nil]; return; }
+    }
+  [super keyDown:event];
+}
+@end
+
 /* Stateful ANSI transcript decoder. Cursor controls are consumed: these panes
    are append-only transcripts, rather than terminal emulators. */
 @interface YCANSITranscript : NSObject
@@ -987,7 +1032,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     }
 
     if (_consoleTextView == nil) {
-        _consoleTextView = [[NSTextView alloc] initWithFrame:[_bottomView bounds]];
+        _consoleTextView = [[YCTranscriptTextView alloc] initWithFrame:[_bottomView bounds]];
         [_consoleTextView setEditable:NO];
         [_consoleTextView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     }
@@ -1080,7 +1125,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [controlsScroll setAutohidesScrollers:YES];
         [controlsScroll setDocumentView:_debuggerControls];
         [debuggerView addSubview:controlsScroll];
-        _debuggerTextView = AUTORELEASE([[NSTextView alloc] initWithFrame:
+        _debuggerTextView = AUTORELEASE([[YCTranscriptTextView alloc] initWithFrame:
             NSMakeRect(0, 0, NSWidth(bounds), MAX(0, NSHeight(bounds) - 74))]);
         [_debuggerTextView setEditable:NO];
         [_debuggerTextView setFont:[NSFont userFixedPitchFontOfSize:12]];

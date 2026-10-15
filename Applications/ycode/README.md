@@ -174,6 +174,15 @@ when both occupy that line. The arrow clears on resume, exit, or session end.
 GDB breakpoint commands also update the markers. Breakpoints relocated by GDB
 appear at the executable source line. Saved breakpoints remain visible outside
 a debug session, and their enabled/disabled state is remembered per project.
+Before Go, a source file in a shared library may produce GDB's "No source file
+named" message. If GDB accepts a pending breakpoint, Ycode reports that it will
+be resolved when the library loads. For example, GormCore breakpoints normally
+resolve when Gorm starts. A breakpoint that remains pending requires checking
+the loaded library, its debug symbols, and source path.
+
+Both Console and Debugger output are read-only but selectable. Use **Edit >
+Copy**, the right-click **Copy** menu, or Ctrl+C to copy selected output.
+Ctrl+A or the right-click **Select All** menu selects the full transcript.
 
 The field in the Debugger tab accepts GDB commands such as `print variable`,
 `backtrace`, `break main`, `disable 1`, and `enable 1`. Press Return to send a

@@ -404,6 +404,10 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
             [_disabledBreakpoints addObject:location];
           else if ([[bp objectForKey:@"enabled"] isEqual:@"y"])
             [_disabledBreakpoints removeObject:location];
+          if ([bp objectForKey:@"pending"] || [[bp objectForKey:@"addr"] isEqual:@"<PENDING>"])
+            [_delegate debugger:self output:[NSString stringWithFormat:
+              @"Breakpoint %@ is pending at %@. GDB accepted it and will try to resolve it when its library loads after Go. If it stays pending, check the source path and debug symbols.\n",
+              number, location]];
         }
     }
   if ([event isEqual:@"breakpoint-deleted"])

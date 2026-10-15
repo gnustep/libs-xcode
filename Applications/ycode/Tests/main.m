@@ -735,6 +735,57 @@ static void testFontAndSidebarPreferences(void)
   [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeFontsDidChange" object:nil];
 }
 
+static void testTranscriptCopy(void)
+{
+  [NSApp finishLaunching];
+  [NSApp activateIgnoringOtherApps:YES];
+  NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+  NSMutableDictionary *saved = [NSMutableDictionary dictionary];
+  NSEnumerator *types = [[pasteboard types] objectEnumerator];
+  NSString *type;
+  while ((type = [types nextObject]) != nil) {
+    NSData *data = [pasteboard dataForType:type];
+    if (data) [saved setObject:data forKey:type];
+  }
+  YCodeWindowController *controller = [YCodeWindowController new];
+  [controller setBottomPanelVisible:YES];
+  [controller showWindow:nil];
+  [[controller window] makeKeyAndOrderFront:nil];
+  NSArray *keys = [NSArray arrayWithObjects:@"_consoleTextView", @"_debuggerTextView", nil];
+  NSArray *tabs = [NSArray arrayWithObjects:@"console", @"debugger", nil];
+  NSUInteger i;
+  for (i = 0; i < [keys count]; i++) {
+    [[controller valueForKey:@"_bottomTabView"] selectTabViewItemWithIdentifier:[tabs objectAtIndex:i]];
+    NSTextView *view = [controller valueForKey:[keys objectAtIndex:i]];
+    [view setString:@"Copy this output\nsecond line\n"];
+    testAssert(![view isEditable] && [view isSelectable], @"Both output panes are selectable but read-only");
+    [[controller window] makeFirstResponder:view];
+    [view setSelectedRange:NSMakeRange(0, 4)];
+    [NSApp sendAction:@selector(copy:) to:nil from:nil];
+    testAssert([[pasteboard stringForType:NSStringPboardType] isEqual:@"Copy"],
+      @"Edit Copy routes to the selected output pane");
+    [view setSelectedRange:NSMakeRange(5, 4)];
+    [[view menu] update];
+    [[view menu] performActionForItemAtIndex:0];
+    testAssert([[pasteboard stringForType:NSStringPboardType] isEqual:@"this"],
+      @"Output context menu copies the selected text");
+    NSEvent *select = [NSEvent keyEventWithType:NSKeyDown location:NSZeroPoint modifierFlags:NSControlKeyMask
+      timestamp:0 windowNumber:[[controller window] windowNumber] context:nil characters:@"a"
+      charactersIgnoringModifiers:@"a" isARepeat:NO keyCode:0];
+    [view keyDown:select];
+    NSEvent *copy = [NSEvent keyEventWithType:NSKeyDown location:NSZeroPoint modifierFlags:NSControlKeyMask
+      timestamp:0 windowNumber:[[controller window] windowNumber] context:nil characters:@"c"
+      charactersIgnoringModifiers:@"c" isARepeat:NO keyCode:0];
+    [view keyDown:copy];
+    testAssert([[pasteboard stringForType:NSStringPboardType] isEqual:[view string]],
+      @"Ctrl+A and Ctrl+C copy the complete transcript without editing it");
+  }
+  [controller close]; [controller release];
+  [pasteboard declareTypes:[saved allKeys] owner:nil];
+  types = [saved keyEnumerator];
+  while ((type = [types nextObject]) != nil) [pasteboard setData:[saved objectForKey:type] forType:type];
+}
+
 static void testBreakpointFileTypes(void)
 {
   YCodeProject *project = [YCodeProject new];
@@ -1415,6 +1466,9 @@ static void testDebuggerRecords(void)
     @"New enabled breakpoints stay red while awaiting GDB confirmation");
   [debugger receiveData:[@"^done,bkpt={number=\"8\",addr=\"<PENDING>\",pending=\"/tmp/later.c:5\",original-location=\"/tmp/later.c:5\",enabled=\"y\"}\n"
     dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([probe->output rangeOfString:@"GDB accepted it"].location != NSNotFound &&
+    [probe->output rangeOfString:@"library loads after Go"].location != NSNotFound,
+    @"Accepted pending breakpoints explain deferred shared-library symbol loading");
   testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
     @"Enabled unresolved breakpoints remain red");
   [debugger toggleBreakpointEnabledAtFile:@"/tmp/later.c" line:5];
@@ -2702,6 +2756,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-output"]) {
+    testTranscriptCopy();
+    testDebuggerRecords();
+    NSLog(@"Ycode transcript and breakpoint checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-sound"]) {
     testSoundInspector(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -2812,6 +2872,7 @@ int main(void)
   testHiddenRulersDebugGutter();
   testBreakpointFileTypes();
   testSyntaxHighlighting();
+  testTranscriptCopy();
   testDebuggerRecords();
   testAssert([manager createDirectoryAtPath:temporaryDirectory
               withIntermediateDirectories:YES attributes:nil error:&error],
