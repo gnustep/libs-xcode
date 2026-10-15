@@ -274,7 +274,13 @@ not inside the project package. It preserves current
 settings and supplies `CleanTarget = clean` and `TestTarget = check` for
 GNUmakefile projects (`test` otherwise). The command sits below **Save Project**
 and is disabled for Xcode (`.xcodeproj`) projects or when the file already exists.
-It does not guess build targets or executable paths; add those as needed. For example:
+The generated `Executable` uses an existing configured path, the ProjectCenter
+runnable product, or a built application/tool discovered in a directory project.
+Application bundles use the executable inside the bundle, including its declared
+executable name. Paths within the project are stored relative to its directory.
+If no executable can be identified unambiguously, the command opens a file
+chooser; select the executable to use for Run and Debug. Cancelling leaves the
+settings file uncreated. Build targets can be added manually. For example:
 
 ```plist
 {
@@ -291,7 +297,8 @@ Target toolbar choices; Automatic uses `BuildTarget`, or make's default target
 when omitted. Clean and Tests use their own targets. `Executable` is an absolute
 path or a path relative to the folder, and enables Run and Debug after building.
 For an application bundle, specify the executable inside the bundle. Ycode does
-not guess executable paths or parse arbitrary makefiles to discover targets.
+not parse arbitrary makefiles to discover targets. For directory projects without
+a built product, build first or select an existing executable when creating settings.
 Save Project writes only `.ycode.plist`; makefiles remain authoritative for
 sources and dependencies. Project Save As does not convert or move this folder.
 

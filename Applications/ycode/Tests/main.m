@@ -2329,8 +2329,29 @@ static void testMakeDirectory(NSString *temporaryDirectory)
       [createItem target] == app, @"File menu contains the create-settings action");
   testAssert([project canCreateSettingsFile], @"Makefile folder permits creating missing settings");
   [[project settings] setObject:@"preserved" forKey:@"CustomSetting"];
+  NSString *appBundle = [directory stringByAppendingPathComponent:@"Applications/Example.app"];
+  [manager createDirectoryAtPath:[appBundle stringByAppendingPathComponent:@"Resources"]
+    withIntermediateDirectories:YES attributes:nil error:NULL];
+  [[NSDictionary dictionaryWithObject:@"ActualExecutable" forKey:@"NSExecutable"]
+    writeToFile:[appBundle stringByAppendingPathComponent:@"Resources/Info-gnustep.plist"] atomically:YES];
+  writeExecutable([appBundle stringByAppendingPathComponent:@"ActualExecutable"], @"#!/bin/sh\nexit 0\n");
   testAssert([project createSettingsFile:&error], @"Create directory project settings");
   NSDictionary *createdSettings = [NSDictionary dictionaryWithContentsOfFile:settingsPath];
+  testAssert([[createdSettings objectForKey:@"Executable"] isEqual:@"Applications/Example.app/ActualExecutable"],
+    @"Generated settings include the actual executable inside a nested application bundle");
+  [[project settings] setObject:@"custom/path" forKey:@"Executable"];
+  testAssert([[project settingsExecutablePath] isEqual:@"custom/path"], @"Explicit executable settings are preserved");
+  [[project settings] removeObjectForKey:@"Executable"];
+  NSString *secondApp = [directory stringByAppendingPathComponent:@"Other.app"];
+  [manager createDirectoryAtPath:secondApp withIntermediateDirectories:YES attributes:nil error:NULL];
+  writeExecutable([secondApp stringByAppendingPathComponent:@"Other"], @"#!/bin/sh\nexit 0\n");
+  testAssert([project settingsExecutablePath] == nil, @"Multiple applications require an executable selection");
+  [manager removeItemAtPath:secondApp error:NULL];
+  [manager removeItemAtPath:appBundle error:NULL];
+  NSString *toolDirectory = [directory stringByAppendingPathComponent:@"obj"];
+  [manager createDirectoryAtPath:toolDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  writeExecutable([toolDirectory stringByAppendingPathComponent:@"ExampleTool"], @"#!/bin/sh\nexit 0\n");
+  testAssert([[project settingsExecutablePath] isEqual:@"obj/ExampleTool"], @"Discover a compiled directory-project tool");
   testAssert([[createdSettings objectForKey:@"CleanTarget"] isEqual:@"clean"] &&
       [[createdSettings objectForKey:@"TestTarget"] isEqual:@"test"] &&
       [[createdSettings objectForKey:@"CustomSetting"] isEqual:@"preserved"],
@@ -2352,12 +2373,21 @@ static void testMakeDirectory(NSString *temporaryDirectory)
   NSString *pcPath = [pcDirectory stringByAppendingPathComponent:@"Example.pcproj"];
   [manager createDirectoryAtPath:pcPath withIntermediateDirectories:YES attributes:nil error:NULL];
   [pcProject setProjectPath:pcPath];
+  PBXProject *pcModel = AUTORELEASE([[PBXProject alloc] init]);
+  PBXNativeTarget *pcTarget = AUTORELEASE([[PBXNativeTarget alloc] init]);
+  [pcTarget setName:@"Example"];
+  [pcTarget setProductType:@"com.apple.product-type.application"];
+  [pcTarget setProductReference:AUTORELEASE([[PBXFileReference alloc] initWithPath:@"Example.app"])];
+  [pcModel setTargets:[NSMutableArray arrayWithObject:pcTarget]];
+  [pcProject setProject:pcModel];
   [[pcProject settings] setObject:[NSDictionary dictionaryWithObject:@"Example" forKey:@"PROJECTNAME"]
     forKey:@"ProjectCenterMetadata"];
   testAssert([pcProject canCreateSettingsFile] && [pcProject createSettingsFile:&error] &&
       [manager fileExistsAtPath:pcSettingsPath] &&
       ![manager fileExistsAtPath:[pcPath stringByAppendingPathComponent:@".ycode.plist"]],
     @"ProjectCenter settings are created beside the package");
+  testAssert([[[NSDictionary dictionaryWithContentsOfFile:pcSettingsPath] objectForKey:@"Executable"]
+      isEqual:@"Example.app/Example"], @"An unbuilt ProjectCenter application supplies its expected executable path");
   testAssert([[NSDictionary dictionaryWithContentsOfFile:pcSettingsPath]
       objectForKey:@"ProjectCenterMetadata"] == nil &&
       [[pcProject settings] objectForKey:@"ProjectCenterMetadata"] != nil,

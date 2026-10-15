@@ -43,8 +43,9 @@ and folders containing a GNUmakefile or Makefile.
   be selected and copied.
 - Use **File > Create .ycode.plist** for a directory or ProjectCenter project
   without an existing settings file. Xcode projects do not use this command. The command creates and opens the file, preserving current
-  settings and supplying default Clean and Test targets. Add build targets,
-  an executable path, or architecture environments as needed.
+  settings, adding the runnable executable, and supplying default Clean and Test
+  targets. If automatic detection is ambiguous, choose the executable in a file
+  panel. Add build targets or architecture environments as needed.
 
 ![Ycode development environment](https://github.com/user-attachments/assets/0fa131b6-b02a-4870-bfd1-d2d78d511e27)
 

@@ -79,6 +79,7 @@
 + (BOOL)isMakeProjectDirectory:(NSString *)path;
 - (BOOL)isDirectoryProject;
 - (BOOL)canCreateSettingsFile;
+- (NSString *)settingsExecutablePath;
 - (BOOL)createSettingsFile:(NSError **)error;
 - (void)refreshDirectoryFiles;
 

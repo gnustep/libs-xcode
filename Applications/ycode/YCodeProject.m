@@ -1242,6 +1242,78 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     return success;
 }
 
+/* Store portable paths when the executable belongs to this project. */
+- (NSString *)relativeSettingsExecutable:(NSString *)path
+{
+    NSString *root = [[[self projectDirectoryPath] stringByStandardizingPath] stringByAppendingString:@"/"];
+    path = [path stringByStandardizingPath];
+    return [path hasPrefix:root] ? [path substringFromIndex:[root length]] : path;
+}
+
+- (NSString *)settingsExecutablePath
+{
+    id configured = [_settings objectForKey:@"Executable"];
+    if ([configured isKindOfClass:[NSString class]] && [configured length]) return configured;
+    NSString *executable = [_buildSystem findExecutable];
+    if (executable) return [self relativeSettingsExecutable:executable];
+
+    if (!_directoryProject) {
+        NSEnumerator *targets = [[_project targets] objectEnumerator];
+        PBXNativeTarget *target;
+        NSString *selection = [_buildSystem targetName];
+        NSMutableArray *products = [NSMutableArray array];
+        while ((target = [targets nextObject]) != nil) {
+            if (![target isKindOfClass:[PBXNativeTarget class]] ||
+                ([selection length] && ![[target name] isEqual:selection])) continue;
+            NSString *product = [[target productReference] path];
+            if (![product length]) continue;
+            if ([[target productType] isEqual:@"com.apple.product-type.application"])
+                [products addObject:[product stringByAppendingPathComponent:
+                    [[product lastPathComponent] stringByDeletingPathExtension]]];
+            else if ([[target productType] isEqual:@"com.apple.product-type.tool"])
+                [products addObject:[@"obj" stringByAppendingPathComponent:product]];
+        }
+        return [products count] == 1 ? [products objectAtIndex:0] : nil;
+    }
+
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSString *root = [self projectDirectoryPath];
+    NSDirectoryEnumerator *enumerator = [manager enumeratorAtPath:root];
+    NSMutableArray *applications = [NSMutableArray array];
+    NSMutableArray *tools = [NSMutableArray array];
+    NSString *relative;
+    while ((relative = [enumerator nextObject]) != nil) {
+        NSString *path = [root stringByAppendingPathComponent:relative];
+        NSDictionary *attributes = [manager attributesOfItemAtPath:path error:NULL];
+        if ([[relative lastPathComponent] hasPrefix:@"."] ||
+            [[attributes objectForKey:NSFileType] isEqual:NSFileTypeSymbolicLink]) {
+            if ([[attributes objectForKey:NSFileType] isEqual:NSFileTypeDirectory])
+                [enumerator skipDescendents];
+            continue;
+        }
+        if ([[[relative pathExtension] lowercaseString] isEqual:@"app"]) {
+            [enumerator skipDescendents];
+            executable = [[NSBundle bundleWithPath:path] executablePath];
+            if (![manager isExecutableFileAtPath:executable]) {
+                NSString *name = [[relative lastPathComponent] stringByDeletingPathExtension];
+                executable = [path stringByAppendingPathComponent:name];
+                if (![manager isExecutableFileAtPath:executable])
+                    executable = [[path stringByAppendingPathComponent:@"Contents/MacOS"] stringByAppendingPathComponent:name];
+            }
+            if ([manager isExecutableFileAtPath:executable])
+                [applications addObject:[self relativeSettingsExecutable:executable]];
+        } else if ([[attributes objectForKey:NSFileType] isEqual:NSFileTypeRegular] &&
+            ![[relative pathExtension] length] &&
+            ([[relative pathComponents] containsObject:@"obj"] ||
+             [[relative pathComponents] containsObject:@"build"]) &&
+            [manager isExecutableFileAtPath:path]) {
+            [tools addObject:relative];
+        }
+    }
+    if ([applications count] == 1) return [applications objectAtIndex:0];
+    return [applications count] == 0 && [tools count] == 1 ? [tools objectAtIndex:0] : nil;
+}
+
 - (BOOL)canCreateSettingsFile
 {
     return (_directoryProject || [[[_projectPath pathExtension] lowercaseString] isEqual:@"pcproj"]) &&
@@ -1261,6 +1333,8 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     }
     NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithDictionary:_settings];
     [settings removeObjectForKey:@"ProjectCenterMetadata"];
+    NSString *executable = [self settingsExecutablePath];
+    if ([executable length]) [settings setObject:executable forKey:@"Executable"];
     if (![settings objectForKey:@"CleanTarget"]) [settings setObject:@"clean" forKey:@"CleanTarget"];
     if (![settings objectForKey:@"TestTarget"]) {
         BOOL gnumake = [[NSFileManager defaultManager] fileExistsAtPath:

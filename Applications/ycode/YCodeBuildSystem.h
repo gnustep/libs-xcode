@@ -136,6 +136,7 @@ typedef enum {
 - (NSString *)buildConfiguration;
 - (void)setBuildConfiguration:(NSString *)configuration;
 - (NSString *)targetName;
+- (NSString *)findExecutable;
 - (void)setTargetName:(NSString *)name;
 - (NSString *)scheme;
 - (void)setScheme:(NSString *)scheme;

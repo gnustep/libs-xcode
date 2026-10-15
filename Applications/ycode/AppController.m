@@ -479,8 +479,31 @@ YCodeFileURLFromPath(NSString *path)
 {
     YCodeProject *project = [self currentProject];
     if (![project canCreateSettingsFile]) return;
+    NSString *chosenExecutable = nil;
+    if (![[project settingsExecutablePath] length]) {
+        NSOpenPanel *panel = [NSOpenPanel openPanel];
+        [panel setTitle:@"Choose Project Executable"];
+        [panel setMessage:@"Select the executable to use for Run and Debug. For an application, select the executable inside its bundle."];
+        [panel setCanChooseDirectories:NO];
+        [panel setCanChooseFiles:YES];
+        [panel setAllowsMultipleSelection:NO];
+        [panel setTreatsFilePackagesAsDirectories:YES];
+        [panel setDirectoryURL:[NSURL fileURLWithPath:[project projectDirectoryPath]]];
+        if ([panel runModal] != NSModalResponseOK) return;
+        chosenExecutable = [[panel URL] path];
+        if (![[NSFileManager defaultManager] isExecutableFileAtPath:chosenExecutable]) {
+            NSAlert *alert = AUTORELEASE([[NSAlert alloc] init]);
+            [alert setMessageText:@"The selected file is not executable."];
+            [alert runModal];
+            return;
+        }
+        NSString *root = [[project projectDirectoryPath] stringByAppendingString:@"/"];
+        if ([chosenExecutable hasPrefix:root]) chosenExecutable = [chosenExecutable substringFromIndex:[root length]];
+        [[project settings] setObject:chosenExecutable forKey:@"Executable"];
+    }
     NSError *error = nil;
     if (![project createSettingsFile:&error]) {
+        if (chosenExecutable) [[project settings] removeObjectForKey:@"Executable"];
         [[NSAlert alertWithError:error] runModal];
         return;
     }

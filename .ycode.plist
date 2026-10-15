@@ -4,6 +4,8 @@
 <dict>
     <key>CleanTarget</key>
     <string>clean</string>
+    <key>Executable</key>
+    <string>Applications/ycode/Ycode.app/Ycode</string>
     <key>TestTarget</key>
     <string>check</string>
 </dict>
