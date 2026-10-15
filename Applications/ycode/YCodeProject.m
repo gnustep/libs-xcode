@@ -305,6 +305,13 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     return NO;
 }
 
++ (BOOL)isProjectDirectory:(NSString *)path
+{
+    BOOL directory = NO;
+    return [[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&directory] &&
+        directory && ![[NSWorkspace sharedWorkspace] isFilePackageAtPath:path];
+}
+
 - (BOOL)isDirectoryProject
 {
     return _directoryProject;
@@ -633,7 +640,7 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
         return NO;
     }
     
-    if ([[self class] isMakeProjectDirectory:path] &&
+    if ([[self class] isProjectDirectory:path] &&
         ![[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] containsObject:[path pathExtension]]) {
         _directoryProject = YES;
         [self setProjectPath:[path stringByStandardizingPath]];

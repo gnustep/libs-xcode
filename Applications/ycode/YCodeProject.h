@@ -77,6 +77,7 @@
 - (NSString *)projectDirectoryPath;
 /** Open a directory containing GNUmakefile, makefile, or Makefile. */
 + (BOOL)isMakeProjectDirectory:(NSString *)path;
++ (BOOL)isProjectDirectory:(NSString *)path;
 - (BOOL)isDirectoryProject;
 - (BOOL)canCreateSettingsFile;
 - (NSString *)settingsExecutablePath;

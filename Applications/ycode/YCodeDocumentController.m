@@ -24,8 +24,50 @@
 
 #import "YCodeDocumentController.h"
 #import "YCodeProject.h"
+#import "YCodeEditorController.h"
 
 @implementation YCodeDocumentController
+
+- (BOOL)openWorkspaceFile:(NSString *)path error:(NSError **)error
+{
+    NSFileManager *manager = [NSFileManager defaultManager];
+    BOOL directory = NO;
+    path = [path stringByStandardizingPath];
+    if (![manager fileExistsAtPath:path isDirectory:&directory]) return NO;
+    NSString *extension = [[path pathExtension] lowercaseString];
+    if (directory || [extension isEqual:@"xcodeproj"] || [extension isEqual:@"pcproj"])
+        return [self openDocumentWithContentsOfURL:[NSURL fileURLWithPath:path]
+            display:YES error:error] != nil;
+
+    NSString *folder = [path stringByDeletingLastPathComponent];
+    NSString *projectPath = nil;
+    NSString *search = folder;
+    while ([search length]) {
+        NSArray *entries = [[manager contentsOfDirectoryAtPath:search error:NULL]
+            sortedArrayUsingSelector:@selector(compare:)];
+        NSEnumerator *extensions = [[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] objectEnumerator];
+        NSString *projectExtension;
+        while (!projectPath && (projectExtension = [extensions nextObject]) != nil) {
+            NSEnumerator *names = [entries objectEnumerator];
+            NSString *name;
+            while ((name = [names nextObject]) != nil) {
+                if ([[[name pathExtension] lowercaseString] isEqual:projectExtension]) {
+                    projectPath = [search stringByAppendingPathComponent:name];
+                    break;
+                }
+            }
+        }
+        if (!projectPath && [YCodeProject isMakeProjectDirectory:search]) projectPath = search;
+        if (projectPath) break;
+        NSString *parent = [search stringByDeletingLastPathComponent];
+        if ([parent isEqual:search]) break;
+        search = parent;
+    }
+    if (!projectPath) projectPath = folder;
+    YCodeProject *project = [self openDocumentWithContentsOfURL:[NSURL fileURLWithPath:projectPath]
+        display:YES error:error];
+    return project != nil && [[project editorController] openFile:path];
+}
 
 - (NSMenu *)recentDocumentsMenu
 {
@@ -97,7 +139,7 @@
 
 - (NSString *)typeForContentsOfURL:(NSURL *)url error:(NSError **)error
 {
-    if ([YCodeProject isMakeProjectDirectory:[url path]] &&
+    if ([YCodeProject isProjectDirectory:[url path]] &&
         ![[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] containsObject:[[url path] pathExtension]])
         return @"YCodeMakeProjectType";
     return [super typeForContentsOfURL:url error:error];
@@ -146,7 +188,7 @@
 
 - (NSString *)displayNameForType:(NSString *)type
 {
-    if ([type isEqual:@"YCodeMakeProjectType"]) return @"Makefile folder";
+    if ([type isEqual:@"YCodeMakeProjectType"]) return @"Project folder";
     if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
         [type isEqualToString:@"xcodeproj"]) {
         return @"Xcode project";

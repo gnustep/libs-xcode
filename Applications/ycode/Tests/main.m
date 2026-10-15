@@ -3324,6 +3324,54 @@ static void testApplicationIcons(NSString *temporaryDirectory)
 }
 
 
+static void testWorkspaceFileOpening(NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  YCodeDocumentController *controller = [YCodeDocumentController sharedDocumentController];
+  NSString *root = [temporaryDirectory stringByAppendingPathComponent:@"Workspace Files"];
+  NSString *sources = [root stringByAppendingPathComponent:@"Sources"];
+  [manager createDirectoryAtPath:sources withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *source = [sources stringByAppendingPathComponent:@"Example.m"];
+  [@"int example;\n" writeToFile:source atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  NSError *error = nil;
+  testAssert([controller openWorkspaceFile:source error:&error], @"Workspace opens a source without a project or Makefile");
+  YCodeProject *project = [controller documentForURL:[NSURL fileURLWithPath:sources]];
+  testAssert([project isDirectoryProject] &&
+      [[[[project editorController] currentDocument] filePath] isEqual:source],
+    @"Plain-folder fallback opens the requested source in the editor");
+  NSUInteger count = [[controller documents] count];
+  testAssert([controller openWorkspaceFile:source error:&error] && [[controller documents] count] == count,
+    @"Repeated workspace opens reuse the existing project window");
+  [project close];
+  NSString *package = [root stringByAppendingPathComponent:@"Example.xcodeproj"];
+  [manager copyItemAtPath:@"../Ycode.xcodeproj" toPath:package error:NULL];
+  testAssert([controller openWorkspaceFile:source error:&error], @"Workspace finds a project above a source subdirectory");
+  project = [controller documentForURL:[NSURL fileURLWithPath:package]];
+  testAssert(project != nil && ![project isDirectoryProject] &&
+      [[[[project editorController] currentDocument] filePath] isEqual:source],
+    @"Existing Xcode project opens with the requested source selected");
+  [project close];
+  [manager removeItemAtPath:package error:NULL];
+  package = [root stringByAppendingPathComponent:@"Example.pcproj"];
+  [[NSDictionary dictionaryWithObjectsAndKeys:@"Example", @"PROJECT_NAME", @"Application", @"PROJECT_TYPE", nil]
+    writeToFile:package atomically:YES];
+  testAssert([controller openWorkspaceFile:source error:&error], @"Workspace finds a ProjectCenter project");
+  project = [controller documentForURL:[NSURL fileURLWithPath:package]];
+  testAssert(project != nil && [[[[project editorController] currentDocument] filePath] isEqual:source],
+    @"ProjectCenter workspace open selects the requested source");
+  [project close];
+  [manager removeItemAtPath:package error:NULL];
+  [@"all:\n\t@true\n" writeToFile:[root stringByAppendingPathComponent:@"GNUmakefile"]
+    atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([controller openWorkspaceFile:source error:&error], @"Workspace finds a parent Makefile folder");
+  project = [controller documentForURL:[NSURL fileURLWithPath:root]];
+  testAssert([project isDirectoryProject] && [[project projectDirectoryPath] isEqual:root],
+    @"Makefile folder becomes the directory project root");
+  [project close];
+  testAssert(![controller openWorkspaceFile:[root stringByAppendingPathComponent:@"Missing.m"] error:&error],
+    @"Missing workspace files are rejected");
+}
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -3338,6 +3386,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-workspace-files"]) {
+    testWorkspaceFileOpening(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode workspace file checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-app-icons"]) {
     testApplicationIcons(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -3482,6 +3536,7 @@ int main(void)
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
+  testWorkspaceFileOpening(temporaryDirectory);
   testFontAndSidebarPreferences();
   testSoundInspector([temporaryDirectory stringByAppendingPathComponent:@"Sound Inspector"]);
   testTabPreferences([temporaryDirectory stringByAppendingPathComponent:@"Tab Preferences"]);

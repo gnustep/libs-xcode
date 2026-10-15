@@ -59,6 +59,15 @@ its `project.pbxproj` through libs-xcode and displays its groups, files, and
 targets in the project navigator. Missing or invalid project contents produce
 an error instead of opening an empty project.
 
+Opening a file associated with Ycode from GWorkspace opens its project and then
+selects that file in the editor. Ycode searches the containing directory and its
+parents, using the nearest `.xcodeproj`, `.pcproj`, or Makefile folder. At the same
+level, Xcode projects take precedence over ProjectCenter projects, then Makefile
+folders; multiple projects of the same type are ordered by name. If none is
+found, the file's containing directory opens as a directory project, even without
+a Makefile. Repeated opens of the same project reuse its window. A plain folder
+can be browsed and edited without a build system; building still requires one.
+
 Double-click a file in the navigator to open it with the system's default
 application for that file type. This includes Gorm/XIB interface documents and
 source, image, sound, and other supporting files. Single-click continues to open

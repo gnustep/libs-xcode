@@ -594,24 +594,11 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL) application: (NSApplication *)application
 	    openFile: (NSString *)fileName
 {
-    // Check if it's a project file
-    NSString *extension = [fileName pathExtension];
-    if ([extension isEqualToString:@"xcodeproj"] || [extension isEqualToString:@"pcproj"] ||
-        [YCodeProject isMakeProjectDirectory:fileName]) {
-        NSError *error = nil;
-        NSURL *fileURL = YCodeFileURLFromPath(fileName);
-        if (fileURL == nil) {
-            return NO;
-        }
-
-        id document = [[NSDocumentController sharedDocumentController]
-            openDocumentWithContentsOfURL:fileURL
-                                  display:YES
-                                    error:&error];
-        return (document != nil && error == nil);
-    }
-    
-    return NO;
+    NSError *error = nil;
+    BOOL opened = [(YCodeDocumentController *)[NSDocumentController sharedDocumentController]
+        openWorkspaceFile:fileName error:&error];
+    if (!opened && error) [[NSDocumentController sharedDocumentController] presentError:error];
+    return opened;
 }
 
 - (void)updateApplicationMenuName
