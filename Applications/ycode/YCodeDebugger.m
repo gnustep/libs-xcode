@@ -23,6 +23,7 @@
 */
 
 #import "YCodeDebugger.h"
+#import "YCodeDebuggerVariables.h"
 
 /* Like ProjectCenter's GDBWrapper, decode MI tuples, lists and C strings.
  * Always advance on malformed input, and retain bytes until a complete record
@@ -111,16 +112,19 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
       _breakpoints = [NSMutableDictionary new];
       _disabledBreakpoints = [NSMutableSet new];
       _resolvedLocations = [NSMutableDictionary new];
+      _variables = [[YCodeDebuggerVariables alloc] initWithDebugger:self];
     }
   return self;
 }
 - (void)dealloc
 {
+  RELEASE(_variables);
   RELEASE(_storageKey); RELEASE(_pending); RELEASE(_breakpoints);
   RELEASE(_disabledBreakpoints); RELEASE(_resolvedLocations);
   RELEASE(_sourceDirectory); RELEASE(_executionFile); [super dealloc];
 }
 - (void)setDelegate:(id<YCodeDebuggerDelegate>)delegate { _delegate = delegate; }
+- (YCodeDebuggerVariables *)variables { return _variables; }
 - (BOOL)isReady { return _ready; }
 - (BOOL)isRunning { return _running; }
 - (void)notifyChange
@@ -130,6 +134,15 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
 - (void)setSourceDirectory:(NSString *)directory { ASSIGN(_sourceDirectory, directory); }
 - (NSString *)executionFile { return _executionFile; }
 - (NSUInteger)executionLine { return _executionLine; }
+- (void)updateSelectedFrame:(NSDictionary *)frame
+{
+  NSString *file = [frame objectForKey:@"fullname"] ?: [frame objectForKey:@"file"];
+  if (file && [[frame objectForKey:@"line"] integerValue] > 0) {
+    ASSIGN(_executionFile, [self sourcePath:file]);
+    _executionLine = [[frame objectForKey:@"line"] integerValue];
+    [_delegate debugger:self stoppedAtFile:_executionFile line:_executionLine];
+  }
+}
 - (NSString *)sourcePath:(NSString *)file
 {
   if (![file isAbsolutePath])
@@ -258,6 +271,7 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
 }
 - (void)reset
 {
+  [_variables reset];
   _ready = _running = _restartPending = NO;
   [_pending setLength:0];
   RELEASE(_executionFile); _executionFile = nil; _executionLine = 0;
@@ -282,7 +296,8 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
 {
   NSScanner *scanner = [NSScanner scannerWithString:record];
   [scanner setCharactersToBeSkipped:nil];
-  [scanner scanCharactersFromSet:[NSCharacterSet decimalDigitCharacterSet] intoString:NULL];
+  NSString *token = nil;
+  [scanner scanCharactersFromSet:[NSCharacterSet decimalDigitCharacterSet] intoString:&token];
   if ([scanner isAtEnd]) return nil;
   NSString *type = [record substringWithRange:NSMakeRange([scanner scanLocation], 1)];
   [scanner setScanLocation:[scanner scanLocation] + 1];
@@ -293,6 +308,8 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
   [scanner scanUpToString:@"," intoString:&event];
   [scanner scanString:@"," intoString:NULL];
   NSMutableDictionary *result = [NSMutableDictionary dictionaryWithDictionary:YCReadFields(scanner)];
+  if ([result objectForKey:@"type"]) [result setObject:[result objectForKey:@"type"] forKey:@"valueType"];
+  if (token) [result setObject:token forKey:@"token"];
   [result setObject:type forKey:@"type"];
   [result setObject:event ?: @"" forKey:@"event"];
   return result;
@@ -350,6 +367,7 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
     }
   NSDictionary *record = [[self class] parseRecord:line];
   NSString *type = [record objectForKey:@"type"], *event = [record objectForKey:@"event"];
+  if ([record objectForKey:@"token"] && [_variables handleRecord:record]) return;
   if ((!record || [type isEqual:@"@"]) && [_delegate respondsToSelector:@selector(debugger:targetOutput:)])
     [(id)_delegate debugger:self targetOutput:record ? [record objectForKey:@"text"] : [line stringByAppendingString:@"\n"]];
   else if (!record || [type isEqual:@"~"] || [type isEqual:@"@"] || [type isEqual:@"&"])
@@ -375,6 +393,7 @@ NSString * const YCodeDebuggerDidChangeNotification = @"YCodeDebuggerDidChangeNo
       _executionLine = [[frame objectForKey:@"line"] integerValue];
       [_delegate debugger:self stoppedAtFile:_executionFile line:_executionLine];
     }
+  if (![record objectForKey:@"token"]) [_variables handleRecord:record];
   NSDictionary *bp = [record objectForKey:@"bkpt"];
   file = [bp objectForKey:@"fullname"] ?: [bp objectForKey:@"file"];
   NSString *number = [bp objectForKey:@"number"];

@@ -24,6 +24,7 @@
 
 #import "YCodePreferences.h"
 #import "YCodeControlIcons.h"
+#import "YCodeVariablesView.h"
 #import "YCodeWindowController.h"
 #import "YCodeProject.h"
 #import <XCode/PBXProject.h>
@@ -1121,25 +1122,29 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         NSView *debuggerView = AUTORELEASE([[NSView alloc] initWithFrame:[_bottomTabView contentRect]]);
         NSRect bounds = [debuggerView bounds];
         _debuggerControls = AUTORELEASE([[NSView alloc] initWithFrame:
-            NSMakeRect(0, 0, 494, 30)]);
+            NSMakeRect(0, 0, 256, 30)]);
         NSArray *titles = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
             @"Next", @"Step Into", @"Step Out", nil];
+        NSArray *icons = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart",
+            @"next", @"stepInto", @"stepOut", nil];
         CGFloat x = 2;
         NSUInteger index;
         for (index = 0; index < [titles count]; index++) {
-            NSButton *button = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(x, 3, 70, 24)]);
+            NSButton *button = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(x, 1, 32, 28)]);
             [button setTitle:[titles objectAtIndex:index]];
-            [button setFont:[NSFont systemFontOfSize:11]];
+            [button setImage:YCodeControlIcon([icons objectAtIndex:index], 20)];
+            [button setImagePosition:NSImageOnly];
+            [button setToolTip:[@"Debugger: " stringByAppendingString:[titles objectAtIndex:index]]];
             [button setBezelStyle:NSRoundedBezelStyle];
             [button setTag:index];
             [button setTarget:self];
             [button setAction:@selector(debugAction:)];
             [button setEnabled:NO];
             [_debuggerControls addSubview:button];
-            x += 70;
+            x += 36;
         }
         NSScrollView *controlsScroll = AUTORELEASE([[NSScrollView alloc] initWithFrame:
-            NSMakeRect(0, MAX(0, NSHeight(bounds) - 46), NSWidth(bounds), 46)]);
+            NSMakeRect(0, MAX(0, NSHeight(bounds) - 46), MAX(0, NSWidth(bounds) - 40), 46)]);
         [controlsScroll setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
         [controlsScroll setHasHorizontalScroller:YES];
         [controlsScroll setAutohidesScrollers:YES];
@@ -1155,7 +1160,20 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         NSScrollView *debugScroll = YCodeScrollViewWithDocumentView(_debuggerTextView);
         [debugScroll setHasHorizontalScroller:NO];
         [debugScroll setFrame:NSMakeRect(0, 28, NSWidth(bounds), MAX(0, NSHeight(bounds) - 74))];
-        [debuggerView addSubview:debugScroll];
+        _debuggerVariablesView = AUTORELEASE([[YCodeVariablesView alloc]
+            initWithFrame:[debugScroll frame] transcript:debugScroll]);
+        [debuggerView addSubview:_debuggerVariablesView];
+        NSButton *variablesButton = AUTORELEASE([[NSButton alloc] initWithFrame:
+            NSMakeRect(MAX(0, NSWidth(bounds) - 36), MAX(0, NSHeight(bounds) - 45), 32, 28)]);
+        [variablesButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
+        [variablesButton setTitle:@"Variables"];
+        [variablesButton setImage:YCodeControlIcon([_debuggerVariablesView variablesVisible] ? @"variablesHide" : @"variablesShow", 20)];
+        [variablesButton setImagePosition:NSImageOnly];
+        [variablesButton setBezelStyle:NSRoundedBezelStyle];
+        [variablesButton setToolTip:[_debuggerVariablesView variablesVisible] ? @"Hide variables" : @"Show variables"];
+        [variablesButton setTarget:_debuggerVariablesView];
+        [variablesButton setAction:@selector(toggleVariables:)];
+        [debuggerView addSubview:variablesButton];
         _debuggerCommandField = AUTORELEASE([[NSTextField alloc] initWithFrame:
             NSMakeRect(4, 2, MAX(0, NSWidth(bounds) - 8), 24)]);
         [_debuggerCommandField setAutoresizingMask:NSViewWidthSizable];
@@ -1321,6 +1339,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)updateDebuggerViews
 {
     YCodeDebugger *debugger = _project ? [[_project buildSystem] debugger] : nil;
+    [_debuggerVariablesView setDebugger:debugger];
     {
       NSEnumerator *documentEnumerator = [[_editorController openDocuments] objectEnumerator];
       YCodeEditorDocument *document;
@@ -1335,7 +1354,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
       NSEnumerator *buttonEnumerator = [[_debuggerControls subviews] objectEnumerator];
       NSButton *button;
       while ((button = [buttonEnumerator nextObject]) != nil)
-        [button setEnabled:[self validateDebuggerAction:@selector(debugAction:) tag:[button tag]]];
+        if ([button action] == @selector(debugAction:))
+          [button setEnabled:[self validateDebuggerAction:@selector(debugAction:) tag:[button tag]]];
     }
     [_toolbar validateVisibleItems];
 }

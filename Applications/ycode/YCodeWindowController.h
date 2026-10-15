@@ -35,6 +35,7 @@
 @class YCTreeView;
 @class YCEditorView;
 @class YCInspectorView;
+@class YCodeVariablesView;
 
 @interface YCodeWindowController : NSWindowController <YCodeBuildSystemDelegate>
 {
@@ -84,6 +85,7 @@
     NSTextView *_debuggerTextView;
     NSTextField *_debuggerCommandField;
     NSView *_debuggerControls;
+    YCodeVariablesView *_debuggerVariablesView;
     NSTableView *_issuesTableView;
     NSMutableArray *_buildIssues;
     NSMutableString *_diagnosticOutput;

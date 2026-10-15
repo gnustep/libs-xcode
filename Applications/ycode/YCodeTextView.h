@@ -45,6 +45,7 @@
 - (void)setEditorTabWidth:(NSUInteger)width;
 - (void)setEditorUsesTabs:(BOOL)usesTabs;
 - (void)updateEditorParagraphStyle;
+- (IBAction)convertTabsToSpaces:(id)sender;
 @end
 
 #endif

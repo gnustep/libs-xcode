@@ -33,6 +33,8 @@
 + (void)resetFonts;
 /** Saved indentation defaults, used when project formatting does not override them. */
 + (NSUInteger)tabWidth;
++ (NSUInteger)controlIndentWidth;
++ (void)setControlIndentWidth:(NSUInteger)width;
 + (BOOL)useSpacesForTabs;
 + (BOOL)useProjectIndentation;
 + (void)setTabWidth:(NSUInteger)width useSpaces:(BOOL)spaces useProjectSettings:(BOOL)project;

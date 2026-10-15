@@ -49,6 +49,8 @@
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
 #import "YCodeTextView.h"
+#import "YCodeDebuggerVariables.h"
+#import "YCodeVariablesView.h"
 #import "AppController.h"
 #import "YCodePreferences.h"
 #import "YCSoundInspectorView.h"
@@ -71,6 +73,9 @@
 + (void)answerAlert:(NSTimer *)timer;
 @end
 @implementation YCodeTabCloseTest
++ (void)wakeModal:(NSTimer *)timer
+{
+}
 + (void)answerAlert:(NSTimer *)timer
 {
   if (![NSApp modalWindow]) return;
@@ -81,6 +86,10 @@
     if ([view isKindOfClass:[NSButton class]]
       && [(NSButton *)view tag] == [[timer userInfo] integerValue]) {
       [timer invalidate];
+      // Keep the modal run loop's poll bounded after this timer is invalidated.
+      [[NSRunLoop currentRunLoop] addTimer:[NSTimer timerWithTimeInterval:0.01
+        target:self selector:@selector(wakeModal:) userInfo:nil repeats:NO]
+        forMode:NSModalPanelRunLoopMode];
       [(NSButton *)view sendAction:[(NSButton *)view action] to:[(NSButton *)view target]];
       // Wake the modal event wait after the timer delivers the button action.
       [NSApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
@@ -574,7 +583,7 @@ static void testTabPreferences(NSString *directory)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   NSArray *keys = [NSArray arrayWithObjects:@"YCodeTabWidth", @"YCodeUseTabCharacters",
-    @"YCodeIgnoreProjectIndentation", nil];
+    @"YCodeIgnoreProjectIndentation", @"YCodeControlIndentWidth", nil];
   NSMutableDictionary *saved = [NSMutableDictionary dictionary];
   NSEnumerator *e = [keys objectEnumerator]; NSString *key;
   while ((key = [e nextObject])) {
@@ -591,9 +600,17 @@ static void testTabPreferences(NSString *directory)
   AppController *app = [AppController new];
   [app showPrefPanel:nil];
   NSPopUpButton *group = [app valueForKey:@"_preferencesGroup"];
-  [group selectItemWithTitle:@"Tabs"]; [group sendAction:[group action] to:[group target]];
+  [group selectItemWithTitle:@"Indentation"]; [group sendAction:[group action] to:[group target]];
   testAssert(![[app valueForKey:@"_tabPreferencesView"] isHidden],
-    @"Tabs group is available in Preferences");
+    @"Indentation group is available in Preferences");
+  NSPopUpButton *controlWidth = [app valueForKey:@"_controlIndentChoice"];
+  testAssert([controlWidth indexOfSelectedItem] == 1, @"Control indentation defaults to two spaces");
+  [controlWidth selectItemAtIndex:3];
+  [controlWidth sendAction:[controlWidth action] to:[controlWidth target]];
+  testAssert([YCodePreferences controlIndentWidth] == 4 && [YCodePreferences tabWidth] == 2,
+    @"Control indentation preference is independent of tab width");
+  [controlWidth selectItemAtIndex:1];
+  [controlWidth sendAction:[controlWidth action] to:[controlWidth target]];
   NSPopUpButton *width = [app valueForKey:@"_tabWidthChoice"];
   [width selectItemAtIndex:3]; [width sendAction:[width action] to:[width target]];
   testAssert([view editorTabWidth] == 4 && [view editorIndentWidth] == 4,
@@ -733,6 +750,46 @@ static void testFontAndSidebarPreferences(void)
   }
   [defaults synchronize];
   [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeFontsDidChange" object:nil];
+}
+
+static void testCloseModifiedFiles(NSString *directory)
+{
+  [NSApp finishLaunching];
+  [NSApp activateIgnoringOtherApps:YES];
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory
+    withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *path = [directory stringByAppendingPathComponent:@"Closing.m"];
+  [@"saved" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  YCodeProject *project = [YCodeProject new];
+  [project makeWindowControllers];
+  [[[project windowControllers] objectAtIndex:0] showWindow:nil];
+  YCodeEditorController *editor = [project editorController];
+  [editor openFile:path];
+  YCodeEditorDocument *file = [editor currentDocument];
+  [file insertText:@"edit " atLocation:0];
+  answerCloseAlert(NSAlertThirdButtonReturn);
+  testAssert(![project canCloseDocument] && [file isModified],
+    @"Cancel blocks project closure when a source file has unsaved edits");
+  answerCloseAlert(NSAlertSecondButtonReturn);
+  testAssert([project canCloseDocument] && [file isModified] &&
+    [[NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL] isEqual:@"saved"],
+    @"Don't Save permits closure without writing the file or discarding edits prematurely");
+  answerCloseAlert(NSAlertFirstButtonReturn);
+  testAssert([project canCloseDocument] && ![file isModified] &&
+    [[NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL] isEqual:@"edit saved"],
+    @"Save writes the edited source before permitting project closure");
+  [file insertText:@"more " atLocation:0];
+  NSDocumentController *documents = [NSDocumentController sharedDocumentController];
+  [documents addDocument:project];
+  AppController *app = [AppController new];
+  answerCloseAlert(NSAlertThirdButtonReturn);
+  testAssert([app applicationShouldTerminate:NSApp] == NSTerminateCancel,
+    @"Quit reviews source edits even when project metadata is unchanged");
+  answerCloseAlert(NSAlertFirstButtonReturn);
+  testAssert([app applicationShouldTerminate:NSApp] == NSTerminateNow && ![file isModified],
+    @"Quit saves modified files before allowing termination");
+  [documents removeDocument:project];
+  [app release]; [project close]; [project release];
 }
 
 static void testFindReplace(NSString *directory)
@@ -1190,6 +1247,12 @@ static void testEditorEditing(NSString *directory)
   [view insertText:@"}"];
   testAssert([[view string] isEqual:@"if (ready)\n  {\n  }"], @"Closing delimiter aligns with its opening line");
   NSArray *newlineCases = [NSArray arrayWithObjects:
+    [NSArray arrayWithObjects:@"  }", @"", nil],
+    [NSArray arrayWithObjects:@"    }", @"  ", nil],
+    [NSArray arrayWithObjects:@"}", @"", nil],
+    [NSArray arrayWithObjects:@"  }   // finished", @"", nil],
+    [NSArray arrayWithObjects:@"  };", @"", nil],
+    [NSArray arrayWithObjects:@"{\n  {\n  }", @"", nil],
     [NSArray arrayWithObjects:@"if (ready) {}", @"", nil],
     [NSArray arrayWithObjects:@"while (ready) { work(); }", @"", nil],
     [NSArray arrayWithObjects:@"if (ready) work();", @"", nil],
@@ -1203,6 +1266,8 @@ static void testEditorEditing(NSString *directory)
     [NSArray arrayWithObjects:@"{ // body", @"  ", nil],
     [NSArray arrayWithObjects:@"if (ready) // body", @"  ", nil],
     [NSArray arrayWithObjects:@"while (ready)", @"  ", nil],
+    [NSArray arrayWithObjects:@"if (ready &&\n    other)", @"  ", nil],
+    [NSArray arrayWithObjects:@"  while (ready &&\n         other)", @"    ", nil],
     [NSArray arrayWithObjects:@"for (i = 0; i < 3; i++)", @"  ", nil],
     [NSArray arrayWithObjects:@"else if (ready)", @"  ", nil],
     [NSArray arrayWithObjects:@"else", @"  ", nil],
@@ -1220,6 +1285,11 @@ static void testEditorEditing(NSString *directory)
     testAssert([[view string] isEqual:[NSString stringWithFormat:@"%@\n%@", input,
       [newlineCase objectAtIndex:1]]], [NSString stringWithFormat:@"Return indentation after %@", input]);
   }
+  [document setContent:@"if (ready)\nwork();"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"if (ready)\n  work();"],
+    @"Tab reindentation agrees with Return for control statement bodies");
   [document setContent:@"{\n      value;\n}"];
   [view setSelectedRange:NSMakeRange(8, 0)];
   [view insertTab:nil];
@@ -1266,10 +1336,37 @@ static void testEditorEditing(NSString *directory)
   [document setFilePath:[root stringByAppendingPathComponent:@"Nested/Other.m"]];
   testAssert([view editorIndentWidth] == 4 && [view editorTabWidth] == 8 && ![view editorUsesTabs],
     @"Read indentation settings from the nearest parent .clang-format");
+  [document setContent:@"\tvalue;\n  \tother;\n"];
+  [view setSelectedRange:NSMakeRange(0, [[view string] length])];
+  [view insertBacktab:nil];
+  testAssert([[view string] isEqual:@"    value;\n    other;\n"],
+    @"Unindent removes one indentation level from mixed whitespace using visual columns");
+  [view insertTab:nil];
+  testAssert([[view string] isEqual:@"        value;\n        other;\n"],
+    @"Block indentation consistently emits the configured whitespace style");
+  [view setSelectedRange:NSMakeRange(10, 0)];
+  [view insertBacktab:nil];
+  testAssert([[view string] hasPrefix:@"    value;"] && [view selectedRange].location == 6,
+    @"Shift-Tab without a selection unindents the current line and preserves the text position");
+  NSString *tabbed = @"\tvalue\tend\r\n  \tlast\t";
+  [document setContent:tabbed];
+  [document setModified:NO];
+  [view setSelectedRange:NSMakeRange(1, 5)];
+  [undo removeAllActions];
+  [view convertTabsToSpaces:nil];
+  testAssert([[view string] isEqual:@"        value   end\r\n        last    "] &&
+    NSEqualRanges([view selectedRange], NSMakeRange(8, 5)) && [document isModified],
+    @"File conversion expands all tabs to visual stops, preserving CRLF and selection");
+  [undo undo];
+  testAssert([[view string] isEqual:tabbed] && ![document isModified], @"Tab conversion is one undoable edit");
+  [undo redo];
+  [document setModified:NO];
+  [view convertTabsToSpaces:nil];
+  testAssert(![document isModified], @"Converting a file without tabs leaves it unmodified");
   [document setContent:@"{"];
   [view setSelectedRange:NSMakeRange(1, 0)];
   [view insertNewline:nil];
-  testAssert([[view string] isEqual:@"{\n    "], @"Return uses the file's configured indent width");
+  testAssert([[view string] isEqual:@"{\n  "], @"Return after an opening brace uses two spaces independently of project indentation");
   CGFloat cellWidth = [[view font] widthOfString:@"8"];
   testAssert(fabs([[view defaultParagraphStyle] defaultTabInterval] - 8 * cellWidth) < 0.01,
     @"Displayed tabs use the configured tab width");
@@ -1279,12 +1376,54 @@ static void testEditorEditing(NSString *directory)
   [document setContent:@"{"];
   [view setSelectedRange:NSMakeRange(1, 0)];
   [view insertNewline:nil];
-  testAssert([[view string] isEqual:@"{\n\t"], @"UseTab emits literal tabs");
+  testAssert([[view string] isEqual:@"{\n  "], @"Opening braces insert spaces even when UseTab is enabled");
   [view insertText:@"{"];
   [view insertNewline:nil];
-  testAssert([[view string] isEqual:@"{\n\t{\n\t\t"], @"Nested literal-tab indentation uses visual columns");
+  testAssert([[view string] isEqual:@"{\n  {\n    "], @"Nested opening braces add two spaces");
   [view insertText:@"}"];
-  testAssert([[view string] isEqual:@"{\n\t{\n\t}"], @"Closing delimiters preserve literal-tab indentation");
+  testAssert([[view string] isEqual:@"{\n  {\n  }"], @"Closing delimiters align with their opening braces");
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"{\n  {\n  }\n"],
+    @"Return after a closing brace removes two spaces even with four-column project settings");
+  [@"IndentWidth: 8\nTabWidth: 8\nUseTab: Always\n" writeToFile:config atomically:YES
+    encoding:NSUTF8StringEncoding error:NULL];
+  [document setFilePath:[root stringByAppendingPathComponent:@"WideTabs.m"]];
+  [document setContent:@"\t}"];
+  [view setSelectedRange:NSMakeRange(2, 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"\t}\n      "],
+    @"An eight-column tab before a closing brace becomes six spaces after Return");
+  [document setContent:@"        }"];
+  [view setSelectedRange:NSMakeRange(9, 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"        }\n      "],
+    @"Eight leading spaces decrease to six regardless of configured indentation width");
+  [document setContent:@"if (ready)"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"if (ready)\n  "],
+    @"Control statements add two literal spaces even with eight-column project tabs");
+  id savedControlWidth = [[[NSUserDefaults standardUserDefaults] objectForKey:@"YCodeControlIndentWidth"] retain];
+  [YCodePreferences setControlIndentWidth:4];
+  [document setContent:@"{"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"{\n    "],
+    @"Auto indentation preference controls opening braces and inserts literal spaces");
+  [document setContent:@"while (ready)"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"while (ready)\n    "],
+    @"Changing control indentation applies immediately and still inserts spaces");
+  [document setContent:@"        }"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"        }\n    "],
+    @"Closing braces use the same configurable control indentation amount");
+  if (savedControlWidth) [[NSUserDefaults standardUserDefaults] setObject:savedControlWidth forKey:@"YCodeControlIndentWidth"];
+  else [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"YCodeControlIndentWidth"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [savedControlWidth release];
   [document setFilePath:[directory stringByAppendingPathComponent:@"Unconfigured.m"]];
   testAssert([view editorIndentWidth] == 2 && ![view editorUsesTabs], @"Changing files resets indentation settings");
 
@@ -1566,6 +1705,114 @@ static void writeExecutable(NSString *path, NSString *contents)
 - (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)path line:(NSUInteger)number
 { ASSIGN(file, path); line = number; }
 @end
+
+static NSString *variableRequestToken(YCodeDebuggerProbe *probe, NSString *fragment)
+{
+  NSEnumerator *lines = [[probe->commands componentsSeparatedByString:@"\n"] reverseObjectEnumerator];
+  NSString *line;
+  while ((line = [lines nextObject]) != nil) {
+    if ([line rangeOfString:fragment].location == NSNotFound) continue;
+    NSRange dash = [line rangeOfString:@"-"];
+    if (dash.location != NSNotFound) return [line substringToIndex:dash.location];
+  }
+  testAssert(NO, [@"Missing variable request: " stringByAppendingString:fragment]);
+  return @"0";
+}
+static void variableReply(YCodeDebugger *debugger, YCodeDebuggerProbe *probe, NSString *command, NSString *fields)
+{
+  NSString *reply = [NSString stringWithFormat:@"%@^done%@\n", variableRequestToken(probe, command), fields];
+  [debugger receiveData:[reply dataUsingEncoding:NSUTF8StringEncoding]];
+}
+static void testDebuggerVariables(void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedFraction = [[defaults objectForKey:@"YCodeDebuggerVariablesFraction"] retain];
+  id savedHidden = [[defaults objectForKey:@"YCodeDebuggerVariablesHidden"] retain];
+  [defaults removeObjectForKey:@"YCodeDebuggerVariablesFraction"];
+  [defaults removeObjectForKey:@"YCodeDebuggerVariablesHidden"];
+  YCodeDebugger *debugger = [YCodeDebugger new];
+  YCodeDebuggerProbe *probe = [YCodeDebuggerProbe new];
+  [debugger setDelegate:probe];
+  YCodeDebuggerVariables *variables = [debugger variables];
+  [variables setEnabled:YES];
+  [debugger receiveData:[@"(gdb)\n*stopped,reason=\"breakpoint-hit\",frame={fullname=\"/tmp/vars.c\",line=\"5\"}\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  variableReply(debugger, probe, @"-stack-info-frame", @",frame={fullname=\"/tmp/vars.c\",line=\"5\"}");
+  variableReply(debugger, probe, @"-stack-list-variables", @",variables=[{name=\"counter\",value=\"3\"},{name=\"pair\",value=\"{...}\"}]");
+  variableReply(debugger, probe, @"\"counter\"", @",name=\"counterObject\",numchild=\"0\",value=\"3\",type=\"int\"");
+  variableReply(debugger, probe, @"\"pair\"", @",name=\"pairObject\",numchild=\"2\",value=\"{...}\",type=\"struct Pair\"");
+  variableReply(debugger, probe, @"-symbol-info-variables", @",symbols={debug=[{fullname=\"/tmp/vars.c\",symbols=[{name=\"counter\",type=\"int\"}]},{fullname=\"/tmp/other.c\",symbols=[{name=\"unrelated\",type=\"int\"}]}]}");
+  variableReply(debugger, probe, @"'::counter", @",numchild=\"0\",value=\"7\",type=\"int\"");
+  NSArray *groups = [variables groups];
+  testAssert([groups count] == 2 && [[[groups objectAtIndex:0] objectForKey:@"children"] count] == 2 &&
+    [[[groups objectAtIndex:1] objectForKey:@"children"] count] == 1, @"Variables separate locals from current-file globals");
+  NSMutableDictionary *counter = [[[groups objectAtIndex:0] objectForKey:@"children"] objectAtIndex:0];
+  testAssert([[counter objectForKey:@"value"] isEqual:@"3"] && [[counter objectForKey:@"type"] isEqual:@"int"],
+    @"Token routing retains variable values and types");
+  NSMutableDictionary *pair = [[[groups objectAtIndex:0] objectForKey:@"children"] objectAtIndex:1];
+  [variables loadChildren:pair];
+  variableReply(debugger, probe, @"-var-list-children", @",children=[child={name=\"p.x\",exp=\"x\",numchild=\"0\",value=\"11\",type=\"int\"},child={name=\"p.y\",exp=\"y\",numchild=\"0\",value=\"12\",type=\"int\"}]");
+  testAssert([[pair objectForKey:@"children"] count] == 2, @"Expanding a structured variable loads its children");
+  NSScrollView *transcript = AUTORELEASE([[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 640, 320)]);
+  YCodeVariablesView *split = [[YCodeVariablesView alloc] initWithFrame:NSMakeRect(0, 0, 640, 320) transcript:transcript];
+  [split setDebugger:debugger];
+  NSOutlineView *outline = [split valueForKey:@"_outline"];
+  testAssert([split isVertical] && [outline gridStyleMask] == NSTableViewGridNone && [[outline tableColumns] count] == 3,
+    @"Debugger uses a vertical split and a grid-free three-column outline");
+  [outline expandItem:pair];
+  NSString *screenshot = [[[NSProcessInfo processInfo] environment] objectForKey:@"YCODE_VARIABLES_IMAGE"];
+  if ([screenshot length]) {
+    NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 640, 320)
+      styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
+    [window setReleasedWhenClosed:NO];
+    [window setContentView:split]; [window makeKeyAndOrderFront:nil]; [window display];
+    [split lockFocus];
+    NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[split bounds]];
+    [split unlockFocus];
+    [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]] writeToFile:screenshot atomically:YES];
+    [bitmap release];
+    [window setContentView:AUTORELEASE([NSView new])];
+    [window close]; [window release];
+  }
+  [split setPosition:380 ofDividerAtIndex:0];
+  CGFloat fraction = [defaults doubleForKey:@"YCodeDebuggerVariablesFraction"];
+  testAssert(fraction > 0.5 && fraction < 0.7, @"Dragging the debugger divider saves its fraction");
+  NSButton *toggle = AUTORELEASE([NSButton new]);
+  [split toggleVariables:toggle];
+  testAssert(![split variablesVisible] && NSWidth([transcript frame]) == NSWidth([split bounds]) &&
+    [defaults boolForKey:@"YCodeDebuggerVariablesHidden"], @"Collapsing variables fills the split with output and persists visibility");
+  YCodeVariablesView *restored = [[YCodeVariablesView alloc] initWithFrame:NSMakeRect(0, 0, 640, 320)
+    transcript:AUTORELEASE([NSScrollView new])];
+  testAssert(![restored variablesVisible], @"A new debugger view restores collapsed state");
+  [restored toggleVariables:toggle];
+  testAssert(fabs(NSWidth([[[restored subviews] objectAtIndex:0] frame]) / (640 - [restored dividerThickness]) - fraction) < 0.01,
+    @"Reopening the variables pane restores the saved divider size");
+  [restored release];
+  [split toggleVariables:toggle];
+  [debugger receiveData:[@"^done\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  NSString *stale = [variableRequestToken(probe, @"-stack-info-frame") copy];
+  [debugger receiveData:[@"*running,thread-id=\"all\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  NSString *late = [NSString stringWithFormat:@"%@^done,frame={fullname=\"/tmp/vars.c\",line=\"5\"}\n", stale];
+  [debugger receiveData:[late dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([[variables groups] count] == 0, @"Resume clears values and ignores late replies from an earlier stopped frame");
+  [debugger receiveData:[@"*stopped,reason=\"end-stepping-range\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  variableReply(debugger, probe, @"-stack-info-frame", @",frame={fullname=\"/tmp/other.c\",line=\"20\"}");
+  testAssert([[debugger executionFile] isEqual:@"/tmp/other.c"] && [debugger executionLine] == 20,
+    @"Variable refresh uses and reports the selected stack frame");
+  variableReply(debugger, probe, @"-stack-list-variables", @",variables=[{name=\"missing\",value=\"<optimized out>\"}]");
+  NSString *errorReply = [NSString stringWithFormat:@"%@^error,msg=\"Unavailable in this frame\"\n",
+    variableRequestToken(probe, @"\"missing\"")];
+  [debugger receiveData:[errorReply dataUsingEncoding:NSUTF8StringEncoding]];
+  NSDictionary *missing = [[[[variables groups] objectAtIndex:0] objectForKey:@"children"] objectAtIndex:0];
+  testAssert([[missing objectForKey:@"value"] isEqual:@"Unavailable in this frame"],
+    @"Unavailable variable values are reported in the outline");
+  [stale release]; [split setDebugger:nil]; [split release];
+  [debugger release]; [probe release];
+  if (savedFraction) [defaults setObject:savedFraction forKey:@"YCodeDebuggerVariablesFraction"];
+  else [defaults removeObjectForKey:@"YCodeDebuggerVariablesFraction"];
+  if (savedHidden) [defaults setObject:savedHidden forKey:@"YCodeDebuggerVariablesHidden"];
+  else [defaults removeObjectForKey:@"YCodeDebuggerVariablesHidden"];
+  [defaults synchronize]; [savedFraction release]; [savedHidden release];
+}
 
 static void testDebuggerRecords(void)
 {
@@ -2964,6 +3211,17 @@ int main(void)
     [pool drain]; return failures ? 1 : 0;
   }
 
+  if ([arguments containsObject:@"--check-close-files"]) {
+    testCloseModifiedFiles(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode close-file checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
+  if ([arguments containsObject:@"--check-variables"]) {
+    testDebuggerVariables();
+    NSLog(@"Ycode debugger variable checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-editing"]) {
     testEditorEditing(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -3092,6 +3350,8 @@ int main(void)
   testHiddenRulersDebugGutter();
   testBreakpointFileTypes();
   testSyntaxHighlighting();
+  testDebuggerVariables();
+  testCloseModifiedFiles(temporaryDirectory);
   testFindReplace(temporaryDirectory);
   testFileModificationTracking(temporaryDirectory);
   testTranscriptCopy();

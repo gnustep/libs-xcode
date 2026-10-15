@@ -27,6 +27,7 @@
 #import <Foundation/Foundation.h>
 
 @class YCodeDebugger;
+@class YCodeDebuggerVariables;
 extern NSString * const YCodeDebuggerDidChangeNotification;
 
 typedef enum {
@@ -59,8 +60,10 @@ typedef enum {
   BOOL _running;
   BOOL _restartPending;
   NSString *_storageKey;
+  YCodeDebuggerVariables *_variables;
 }
 - (void)setDelegate:(id<YCodeDebuggerDelegate>)delegate;
+- (YCodeDebuggerVariables *)variables;
 - (void)reset;
 - (void)setBreakpointStorageKey:(NSString *)key;
 - (void)setSourceDirectory:(NSString *)directory;

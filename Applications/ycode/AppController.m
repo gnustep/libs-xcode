@@ -17,6 +17,7 @@
 #import "YCodeProject.h"
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
+#import "YCodeTextView.h"
 
 @interface AppController (Private)
 - (void)updateApplicationMenuName;
@@ -229,6 +230,8 @@ YCodeFileURLFromPath(NSString *path)
     [editMenu addItem:[NSMenuItem separatorItem]];
     [editMenu addItem:YCodeMenuItem(@"Find...", @selector(findInFile:), @"f", self)];
     [editMenu addItem:YCodeMenuItem(@"Replace...", @selector(replaceInFile:), @"", self)];
+    [editMenu addItem:[NSMenuItem separatorItem]];
+    [editMenu addItem:YCodeMenuItem(@"Convert Tabs to Spaces", @selector(convertTabsToSpaces:), @"", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"Edit" action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:editMenu];
     [mainMenu addItem:menuItem];
@@ -320,27 +323,11 @@ YCodeFileURLFromPath(NSString *path)
 
 - (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender
 {
-    // Check if there are unsaved changes in open projects
-    if ([[NSDocumentController sharedDocumentController] hasEditedDocuments]) {
-        // TODO: Check for unsaved changes
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:@"Do you want to save your changes before closing?"];
-        [alert addButtonWithTitle:@"Save"];
-        [alert addButtonWithTitle:@"Don't Save"];
-        [alert addButtonWithTitle:@"Cancel"];
-        
-        NSInteger result = [alert runModal];
-        RELEASE(alert);
-        
-        if (result == NSAlertThirdButtonReturn) {
-            return NSTerminateCancel;
-        } else if (result == NSAlertFirstButtonReturn) {
-            if (![self saveActiveProjectShowingPanel:NO]) {
-                return NSTerminateCancel;
-            }
-        }
-    }
-    
+    NSEnumerator *documents = [[[NSDocumentController sharedDocumentController] documents] objectEnumerator];
+    YCodeProject *project;
+    while ((project = [documents nextObject]) != nil)
+        if (![project canCloseDocument]) return NSTerminateCancel;
+
     return NSTerminateNow;
 }
 
@@ -758,6 +745,12 @@ YCodeFileURLFromPath(NSString *path)
     [[self currentEditorController] replaceInFile:sender];
 }
 
+- (IBAction)convertTabsToSpaces:(id)sender
+{
+    [(YCodeTextView *)[[[self currentEditorController] currentDocument] textView]
+        convertTabsToSpaces:sender];
+}
+
 - (IBAction)buildProject:(id)sender
 {
     YCodeWindowController *controller = [self currentProjectWindowController];
@@ -783,6 +776,8 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
     SEL action = [item action];
+    if (action == @selector(convertTabsToSpaces:))
+        return [[[[self currentEditorController] currentDocument] textView] isEditable];
     if (action == @selector(findInFile:) || action == @selector(replaceInFile:))
         return [[[self currentEditorController] currentDocument] textView] != nil;
     if (action == @selector(exportProjectCenter:)) return [self currentProject] != nil;
@@ -866,6 +861,7 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void)changeTabPreferences:(id)sender
 {
+    [YCodePreferences setControlIndentWidth:[_controlIndentChoice indexOfSelectedItem] + 1];
     [YCodePreferences setTabWidth:[_tabWidthChoice indexOfSelectedItem] + 1
         useSpaces:[_spacesForTabs state] == NSOnState
         useProjectSettings:[_projectIndentation state] == NSOnState];
@@ -896,8 +892,18 @@ YCodeFileURLFromPath(NSString *path)
     [_projectIndentation setTitle:@"Honor project .clang-format settings"];
     [_projectIndentation setTarget:self]; [_projectIndentation setAction:@selector(changeTabPreferences:)];
     [_tabPreferencesView addSubview:_projectIndentation];
-    NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 236, 350, 64)]);
-    [hint setStringValue:@"Changes are saved and applied immediately. Existing whitespace is preserved. Project settings override these defaults when enabled."];
+    NSTextField *controlLabel = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 276, 230, 24)]);
+    [controlLabel setStringValue:@"Auto indentation (spaces):"];
+    [controlLabel setEditable:NO]; [controlLabel setSelectable:NO];
+    [controlLabel setBezeled:NO]; [controlLabel setDrawsBackground:NO];
+    [_tabPreferencesView addSubview:controlLabel];
+    _controlIndentChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(260, 273, 110, 28) pullsDown:NO]);
+    for (width = 1; width <= 16; width++)
+        [_controlIndentChoice addItemWithTitle:[NSString stringWithFormat:@"%lu", (unsigned long)width]];
+    [_controlIndentChoice setTarget:self]; [_controlIndentChoice setAction:@selector(changeTabPreferences:)];
+    [_tabPreferencesView addSubview:_controlIndentChoice];
+    NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 140, 350, 120)]);
+    [hint setStringValue:@"Auto indentation adds spaces after control statements and opening braces, and removes the same amount after closing braces. It is independent of tab width and project settings. Changes apply immediately; existing whitespace is preserved."];
     [hint setEditable:NO]; [hint setSelectable:NO];
     [hint setBezeled:NO]; [hint setDrawsBackground:NO];
     [hint setFont:[NSFont systemFontOfSize:12]];
@@ -1005,7 +1011,7 @@ YCodeFileURLFromPath(NSString *path)
         NSView *content = [_preferencesPanel contentView];
         _preferencesGroup = AUTORELEASE([[NSPopUpButton alloc]
             initWithFrame:NSMakeRect(20, 458, 350, 28) pullsDown:NO]);
-        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", @"Tabs", nil]];
+        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", @"Indentation", nil]];
         [_preferencesGroup setTarget:self];
         [_preferencesGroup setAction:@selector(selectPreferenceGroup:)];
         [content addSubview:_preferencesGroup];
@@ -1060,6 +1066,7 @@ YCodeFileURLFromPath(NSString *path)
     [self refreshEditorColorWells];
     [self refreshFontPreferences];
     [_tabWidthChoice selectItemAtIndex:[YCodePreferences tabWidth] - 1];
+    [_controlIndentChoice selectItemAtIndex:[YCodePreferences controlIndentWidth] - 1];
     [_spacesForTabs setState:[YCodePreferences useSpacesForTabs] ? NSOnState : NSOffState];
     [_projectIndentation setState:[YCodePreferences useProjectIndentation] ? NSOnState : NSOffState];
     [_showEditorRulers setState:[[NSUserDefaults standardUserDefaults]

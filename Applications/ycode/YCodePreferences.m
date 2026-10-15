@@ -25,6 +25,19 @@
 #import "YCodePreferences.h"
 #include <math.h>
 @implementation YCodePreferences
++ (NSUInteger)controlIndentWidth
+{
+    NSInteger width = [[NSUserDefaults standardUserDefaults] integerForKey:@"YCodeControlIndentWidth"];
+    return width >= 1 && width <= 16 ? width : 2;
+}
+
++ (void)setControlIndentWidth:(NSUInteger)width
+{
+    [[NSUserDefaults standardUserDefaults] setInteger:MAX(1, MIN(16, width)) forKey:@"YCodeControlIndentWidth"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeTabsDidChange" object:nil];
+}
+
 + (NSUInteger)tabWidth
 {
     NSInteger width = [[NSUserDefaults standardUserDefaults] integerForKey:@"YCodeTabWidth"];

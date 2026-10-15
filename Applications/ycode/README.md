@@ -95,6 +95,9 @@ the Test tab as well as Console. Native macOS uses
 use `make test`. Full output and build/runner errors appear in Console.
 **Project > Stop** cancels the operation. Each run replaces the previous results.
 
+Closing a tab or project, or quitting Ycode, asks whether to Save, Don’t Save,
+or Cancel for each modified file. Cancelling or a failed save prevents closure.
+
 Each project remembers its last selected source file and
 reopens it next time. Closing the last source tab clears that saved selection;
 missing files are skipped when reopening the project.
@@ -112,11 +115,14 @@ enable background waveform decoding when `pkg-config sndfile` is available
 (install the libsndfile development package before building); without it, playback
 remains available and the inspector explains that waveform support is unavailable.
 
-**Preferences > Tabs** controls tab and indentation width (1–16 spaces, default 2)
+**Preferences > Indentation** controls tab and indentation width (1–16 spaces, default 2)
 and whether indentation inserts spaces (the default) or literal tabs. Settings
 are saved and update open editors immediately without rewriting existing whitespace.
 The **Honor project .clang-format settings** option is enabled by default; turn
 it off to use your chosen width and indentation style even in configured projects.
+**Auto indentation (spaces)** independently sets how many literal spaces to add
+after control statements and opening braces, and remove after closing braces (1–16, default 2).
+This setting applies even when the project uses tabs or a different indent width.
 
 The editor highlights keywords, types, function and method names, constants,
 numbers, strings, and comments in Objective-C, C, C++, Swift, JavaScript,
@@ -142,12 +148,23 @@ line numbers down the side, following the font size and scroll position.
 The editable area fills the window as it grows while long lines remain
 horizontally scrollable. Return adds an indentation level after an opening
 brace or a control statement awaiting its body, ignoring punctuation in comments
-and strings. Closing braces and completed statements do not add a level.
+and strings. After a line beginning with a closing brace, Return removes the configured
+auto indentation amount (two spaces by default), stopping at
+column zero. A closing brace followed by a new
+opening brace starts the new block instead. Completed statements do not add a level.
 Tab reindents the current line or shifts selected lines, Shift-Tab
 unindents selected lines, and closing delimiters align with their opening
 line. Shift-arrow keys extend or contract the selection from its anchor.
 Indentation defaults to two spaces and reads `IndentWidth`, `TabWidth`, and
 `UseTab` from the nearest parent `.clang-format` file.
+
+Control-statement bodies, including multiline conditions, use the auto
+indentation preference and always insert spaces. Block indent/unindent measures mixed tabs and
+spaces in columns, so Shift-Tab removes one indentation level even when tab
+stops are wider. Shift-Tab also unindents the current line without a selection.
+**Edit > Convert Tabs to Spaces** expands every tab in the current file to its
+configured tab stop, preserving line endings and the selected text. Conversion
+is one undoable edit and does not change indentation preferences.
 
 Run the application regression checks with a working GUI display (or under
 `xvfb-run -a` on a headless GNUstep system):
@@ -195,6 +212,15 @@ the loaded library, its debug symbols, and source path.
 Both Console and Debugger output are read-only but selectable. Use **Edit >
 Copy**, the right-click **Copy** menu, or Ctrl+C to copy selected output.
 Ctrl+A or the right-click **Select All** menu selects the full transcript.
+
+The Debugger tab has a vertical split with a grid-free variables outline
+to the left of its output. Name, Value, and Type columns show locals (including arguments)
+and globals from the selected frame's source file. Expand structures, arrays,
+and pointers to inspect children; large values show up to 200 children per
+expansion. Values refresh when execution pauses or the selected frame changes,
+and clear on resume. Debug symbols are required; unavailable values are reported
+in the outline. The variables icon at the right of the debugger toolbar shows or hides the left pane. Its visibility
+and divider proportion are saved in user defaults and restored next time.
 
 The field in the Debugger tab accepts GDB commands such as `print variable`,
 `backtrace`, `break main`, `disable 1`, and `enable 1`. Press Return to send a

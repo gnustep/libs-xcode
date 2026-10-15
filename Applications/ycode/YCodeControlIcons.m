@@ -91,6 +91,14 @@ NSImage *YCodeControlIcon(NSString *name, CGFloat size)
           controlPoint1:NSMakePoint(17.5, 3) controlPoint2:NSMakePoint(20, 3)];
       [wave stroke];
     }
+  else if ([name isEqual:@"variablesShow"] || [name isEqual:@"variablesHide"])
+    {
+      [[NSBezierPath bezierPathWithRect:NSMakeRect(3, 3, 18, 18)] stroke];
+      YCLine(11, 3, 11, 21);
+      BOOL show = [name isEqual:@"variablesShow"];
+      YCLine(show ? 5 : 8, 8, show ? 8 : 5, 12);
+      YCLine(show ? 8 : 5, 12, show ? 5 : 8, 16);
+    }
   else if ([name isEqual:@"stop"])
     {
       [[NSColor colorWithCalibratedRed:0.77 green:0.23 blue:0.22 alpha:1] set];

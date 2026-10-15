@@ -86,6 +86,7 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
  */
 - (BOOL)openFile:(NSString *)filePath;
 - (BOOL)closeFile:(NSString *)filePath;
+- (BOOL)canCloseFiles;
 - (BOOL)saveCurrentFile;
 - (BOOL)saveAllFiles;
 

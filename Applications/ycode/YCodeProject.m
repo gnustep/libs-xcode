@@ -587,6 +587,12 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
 
 #pragma mark - NSDocument overrides
 
+- (BOOL)canCloseDocument
+{
+    if (![_editorController canCloseFiles]) return NO;
+    return [super canCloseDocument];
+}
+
 - (void)close
 {
     [_editorController closeFindPanel];

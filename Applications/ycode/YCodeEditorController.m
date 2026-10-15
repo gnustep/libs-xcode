@@ -353,13 +353,8 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     }
 }
 
-- (BOOL)closeFile:(NSString *)filePath
+- (BOOL)confirmClosingDocument:(YCodeEditorDocument *)document
 {
-    YCodeEditorDocument *document = [self documentForFilePath:filePath];
-    if (!document) {
-        return NO;
-    }
-    
     // Check for unsaved changes
     if ([document isModified]) {
         NSAlert *alert = [[NSAlert alloc] init];
@@ -381,6 +376,27 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
         }
     }
     
+    return YES;
+}
+
+- (BOOL)canCloseFiles
+{
+    NSEnumerator *documents = [[self openDocuments] objectEnumerator];
+    YCodeEditorDocument *document;
+    while ((document = [documents nextObject]) != nil)
+        if (![self confirmClosingDocument:document]) return NO;
+    return YES;
+}
+
+- (BOOL)closeFile:(NSString *)filePath
+{
+    YCodeEditorDocument *document = [self documentForFilePath:filePath];
+    if (!document) {
+        return NO;
+    }
+
+    if (![self confirmClosingDocument:document]) return NO;
+
     // Remove tab
     NSTabViewItem *tabItem = [_documentTabs objectForKey:filePath];
     if (tabItem && _tabView) {

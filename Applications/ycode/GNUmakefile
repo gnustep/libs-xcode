@@ -83,6 +83,8 @@ YCodeEditorDocument.h \
 YCodeSyntaxHighlighter.h \
 YCodeBuildSystem.h \
 YCodeDebugger.h \
+YCodeDebuggerVariables.h \
+YCodeVariablesView.h \
 YCodeControlIcons.h
 
 #
@@ -108,6 +110,8 @@ YCodeEditorDocument.m \
 YCodeSyntaxHighlighter.m \
 YCodeBuildSystem.m \
 YCodeDebugger.m \
+YCodeDebuggerVariables.m \
+YCodeVariablesView.m \
 YCodeControlIcons.m
 
 #

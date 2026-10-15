@@ -28,6 +28,7 @@
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;
   NSPopUpButton *_tabWidthChoice;
+  NSPopUpButton *_controlIndentChoice;
   NSButton *_spacesForTabs;
   NSButton *_projectIndentation;
   NSMutableArray *_fontChoices;
