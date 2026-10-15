@@ -76,6 +76,14 @@ line, and matching text; select a result to open and select the occurrence.
 Search includes unsaved changes in open editors and skips unreadable or binary
 files. Run the search again after editing to refresh the results.
 
+**Edit > Find...** and **Edit > Replace...** open a modeless panel for the
+current editor tab. Search is literal, with options for case sensitivity and
+wraparound. Use Next/Previous (or Return for Next), Replace, Replace & Find,
+or Replace All. An empty replacement deletes matches. Replace operates on a
+selected match; otherwise it finds the next match first. Replace All affects
+only the current file and can be undone in one step. Switching tabs changes
+the panel's target file. Searching alone does not mark the file changed.
+
 In the **Test** tab, choose **Run Tests** to save edits and run the project's
 tests. Results update with each XCTest case and show passed, failed, and skipped
 states. On GNUstep, Xcode projects are built with `buildtool`, then their unit-test

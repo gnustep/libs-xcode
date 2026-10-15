@@ -735,6 +735,99 @@ static void testFontAndSidebarPreferences(void)
   [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeFontsDidChange" object:nil];
 }
 
+static void testFindReplace(NSString *directory)
+{
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory
+    withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *path = [directory stringByAppendingPathComponent:@"Find.m"];
+  [@"One one ONE\n[one] café café" writeToFile:path atomically:YES
+    encoding:NSUTF8StringEncoding error:NULL];
+  YCodeProject *project = [YCodeProject new];
+  [project makeWindowControllers];
+  YCodeEditorController *editor = [project editorController];
+  [editor openFile:path];
+  YCodeEditorDocument *document = [editor currentDocument];
+  NSTextView *view = [document textView];
+  [view setSelectedRange:NSMakeRange(0, 3)];
+  [editor findInFile:nil];
+  NSPanel *panel = [editor valueForKey:@"_findPanel"];
+  NSTextField *find = [editor valueForKey:@"_findField"];
+  NSTextField *replace = [editor valueForKey:@"_replaceField"];
+  NSButton *caseSensitive = [editor valueForKey:@"_findCaseSensitive"];
+  NSButton *wrap = [editor valueForKey:@"_findWrap"];
+  testAssert([panel isVisible] && [[find stringValue] isEqual:@"One"],
+    @"Find opens a modeless panel seeded with selected text");
+  NSString *screenshot = [[[NSProcessInfo processInfo] environment] objectForKey:@"YCODE_FIND_PANEL_IMAGE"];
+  if ([screenshot length]) {
+    [[panel contentView] lockFocus];
+    NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[[panel contentView] bounds]];
+    [[panel contentView] unlockFocus];
+    [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]]
+      writeToFile:screenshot atomically:YES];
+    [bitmap release];
+  }
+  [[[editor valueForKey:@"_findButtons"] objectAtIndex:1] performClick:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(4, 3)), @"Find next ignores case by default");
+  [editor findPrevious:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(0, 3)), @"Find previous selects preceding match");
+  [editor findPrevious:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(13, 3)), @"Find previous wraps to last match");
+  [editor findNext:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(0, 3)), @"Find next wraps to first match");
+  [caseSensitive setState:NSOnState];
+  [find setStringValue:@"ONE"];
+  [editor findNext:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(8, 3)), @"Case-sensitive search selects exact case");
+  [wrap setState:NSOffState];
+  [editor findNext:nil];
+  testAssert(NSEqualRanges([view selectedRange], NSMakeRange(8, 3)) &&
+    [[[editor valueForKey:@"_findStatus"] stringValue] isEqual:@"No match found."],
+    @"No-wrap search preserves selection when no following match exists");
+  testAssert(![document isModified] && ![project isDocumentEdited], @"Searching does not modify files or project");
+  [replace setStringValue:@"two"];
+  [editor replaceMatch:nil];
+  testAssert([[view string] hasPrefix:@"One one two"] && [document isModified], @"Replace edits selected match");
+  [[view undoManager] undo];
+  testAssert([[view string] hasPrefix:@"One one ONE"] && ![document isModified], @"Replace can be undone to saved text");
+  [[view undoManager] redo];
+  testAssert([[view string] hasPrefix:@"One one two"], @"Replacement supports redo");
+  [find setStringValue:@"one"]; [caseSensitive setState:NSOffState];
+  [replace setStringValue:@"oneone"]; [wrap setState:NSOnState];
+  [editor replaceAll:nil];
+  testAssert([[view string] isEqual:@"oneone oneone two\n[oneone] café café"],
+    @"Replace All handles replacement containing the search term without looping");
+  [[view undoManager] undo];
+  testAssert([[view string] isEqual:@"One one two\n[one] café café"], @"Replace All is one undo operation");
+  [find setStringValue:@"[one]"]; [replace setStringValue:@""];
+  [editor replaceAll:nil];
+  testAssert([[view string] isEqual:@"One one two\n café café"], @"Search is literal and empty replacement deletes matches");
+  [find setStringValue:@"café"]; [replace setStringValue:@"茶"];
+  [editor replaceAll:nil];
+  testAssert([[view string] hasSuffix:@"茶 茶"], @"Replace All handles Unicode text");
+  NSString *before = [[view string] copy];
+  [find setStringValue:@""]; [editor replaceAll:nil];
+  testAssert([[view string] isEqual:before], @"Empty search never changes text");
+  [before release];
+  [find setStringValue:@"one"]; [replace setStringValue:@"new"];
+  [view setSelectedRange:NSMakeRange(0, 3)];
+  [editor replaceAndFind:nil];
+  testAssert([[view string] hasPrefix:@"new one"] && NSEqualRanges([view selectedRange], NSMakeRange(4, 3)),
+    @"Replace and Find advances to the next match");
+  NSString *other = [directory stringByAppendingPathComponent:@"Other.md"];
+  [@"one" writeToFile:other atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  [editor openFile:other];
+  [editor replaceAll:nil];
+  testAssert([[[editor currentDocument] content] isEqual:@"new"] && [[document content] hasPrefix:@"new one"],
+    @"The panel follows the active tab without changing the previous file");
+  [editor setCurrentDocument:nil];
+  [editor replaceAll:nil];
+  testAssert(![[[editor valueForKey:@"_findButtons"] objectAtIndex:0] isEnabled],
+    @"Find controls are disabled when no text document is active");
+  [project close];
+  testAssert(![panel isVisible], @"Closing the project hides its find panel");
+  [project release];
+}
+
 static void testFileModificationTracking(NSString *directory)
 {
   [[NSFileManager defaultManager] createDirectoryAtPath:directory
@@ -2864,6 +2957,13 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-find-replace"]) {
+    testFindReplace(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode find/replace checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
+
   if ([arguments containsObject:@"--check-editing"]) {
     testEditorEditing(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -2992,6 +3092,7 @@ int main(void)
   testHiddenRulersDebugGutter();
   testBreakpointFileTypes();
   testSyntaxHighlighting();
+  testFindReplace(temporaryDirectory);
   testFileModificationTracking(temporaryDirectory);
   testTranscriptCopy();
   testDebuggerRecords();

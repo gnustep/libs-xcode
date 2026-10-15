@@ -783,6 +783,8 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
     SEL action = [item action];
+    if (action == @selector(findInFile:) || action == @selector(replaceInFile:))
+        return [[[self currentEditorController] currentDocument] textView] != nil;
     if (action == @selector(exportProjectCenter:)) return [self currentProject] != nil;
     if (action == @selector(debugProject:) || action == @selector(debugAction:) ||
         action == @selector(toggleBreakpoint:))

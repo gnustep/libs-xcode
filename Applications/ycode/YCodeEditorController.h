@@ -53,6 +53,13 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
     NSColor *_textColor;
     BOOL _showLineNumbers;
     BOOL _syntaxHighlighting;
+    NSPanel *_findPanel;
+    NSTextField *_findField;
+    NSTextField *_replaceField;
+    NSTextField *_findStatus;
+    NSButton *_findCaseSensitive;
+    NSButton *_findWrap;
+    NSMutableArray *_findButtons;
 }
 
 /**
@@ -110,6 +117,12 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
 - (IBAction)closeCurrentFile:(id)sender;
 - (IBAction)findInFile:(id)sender;
 - (IBAction)replaceInFile:(id)sender;
+- (IBAction)findNext:(id)sender;
+- (IBAction)findPrevious:(id)sender;
+- (IBAction)replaceMatch:(id)sender;
+- (IBAction)replaceAndFind:(id)sender;
+- (IBAction)replaceAll:(id)sender;
+- (void)closeFindPanel;
 
 @end
 

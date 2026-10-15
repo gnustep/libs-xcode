@@ -128,6 +128,10 @@
 - (void)restoreLastSourceFile;
 @end
 
+@interface YCodeEditorController (FindPanel)
+- (void)updateFindPanel;
+@end
+
 NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocumentDidChangeNotification";
 
 @implementation YCodeEditorController
@@ -158,6 +162,9 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self closeFindPanel];
+    RELEASE(_findPanel);
+    RELEASE(_findButtons);
     RELEASE(_project);
     RELEASE(_tabView);
     RELEASE(_openDocuments);
@@ -226,6 +233,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
 {
     if (_currentDocument != document) {
         ASSIGN(_currentDocument, document);
+        [self updateFindPanel];
         [self rememberCurrentSourceFile];
         [[NSNotificationCenter defaultCenter] postNotificationName:
             YCodeCurrentDocumentDidChangeNotification object:self];
@@ -577,16 +585,212 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     }
 }
 
+- (void)updateFindPanel
+{
+    if (!_findPanel) return;
+    BOOL enabled = [_currentDocument textView] != nil;
+    [_findPanel setTitle:enabled ? [NSString stringWithFormat:@"Find / Replace — %@",
+        [_currentDocument fileName]] : @"Find / Replace"];
+    [_findStatus setStringValue:enabled ? @"" : @"Open a text file to find or replace."];
+    NSEnumerator *buttons = [_findButtons objectEnumerator];
+    NSButton *button;
+    while ((button = [buttons nextObject]) != nil) [button setEnabled:enabled];
+}
+
+- (void)createFindPanel
+{
+    if (_findPanel) return;
+    _findPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 560, 224)
+        styleMask:NSTitledWindowMask | NSClosableWindowMask
+        backing:NSBackingStoreBuffered defer:NO];
+    [_findPanel setReleasedWhenClosed:NO];
+    [_findPanel setFloatingPanel:YES];
+    [_findPanel setHidesOnDeactivate:YES];
+    NSView *content = [_findPanel contentView];
+    NSArray *labels = [NSArray arrayWithObjects:@"Find:", @"Replace:", nil];
+    NSUInteger i;
+    for (i = 0; i < 2; i++) {
+        CGFloat y = 182 - i * 36;
+        NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(16, y, 76, 24)];
+        [label setStringValue:[labels objectAtIndex:i]];
+        [label setEditable:NO]; [label setSelectable:NO];
+        [label setBezeled:NO]; [label setDrawsBackground:NO];
+        [content addSubview:label]; RELEASE(label);
+        NSTextField *field = [[NSTextField alloc] initWithFrame:NSMakeRect(96, y, 448, 26)];
+        [field setTarget:self]; [field setAction:@selector(findNext:)];
+        [content addSubview:field];
+        if (i == 0) _findField = field; else _replaceField = field;
+        RELEASE(field);
+    }
+    _findCaseSensitive = [[NSButton alloc] initWithFrame:NSMakeRect(96, 112, 170, 24)];
+    [_findCaseSensitive setButtonType:NSSwitchButton];
+    [_findCaseSensitive setTitle:@"Case sensitive"];
+    [content addSubview:_findCaseSensitive]; RELEASE(_findCaseSensitive);
+    _findWrap = [[NSButton alloc] initWithFrame:NSMakeRect(290, 112, 180, 24)];
+    [_findWrap setButtonType:NSSwitchButton]; [_findWrap setTitle:@"Wrap around"];
+    [_findWrap setState:NSOnState];
+    [content addSubview:_findWrap]; RELEASE(_findWrap);
+    NSArray *titles = [NSArray arrayWithObjects:@"Previous", @"Next", @"Replace",
+        @"Replace & Find", @"Replace All", nil];
+    NSArray *actions = [NSArray arrayWithObjects:@"findPrevious:", @"findNext:",
+        @"replaceMatch:", @"replaceAndFind:", @"replaceAll:", nil];
+    _findButtons = [[NSMutableArray alloc] init];
+    CGFloat x = 12;
+    for (i = 0; i < [titles count]; i++) {
+        CGFloat width = i == 3 ? 136 : 100;
+        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(x, 64, width, 32)];
+        [button setTitle:[titles objectAtIndex:i]];
+        [button setBezelStyle:NSRoundedBezelStyle];
+        [button setTarget:self]; [button setAction:NSSelectorFromString([actions objectAtIndex:i])];
+        [content addSubview:button]; [_findButtons addObject:button]; RELEASE(button);
+        x += width;
+    }
+    _findStatus = [[NSTextField alloc] initWithFrame:NSMakeRect(16, 16, 528, 32)];
+    [_findStatus setEditable:NO]; [_findStatus setSelectable:YES];
+    [_findStatus setBezeled:NO]; [_findStatus setDrawsBackground:NO];
+    [content addSubview:_findStatus]; RELEASE(_findStatus);
+    [_findField setNextKeyView:_replaceField];
+    [_replaceField setNextKeyView:_findCaseSensitive];
+    [_findCaseSensitive setNextKeyView:_findWrap];
+    [_findWrap setNextKeyView:_findField];
+    [_findPanel center];
+}
+
+- (void)showFindPanelForReplacement:(BOOL)replacement
+{
+    [self createFindPanel];
+    [self updateFindPanel];
+    NSString *selected = [_currentDocument selectedText];
+    if ([selected length] && [selected rangeOfCharacterFromSet:
+        [NSCharacterSet newlineCharacterSet]].location == NSNotFound)
+        [_findField setStringValue:selected];
+    [_findPanel makeKeyAndOrderFront:nil];
+    NSTextField *focus = replacement && [[_findField stringValue] length] ? _replaceField : _findField;
+    [_findPanel makeFirstResponder:focus];
+    [focus selectText:nil];
+}
+
+- (void)closeFindPanel
+{
+    [_findPanel orderOut:nil];
+}
+
 - (IBAction)findInFile:(id)sender
 {
-    // TODO: Implement find dialog
-    NSLog(@"Find in file not yet implemented");
+    [self showFindPanelForReplacement:NO];
 }
 
 - (IBAction)replaceInFile:(id)sender
 {
-    // TODO: Implement find/replace dialog
-    NSLog(@"Replace in file not yet implemented");
+    [self showFindPanelForReplacement:YES];
+}
+
+- (NSUInteger)findOptions
+{
+    return [_findCaseSensitive state] == NSOnState ? 0 : NSCaseInsensitiveSearch;
+}
+
+- (BOOL)findBackwards:(BOOL)backwards
+{
+    NSTextView *view = [_currentDocument textView];
+    NSString *needle = [_findField stringValue];
+    if (!view || ![needle length]) {
+        [_findStatus setStringValue:view ? @"Enter text to find." : @"Open a text file to find or replace."];
+        return NO;
+    }
+    NSString *text = [view string];
+    NSRange selection = [view selectedRange];
+    NSUInteger start = MIN(backwards ? selection.location : NSMaxRange(selection), [text length]);
+    NSUInteger options = [self findOptions] | (backwards ? NSBackwardsSearch : 0);
+    NSRange range = backwards ? NSMakeRange(0, start) : NSMakeRange(start, [text length] - start);
+    NSRange found = [text rangeOfString:needle options:options range:range];
+    BOOL wrapped = NO;
+    if (found.location == NSNotFound && [_findWrap state] == NSOnState) {
+        range = backwards ? NSMakeRange(start, [text length] - start) : NSMakeRange(0, start);
+        found = [text rangeOfString:needle options:options range:range];
+        wrapped = found.location != NSNotFound;
+    }
+    if (found.location == NSNotFound) {
+        [_findStatus setStringValue:@"No match found."];
+        return NO;
+    }
+    [view setSelectedRange:found];
+    [view scrollRangeToVisible:found];
+    [_findStatus setStringValue:wrapped ? @"Match found (wrapped around)." : @"Match found."];
+    return YES;
+}
+
+- (IBAction)findNext:(id)sender { [self findBackwards:NO]; }
+- (IBAction)findPrevious:(id)sender { [self findBackwards:YES]; }
+
+- (BOOL)replaceRange:(NSRange)range withString:(NSString *)replacement actionName:(NSString *)name
+{
+    NSTextView *view = [_currentDocument textView];
+    if (!view || ![view isEditable]) return NO;
+    if ([[[view string] substringWithRange:range] isEqual:replacement]) return YES;
+    NSUndoManager *undo = [view undoManager];
+    [undo beginUndoGrouping];
+    BOOL allowed = [view shouldChangeTextInRange:range replacementString:replacement];
+    if (allowed) {
+        [[view textStorage] replaceCharactersInRange:range withString:replacement];
+        [view setSelectedRange:NSMakeRange(range.location, [replacement length])];
+        [view didChangeText];
+        [undo setActionName:name];
+    }
+    [undo endUndoGrouping];
+    return allowed;
+}
+
+- (BOOL)replaceSelectedMatch
+{
+    NSTextView *view = [_currentDocument textView];
+    NSString *needle = [_findField stringValue];
+    if (!view || ![needle length]) return NO;
+    NSRange selection = [view selectedRange];
+    NSRange match = [[view string] rangeOfString:needle options:[self findOptions] range:selection];
+    if (!selection.length || !NSEqualRanges(match, selection)) return NO;
+    return [self replaceRange:selection withString:[_replaceField stringValue] actionName:@"Replace"];
+}
+
+- (IBAction)replaceMatch:(id)sender
+{
+    if ([self replaceSelectedMatch]) [_findStatus setStringValue:@"Replaced one match."];
+    else [self findNext:sender];
+}
+
+- (IBAction)replaceAndFind:(id)sender
+{
+    [self replaceSelectedMatch];
+    [self findNext:sender];
+}
+
+- (IBAction)replaceAll:(id)sender
+{
+    NSTextView *view = [_currentDocument textView];
+    NSString *needle = [_findField stringValue];
+    if (!view || ![needle length]) {
+        [self findNext:sender];
+        return;
+    }
+    NSString *text = [view string];
+    NSString *replacement = [_replaceField stringValue];
+    NSMutableString *result = [NSMutableString string];
+    NSUInteger position = 0, count = 0;
+    while (position < [text length]) {
+        NSRange match = [text rangeOfString:needle options:[self findOptions]
+            range:NSMakeRange(position, [text length] - position)];
+        if (match.location == NSNotFound) break;
+        [result appendString:[text substringWithRange:NSMakeRange(position, match.location - position)]];
+        [result appendString:replacement];
+        position = NSMaxRange(match);
+        count++;
+    }
+    [result appendString:[text substringFromIndex:position]];
+    if (count && ![self replaceRange:NSMakeRange(0, [text length]) withString:result actionName:@"Replace All"])
+        [_findStatus setStringValue:@"Unable to replace matches."];
+    else
+        [_findStatus setStringValue:[NSString stringWithFormat:@"Replaced %lu match%@.",
+            (unsigned long)count, count == 1 ? @"" : @"es"]];
 }
 
 #pragma mark - NSTabViewDelegate

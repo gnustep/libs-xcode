@@ -589,6 +589,7 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
 
 - (void)close
 {
+    [_editorController closeFindPanel];
     [_buildSystem stop];
     [_buildSystem setDelegate:nil];
     [super close];
