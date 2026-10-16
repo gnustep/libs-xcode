@@ -25,6 +25,7 @@
   NSView *_colorPreferencesView;
   NSView *_editorPreferencesView;
   NSButton *_showEditorRulers;
+  NSPopUpButton *_matchingDelimitersChoice;
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;
   NSPopUpButton *_tabWidthChoice;

@@ -3452,6 +3452,110 @@ static void testExternalFileChanges(NSString *temporaryDirectory)
   [editor release];
 }
 
+static BOOL delimiterHighlighted(YCodeTextView *view, NSUInteger index)
+{
+  return [[[view layoutManager] temporaryAttributesAtCharacterIndex:index effectiveRange:NULL]
+    objectForKey:NSBackgroundColorAttributeName] != nil;
+}
+
+static void testMatchingDelimiters(void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey:@"YCodeDisableMatchingDelimiters"] retain];
+  [defaults removeObjectForKey:@"YCodeDisableMatchingDelimiters"];
+  testAssert([YCodePreferences highlightMatchingDelimiters], @"Matching delimiters default to enabled");
+  YCodeTextView *view = [[YCodeTextView alloc] initWithFrame:NSMakeRect(0, 0, 500, 300)];
+  NSArray *pairs = [NSArray arrayWithObjects:@"{ nested {} }", @"( nested () )", @"[ nested [] ]", nil];
+  NSEnumerator *enumerator = [pairs objectEnumerator];
+  NSString *text;
+  while ((text = [enumerator nextObject]) != nil) {
+    [view setString:text];
+    [view setSelectedRange:NSMakeRange(1, 0)];
+    testAssert(delimiterHighlighted(view, [text length] - 1), @"Caret after opening delimiter highlights its nested match");
+    [view setSelectedRange:NSMakeRange([text length], 0)];
+    testAssert(delimiterHighlighted(view, 0), @"Caret after closing delimiter highlights its opening match");
+    [view setSelectedRange:NSMakeRange(0, 0)];
+    testAssert(delimiterHighlighted(view, [text length] - 1), @"Caret before opening delimiter highlights its match");
+    [view setSelectedRange:NSMakeRange([text length] - 1, 0)];
+    testAssert(delimiterHighlighted(view, 0), @"Caret before closing delimiter highlights its match");
+    [view setSelectedRange:NSMakeRange(3, 0)];
+    testAssert(!delimiterHighlighted(view, 0), @"Moving away removes the highlight");
+  }
+  [view setString:@"{ /* } */ \"}\" }"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  testAssert(delimiterHighlighted(view, [[view string] length] - 1), @"Comments and quoted delimiters are ignored");
+  [YCodePreferences setHighlightMatchingDelimiters:NO];
+  testAssert(!delimiterHighlighted(view, [[view string] length] - 1), @"Disabling the preference clears existing highlights");
+  [YCodePreferences setHighlightMatchingDelimiters:YES];
+  testAssert(delimiterHighlighted(view, [[view string] length] - 1), @"Enabling the preference updates existing editors");
+  [view setSelectedRange:NSMakeRange(0, 1)];
+  testAssert(!delimiterHighlighted(view, [[view string] length] - 1), @"A text selection suppresses matching highlights");
+  [view setString:@"{ unmatched"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  testAssert(!delimiterHighlighted(view, 0), @"Unmatched delimiters do not produce highlights");
+  testAssert([[view textStorage] attribute:NSBackgroundColorAttributeName atIndex:0 effectiveRange:NULL] == nil,
+    @"Highlight does not modify stored text attributes");
+  [view setString:@"{([])}"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  testAssert(delimiterHighlighted(view, 5), @"Mixed nested delimiter types match correctly");
+  [view setString:@"{ more text }"];
+  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+  testAssert(delimiterHighlighted(view, 0), @"Programmatic replacement refreshes matching at the updated caret");
+  AppController *app = AUTORELEASE([AppController new]);
+  [app showPrefPanel:nil];
+  NSPopUpButton *choice = [app valueForKey:@"_matchingDelimitersChoice"];
+  testAssert([choice numberOfItems] == 2 && [choice indexOfSelectedItem] == 0,
+    @"Editor preferences provide an enabled-by-default matching dropdown");
+  [choice selectItemAtIndex:1];
+  [NSApp sendAction:[choice action] to:[choice target] from:choice];
+  testAssert(![YCodePreferences highlightMatchingDelimiters] && !delimiterHighlighted(view, 0),
+    @"Preference dropdown disables highlighting immediately");
+  [[app valueForKey:@"_preferencesPanel"] orderOut:nil];
+  [YCodePreferences setHighlightMatchingDelimiters:YES];
+  [view setBackgroundColor:[NSColor whiteColor]];
+  [view setTextColor:[NSColor blackColor]];
+  [view setFont:[NSFont userFixedPitchFontOfSize:18]];
+  [view setString:@"{  }"];
+  [view setSelectedRange:NSMakeRange(1, 0)];
+  NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 500, 300)
+      styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [window setReleasedWhenClosed:NO];
+  [window setContentView:view];
+  [window orderFront:nil];
+  [view display];
+  NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:[view bounds]];
+  [view cacheDisplayInRect:[view bounds] toBitmapImageRep:bitmap];
+  NSUInteger yellowPixels = 0;
+  NSInteger x, y;
+  for (y = 0; y < [bitmap pixelsHigh]; y++)
+    for (x = 0; x < [bitmap pixelsWide]; x++) {
+      NSColor *pixel = [[bitmap colorAtX:x y:y] colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+      if ([pixel redComponent] > 0.9 && [pixel greenComponent] > 0.6 &&
+          [pixel blueComponent] < 0.7) yellowPixels++;
+    }
+  testAssert(yellowPixels > 10, @"Matching delimiter highlight is visibly painted behind the glyph");
+  NSString *imagePath = [[[NSProcessInfo processInfo] environment] objectForKey:@"YCODE_DELIMITER_IMAGE"];
+  if (imagePath) [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]]
+      writeToFile:imagePath atomically:YES];
+  [YCodePreferences setHighlightMatchingDelimiters:NO];
+  [view display];
+  [view cacheDisplayInRect:[view bounds] toBitmapImageRep:bitmap];
+  yellowPixels = 0;
+  for (y = 0; y < [bitmap pixelsHigh]; y++)
+    for (x = 0; x < [bitmap pixelsWide]; x++) {
+      NSColor *pixel = [[bitmap colorAtX:x y:y] colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+      if ([pixel redComponent] > 0.9 && [pixel greenComponent] > 0.6 &&
+          [pixel blueComponent] < 0.7) yellowPixels++;
+    }
+  testAssert(yellowPixels == 0, @"Disabling matching removes the rendered highlight");
+  [window close]; [window release];
+  [NSObject cancelPreviousPerformRequestsWithTarget:view];
+  [view release];
+  if (saved) [defaults setObject:saved forKey:@"YCodeDisableMatchingDelimiters"];
+  else [defaults removeObjectForKey:@"YCodeDisableMatchingDelimiters"];
+  [saved release];
+}
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -3466,6 +3570,11 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-delimiters"]) {
+    testMatchingDelimiters();
+    NSLog(@"Ycode delimiter checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-external-files"]) {
     testExternalFileChanges(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -3622,6 +3731,7 @@ int main(void)
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
+  testMatchingDelimiters();
   testExternalFileChanges(temporaryDirectory);
   testWorkspaceFileOpening(temporaryDirectory);
   testFontAndSidebarPreferences();

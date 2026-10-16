@@ -32,6 +32,8 @@
 + (void)setFont:(NSFont *)font forPane:(NSString *)pane;
 + (void)resetFonts;
 /** Saved indentation defaults, used when project formatting does not override them. */
++ (BOOL)highlightMatchingDelimiters;
++ (void)setHighlightMatchingDelimiters:(BOOL)enabled;
 + (NSUInteger)tabWidth;
 + (NSUInteger)controlIndentWidth;
 + (void)setControlIndentWidth:(NSUInteger)width;

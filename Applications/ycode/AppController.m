@@ -951,6 +951,11 @@ YCodeFileURLFromPath(NSString *path)
     }
 }
 
+- (void)changeMatchingDelimiters:(NSPopUpButton *)sender
+{
+    [YCodePreferences setHighlightMatchingDelimiters:[sender indexOfSelectedItem] == 0];
+}
+
 - (void)changeEditorRulers:(NSButton *)sender
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -990,6 +995,7 @@ YCodeFileURLFromPath(NSString *path)
 - (void)resetPreferenceFonts:(id)sender
 {
     [YCodePreferences resetFonts];
+    [_matchingDelimitersChoice selectItemAtIndex:[YCodePreferences highlightMatchingDelimiters] ? 0 : 1];
     [self refreshFontPreferences];
     id responder = [_preferencesPanel firstResponder];
     if ([_fontChoices containsObject:responder])
@@ -1050,6 +1056,15 @@ YCodeFileURLFromPath(NSString *path)
         [_showEditorRulers setTarget:self];
         [_showEditorRulers setAction:@selector(changeEditorRulers:)];
         [_editorPreferencesView addSubview:_showEditorRulers];
+        NSTextField *matchingLabel = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 363, 210, 24)]);
+        [matchingLabel setStringValue:@"Highlight matching delimiters:"];
+        [matchingLabel setEditable:NO]; [matchingLabel setBezeled:NO]; [matchingLabel setDrawsBackground:NO];
+        [_editorPreferencesView addSubview:matchingLabel];
+        _matchingDelimitersChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(240, 361, 130, 28) pullsDown:NO]);
+        [_matchingDelimitersChoice addItemsWithTitles:[NSArray arrayWithObjects:@"On", @"Off", nil]];
+        [_matchingDelimitersChoice setTarget:self];
+        [_matchingDelimitersChoice setAction:@selector(changeMatchingDelimiters:)];
+        [_editorPreferencesView addSubview:_matchingDelimitersChoice];
         [self setupFontPreferences];
         [self setupTabPreferences];
         _editorColorWells = [NSMutableArray new];
@@ -1089,6 +1104,7 @@ YCodeFileURLFromPath(NSString *path)
         [_colorPreferencesView addSubview:reset];
     }
     [self refreshEditorColorWells];
+    [_matchingDelimitersChoice selectItemAtIndex:[YCodePreferences highlightMatchingDelimiters] ? 0 : 1];
     [self refreshFontPreferences];
     [_tabWidthChoice selectItemAtIndex:[YCodePreferences tabWidth] - 1];
     [_controlIndentChoice selectItemAtIndex:[YCodePreferences controlIndentWidth] - 1];

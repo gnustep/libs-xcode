@@ -25,6 +25,16 @@
 #import "YCodePreferences.h"
 #include <math.h>
 @implementation YCodePreferences
++ (BOOL)highlightMatchingDelimiters
+{
+    return ![[NSUserDefaults standardUserDefaults] boolForKey:@"YCodeDisableMatchingDelimiters"];
+}
++ (void)setHighlightMatchingDelimiters:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:!enabled forKey:@"YCodeDisableMatchingDelimiters"];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeMatchingDelimitersDidChange" object:nil];
+}
+
 + (NSUInteger)controlIndentWidth
 {
     NSInteger width = [[NSUserDefaults standardUserDefaults] integerForKey:@"YCodeControlIndentWidth"];

@@ -163,6 +163,95 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 
 @implementation YCodeTextView
 
+- (id)initWithFrame:(NSRect)frame textContainer:(NSTextContainer *)container
+{
+  self = [super initWithFrame:frame textContainer:container];
+  if (self) {
+    _matchingDelimiterRange = NSMakeRange(NSNotFound, 0);
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    [center addObserver:self selector:@selector(updateMatchingDelimiter:)
+      name:NSTextViewDidChangeSelectionNotification object:self];
+    [center addObserver:self selector:@selector(delimiterTextChanged:)
+      name:NSTextStorageDidProcessEditingNotification object:[self textStorage]];
+    [center addObserver:self selector:@selector(updateMatchingDelimiter:)
+      name:@"YCodeMatchingDelimitersDidChange" object:nil];
+  }
+  return self;
+}
+
+- (void)delimiterTextChanged:(NSNotification *)notification
+{
+  if (!([[self textStorage] editedMask] & NSTextStorageEditedCharacters)) return;
+  DESTROY(_delimiterMatches);
+  [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(updateMatchingDelimiter:) object:nil];
+  [self performSelector:@selector(updateMatchingDelimiter:) withObject:nil afterDelay:0];
+}
+
+- (void)updateMatchingDelimiter:(NSNotification *)notification
+{
+  NSString *text = [self string];
+  NSLayoutManager *layout = [self layoutManager];
+  [layout removeTemporaryAttribute:NSBackgroundColorAttributeName forCharacterRange:NSMakeRange(0, [text length])];
+  _matchingDelimiterRange = NSMakeRange(NSNotFound, 0);
+  [self setNeedsDisplay:YES];
+  NSRange selection = [self selectedRange];
+  if (![YCodePreferences highlightMatchingDelimiters] || selection.length || selection.location > [text length]) return;
+  if (!_delimiterMatches) {
+    NSString *code = YCodeIndentationCode(text);
+    NSMutableDictionary *matches = [NSMutableDictionary dictionary];
+    NSMutableArray *stack = [NSMutableArray array];
+    NSUInteger i;
+    for (i = 0; i < [code length]; i++) {
+      unichar c = [code characterAtIndex:i];
+      if (c == '(' || c == '[' || c == '{') [stack addObject:[NSNumber numberWithUnsignedInteger:i]];
+      else if (c == ')' || c == ']' || c == '}') {
+        NSNumber *opening = [stack lastObject];
+        if (!opening) continue;
+        unichar start = [code characterAtIndex:[opening unsignedIntegerValue]];
+        if ((start == '(' && c == ')') || (start == '[' && c == ']') || (start == '{' && c == '}')) {
+          NSNumber *closing = [NSNumber numberWithUnsignedInteger:i];
+          [matches setObject:closing forKey:opening];
+          [matches setObject:opening forKey:closing];
+          [stack removeLastObject];
+        } else [stack removeAllObjects];
+      }
+    }
+    _delimiterMatches = [matches copy];
+  }
+  // Prefer the delimiter immediately before the caret, then the one after it.
+  NSNumber *match = nil;
+  if (selection.location) match = [_delimiterMatches objectForKey:[NSNumber numberWithUnsignedInteger:selection.location - 1]];
+  if (!match) match = [_delimiterMatches objectForKey:[NSNumber numberWithUnsignedInteger:selection.location]];
+  if (match) {
+    _matchingDelimiterRange = NSMakeRange([match unsignedIntegerValue], 1);
+    NSColor *color = [NSColor colorWithCalibratedRed:1.0 green:0.75 blue:0.15 alpha:0.55];
+    [layout addTemporaryAttributes:[NSDictionary dictionaryWithObject:color forKey:NSBackgroundColorAttributeName]
+      forCharacterRange:NSMakeRange([match unsignedIntegerValue], 1)];
+  }
+  [self setNeedsDisplay:YES];
+}
+
+#ifdef GNUSTEP
+- (void)drawViewBackgroundInRect:(NSRect)rect
+{
+  [super drawViewBackgroundInRect:rect];
+  // GNUstep's layout manager stores temporary background attributes but its
+  // background renderer only reads attributes from the text storage.
+  if (!_matchingDelimiterRange.length || NSMaxRange(_matchingDelimiterRange) > [[self string] length]) return;
+  NSUInteger count = 0;
+  NSRect *rects = [[self layoutManager] rectArrayForCharacterRange:_matchingDelimiterRange
+      withinSelectedCharacterRange:NSMakeRange(NSNotFound, 0)
+      inTextContainer:[self textContainer] rectCount:&count];
+  NSPoint origin = [self textContainerOrigin];
+  [[NSColor colorWithCalibratedRed:1.0 green:0.75 blue:0.15 alpha:0.55] set];
+  NSUInteger i;
+  for (i = 0; i < count; i++) {
+    NSRect highlight = NSOffsetRect(rects[i], origin.x, origin.y);
+    if (NSIntersectsRect(highlight, rect)) NSRectFillUsingOperation(highlight, NSCompositeSourceOver);
+  }
+}
+#endif
+
 - (NSUInteger)editorTabWidth
 {
   [self loadIndentSettingsIfNeeded];
@@ -872,6 +961,8 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 - (void)dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+  [NSObject cancelPreviousPerformRequestsWithTarget:self];
+  RELEASE(_delimiterMatches);
   RELEASE(_filePath);
   [super dealloc];
 }
