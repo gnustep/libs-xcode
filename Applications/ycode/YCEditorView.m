@@ -143,7 +143,7 @@
         [_textView setBackgroundColor:_backgroundColor];
         [_textView setSelectedTextAttributes:[NSDictionary dictionaryWithObject:_selectionColor
             forKey:NSBackgroundColorAttributeName]];
-        [_textView setInsertionPointColor:_textColor];
+        [_textView setInsertionPointColor:[YCodeSyntaxHighlighter preferredColorForKey:@"cursor"]];
         [self applySyntaxHighlighting];
         [[_scrollView horizontalRulerView] setNeedsDisplay:YES];
         [[_scrollView verticalRulerView] setNeedsDisplay:YES];

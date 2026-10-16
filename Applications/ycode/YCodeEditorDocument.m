@@ -528,6 +528,7 @@
 {
     [_syntaxHighlighter loadPreferredColors];
     [_textView setBackgroundColor:[YCodeSyntaxHighlighter preferredColorForKey:@"background"]];
+    [_textView setInsertionPointColor:[YCodeSyntaxHighlighter preferredColorForKey:@"cursor"]];
     [self applySyntaxHighlighting];
 }
 

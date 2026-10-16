@@ -101,6 +101,10 @@ use the generic icon.
 
 ## Editing and search
 
+The insertion cursor is red by default. Change it using **Preferences > Editor
+Colors > Insertion cursor**. The color is saved and applied immediately to open
+editors; **Restore Defaults** restores red.
+
 Placing the caret immediately before or after `{}`, `()`, or `[]` highlights
 its matching delimiter, including nested pairs. Punctuation inside C-style
 comments and quoted strings is ignored. Highlighting is enabled by default;

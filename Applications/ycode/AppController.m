@@ -1067,10 +1067,10 @@ YCodeFileURLFromPath(NSString *path)
         _editorColorWells = [NSMutableArray new];
         NSArray *labels = [NSArray arrayWithObjects:@"Editor background", @"Plain text", @"Keywords",
             @"Strings", @"Comments", @"Numbers", @"Preprocessor directives", @"Types",
-            @"Symbols", @"Constants", nil];
+            @"Symbols", @"Constants", @"Insertion cursor", nil];
         NSUInteger i;
         for (i = 0; i < [labels count]; i++) {
-            CGFloat y = 405 - i * 34;
+            CGFloat y = 405 - i * 30;
             NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, y, 250, 24)]);
             [label setStringValue:[labels objectAtIndex:i]];
             [label setEditable:NO];

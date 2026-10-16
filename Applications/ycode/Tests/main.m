@@ -374,6 +374,7 @@ static void testEditorColorPreferences(void)
   YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
     initWithFilePath:@"Colors.m" content:@"int ordinary = 42;"];
   [document setModified:NO];
+  testAssert(colorMatches([[document textView] insertionPointColor], 1, 0, 0), @"Insertion cursor defaults to red");
   YCodeEditorController *existingEditor = [YCodeEditorController new];
   AppController *app = [AppController new];
   [app showPrefPanel:nil];
@@ -386,8 +387,8 @@ static void testEditorColorPreferences(void)
     colorMatches([[[document textView] textStorage] attribute:NSForegroundColorAttributeName
       atIndex:4 effectiveRange:NULL], 0, 0, 0),
     @"Default preferences and editor both use black text on white regardless of the system theme");
-  testAssert([panel isVisible] && [wells count] == 10,
-    @"Preferences exposes background, plain text and all eight syntax colors");
+  testAssert([panel isVisible] && [wells count] == 11,
+    @"Preferences exposes background, plain text, cursor and all eight syntax colors");
   NSUInteger i;
   for (i = 0; i < [wells count]; i++) {
     NSColorWell *well = [wells objectAtIndex:i];
@@ -397,7 +398,10 @@ static void testEditorColorPreferences(void)
     [well sendAction:[well action] to:[well target]];
     testAssert(colorMatches([YCodeSyntaxHighlighter preferredColorForKey:[keys objectAtIndex:i]],
       0.1 + i * 0.04, 0.2, 0.3), @"Color wells save each chosen color");
-    if (i >= 2) {
+    if ([[keys objectAtIndex:i] isEqual:@"cursor"]) {
+      testAssert(colorMatches([[document textView] insertionPointColor], 0.5, 0.2, 0.3),
+        @"Cursor preference updates the open editor immediately");
+    } else if (i >= 2) {
       NSString *property = [[keys objectAtIndex:i] stringByAppendingString:@"Color"];
       testAssert(colorMatches([[document syntaxHighlighter] valueForKey:property],
         0.1 + i * 0.04, 0.2, 0.3), @"Open highlighters update every syntax category immediately");
@@ -452,12 +456,16 @@ static void testEditorColorPreferences(void)
   testAssert(![colorsGroup isHidden] && [editorGroup isHidden], @"Returning to Colors restores its controls");
   testAssert(colorMatches([[newDocument textView] backgroundColor], 0.1, 0.2, 0.3) &&
     colorMatches([[newDocument syntaxHighlighter] keywordColor], 0.18, 0.2, 0.3) &&
-    [[defaults dictionaryForKey:@"YCodeEditorColors"] count] == 10,
+    [[defaults dictionaryForKey:@"YCodeEditorColors"] count] == 11,
     @"New editors inherit the persisted palette");
+  testAssert(colorMatches([[newDocument textView] insertionPointColor], 0.5, 0.2, 0.3),
+    @"New editors inherit the saved cursor color");
   [YCodeSyntaxHighlighter resetColorPreferences];
   testAssert([defaults objectForKey:@"YCodeEditorColors"] == nil &&
     colorMatches([[document syntaxHighlighter] keywordColor], 0.67, 0.20, 0.89),
     @"Restoring defaults clears saved overrides and recolors open editors");
+  testAssert(colorMatches([[document textView] insertionPointColor], 1, 0, 0) && ![document isModified],
+    @"Reset restores a red cursor without modifying the document");
   [panel close];
   [app release];
   [newDocument release];
@@ -3569,6 +3577,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-colors"]) {
+    testEditorColorPreferences();
+    testEditorColors();
+    NSLog(@"Ycode editor color checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-delimiters"]) {
     testMatchingDelimiters();
     NSLog(@"Ycode delimiter checks: %lu failures", (unsigned long)failures);

@@ -54,7 +54,7 @@ static NSString *YCodeWordPattern(NSArray *words)
 + (NSArray *)colorPreferenceKeys
 {
     return [NSArray arrayWithObjects:@"background", @"text", @"keyword", @"string",
-        @"comment", @"number", @"preprocessor", @"type", @"symbol", @"constant", nil];
+        @"comment", @"number", @"preprocessor", @"type", @"symbol", @"constant", @"cursor", nil];
 }
 
 + (NSColor *)savedColorForKey:(NSString *)key
@@ -76,6 +76,7 @@ static NSString *YCodeWordPattern(NSArray *words)
 {
     NSColor *saved = [self savedColorForKey:key];
     if (saved) return saved;
+    if ([key isEqual:@"cursor"]) return [NSColor redColor];
     if ([key isEqual:@"background"]) return [NSColor whiteColor];
     if ([key isEqual:@"text"]) return [self plainTextColorForBackground:[self preferredColorForKey:@"background"]];
     static const CGFloat defaults[8][3] = {
@@ -200,6 +201,7 @@ static NSString *YCodeWordPattern(NSArray *words)
 {
     ASSIGN(_textView, textView);
     [_textView setBackgroundColor:[[self class] preferredColorForKey:@"background"]];
+    [_textView setInsertionPointColor:[[self class] preferredColorForKey:@"cursor"]];
 }
 
 #pragma mark - Color Scheme
@@ -291,7 +293,7 @@ static NSString *YCodeWordPattern(NSArray *words)
     [attributes setObject:color forKey:NSForegroundColorAttributeName];
     [_textView setTypingAttributes:attributes];
     RELEASE(attributes);
-    [_textView setInsertionPointColor:color];
+    [_textView setInsertionPointColor:[[self class] preferredColorForKey:@"cursor"]];
 }
 
 - (void)highlightText
