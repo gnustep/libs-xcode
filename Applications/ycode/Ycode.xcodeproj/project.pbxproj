@@ -4,6 +4,27 @@
     };
     objectVersion = 56;
     objects = {
+        DEBUGGER_REGISTRY_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeDebuggerRegistry.h; sourceTree = "<group>"; };
+        DEBUGGER_REGISTRY_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeDebuggerRegistry.m; sourceTree = "<group>"; };
+        DEBUGGER_REGISTRY_BUILD = { isa = PBXBuildFile; fileRef = DEBUGGER_REGISTRY_M; };
+        VARIABLES_VIEW_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeVariablesView.h; sourceTree = "<group>"; };
+        VARIABLES_VIEW_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeVariablesView.m; sourceTree = "<group>"; };
+        VARIABLES_VIEW_BUILD = { isa = PBXBuildFile; fileRef = VARIABLES_VIEW_M; };
+        DEBUGGER_BACKEND_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeDebuggerBackend.h; sourceTree = "<group>"; };
+        DEBUGGER_VARIABLES_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeDebuggerVariables.h; sourceTree = "<group>"; };
+        DEBUGGER_BUNDLES = { isa = PBXFileReference; lastKnownFileType = folder; path = DebuggerBundles; sourceTree = "<group>"; };
+        DEBUGGER_BUNDLE_PHASE = {
+            isa = PBXShellScriptBuildPhase;
+            buildActionMask = 2147483647;
+            files = ();
+            inputPaths = ();
+            outputPaths = ();
+            name = "Build debugger bundles";
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "sh \"$SRCROOT/DebuggerBundles/build-macos.sh\"";
+        };
+
         YCODE_LANGUAGE_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeLanguage.h; sourceTree = "<group>"; };
         YCODE_LANGUAGE_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeLanguage.m; sourceTree = "<group>"; };
         YCODE_LANGUAGE_BUILD = { isa = PBXBuildFile; fileRef = YCODE_LANGUAGE_M; };
@@ -75,7 +96,8 @@
 	"1C52F42D-B586-F606-71AE-065813D69D31" = {
 	    buildPhases = (
 		"3EFFAD06-3C2F-A000-447C-11BA1E695B29",
-		"A5517E5A-3371-9A0A-79AA-5D307EFF3750"
+		"A5517E5A-3371-9A0A-79AA-5D307EFF3750",
+                DEBUGGER_BUNDLE_PHASE
 	    );
 	    isa = PBXNativeTarget;
 	    name = Ycode;
@@ -98,8 +120,8 @@
         YCODE_TEMPLATES, YCODE_LANGUAGES,
         YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
-        YCODE_DEBUGGER_SOURCE,
-        YCODE_DEBUGGER_HEADER,
+        YCODE_DEBUGGER_SOURCE, DEBUGGER_BACKEND_H, DEBUGGER_VARIABLES_H, DEBUGGER_BUNDLES,
+        YCODE_DEBUGGER_HEADER, VARIABLES_VIEW_H, VARIABLES_VIEW_M, DEBUGGER_REGISTRY_H, DEBUGGER_REGISTRY_M,
         "2C5D2D0A-526B-EA0A-7DBF-044613160251",
 		"1645F4CB-A38D-AE0E-5EE0-DCB5F492B181",
 		"FAA2CA0E-57D6-9404-6BFF-F1FFAC43C605",
@@ -132,7 +154,7 @@
         YCODE_FILE_INSPECTOR_BUILD,
         YCODE_IMAGE_INSPECTOR_BUILD,
         YCODE_SOUND_INSPECTOR_BUILD,
-        YCODE_DEBUGGER_BUILD,
+        YCODE_DEBUGGER_BUILD, VARIABLES_VIEW_BUILD, DEBUGGER_REGISTRY_BUILD,
         "60D3A5A8-4695-CB0B-5738-AEC068B0253F",
 		"38118205-AC17-F000-48CB-7D0B67582EA2",
 		"392D7AF5-A4CF-9B0B-43FA-F1132EB42984",

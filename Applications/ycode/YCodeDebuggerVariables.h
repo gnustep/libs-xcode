@@ -22,28 +22,14 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */
 
-#ifndef _YCODEDEBUGGERVARIABLES_H_
-#define _YCODEDEBUGGERVARIABLES_H_
+#ifndef YCODE_DEBUGGER_VARIABLES_H
+#define YCODE_DEBUGGER_VARIABLES_H
 #import <Foundation/Foundation.h>
-@class YCodeDebugger;
-/** Read-only, stopped-frame variables, with lazily loaded children. */
-@interface YCodeDebuggerVariables : NSObject
-{
-  YCodeDebugger *_debugger;
-  NSMutableArray *_groups;
-  NSMutableDictionary *_requests;
-  NSMutableArray *_objects;
-  NSUInteger _token;
-  NSUInteger _generation;
-  BOOL _enabled;
-  BOOL _stopped;
-  NSString *_file;
-}
-- (id)initWithDebugger:(YCodeDebugger *)debugger;
+/* Nodes are dictionaries with name, value, type, numchild and children keys.
+ * Backends may keep additional private keys for lazy child loading. */
+@protocol YCodeDebuggerVariableSource <NSObject>
 - (NSArray *)groups;
 - (void)setEnabled:(BOOL)enabled;
-- (void)reset;
-- (BOOL)handleRecord:(NSDictionary *)record;
 - (void)loadChildren:(NSMutableDictionary *)node;
 @end
 #endif

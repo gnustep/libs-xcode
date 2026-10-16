@@ -252,6 +252,13 @@ make -C Applications/ycode/Tests check
 ## Debugging
 
 Choose **Project > Debug** to build the selected target and open a GDB session.
+Debugger support is supplied by executable backend bundles. The included GDB
+bundle provides the existing debugging workflow; additional backends can supply
+their own launch commands, stepping, breakpoints, and variables without changing
+the editor or debugger pane. Select a backend with the `YCodeDebuggerBackend`
+user default or the project's `DebuggerBackend` setting. See
+[Debugger bundles](DEBUGGER_BUNDLES.md) for installation and the provider API.
+
 GDB must be installed and available on `PATH`; set the `DebuggerPath` user
 preference to use a specific GDB executable (for example,
 `defaults write Ycode DebuggerPath /usr/bin/gdb`). This uses GDB's MI2 interface,

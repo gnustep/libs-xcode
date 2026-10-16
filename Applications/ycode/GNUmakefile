@@ -54,6 +54,7 @@ TestHost/YCodeTestHost.bundle \
 Resources/Ycode.tiff \
 Resources/Templates \
 Resources/Languages \
+DebuggerBundles/Debuggers \
 Resources/ProjectCenterIcons \
 Resources/ProjectCenterIcons/FileH.tiff \
 Resources/ProjectCenterIcons/FileC.tiff \
@@ -86,6 +87,8 @@ YCodeFileWatcher.h \
 YCodeSyntaxHighlighter.h \
 YCodeBuildSystem.h \
 YCodeDebugger.h \
+YCodeDebuggerBackend.h \
+YCodeDebuggerRegistry.h \
 YCodeDebuggerVariables.h \
 YCodeVariablesView.h \
 YCodeControlIcons.h
@@ -115,7 +118,7 @@ YCodeFileWatcher.m \
 YCodeSyntaxHighlighter.m \
 YCodeBuildSystem.m \
 YCodeDebugger.m \
-YCodeDebuggerVariables.m \
+YCodeDebuggerRegistry.m \
 YCodeVariablesView.m \
 YCodeControlIcons.m
 

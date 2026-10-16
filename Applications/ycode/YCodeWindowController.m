@@ -1178,7 +1178,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
             NSMakeRect(4, 2, MAX(0, NSWidth(bounds) - 8), 24)]);
         [_debuggerCommandField setAutoresizingMask:NSViewWidthSizable];
         [[_debuggerCommandField cell] setPlaceholderString:@"GDB command"];
-        [_debuggerCommandField setToolTip:@"GDB command: print variable, backtrace, break main, disable 1, enable 1"];
+        [_debuggerCommandField setToolTip:@"Command for the selected debugger backend"];
         [_debuggerCommandField setTarget:self];
         [_debuggerCommandField setAction:@selector(debugConsoleCommand:)];
         [_debuggerCommandField setEnabled:NO];
@@ -1379,11 +1379,9 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     if (action == @selector(debugProject:)) return _project && ![build isBusy];
     YCodeDebugger *debugger = [build debugger];
     if (action == @selector(toggleBreakpoint:))
-        return [YCodeDebugger canSetBreakpointAtFile:[[_editorController currentDocument] filePath]];
+        return [debugger canSetBreakpointAtFile:[[_editorController currentDocument] filePath]];
     if (![build isDebugging] || ![debugger isReady]) return NO;
-    if (tag == 1) return [debugger isRunning];
-    if (tag == 3) return YES;
-    return ![debugger isRunning];
+    return [debugger canPerformAction:(YCodeDebuggerAction)tag];
 }
 
 - (IBAction)debugProject:(id)sender
@@ -1396,21 +1394,17 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 
 - (IBAction)debugAction:(id)sender
 {
-    NSArray *commands = [NSArray arrayWithObjects:@"-exec-run", @"-exec-interrupt --all",
-        @"-exec-continue", @"-exec-run", @"-exec-next", @"-exec-step", @"-exec-finish",
-        @"-interpreter-exec console \"up\"", @"-interpreter-exec console \"down\"", nil];
     if (![[_project buildSystem] isDebugging]) return;
     NSInteger index = [sender tag];
-    if (index == 3) { [[[_project buildSystem] debugger] restart]; return; }
-    if (index >= 0 && index < (NSInteger)[commands count])
-        [[[_project buildSystem] debugger] command:[commands objectAtIndex:index]];
+    if (index >= YCodeDebuggerRun && index <= YCodeDebuggerFrameDown)
+        [[[_project buildSystem] debugger] performAction:(YCodeDebuggerAction)index];
 }
 
 - (IBAction)debugConsoleCommand:(id)sender
 {
     if (![[[_project buildSystem] debugger] isReady]) return;
     [self buildSystem:[_project buildSystem] didReceiveDebuggerOutput:
-        [NSString stringWithFormat:@"(gdb) %@\n", [sender stringValue]]];
+        [NSString stringWithFormat:@"(%@) %@\n", [[[_project buildSystem] debugger] displayName], [sender stringValue]]];
     [[[_project buildSystem] debugger] consoleCommand:[sender stringValue]];
     [sender setStringValue:@""];
 }

@@ -51,6 +51,8 @@
 #import "YCodeTextView.h"
 #import "YCodeLanguage.h"
 #import "YCodeDebuggerVariables.h"
+#import "YCodeDebuggerRegistry.h"
+#import "../DebuggerBundles/GDB/YCodeGDBDebugger.h"
 #import "YCodeVariablesView.h"
 #import "AppController.h"
 #import "YCodePreferences.h"
@@ -1729,6 +1731,101 @@ static void writeExecutable(NSString *path, NSString *contents)
 { ASSIGN(file, path); line = number; }
 @end
 
+@interface YCodeDebuggerChangeProbe : NSObject
+{
+@public
+  id sender;
+  NSUInteger count;
+}
+- (void)changed:(NSNotification *)notification;
+@end
+@implementation YCodeDebuggerChangeProbe
+- (void)changed:(NSNotification *)notification { sender = [notification object]; count++; }
+@end
+
+static void testDebuggerBundles(NSString *directory)
+{
+  NSString *resources = [[NSBundle mainBundle] pathForResource:@"Debuggers" ofType:nil];
+  testAssert([resources length] > 0, @"Debugger bundles are packaged as application resources");
+  if (!resources) return;
+  YCodeDebuggerRegistry *registry = [[YCodeDebuggerRegistry alloc]
+    initWithSearchPaths:[NSArray arrayWithObject:resources]];
+  testAssert([[registry backendIdentifiers] containsObject:@"gdb"], @"Discover GDB by loading its executable bundle");
+  id<YCodeDebuggerBackend> backend = [registry newBackendWithIdentifier:@"gdb"];
+  testAssert(backend != nil && [[NSBundle bundleForClass:[backend class]] bundlePath] != nil &&
+    [[[NSBundle bundleForClass:[backend class]] bundlePath] hasSuffix:@"GDB.bundle"],
+    @"GDB implementation lives in the bundle rather than the application executable");
+  YCodeDebugger *first = [[YCodeDebugger alloc] initWithBackend:backend];
+  [backend release];
+  YCodeDebugger *second = [[YCodeDebugger alloc] initWithBackendIdentifier:@"gdb"];
+  testAssert([[first displayName] isEqual:@"GDB"] && [[first backendIdentifier] isEqual:@"gdb"],
+    @"Facade exposes selected backend metadata");
+  [first setSourceDirectory:@"/tmp/debugger-bundle-one"];
+  [second setSourceDirectory:@"/tmp/debugger-bundle-two"];
+  [first toggleBreakpointAtFile:@"Example.m" line:8];
+  testAssert([first breakpointStateAtFile:@"Example.m" line:8] == YCodeBreakpointEnabled &&
+    [second breakpointStateAtFile:@"Example.m" line:8] == YCodeBreakpointNone,
+    @"Separate projects retain independent backend breakpoint state");
+  testAssert([first canSetBreakpointAtFile:@"Example.m"] && ![first canSetBreakpointAtFile:@"Example.h"],
+    @"Breakpoint eligibility comes from selected backend");
+  NSString *executable = @"/tmp/Product With Spaces.app/Product With Spaces";
+  testAssert([[[first launchArgumentsForExecutable:executable] lastObject] isEqual:executable],
+    @"Backend launch arguments preserve executable paths without shell splitting");
+  YCodeDebuggerProbe *probe = [YCodeDebuggerProbe new];
+  YCodeDebuggerChangeProbe *changes = [YCodeDebuggerChangeProbe new];
+  [[NSNotificationCenter defaultCenter] addObserver:changes selector:@selector(changed:)
+    name:YCodeDebuggerDidChangeNotification object:first];
+  [first setDelegate:probe];
+  testAssert(![first canPerformAction:YCodeDebuggerRun], @"Run is disabled until the backend is ready");
+  [first receiveData:[@"(gdb) \n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([first isReady] && ![second isReady] && changes->sender == first && changes->count > 0,
+    @"Backend events preserve facade notification identity and session isolation");
+  [probe->commands setString:@""];
+  [first performAction:YCodeDebuggerNext];
+  [first performAction:YCodeDebuggerFrameUp];
+  testAssert([probe->commands rangeOfString:@"-exec-next\n"].location != NSNotFound &&
+    [probe->commands rangeOfString:@"-interpreter-exec console \"up\"\n"].location != NSNotFound,
+    @"Generic step and frame actions are translated inside the GDB backend");
+  [first receiveData:[@"*running,thread-id=\"all\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert([first canPerformAction:YCodeDebuggerPause] && ![first canPerformAction:YCodeDebuggerNext],
+    @"Backend capabilities reflect running state");
+  [first performAction:YCodeDebuggerPause];
+  testAssert([probe->commands rangeOfString:@"-exec-interrupt --all\n"].location != NSNotFound,
+    @"Generic pause reaches backend transport");
+  [first reset];
+  testAssert(![first isReady] && ![first isRunning] &&
+    [first breakpointStateAtFile:@"Example.m" line:8] == YCodeBreakpointEnabled,
+    @"Reset clears session state and preserves source breakpoints");
+  [[NSNotificationCenter defaultCenter] removeObserver:changes];
+  [first setDelegate:nil]; [first release]; [second release]; [probe release]; [changes release];
+  testAssert([registry newBackendWithIdentifier:@"missing-backend"] == nil,
+    @"Missing explicit backend does not silently launch a different debugger");
+  id saved = [[[NSUserDefaults standardUserDefaults] objectForKey:@"YCodeDebuggerBackend"] retain];
+  [[NSUserDefaults standardUserDefaults] setObject:@"missing-backend" forKey:@"YCodeDebuggerBackend"];
+  YCodeDebugger *missing = [YCodeDebugger new];
+  testAssert(missing == nil, @"Unavailable default backend fails session creation safely");
+  [missing release];
+  if (saved) [[NSUserDefaults standardUserDefaults] setObject:saved forKey:@"YCodeDebuggerBackend"];
+  else [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"YCodeDebuggerBackend"];
+  [saved release];
+
+  NSString *bad = [directory stringByAppendingPathComponent:@"Invalid.bundle"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSError *error = nil;
+  BOOL copied = [[NSFileManager defaultManager] copyItemAtPath:[resources stringByAppendingPathComponent:@"GDB.bundle"] toPath:bad error:&error];
+  testAssert(copied, @"Prepare incompatible debugger bundle fixture");
+  if (copied) {
+    NSString *manifest = [[NSBundle bundleWithPath:bad] pathForResource:@"Debugger" ofType:@"plist"];
+    NSMutableDictionary *info = [NSMutableDictionary dictionaryWithContentsOfFile:manifest];
+    [info setObject:[NSNumber numberWithInt:99] forKey:@"APIVersion"];
+    [[NSPropertyListSerialization dataWithPropertyList:info format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL]
+      writeToFile:manifest atomically:YES];
+    testAssert(![registry loadBundleAtPath:bad] && [[registry backendIdentifiers] containsObject:@"gdb"],
+      @"Reject incompatible debugger API before loading code, preserving working registrations");
+  }
+  [registry release];
+}
+
 static NSString *variableRequestToken(YCodeDebuggerProbe *probe, NSString *fragment)
 {
   NSEnumerator *lines = [[probe->commands componentsSeparatedByString:@"\n"] reverseObjectEnumerator];
@@ -1756,7 +1853,7 @@ static void testDebuggerVariables(void)
   YCodeDebugger *debugger = [YCodeDebugger new];
   YCodeDebuggerProbe *probe = [YCodeDebuggerProbe new];
   [debugger setDelegate:probe];
-  YCodeDebuggerVariables *variables = [debugger variables];
+  id<YCodeDebuggerVariableSource> variables = [debugger variables];
   [variables setEnabled:YES];
   [debugger receiveData:[@"(gdb)\n*stopped,reason=\"breakpoint-hit\",frame={fullname=\"/tmp/vars.c\",line=\"5\"}\n" dataUsingEncoding:NSUTF8StringEncoding]];
   variableReply(debugger, probe, @"-stack-info-frame", @",frame={fullname=\"/tmp/vars.c\",line=\"5\"}");
@@ -1921,7 +2018,7 @@ static void testDebuggerRecords(void)
   [debugger receiveData:[@"9^error,msg=\"No symbol\\n\"\n" dataUsingEncoding:NSUTF8StringEncoding]];
   testAssert([probe->output rangeOfString:@"Debugger error: No symbol"].location != NSNotFound,
     @"Display MI command failures in the console");
-  NSDictionary *parsed = [YCodeDebugger parseRecord:@"24^done,stack=[frame={level=\"0\"},frame={level=\"1\"}]"];
+  NSDictionary *parsed = [NSClassFromString(@"YCodeGDBDebugger") parseRecord:@"24^done,stack=[frame={level=\"0\"},frame={level=\"1\"}]"];
   testAssert([[parsed objectForKey:@"stack"] count] == 2, @"Parse MI result lists as well as value lists");
   [debugger setSourceDirectory:@"/tmp/Source Folder"];
   [debugger receiveData:[@"=breakpoint-created,bkpt={number=\"7\",file=\"main.c\",line=\"3\",enabled=\"y\"}\n"
@@ -1952,7 +2049,7 @@ static void testDebuggerRecords(void)
     dataUsingEncoding:NSUTF8StringEncoding]];
   testAssert([debugger breakpointStateAtFile:@"/tmp/later.c" line:5] == YCodeBreakpointEnabled,
     @"Resolved breakpoints become red");
-  [YCodeDebugger parseRecord:@"^done,bad=[garbage"];
+  [NSClassFromString(@"YCodeGDBDebugger") parseRecord:@"^done,bad=[garbage"];
   [debugger reset];
   testAssert(![debugger isReady] && ![debugger isRunning], @"Reset session state after termination");
   [[NSUserDefaults standardUserDefaults] removeObjectForKey:storage];
@@ -2652,7 +2749,7 @@ static void testBuildAndRun(NSString *temporaryDirectory)
       @"Clicking the gutter creates a breakpoint in that file");
     NSString *response = [NSString stringWithFormat:@"^done,bkpt={number=\"9\",fullname=%@,line=\"2\",enabled=\"y\"}\n"
       @"*stopped,reason=\"breakpoint-hit\",frame={fullname=%@,line=\"2\"}\n",
-      [YCodeDebugger quote:source], [YCodeDebugger quote:source]];
+      [NSClassFromString(@"YCodeGDBDebugger") quote:source], [NSClassFromString(@"YCodeGDBDebugger") quote:source]];
     [[build debugger] receiveData:[response dataUsingEncoding:NSUTF8StringEncoding]];
     testAssert([[build debugger] executionLine] == 2 &&
       [[[build debugger] executionFile] isEqual:source], @"Stopped source and breakpoint share the gutter line");
@@ -2663,8 +2760,8 @@ static void testBuildAndRun(NSString *temporaryDirectory)
       @"Shift-click disables the breakpoint without deleting it");
     [[build debugger] toggleBreakpointAtFile:source line:2];
     testAssert(![build debug] && ![build run], @"Debug session excludes competing builds and runs");
-    [[build debugger] command:@"-exec-run"];
-    [[build debugger] command:@"-gdb-exit"];
+    [[build debugger] performAction:YCodeDebuggerRun];
+    [[build debugger] performAction:YCodeDebuggerStop];
     waitForBuild(build, NO);
     testAssert(![build isBusy] && ![build isDebugging] && ![[build debugger] isReady],
       @"Debugger exit drains pipes and permits another session");
@@ -3745,6 +3842,14 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-debugger-bundles"]) {
+    testDebuggerBundles(temporaryDirectory);
+    testDebuggerRecords();
+    testDebuggerVariables();
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode debugger bundle checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-languages"]) {
     testLanguageBundles(temporaryDirectory);
     testSyntaxHighlighting();
@@ -3932,6 +4037,7 @@ int main(void)
   testBreakpointFileTypes();
   testLanguageBundles(temporaryDirectory);
   testSyntaxHighlighting();
+  testDebuggerBundles(temporaryDirectory);
   testDebuggerVariables();
   testCloseModifiedFiles(temporaryDirectory);
   testFindReplace(temporaryDirectory);

@@ -22,15 +22,15 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */
 
-#import "YCodeDebuggerVariables.h"
-#import "YCodeDebugger.h"
+#import "YCodeGDBVariables.h"
+#import "YCodeGDBDebugger.h"
 
-@interface YCodeDebugger (VariableFrame)
+@interface YCodeGDBDebugger (VariableFrame)
 - (void)updateSelectedFrame:(NSDictionary *)frame;
 @end
 
-@implementation YCodeDebuggerVariables
-- (id)initWithDebugger:(YCodeDebugger *)debugger
+@implementation YCodeGDBVariables
+- (id)initWithDebugger:(YCodeGDBDebugger *)debugger
 {
   if ((self = [super init])) {
     _debugger = debugger;
@@ -43,13 +43,13 @@
 }
 - (void)dealloc
 {
-  RELEASE(_groups); RELEASE(_requests); RELEASE(_objects); RELEASE(_file);
+  [_groups release]; [_requests release]; [_objects release]; [_file release];
   [super dealloc];
 }
 - (NSArray *)groups { return _groups; }
 - (void)changed
 {
-  [[NSNotificationCenter defaultCenter] postNotificationName:YCodeDebuggerDidChangeNotification object:_debugger];
+  [_debugger notifyChange];
 }
 - (void)request:(NSString *)command kind:(NSString *)kind node:(NSMutableDictionary *)node
 {
@@ -75,7 +75,7 @@
   _generation++;
   _stopped = NO;
   [_groups removeAllObjects]; [_objects removeAllObjects]; [_requests removeAllObjects];
-  DESTROY(_file);
+  [_file release]; _file = nil;
 }
 - (void)refresh
 {
@@ -109,7 +109,7 @@
   [_objects addObject:name];
   [node setObject:name forKey:@"object"];
   [self request:[NSString stringWithFormat:@"-var-create %@ * %@", name,
-    [YCodeDebugger quote:expression]] kind:@"value" node:node];
+    [YCodeGDBDebugger quote:expression]] kind:@"value" node:node];
 }
 - (void)loadChildren:(NSMutableDictionary *)node
 {
@@ -135,10 +135,10 @@
     }
     return NO;
   }
-  RETAIN(request);
+  [request retain];
   [_requests removeObjectForKey:token];
   if ([[request objectForKey:@"generation"] unsignedIntegerValue] != _generation) {
-    RELEASE(request); return YES;
+    [request release]; return YES;
   }
   NSString *kind = [request objectForKey:@"kind"];
   NSMutableDictionary *node = [request objectForKey:@"node"];
@@ -151,7 +151,7 @@
   } else if ([kind isEqual:@"frame"]) {
     NSDictionary *frame = [record objectForKey:@"frame"];
     [_debugger updateSelectedFrame:frame];
-    ASSIGN(_file, [frame objectForKey:@"fullname"] ?: [frame objectForKey:@"file"]);
+    do { id value = ([frame objectForKey:@"fullname"] ?: [frame objectForKey:@"file"]); [value retain]; [_file release]; _file = value; } while (0);
     NSMutableDictionary *locals = [self group:@"Locals"];
     NSMutableDictionary *globals = [self group:@"Globals (current file)"];
     [self request:@"-stack-list-variables --all-values" kind:@"locals" node:locals];
@@ -199,7 +199,7 @@
         @"…", @"name", @"First 200 children shown", @"value", nil]];
   }
   if (![kind isEqual:@"delete"]) [self changed];
-  RELEASE(request);
+  [request release];
   return YES;
 }
 @end

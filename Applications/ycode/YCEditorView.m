@@ -601,7 +601,7 @@
 {
     ASSIGN(_debugger, debugger);
     ASSIGN(_debugFile, file);
-    _debugGutterVisible = [YCodeDebugger canSetBreakpointAtFile:file] &&
+    _debugGutterVisible = [debugger canSetBreakpointAtFile:file] &&
         (active || [[debugger breakpointLinesForFile:file] count] > 0);
     [self updateRulerVisibility];
     [self setToolTip:_debugGutterVisible ?

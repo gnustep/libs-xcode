@@ -357,7 +357,9 @@
 - (YCodeDebugger *)debugger
 {
     if (!_debugger) {
-        _debugger = [YCodeDebugger new];
+        NSString *identifier = [[_project settings] objectForKey:@"DebuggerBackend"];
+        if (![identifier isKindOfClass:[NSString class]]) identifier = nil;
+        _debugger = [[YCodeDebugger alloc] initWithBackendIdentifier:identifier];
         [_debugger setDelegate:self];
         [_debugger setSourceDirectory:[_project projectDirectoryPath]];
         if ([_project projectPath]) [_debugger setBreakpointStorageKey:
@@ -371,6 +373,10 @@
 - (BOOL)debug
 {
     if ([self isBusy]) return NO;
+    if (![self debugger]) {
+        [self reportError:@"The selected debugger backend is unavailable. Check DebuggerBackend in the project settings or the YCodeDebuggerBackend user default, and installed debugger bundles.\n"];
+        return NO;
+    }
     _debugAfterBuild = YES;
     if (![self run]) { _debugAfterBuild = NO; return NO; }
     return YES;
@@ -449,10 +455,24 @@
     if (debug) {
         _debugging = YES;
         [[self debugger] reset];
-        NSString *path = [[NSUserDefaults standardUserDefaults] stringForKey:@"DebuggerPath"];
-        if (![path length]) path = @"gdb";
-        return [self runCommand:path withArguments:[NSArray arrayWithObjects:
-            @"--interpreter=mi2", @"--quiet", @"--nx", @"-f", executablePath, nil]];
+        YCodeDebugger *session = [self debugger];
+        NSString *path = [session launchCommandForExecutable:executablePath];
+        NSArray *arguments = [session launchArgumentsForExecutable:executablePath];
+        BOOL valid = [path isKindOfClass:[NSString class]] && [path length] &&
+            [arguments isKindOfClass:[NSArray class]];
+        if (valid) {
+            NSEnumerator *e = [arguments objectEnumerator]; id argument;
+            while ((argument = [e nextObject]))
+                if (![argument isKindOfClass:[NSString class]]) { valid = NO; break; }
+        }
+        if (!valid) {
+            _debugging = NO; _status = YCodeBuildStatusFailed;
+            [self reportError:@"The debugger backend returned an invalid launch configuration.\n"];
+            if ([_delegate respondsToSelector:@selector(buildSystemDidFinishRun:)])
+                [(id)_delegate buildSystemDidFinishRun:self];
+            return NO;
+        }
+        return [self runCommand:path withArguments:arguments];
     }
     return [self runCommand:executablePath withArguments:[NSArray array]];
 }
@@ -581,7 +601,7 @@
     [_testBundles removeAllObjects];
     _debugAfterBuild = NO;
     if (_debugging) {
-        [_debugger command:@"-gdb-exit"];
+        [_debugger performAction:YCodeDebuggerStop];
         [_debugger reset];
     }
     _runAfterBuild = NO;

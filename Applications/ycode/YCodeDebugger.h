@@ -24,66 +24,49 @@
 
 #ifndef _YCODEDEBUGGER_H_
 #define _YCODEDEBUGGER_H_
-#import <Foundation/Foundation.h>
+#import "YCodeDebuggerBackend.h"
 
 @class YCodeDebugger;
-@class YCodeDebuggerVariables;
 extern NSString * const YCodeDebuggerDidChangeNotification;
-
-typedef enum {
-  YCodeBreakpointNone,
-  YCodeBreakpointEnabled,
-  YCodeBreakpointInactive
-} YCodeBreakpointState;
 @protocol YCodeDebuggerDelegate <NSObject>
 - (void)debugger:(YCodeDebugger *)debugger sendCommand:(NSString *)command;
 - (void)debugger:(YCodeDebugger *)debugger output:(NSString *)output;
 - (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)file line:(NSUInteger)line;
 @end
-
 @interface NSObject (YCodeDebuggerDelegateOptional)
 - (void)debugger:(YCodeDebugger *)debugger targetOutput:(NSString *)output;
 @end
 
-/** GDB/MI session, following ProjectCenter's debugger command and event model. */
-@interface YCodeDebugger : NSObject
+/** Backend-neutral debugger session. Transport and UI stay in the application. */
+@interface YCodeDebugger : NSObject <YCodeDebuggerBackendDelegate>
 {
   id<YCodeDebuggerDelegate> _delegate;
-  NSMutableData *_pending;
-  NSMutableDictionary *_breakpoints;
-  NSMutableSet *_disabledBreakpoints;
-  NSMutableDictionary *_resolvedLocations;
-  NSString *_sourceDirectory;
-  NSString *_executionFile;
-  NSUInteger _executionLine;
-  BOOL _ready;
-  BOOL _running;
-  BOOL _restartPending;
-  NSString *_storageKey;
-  YCodeDebuggerVariables *_variables;
+  id<YCodeDebuggerBackend> _backend;
 }
+- (id)initWithBackendIdentifier:(NSString *)identifier;
+- (id)initWithBackend:(id<YCodeDebuggerBackend>)backend;
+- (NSString *)backendIdentifier;
+- (NSString *)displayName;
 - (void)setDelegate:(id<YCodeDebuggerDelegate>)delegate;
-- (YCodeDebuggerVariables *)variables;
+- (id<YCodeDebuggerVariableSource>)variables;
+- (NSString *)launchCommandForExecutable:(NSString *)executable;
+- (NSArray *)launchArgumentsForExecutable:(NSString *)executable;
+- (BOOL)canPerformAction:(YCodeDebuggerAction)action;
+- (void)performAction:(YCodeDebuggerAction)action;
+- (void)restart;
 - (void)reset;
 - (void)setBreakpointStorageKey:(NSString *)key;
 - (void)setSourceDirectory:(NSString *)directory;
-/** Source location of the selected stopped frame; cleared on resume or exit. */
 - (NSString *)executionFile;
 - (NSUInteger)executionLine;
-/** Map of source line numbers to YCodeBreakpointState values for this file. */
 - (NSDictionary *)breakpointLinesForFile:(NSString *)file;
 - (YCodeBreakpointState)breakpointStateAtFile:(NSString *)file line:(NSUInteger)line;
 - (void)toggleBreakpointEnabledAtFile:(NSString *)file line:(NSUInteger)line;
-- (void)restart;
 - (BOOL)isReady;
 - (BOOL)isRunning;
 - (void)receiveData:(NSData *)data;
-- (void)command:(NSString *)command;
 - (void)consoleCommand:(NSString *)command;
 - (void)toggleBreakpointAtFile:(NSString *)file line:(NSUInteger)line;
-/** Whether the path names a source implementation file, excluding headers. */
-+ (BOOL)canSetBreakpointAtFile:(NSString *)file;
-+ (NSString *)quote:(NSString *)string;
-+ (NSDictionary *)parseRecord:(NSString *)record;
+- (BOOL)canSetBreakpointAtFile:(NSString *)file;
 @end
 #endif
