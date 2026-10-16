@@ -381,12 +381,12 @@ static void testEditorColorPreferences(void)
   NSPanel *panel = [app valueForKey:@"_preferencesPanel"];
   NSArray *wells = [app valueForKey:@"_editorColorWells"];
   NSArray *keys = [YCodeSyntaxHighlighter colorPreferenceKeys];
-  testAssert(colorMatches([[wells objectAtIndex:0] color], 1, 1, 1) &&
-    colorMatches([[wells objectAtIndex:1] color], 0, 0, 0) &&
-    colorMatches([[document textView] backgroundColor], 1, 1, 1) &&
+  testAssert(colorMatches([[wells objectAtIndex:0] color], 0, 0, 0) &&
+    colorMatches([[wells objectAtIndex:1] color], 1, 1, 1) &&
+    colorMatches([[document textView] backgroundColor], 0, 0, 0) &&
     colorMatches([[[document textView] textStorage] attribute:NSForegroundColorAttributeName
-      atIndex:4 effectiveRange:NULL], 0, 0, 0),
-    @"Default preferences and editor both use black text on white regardless of the system theme");
+      atIndex:4 effectiveRange:NULL], 1, 1, 1),
+    @"Default preferences and editor both use white text on black regardless of the system theme");
   testAssert([panel isVisible] && [wells count] == 11,
     @"Preferences exposes background, plain text, cursor and all eight syntax colors");
   NSUInteger i;

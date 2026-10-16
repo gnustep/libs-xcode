@@ -77,7 +77,7 @@ static NSString *YCodeWordPattern(NSArray *words)
     NSColor *saved = [self savedColorForKey:key];
     if (saved) return saved;
     if ([key isEqual:@"cursor"]) return [NSColor redColor];
-    if ([key isEqual:@"background"]) return [NSColor whiteColor];
+    if ([key isEqual:@"background"]) return [NSColor blackColor];
     if ([key isEqual:@"text"]) return [self plainTextColorForBackground:[self preferredColorForKey:@"background"]];
     static const CGFloat defaults[8][3] = {
         {0.67, 0.20, 0.89}, {0.77, 0.10, 0.08}, {0.42, 0.48, 0.53},

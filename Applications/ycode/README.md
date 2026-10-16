@@ -101,6 +101,10 @@ use the generic icon.
 
 ## Editing and search
 
+The editor defaults to a black background with white unhighlighted text. Saved
+color preferences take precedence; **Preferences > Editor Colors > Restore
+Defaults** applies the default palette.
+
 The insertion cursor is red by default. Change it using **Preferences > Editor
 Colors > Insertion cursor**. The color is saved and applied immediately to open
 editors; **Restore Defaults** restores red.
