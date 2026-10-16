@@ -50,8 +50,6 @@
   // Project settings
   NSMutableDictionary *_settings;
   
-  // File watching
-  NSMutableDictionary *_fileWatchers;
 }
 
 /** Supported target kinds for the new-project accessory view. */

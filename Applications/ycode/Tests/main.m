@@ -910,6 +910,8 @@ static void testFileModificationTracking(NSString *directory)
     testAssert([editor openFile:path], @"Open modification fixture");
     YCodeEditorDocument *file = [editor currentDocument];
     NSTextView *text = [file textView];
+    NSTabViewItem *fileTab = [[editor tabView] selectedTabViewItem];
+    testAssert([[fileTab label] isEqual:name], @"Unmodified file tab has no marker");
     [file applySyntaxHighlighting];
     [text didChangeText];
     [controller buildSystem:[project buildSystem] didReceiveOutput:@"Build output\n"];
@@ -924,13 +926,18 @@ static void testFileModificationTracking(NSString *directory)
     [undo endUndoGrouping];
     testAssert([file isModified] && [window isDocumentEdited] && ![project isDocumentEdited],
       @"Source and supporting file edits mark the window without dirtying project metadata");
+    testAssert([[fileTab label] isEqual:[@"* " stringByAppendingString:name]],
+      @"Modified file tab prefixes its name with an asterisk");
     [undo undo];
     testAssert(![file isModified] && ![window isDocumentEdited],
       @"Undoing to saved text clears the edited indicator");
+    testAssert([[fileTab label] isEqual:name], @"Undo to saved content clears the tab marker");
     [undo redo];
     testAssert([file isModified] && [window isDocumentEdited], @"Redo marks the file changed again");
+    testAssert([[fileTab label] hasPrefix:@"* "], @"Redo restores the tab marker");
     testAssert([file saveToFile] && ![file isModified] && ![window isDocumentEdited],
       @"Saving clears file and window modification state");
+    testAssert([[fileTab label] isEqual:name], @"Saving clears the tab marker");
     [text didChangeText];
     testAssert(![file isModified], @"Saving updates the text baseline");
     [file setContent:@"replacement\n"];
@@ -3372,6 +3379,79 @@ static void testWorkspaceFileOpening(NSString *temporaryDirectory)
     @"Missing workspace files are rejected");
 }
 
+static void waitForExternalFile(YCodeEditorDocument *document, NSString *content, BOOL conflict)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:3];
+  while ([deadline timeIntervalSinceNow] > 0) {
+    if ([[document content] isEqual:content] && [document hasExternalChanges] == conflict) return;
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+  }
+}
+
+static void testExternalFileChanges(NSString *temporaryDirectory)
+{
+  [NSApp finishLaunching];
+  [NSApp activateIgnoringOtherApps:YES];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *directory = [temporaryDirectory stringByAppendingPathComponent:@"Watched Files"];
+  [manager createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *path = [directory stringByAppendingPathComponent:@"Example.m"];
+  [@"original\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  YCodeEditorController *editor = [YCodeEditorController new];
+  [editor setTabView:AUTORELEASE([[YCodeEditorTabView alloc] initWithFrame:NSMakeRect(0, 0, 600, 400)])];
+  testAssert([editor openFile:path], @"Open text file for event-driven reload");
+  YCodeEditorDocument *document = [editor currentDocument];
+  [[document textView] setSelectedRange:NSMakeRange(2, 2)];
+  [@"external in-place\n" writeToFile:path atomically:NO encoding:NSUTF8StringEncoding error:NULL];
+  waitForExternalFile(document, @"external in-place\n", NO);
+  testAssert([[document content] isEqual:@"external in-place\n"] && ![document isModified],
+    @"OS notification reloads an in-place edit without dirtying the file");
+  testAssert(NSEqualRanges([[document textView] selectedRange], NSMakeRange(2, 2)),
+    @"External reload preserves selection");
+  [@"atomic replacement\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  waitForExternalFile(document, @"atomic replacement\n", NO);
+  testAssert([[document content] isEqual:@"atomic replacement\n"], @"Watch survives atomic replacement");
+  [@"another replacement\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  waitForExternalFile(document, @"another replacement\n", NO);
+  testAssert([[document content] isEqual:@"another replacement\n"], @"Replacement remains watched for subsequent changes");
+  [document setContent:@"local edit\n"]; [document setModified:YES];
+  [@"conflicting edit\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  waitForExternalFile(document, @"local edit\n", YES);
+  testAssert([document hasExternalChanges] && [document isModified] && [[document content] isEqual:@"local edit\n"],
+    @"External changes preserve unsaved local edits and flag a conflict");
+  testAssert([[[[editor tabView] selectedTabViewItem] label] hasPrefix:@"! * "], @"Conflicted tab identifies both disk and local changes");
+  answerCloseAlert(NSAlertThirdButtonReturn);
+  testAssert(![document saveToFile] && [[NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL] isEqual:@"conflicting edit\n"],
+    @"Cancel saving does not overwrite an external change");
+  answerCloseAlert(NSAlertSecondButtonReturn);
+  testAssert([document saveToFile] && ![document isModified] && [[document content] isEqual:@"conflicting edit\n"],
+    @"Reload conflict resolution uses the disk version");
+  [document setContent:@"keep local\n"]; [document setModified:YES];
+  [@"second conflict\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  // Save checks again even before an asynchronous notification has arrived.
+  answerCloseAlert(NSAlertFirstButtonReturn);
+  testAssert([document saveToFile] && [[NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL] isEqual:@"keep local\n"],
+    @"Explicit overwrite resolves an external conflict");
+  [manager removeItemAtPath:path error:NULL];
+  waitForExternalFile(document, @"keep local\n", YES);
+  testAssert([document hasExternalChanges] && [[document content] isEqual:@"keep local\n"], @"Deletion preserves the editor contents");
+  [@"recreated\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  waitForExternalFile(document, @"recreated\n", NO);
+  testAssert([[document content] isEqual:@"recreated\n"] && ![document hasExternalChanges], @"Recreated file is still watched");
+  NSString *secondPath = [directory stringByAppendingPathComponent:@"Supporting.md"];
+  [@"supporting\n" writeToFile:secondPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([editor openFile:secondPath], @"Open another file in the watched directory");
+  testAssert([[editor valueForKey:@"_fileWatchers"] count] == 1, @"One watcher covers the open directory");
+  [@"inactive tab\n" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  waitForExternalFile(document, @"inactive tab\n", NO);
+  testAssert([[document content] isEqual:@"inactive tab\n"], @"Inactive tabs remain watched after adding a file");
+  [editor closeFile:path];
+  testAssert([[editor valueForKey:@"_fileWatchers"] count] == 1, @"Closing one tab keeps the other file watched");
+  [editor closeFile:secondPath];
+  testAssert([[editor valueForKey:@"_fileWatchers"] count] == 0, @"Closing the last tab stops its directory watcher");
+  [editor release];
+}
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -3386,6 +3466,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-external-files"]) {
+    testExternalFileChanges(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode external file checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-workspace-files"]) {
     testWorkspaceFileOpening(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -3536,6 +3622,7 @@ int main(void)
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
+  testExternalFileChanges(temporaryDirectory);
   testWorkspaceFileOpening(temporaryDirectory);
   testFontAndSidebarPreferences();
   testSoundInspector([temporaryDirectory stringByAppendingPathComponent:@"Sound Inspector"]);

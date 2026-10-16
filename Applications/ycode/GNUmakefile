@@ -80,6 +80,7 @@ YCodeProjectNavigatorController.h \
 YCodeProjectNavigatorItem.h \
 YCodeEditorController.h \
 YCodeEditorDocument.h \
+YCodeFileWatcher.h \
 YCodeSyntaxHighlighter.h \
 YCodeBuildSystem.h \
 YCodeDebugger.h \
@@ -107,6 +108,7 @@ YCodeProjectNavigatorController.m \
 YCodeProjectNavigatorItem.m \
 YCodeEditorController.m \
 YCodeEditorDocument.m \
+YCodeFileWatcher.m \
 YCodeSyntaxHighlighter.m \
 YCodeBuildSystem.m \
 YCodeDebugger.m \

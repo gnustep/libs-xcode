@@ -226,14 +226,16 @@
 
 - (void)setModified:(BOOL)modified
 {
+    BOOL external = _externalChange;
     if (!modified) {
+        _externalChange = NO;
         NSString *snapshot = [[self content] copy];
         RELEASE(_savedContent);
         _savedContent = snapshot;
     }
     BOOL changed = !_image && !_soundDocument && modified &&
         ![[self content] isEqualToString:_savedContent];
-    if (_modified == changed) return;
+    if (_modified == changed && external == _externalChange) return;
     _modified = changed;
     [[NSNotificationCenter defaultCenter] postNotificationName:
         @"YCodeFileModificationDidChange" object:_editorController];
@@ -374,6 +376,23 @@
 {
     // Previewing an image must never overwrite its bytes with text.
     if (_image || _soundDocument) return YES;
+    [self checkForExternalChanges];
+    if (_externalChange) {
+        NSAlert *alert = AUTORELEASE([[NSAlert alloc] init]);
+        [alert setMessageText:@"File Changed Outside Ycode"];
+        [alert setInformativeText:[NSString stringWithFormat:
+            @"%@ has changed or is no longer readable on disk. Overwrite it with your edits, reload the disk version, or cancel saving.", [self fileName]]];
+        [alert addButtonWithTitle:@"Overwrite"];
+        [alert addButtonWithTitle:@"Reload"];
+        [alert addButtonWithTitle:@"Cancel"];
+        NSInteger choice = [alert runModal];
+        if (choice == NSAlertSecondButtonReturn) {
+            BOOL loaded = [self loadFromFile];
+            if (loaded) [_undoManager removeAllActions];
+            return loaded;
+        }
+        if (choice != NSAlertFirstButtonReturn) return NO;
+    }
     NSString *content = [self content];
     NSError *error = nil;
     
@@ -412,6 +431,36 @@
     }
     
     return [self loadFromFile];
+}
+
+- (BOOL)hasExternalChanges { return _externalChange; }
+
+- (void)checkForExternalChanges
+{
+    // Text reloads are triggered by kernel events, never by a recurring timer.
+    if (!_textView || ![_filePath isAbsolutePath]) return;
+    NSString *disk = [NSString stringWithContentsOfFile:_filePath encoding:NSUTF8StringEncoding error:NULL];
+    BOOL changed = disk == nil || ![disk isEqual:_savedContent];
+    if (changed && disk && !_modified) {
+        NSRange selection = [_textView selectedRange];
+        NSPoint origin = [[_scrollView contentView] bounds].origin;
+        [self setContent:disk];
+        NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:_filePath error:NULL];
+        ASSIGN(_lastModified, [attributes fileModificationDate]);
+        [_undoManager removeAllActions];
+        [self setModified:NO];
+        selection.location = MIN(selection.location, [disk length]);
+        selection.length = MIN(selection.length, [disk length] - selection.location);
+        [_textView setSelectedRange:selection];
+        [[_scrollView contentView] scrollToPoint:origin];
+        [_scrollView reflectScrolledClipView:[_scrollView contentView]];
+        changed = NO;
+    }
+    if (_externalChange != changed) {
+        _externalChange = changed;
+        [[NSNotificationCenter defaultCenter] postNotificationName:
+            @"YCodeFileModificationDidChange" object:_editorController];
+    }
 }
 
 #pragma mark - Text Operations

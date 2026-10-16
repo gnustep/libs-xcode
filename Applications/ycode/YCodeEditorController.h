@@ -44,6 +44,8 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
     NSTabView *_tabView;
     NSMutableArray *_openDocuments;
     NSMutableDictionary *_documentTabs;
+    NSMutableDictionary *_fileWatchers;
+    NSMutableSet *_changedDirectories;
     
     YCodeEditorDocument *_currentDocument;
     
@@ -72,6 +74,8 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
  * Tab view association
  */
 - (NSTabView *)tabView;
+- (void)startWatchingFiles;
+- (void)stopWatchingFiles;
 - (void)setTabView:(NSTabView *)tabView;
 
 /**

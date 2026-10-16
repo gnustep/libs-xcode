@@ -37,6 +37,7 @@
     NSString *_content;
     NSString *_savedContent;
     BOOL _modified;
+    BOOL _externalChange;
     NSUndoManager *_undoManager;
     NSDate *_lastModified;
     
@@ -95,6 +96,8 @@
 - (BOOL)loadFromFile;
 - (BOOL)saveToFile;
 - (BOOL)reloadFromFile;
+- (void)checkForExternalChanges;
+- (BOOL)hasExternalChanges;
 
 /**
  * Text operations

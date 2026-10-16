@@ -27,6 +27,7 @@
 #import "YCodeEditorDocument.h"
 #import "YCodeProject.h"
 #import "YCodeSyntaxHighlighter.h"
+#import "YCodeFileWatcher.h"
 
 @interface YCodeEditorTabItem : NSTabViewItem
 {
@@ -142,6 +143,10 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     if (self) {
         _openDocuments = [[NSMutableArray alloc] init];
         _documentTabs = [[NSMutableDictionary alloc] init];
+        _fileWatchers = [NSMutableDictionary new];
+        _changedDirectories = [NSMutableSet new];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(directoryChanged:)
+            name:@"YCodeDirectoryDidChange" object:nil];
         
         // Default editor settings
         _editorFont = [[YCodePreferences fontForPane:@"Editor"] retain];
@@ -155,12 +160,17 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
             name:@"YCodeEditorRulersDidChange" object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(editorFontsChanged:)
             name:@"YCodeFontsDidChange" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(fileModificationChanged:)
+            name:@"YCodeFileModificationDidChange" object:self];
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [self stopWatchingFiles];
+    RELEASE(_fileWatchers);
+    RELEASE(_changedDirectories);
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self closeFindPanel];
     RELEASE(_findPanel);
@@ -179,6 +189,83 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
 - (void)editorFontsChanged:(NSNotification *)notification
 {
     [self setEditorFont:[YCodePreferences fontForPane:@"Editor"]];
+}
+
+- (void)fileModificationChanged:(NSNotification *)notification
+{
+    NSEnumerator *enumerator = [_openDocuments objectEnumerator];
+    YCodeEditorDocument *document;
+    while ((document = [enumerator nextObject]) != nil) {
+        NSString *path = [document filePath];
+        NSString *name = [path lastPathComponent];
+        NSTabViewItem *item = [_documentTabs objectForKey:path];
+        [item setLabel:[document isModified] ? [@"* " stringByAppendingString:name] : name];
+        if ([document hasExternalChanges]) [item setLabel:[@"! " stringByAppendingString:[item label]]];
+        [item setToolTip:[document hasExternalChanges] ?
+            [path stringByAppendingString:@" — Changed outside Ycode; local contents preserved"] : path];
+    }
+    [_tabView setNeedsDisplay:YES];
+}
+
+- (void)startWatchingFiles { [self updateFileWatchers]; }
+
+- (void)stopWatchingFiles
+{
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(checkChangedFiles) object:nil];
+    [[_fileWatchers allValues] makeObjectsPerformSelector:@selector(stop)];
+    [_fileWatchers removeAllObjects];
+    [_changedDirectories removeAllObjects];
+}
+
+- (void)updateFileWatchers
+{
+    NSMutableDictionary *directories = [NSMutableDictionary dictionary];
+    NSEnumerator *documents = [_openDocuments objectEnumerator];
+    YCodeEditorDocument *document;
+    while ((document = [documents nextObject]) != nil) {
+        NSString *path = [document filePath];
+        if (![document textView] || ![path isAbsolutePath]) continue;
+        NSString *directory = [path stringByDeletingLastPathComponent];
+        NSMutableArray *paths = [directories objectForKey:directory];
+        if (!paths) { paths = [NSMutableArray array]; [directories setObject:paths forKey:directory]; }
+        [paths addObject:path];
+    }
+    NSEnumerator *keys = [[_fileWatchers allKeys] objectEnumerator];
+    NSString *directory;
+    while ((directory = [keys nextObject]) != nil) {
+        YCodeFileWatcher *watcher = [_fileWatchers objectForKey:directory];
+        if (![[watcher paths] isEqual:[directories objectForKey:directory]]) {
+            [watcher stop]; [_fileWatchers removeObjectForKey:directory];
+        }
+    }
+    keys = [directories keyEnumerator];
+    while ((directory = [keys nextObject]) != nil) {
+        if ([_fileWatchers objectForKey:directory]) continue;
+        YCodeFileWatcher *watcher = [[YCodeFileWatcher alloc] initWithDirectory:directory paths:[directories objectForKey:directory]];
+        if (watcher) { [_fileWatchers setObject:watcher forKey:directory]; [watcher release]; }
+        else NSLog(@"Unable to watch open files in %@", directory);
+    }
+    // Close the load/subscription race without introducing periodic polling.
+    [_openDocuments makeObjectsPerformSelector:@selector(checkForExternalChanges)];
+}
+
+- (void)directoryChanged:(NSNotification *)notification
+{
+    NSArray *directories = [_fileWatchers allKeysForObject:[notification object]];
+    if (![directories count]) return;
+    BOOL scheduled = [_changedDirectories count] > 0;
+    [_changedDirectories addObjectsFromArray:directories];
+    if (!scheduled) [self performSelector:@selector(checkChangedFiles) withObject:nil afterDelay:0.1];
+}
+
+- (void)checkChangedFiles
+{
+    NSEnumerator *documents = [_openDocuments objectEnumerator];
+    YCodeEditorDocument *document;
+    while ((document = [documents nextObject]) != nil)
+        if ([_changedDirectories containsObject:[[document filePath] stringByDeletingLastPathComponent]])
+            [document checkForExternalChanges];
+    [_changedDirectories removeAllObjects];
 }
 
 - (void)editorPreferencesChanged:(NSNotification *)notification
@@ -342,6 +429,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
         }
         
         [_documentTabs setObject:tabItem forKey:filePath];
+        [self updateFileWatchers];
         [self setCurrentDocument:document];
         
         RELEASE(tabItem);
@@ -406,6 +494,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     
     // Remove document
     [_openDocuments removeObject:document];
+    [self updateFileWatchers];
     
     // Update current document
     if (_currentDocument == document) {

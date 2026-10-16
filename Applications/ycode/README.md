@@ -116,6 +116,20 @@ selected match; otherwise it finds the next match first. Replace All affects
 only the current file and can be undone in one step. Switching tabs changes
 the panel's target file. Searching alone does not mark the file changed.
 
+Open text files update automatically when changed outside Ycode. Monitoring uses
+inotify on Linux, kqueue on macOS/BSD, and Windows directory-change notifications;
+there is no recurring file-polling timer. Watchers are shared by open files in
+each directory, event bursts are coalesced, and closing the files releases their
+watchers. Atomic replacement saves remain watched.
+
+Clean files reload while preserving the selection and scroll position. Unsaved
+local edits are preserved when the disk version changes; the tab gains a `!`
+marker and an explanatory tooltip. Saving then offers **Overwrite**, **Reload**,
+or **Cancel**. A deleted or unreadable file stays in the editor and is flagged
+rather than replaced with empty text. Image and sound previews are not refreshed
+by this text-file watcher. Platforms without one of these notification backends
+log that monitoring is unavailable rather than silently falling back to polling.
+
 Closing a tab or project, or quitting Ycode, asks whether to Save, Don’t Save,
 or Cancel for each modified file. Cancelling or a failed save prevents closure.
 

@@ -564,7 +564,6 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
         // Each source/supporting file owns its own undo history.
         [self setHasUndoManager:NO];
         _settings = [[NSMutableDictionary alloc] init];
-        _fileWatchers = [[NSMutableDictionary alloc] init];
         
         // Initialize controllers
         _navigatorController = [[YCodeProjectNavigatorController alloc] init];
@@ -588,7 +587,6 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     RELEASE(_editorController);
     RELEASE(_buildSystem);
     RELEASE(_settings);
-    RELEASE(_fileWatchers);
     [super dealloc];
 }
 
@@ -602,6 +600,7 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
 
 - (void)close
 {
+    [_editorController stopWatchingFiles];
     [_editorController closeFindPanel];
     [_buildSystem stop];
     [_buildSystem setDelegate:nil];
@@ -1777,20 +1776,12 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
 
 - (void)startWatchingFiles
 {
-    if (!_projectPath) {
-        return;
-    }
-    
-    // Simple file watching implementation
-    // In a real implementation, you'd use FSEvents or similar
-    NSLog(@"Started watching files in project: %@", _projectPath);
+    [_editorController startWatchingFiles];
 }
 
 - (void)stopWatchingFiles
 {
-    // Stop file system monitoring
-    [_fileWatchers removeAllObjects];
-    NSLog(@"Stopped watching files");
+    [_editorController stopWatchingFiles];
 }
 
 @end
