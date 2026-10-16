@@ -104,8 +104,7 @@ use the generic icon.
 Placing the caret immediately before or after `{}`, `()`, or `[]` highlights
 its matching delimiter, including nested pairs. Punctuation inside C-style
 comments and quoted strings is ignored. Highlighting is enabled by default;
-use **Preferences > Editor > Highlight matching delimiters** and choose **On**
-or **Off**. Changes apply immediately to open editors. The highlight is temporary
+toggle the **Preferences > Editor > Highlight matching delimiters** checkbox. Changes apply immediately to open editors. The highlight is temporary
 and does not modify the file or its undo history.
 
 The navigator's **Search** tab searches the contents of project file references,

@@ -3503,13 +3503,13 @@ static void testMatchingDelimiters(void)
   testAssert(delimiterHighlighted(view, 0), @"Programmatic replacement refreshes matching at the updated caret");
   AppController *app = AUTORELEASE([AppController new]);
   [app showPrefPanel:nil];
-  NSPopUpButton *choice = [app valueForKey:@"_matchingDelimitersChoice"];
-  testAssert([choice numberOfItems] == 2 && [choice indexOfSelectedItem] == 0,
-    @"Editor preferences provide an enabled-by-default matching dropdown");
-  [choice selectItemAtIndex:1];
+  NSButton *choice = [app valueForKey:@"_matchingDelimitersCheckbox"];
+  testAssert([choice isKindOfClass:[NSButton class]] && [choice state] == NSOnState,
+    @"Editor preferences provide an enabled-by-default matching checkbox");
+  [choice setState:NSOffState];
   [NSApp sendAction:[choice action] to:[choice target] from:choice];
   testAssert(![YCodePreferences highlightMatchingDelimiters] && !delimiterHighlighted(view, 0),
-    @"Preference dropdown disables highlighting immediately");
+    @"Preference checkbox disables highlighting immediately");
   [[app valueForKey:@"_preferencesPanel"] orderOut:nil];
   [YCodePreferences setHighlightMatchingDelimiters:YES];
   [view setBackgroundColor:[NSColor whiteColor]];
