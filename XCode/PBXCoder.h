@@ -62,6 +62,12 @@
  */
 - (id) unarchive;
 
+/** Returns the raw project dictionary read by this coder. */
+- (NSDictionary *) dictionary;
+
+/** Returns the raw object dictionaries indexed by project object identifier. */
+- (NSDictionary *) objects;
+
 /**
  * Unarchives an object for the given key.
  */

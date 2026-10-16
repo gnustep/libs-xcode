@@ -189,7 +189,7 @@ static void testRecentDocuments(YCodeProject *project, NSString *directory)
       if ([[item representedObject] isEqual:[project fileURL]]) occurrences++;
   }
   testAssert(occurrences == 1, @"Reopening does not duplicate recent entries");
-  NSMenuItem *clear = [menu itemWithTitle:@"Clear Menu"];
+  NSMenuItem *clear = (NSMenuItem *)[menu itemWithTitle:@"Clear Menu"];
   [NSApp sendAction:[clear action] to:[clear target] from:clear];
   testAssert([[controller recentDocumentURLs] count] == 0 && [menu numberOfItems] == 1
     && ![[menu itemAtIndex:0] isEnabled], @"Clear Menu clears recent history and disables itself");
@@ -233,8 +233,7 @@ static void testSaveActiveFile(YCodeProject *project, NSString *directory)
   NSString *projectFile = [[project projectPath] stringByAppendingPathComponent:@"project.pbxproj"];
   NSData *projectBefore = [NSData dataWithContentsOfFile:projectFile];
   [project updateChangeCount:NSChangeDone];
-  NSMenuItem *save = [[[NSApp mainMenu] itemWithTitle:@"File"] submenu] ?
-    [[[[NSApp mainMenu] itemWithTitle:@"File"] submenu] itemWithTitle:@"Save"] : nil;
+  NSMenuItem *save = (NSMenuItem *)[[[[NSApp mainMenu] itemWithTitle:@"File"] submenu] itemWithTitle:@"Save"];
   testAssert(save != nil && [[save keyEquivalent] isEqual:@"s"] && [save action] == @selector(saveDocument:),
     @"File Save and its shortcut invoke the same action");
   [NSApp sendAction:[save action] to:[save target] from:save];
@@ -345,7 +344,7 @@ static void testProjectFileMembership(YCodeProject *project, NSString *directory
   [navigator deleteItem:nil];
   testAssert(![[mainGroup children] containsObject:reference] && [manager fileExistsAtPath:source],
     @"Navigator Remove File changes the project without deleting the disk file");
-  NSMenuItem *saveProject = [[[[NSApp mainMenu] itemWithTitle:@"File"] submenu] itemWithTitle:@"Save Project"];
+  NSMenuItem *saveProject = (NSMenuItem *)[[[[NSApp mainMenu] itemWithTitle:@"File"] submenu] itemWithTitle:@"Save Project"];
   testAssert(saveProject != nil, @"A separate Save Project action is available with an editor tab open");
   [NSApp sendAction:[saveProject action] to:[saveProject target] from:saveProject];
   testAssert(![project isDocumentEdited], @"Save Project persists membership changes while a source tab is open");
@@ -2157,10 +2156,10 @@ static void testArchitectureSelection(NSString *temporaryDirectory)
   testAssert(statusIndex == index + 1 && statusIndex + 1 < [identifiers count] &&
     [[identifiers objectAtIndex:statusIndex + 1] isEqual:NSToolbarSeparatorItemIdentifier],
     @"Project status follows Architecture with a separator after it");
-  NSTextField *statusField = statusIndex == NSNotFound ? nil : [[[toolbar items] objectAtIndex:statusIndex] view];
+  NSTextField *statusField = statusIndex == NSNotFound ? nil : (NSTextField *)[[[toolbar items] objectAtIndex:statusIndex] view];
   testAssert([[statusField stringValue] isEqual:@"Architecture Project - Ready - —"],
     @"Status starts with the project name and Ready before any build");
-  NSPopUpButton *selector = [[[toolbar items] objectAtIndex:index] view];
+  NSPopUpButton *selector = (NSPopUpButton *)[[[toolbar items] objectAtIndex:index] view];
   YCodeBuildSystem *build = [project buildSystem];
   testAssert([build architecture] == nil && [selector indexOfSelectedItem] == 0,
     @"Architecture defaults to Native");
@@ -2330,7 +2329,7 @@ static void testMakeDirectory(NSString *temporaryDirectory)
   BOOL wasEdited = [project isDocumentEdited];
   AppController *app = AUTORELEASE([[AppController alloc] init]);
   [app buildMainMenu];
-  NSMenuItem *createItem = [[[[NSApp mainMenu] itemWithTitle:@"File"] submenu]
+  NSMenuItem *createItem = (NSMenuItem *)[[[[NSApp mainMenu] itemWithTitle:@"File"] submenu]
     itemWithTitle:@"Create .ycode.plist"];
   testAssert(createItem != nil && [createItem action] == @selector(createProjectSettings:) &&
       [createItem target] == app, @"File menu contains the create-settings action");
