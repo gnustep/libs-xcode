@@ -53,6 +53,7 @@ Ycode_RESOURCE_FILES = \
 TestHost/YCodeTestHost.bundle \
 Resources/Ycode.tiff \
 Resources/Templates \
+Resources/Languages \
 Resources/ProjectCenterIcons \
 Resources/ProjectCenterIcons/FileH.tiff \
 Resources/ProjectCenterIcons/FileC.tiff \
@@ -64,6 +65,7 @@ Resources/ProjectCenterIcons/FileMM.tiff
 # Header files
 #
 Ycode_HEADER_FILES = \
+YCodeLanguage.h \
 YCodePreferences.h \
 AppController.h \
 YCodeDocumentController.h \
@@ -92,6 +94,7 @@ YCodeControlIcons.h
 # Objective-C Class files
 #
 Ycode_OBJC_FILES = \
+YCodeLanguage.m \
 YCodePreferences.m \
 AppController.m \
 YCodeDocumentController.m \

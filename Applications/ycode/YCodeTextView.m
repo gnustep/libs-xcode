@@ -26,59 +26,9 @@
 // Editing algorithms adapted from apps-projectcenter/Modules/Editors/ProjectCenter/PCEditorView.m.
 #import "YCodeTextView.h"
 #import "YCodePreferences.h"
+#import "YCodeLanguage.h"
 
 #define EDITOR_TAB_WIDTH 2
-
-/* Keep offsets intact while ignoring punctuation in comments and literals. */
-static NSString *YCodeIndentationCode(NSString *string)
-{
-  NSMutableString *code = [NSMutableString stringWithString:string];
-  NSUInteger i, length = [string length];
-  BOOL lineComment = NO, blockComment = NO, escaped = NO;
-  unichar quote = 0;
-  for (i = 0; i < length; i++)
-    {
-      unichar c = [string characterAtIndex:i];
-      unichar next = i + 1 < length ? [string characterAtIndex:i + 1] : 0;
-      if (lineComment)
-        {
-          if (c == '\n' || c == '\r') lineComment = NO;
-          else [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@" "];
-        }
-      else if (blockComment)
-        {
-          if (c == '*' && next == '/')
-            {
-              [code replaceCharactersInRange:NSMakeRange(i, 2) withString:@"  "];
-              i++;
-              blockComment = NO;
-            }
-          else if (c != '\n' && c != '\r')
-            [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@" "];
-        }
-      else if (quote)
-        {
-          if (c != '\n' && c != '\r')
-            [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@"x"];
-          if (escaped) escaped = NO;
-          else if (c == '\\') escaped = YES;
-          else if (c == quote) quote = 0;
-        }
-      else if (c == '/' && (next == '/' || next == '*'))
-        {
-          lineComment = next == '/';
-          blockComment = next == '*';
-          [code replaceCharactersInRange:NSMakeRange(i, 2) withString:@"  "];
-          i++;
-        }
-      else if (c == '"' || c == '\'')
-        {
-          quote = c;
-          [code replaceCharactersInRange:NSMakeRange(i, 1) withString:@"x"];
-        }
-    }
-  return code;
-}
 
 /* Locate the header of a possibly multiline control condition. */
 static NSInteger YCodeControlStatementIndex(NSString *string, NSInteger index)
@@ -124,6 +74,9 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 }
 
 @interface YCodeTextView (Private)
+- (YCodeLanguage *)languageDefinition;
+- (NSString *)codeForText:(NSString *)text;
+- (void)alignBlockClosingLine;
 
 - (void)insertSpaceFillAlignedAtTabsOfSize:(unsigned int)tabSize;
 - (void)performIndentation;
@@ -163,6 +116,18 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 
 @implementation YCodeTextView
 
+- (YCodeLanguage *)languageDefinition
+{
+  return [[YCodeLanguageRegistry sharedRegistry] languageForFile:_filePath ? _filePath : @"m"];
+}
+
+- (NSString *)codeForText:(NSString *)text
+{
+  YCodeLanguage *language = [self languageDefinition];
+  return language ? [language codeByMaskingLiterals:text] : text;
+}
+
+
 - (id)initWithFrame:(NSRect)frame textContainer:(NSTextContainer *)container
 {
   self = [super initWithFrame:frame textContainer:container];
@@ -197,7 +162,7 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
   NSRange selection = [self selectedRange];
   if (![YCodePreferences highlightMatchingDelimiters] || selection.length || selection.location > [text length]) return;
   if (!_delimiterMatches) {
-    NSString *code = YCodeIndentationCode(text);
+    NSString *code = [self codeForText:text];
     NSMutableDictionary *matches = [NSMutableDictionary dictionary];
     NSMutableArray *stack = [NSMutableArray array];
     NSUInteger i;
@@ -473,8 +438,10 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 
 - (NSInteger)indentForLineAtIndex:(NSInteger)index forString:(NSString *)string
 {
+  if (![[[self languageDefinition] indentationStyle] isEqual:@"braces"])
+    return [self indentColumnsForLineAtIndex:index forString:string];
   NSInteger depth = 0;
-  NSString *code = YCodeIndentationCode(string);
+  NSString *code = [self codeForText:string];
   NSInteger offset;
   index = MIN(index, (NSInteger)[string length]);
   for (offset = index - 1; offset >= 0; offset--)
@@ -505,11 +472,20 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
                              forString:(NSString *)string
 {
   NSInteger offset = [self indentForLineAtIndex:index forString:string];
-  NSString *code = YCodeIndentationCode([string substringToIndex:index]);
+  NSString *code = [self codeForText:[string substringToIndex:index]];
   NSString *line = [[code substringFromIndex:
       [self lineStartIndexForIndex:index forString:string]]
       stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 
+  NSString *style = [[self languageDefinition] indentationStyle];
+  if ([style isEqual:@"colon"] || [style isEqual:@"blocks"])
+    {
+      NSRegularExpression *rule = [[self languageDefinition] patternForToken:@"indentAfter"];
+      if ([rule firstMatchInString:line options:0 range:NSMakeRange(0, [line length])])
+        offset += [YCodePreferences controlIndentWidth];
+      return offset;
+    }
+  if (![style isEqual:@"braces"]) return offset;
   if ([line hasSuffix:@"{"])
     offset = [self indentColumnsForLineAtIndex:index forString:string] + [YCodePreferences controlIndentWidth];
   else if ([line hasPrefix:@"}"])
@@ -546,10 +522,11 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
       return 0;
     }
 
+  NSString *code = [self codeForText:string];
   level = 0;
   for (offset = index - 1; offset >= 0; offset--)
     {
-      unichar c = [string characterAtIndex:offset];
+      unichar c = [code characterAtIndex:offset];
 
       if (c == closing_delimiter)
 	{
@@ -572,7 +549,7 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 	  while (offset > 0)
 	    {
 	      offset--;
-	      c = [string characterAtIndex:offset];
+	      c = [code characterAtIndex:offset];
 	      if (c == other_opening_delimiter)
 		{
 		  break;
@@ -596,7 +573,8 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
   NSString *keyword;
   NSEnumerator *e;
 
-  string = YCodeIndentationCode(string);
+  if (![[[self languageDefinition] indentationStyle] isEqual:@"braces"]) return NO;
+  string = [self codeForText:string];
   string_length = [string length];
   if (string_length == 0 || index <= 0)
     {
@@ -631,13 +609,11 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
       return NO;
     }
 
-  if ([line isEqual:@"else"] || [line isEqual:@"do"] ||
-      [line isEqual:@"@try"] || [line isEqual:@"@finally"]) return YES;
+  if ([[[self languageDefinition] standaloneControls] containsObject:line]) return YES;
   if ([line hasPrefix:@"else "] || [line hasPrefix:@"else\t"])
     line = [[line substringFromIndex:4] stringByTrimmingCharactersInSet:
         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  keywords = [NSArray arrayWithObjects:@"if", @"while", @"for", @"switch",
-      @"@catch", @"@synchronized", nil];
+  keywords = [[self languageDefinition] controlKeywords];
   e = [keywords objectEnumerator];
   while ((keyword = [e nextObject]) != nil)
     {
@@ -940,7 +916,7 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
     columns = [self indentForClosingDelimiterAtIndex:first forString:string];
   else if ([self lineBeforeIndexIsControlStatement:start forString:string])
     columns = [self indentColumnsForLineAtIndex:
-        YCodeControlStatementIndex(YCodeIndentationCode(string), start) forString:string]
+        YCodeControlStatementIndex([self codeForText:string], start) forString:string]
         + [YCodePreferences controlIndentWidth];
   NSString *indent = [self lineBeforeIndexIsControlStatement:start forString:string] && !IsClosingDelimiter(c)
       ? [@"" stringByPaddingToLength:MAX(0, columns) withString:@" " startingAtIndex:0]
@@ -970,6 +946,8 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 - (void)setFilePath:(NSString *)path
 {
   ASSIGN(_filePath, path);
+  DESTROY(_delimiterMatches);
+  [self updateMatchingDelimiter:nil];
   editorIndentSettingsLoaded = NO;
   [self updateEditorParagraphStyle];
 }
@@ -1090,16 +1068,18 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 
 - (void) insertNewline: (id)sender
 {
+  [self alignBlockClosingLine];
   NSInteger location = [self selectedRange].location;
   int  offset = [self indentAfterNewlineAtIndex:location
                                       forString:[self string]];
   NSMutableString *replacement;
 
   replacement = [NSMutableString stringWithString:@"\n"];
-  NSString *code = YCodeIndentationCode([[self string] substringToIndex:location]);
+  NSString *code = [self codeForText:[[self string] substringToIndex:location]];
   NSString *line = [[code substringFromIndex:[self lineStartIndexForIndex:location forString:code]]
       stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-  BOOL spaces = [line hasSuffix:@"{"] || [self lineBeforeIndexIsControlStatement:location forString:code] ||
+  BOOL spaces = [[[self languageDefinition] indentationStyle] isEqual:@"colon"] ||
+      [[[self languageDefinition] indentationStyle] isEqual:@"blocks"] || [line hasSuffix:@"{"] || [self lineBeforeIndexIsControlStatement:location forString:code] ||
       ([line hasPrefix:@"}"] && ![line hasSuffix:@"{"]);
   [replacement appendString:spaces ?
       [@"" stringByPaddingToLength:offset withString:@" " startingAtIndex:0] :
@@ -1128,7 +1108,8 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
 
   selected_range = [self selectedRange];
   should_indent = NO;
-  if (text != nil && [text length] == 1
+  if (![[[self languageDefinition] indentationStyle] isEqual:@"preserve"]
+      && [self languageDefinition] != nil && text != nil && [text length] == 1
       && IsClosingDelimiter([text characterAtIndex:0]))
     {
       string = [self string];
@@ -1146,10 +1127,114 @@ static unichar OpeningDelimiterForClosingDelimiter(unichar c)
     }
 
   [super insertText:insertString];
+  [self alignBlockClosingLine];
 
   if (should_indent)
     {
       [self performIndentation];
+    }
+}
+
+/* Block languages align a closing/middle keyword with its opening line.
+ * Derive the target from preceding code, so repeated edits never dedent twice. */
+- (void)alignBlockClosingLine
+{
+  YCodeLanguage *language = [self languageDefinition];
+  if (![[language indentationStyle] isEqual:@"blocks"]) return;
+  NSRange selection = [self selectedRange];
+  if (selection.length) return;
+  NSString *text = [self string];
+  NSString *code = [self codeForText:text];
+  NSUInteger start = [self lineStartIndexForIndex:selection.location forString:text];
+  NSString *line = [code substringWithRange:NSMakeRange(start, selection.location - start)];
+  NSRegularExpression *closing = [language patternForToken:@"indentBefore"];
+  if (![closing firstMatchInString:line options:0 range:NSMakeRange(0, [line length])]) return;
+  NSRegularExpression *opening = [language patternForToken:@"indentAfter"];
+  NSMutableArray *stack = [NSMutableArray array];
+  NSUInteger i = 0;
+  while (i < start)
+    {
+      NSRange range = [code lineRangeForRange:NSMakeRange(i, 0)];
+      NSString *previous = [[code substringWithRange:range]
+          stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+      if ([closing firstMatchInString:previous options:0 range:NSMakeRange(0, [previous length])] && [stack count])
+        [stack removeLastObject];
+      if ([opening firstMatchInString:previous options:0 range:NSMakeRange(0, [previous length])])
+        [stack addObject:[NSNumber numberWithUnsignedInteger:[self indentColumnsForLineAtIndex:i forString:text]]];
+      i = NSMaxRange(range);
+    }
+  if (![stack count]) return;
+  NSUInteger columns = [[stack lastObject] unsignedIntegerValue];
+  NSUInteger length = [self leadingWhitespaceLengthOfLineAtIndex:start forString:text];
+  NSString *indent = [@"" stringByPaddingToLength:columns withString:@" " startingAtIndex:0];
+  NSRange range = NSMakeRange(start, length);
+  if ([[text substringWithRange:range] isEqual:indent]) return;
+  if ([self shouldChangeTextInRange:range replacementString:indent])
+    {
+      [[self textStorage] replaceCharactersInRange:range withString:indent];
+      [self didChangeText];
+      [self setSelectedRange:NSMakeRange(selection.location - length + [indent length], 0)];
+    }
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item
+{
+  if ([item action] == @selector(toggleLineComment:))
+    return [self isEditable] && [[[self languageDefinition] lineComment] length] > 0;
+  return [super validateMenuItem:item];
+}
+
+- (IBAction)toggleLineComment:(id)sender
+{
+  NSString *marker = [[self languageDefinition] lineComment];
+  if (![self isEditable] || ![marker length]) return;
+  NSString *text = [self string];
+  NSRange selection = [self selectedRange];
+  /* A selection ending at column zero does not include the following line. */
+  NSRange selectedLines = selection;
+  if (selectedLines.length) selectedLines.length--;
+  NSRange range = [text lineRangeForRange:selectedLines];
+  NSString *original = [text substringWithRange:range];
+  NSMutableArray *lines = [NSMutableArray array];
+  NSUInteger offset = 0;
+  BOOL allCommented = YES, anyContent = NO;
+  while (offset < [original length])
+    {
+      NSRange lineRange = [original lineRangeForRange:NSMakeRange(offset, 0)];
+      NSString *line = [original substringWithRange:lineRange];
+      [lines addObject:line];
+      NSString *trimmed = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      if ([trimmed length])
+        { anyContent = YES; if (![trimmed hasPrefix:marker]) allCommented = NO; }
+      offset = NSMaxRange(lineRange);
+    }
+  if (!anyContent) return;
+  NSMutableString *replacement = [NSMutableString string];
+  NSEnumerator *e = [lines objectEnumerator];
+  NSString *line;
+  while ((line = [e nextObject]))
+    {
+      NSUInteger i = 0;
+      while (i < [line length] && ([line characterAtIndex:i] == ' ' || [line characterAtIndex:i] == '\t')) i++;
+      NSString *rest = [line substringFromIndex:i];
+      [replacement appendString:[line substringToIndex:i]];
+      if ([[rest stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]] length])
+        {
+          if (allCommented)
+            {
+              rest = [rest substringFromIndex:[marker length]];
+              if ([rest hasPrefix:@" "]) rest = [rest substringFromIndex:1];
+            }
+          else [replacement appendFormat:@"%@ ", marker];
+        }
+      [replacement appendString:rest];
+    }
+  if ([self shouldChangeTextInRange:range replacementString:replacement])
+    {
+      [[self textStorage] replaceCharactersInRange:range withString:replacement];
+      [self didChangeText];
+      [self setSelectedRange:NSMakeRange(range.location, [replacement length])];
+      [[self undoManager] setActionName:allCommented ? @"Uncomment Lines" : @"Comment Lines"];
     }
 }
 

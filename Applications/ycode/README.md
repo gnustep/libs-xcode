@@ -180,10 +180,19 @@ This setting applies even when the project uses tabs or a different indent width
 
 The editor highlights keywords, types, function and method names, constants,
 numbers, strings, and comments in Objective-C, C, C++, Swift, JavaScript,
-TypeScript, and Python. Highlighting also covers GNUmakefiles, CMake files,
+TypeScript, Python, Ruby, and Java. Highlighting also covers GNUmakefiles, CMake files,
 shell scripts, JSON, XML, property lists, and project files. GNUmakefile and
 CMakeLists.txt are recognized by filename. Colors use lexical patterns;
 they do not require a successful build or a language server.
+
+Language support is supplied by versioned bundles. The included C-family,
+Python, Ruby, Java, and standard-language bundles can be extended or overridden
+without changing the editor. Python suite headers and Ruby blocks use the
+configured indentation spaces; Ruby closing keywords align with their opening
+blocks. **Edit > Comment/Uncomment Lines** toggles line comments using the
+current language, supports undo, and marks the file modified when its content
+changes. See [Language bundles](LANGUAGE_BUNDLES.md) for installation paths,
+provider APIs, and the definition format.
 
 **File > Save** and its keyboard shortcut save the active source tab. With no
 source tab open, Save saves the project.

@@ -43,9 +43,9 @@
     NSColor *_symbolColor;
     NSColor *_constantColor;
     
+    BOOL _highlightStringKeys;
+    NSRegularExpression *_annotationPattern;
     // Language patterns
-    NSArray *_keywords;
-    NSArray *_types;
     NSRegularExpression *_numberPattern;
     NSRegularExpression *_preprocessorPattern;
     NSRegularExpression *_keywordPattern;
@@ -108,13 +108,7 @@
 /**
  * Language-specific setup
  */
-- (void)setupForLanguage:(NSString *)language;
-- (void)setupObjectiveC;
-- (void)setupC;
-- (void)setupCPlusPlus;
-- (void)setupJavaScript;
-- (void)setupPython;
-- (void)setupSwift;
+- (void)setupLanguagePatterns;
 
 @end
 

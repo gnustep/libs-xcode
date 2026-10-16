@@ -23,30 +23,8 @@
 */
 
 #import "YCodeSyntaxHighlighter.h"
+#import "YCodeLanguage.h"
 #include <math.h>
-
-static NSRegularExpression *YCodeTokenPattern(NSString *pattern)
-{
-    if (![pattern length]) return nil;
-    NSError *error = nil;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
-        options:NSRegularExpressionAnchorsMatchLines error:&error];
-    if (error) NSLog(@"Invalid syntax highlighting pattern: %@", error);
-    return regex;
-}
-
-static NSString *YCodeWordPattern(NSArray *words)
-{
-    NSMutableArray *escaped = [NSMutableArray array];
-    {
-      NSEnumerator *wordEnumerator = [words objectEnumerator];
-      NSString *word;
-      while ((word = [wordEnumerator nextObject]) != nil)
-        [escaped addObject:[NSRegularExpression escapedPatternForString:word]];
-    }
-    return [escaped count] ? [NSString stringWithFormat:
-        @"(?<![A-Za-z0-9_])(?:%@)(?![A-Za-z0-9_])", [escaped componentsJoinedByString:@"|"]] : nil;
-}
 
 @implementation YCodeSyntaxHighlighter
 
@@ -144,8 +122,6 @@ static NSString *YCodeWordPattern(NSArray *words)
     RELEASE(_numberColor);
     RELEASE(_preprocessorColor);
     RELEASE(_typeColor);
-    RELEASE(_keywords);
-    RELEASE(_types);
     RELEASE(_symbolColor);
     RELEASE(_constantColor);
     RELEASE(_keywordPattern);
@@ -154,6 +130,7 @@ static NSString *YCodeWordPattern(NSArray *words)
     RELEASE(_constantPattern);
     RELEASE(_literalPattern);
     RELEASE(_numberPattern);
+    RELEASE(_annotationPattern);
     RELEASE(_preprocessorPattern);
     [super dealloc];
 }
@@ -168,26 +145,13 @@ static NSString *YCodeWordPattern(NSArray *words)
 - (void)setFileExtension:(NSString *)extension
 {
     ASSIGN(_fileExtension, extension);
-    [self setupForLanguage:[self language]];
+    [self setupLanguagePatterns];
 }
 
 - (NSString *)language
 {
-    NSString *extension = [_fileExtension lowercaseString];
-    if ([_fileExtension isEqual:@"C"]) return @"cpp";
-    if ([[NSArray arrayWithObjects:@"m", @"mm", @"h", nil] containsObject:extension]) return @"objc";
-    if ([extension isEqual:@"c"]) return @"c";
-    if ([[NSArray arrayWithObjects:@"cpp", @"cc", @"cp", @"cxx", @"c++", @"hpp", @"hh", @"hxx", @"h++", nil] containsObject:extension]) return @"cpp";
-    if ([[NSArray arrayWithObjects:@"js", @"jsx", @"mjs", @"cjs", @"ts", @"tsx", nil] containsObject:extension]) return @"javascript";
-    if ([[NSArray arrayWithObjects:@"py", @"pyw", nil] containsObject:extension]) return @"python";
-    if ([extension isEqual:@"swift"]) return @"swift";
-    if ([[NSArray arrayWithObjects:@"make", @"mk", @"makefile", @"gnumakefile", nil] containsObject:extension]) return @"make";
-    if ([extension isEqual:@"cmake"]) return @"cmake";
-    if ([[NSArray arrayWithObjects:@"sh", @"bash", @"zsh", nil] containsObject:extension]) return @"shell";
-    if ([[NSArray arrayWithObjects:@"json", @"jsonc", nil] containsObject:extension]) return @"json";
-    if ([[NSArray arrayWithObjects:@"plist", @"pbxproj", @"xcworkspacedata", @"strings", @"pcproj", @"project", nil] containsObject:extension]) return @"plist";
-    if ([[NSArray arrayWithObjects:@"xml", @"xib", @"html", @"htm", @"svg", @"xcscheme", @"gsmarkup", nil] containsObject:extension]) return @"xml";
-    return @"plain";
+    NSString *identifier = [[[YCodeLanguageRegistry sharedRegistry] languageForFile:_fileExtension] identifier];
+    return identifier ? identifier : @"plain";
 }
 
 #pragma mark - Text View Association
@@ -330,8 +294,7 @@ static NSString *YCodeWordPattern(NSArray *words)
     if (!_textView) return;
     NSString *text = [_textView string];
     if (range.location > [text length] || range.length > [text length] - range.location) return;
-    NSString *language = [self language];
-    BOOL highlightKeys = [language isEqual:@"json"] || [language isEqual:@"plist"];
+
     NSTextStorage *storage = [_textView textStorage];
     [storage beginEditing];
     @try {
@@ -342,6 +305,7 @@ static NSString *YCodeWordPattern(NSArray *words)
         [self applyPattern:_typePattern color:_typeColor text:text range:range];
         [self applyPattern:_numberPattern color:_numberColor text:text range:range];
         [self applyPattern:_keywordPattern color:_keywordColor text:text range:range];
+        [self applyPattern:_annotationPattern color:_preprocessorColor text:text range:range];
         // One left-to-right lexical pass prevents comment markers in strings,
         // or strings inside comments, from winning over their enclosing token.
         {
@@ -355,7 +319,7 @@ static NSString *YCodeWordPattern(NSArray *words)
               if (!painted.length) continue;
               BOOL comment = [match rangeAtIndex:1].location != NSNotFound;
               NSColor *color = comment ? _commentColor : _stringColor;
-              if (!comment && highlightKeys) {
+              if (!comment && _highlightStringKeys) {
                   NSUInteger next = NSMaxRange(token);
                   while (next < [text length] && [[NSCharacterSet whitespaceAndNewlineCharacterSet]
                       characterIsMember:[text characterAtIndex:next]]) next++;
@@ -382,164 +346,18 @@ static NSString *YCodeWordPattern(NSArray *words)
 
 #pragma mark - Language-Specific Setup
 
-- (void)setupForLanguage:(NSString *)language
+- (void)setupLanguagePatterns
 {
-    DESTROY(_keywords); DESTROY(_types);
-    DESTROY(_numberPattern);
-    DESTROY(_preprocessorPattern); DESTROY(_keywordPattern); DESTROY(_typePattern);
-    DESTROY(_symbolPattern); DESTROY(_constantPattern); DESTROY(_literalPattern);
-    if ([language isEqual:@"plain"]) return;
-
-    if ([language isEqual:@"objc"]) [self setupObjectiveC];
-    else if ([language isEqual:@"c"]) [self setupC];
-    else if ([language isEqual:@"cpp"]) [self setupCPlusPlus];
-    else if ([language isEqual:@"javascript"]) [self setupJavaScript];
-    else if ([language isEqual:@"python"]) [self setupPython];
-    else if ([language isEqual:@"swift"]) [self setupSwift];
-
-    NSString *strings = @"@?\"(?:\\\\[\\s\\S]|[^\"\\\\\\r\\n])*(?:\"|$)|'(?:\\\\[\\s\\S]|[^'\\\\\\r\\n])*(?:'|$)";
-    NSString *comments = @"/\\*[\\s\\S]*?(?:\\*/|\\z)|//[^\\r\\n]*";
-    NSString *preprocessor = @"^[ \\t]*#[ \\t]*[A-Za-z_]+(?:[^\\r\\n\\\\]|\\\\[^\\r\\n]|\\\\\\r?\\n)*";
-    NSString *symbols = @"\\b[A-Za-z_]\\w*(?=[ \\t]*(?:\\(|:))|(?<=\\.)[A-Za-z_]\\w*|\\b_[A-Za-z_]\\w*";
-    NSString *types = @"\\b[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*\\b(?![ \\t]*\\()";
-    NSString *constants = @"\\b[A-Z][A-Z0-9_]+\\b";
-    NSArray *extraKeywords = nil;
-    if ([language isEqual:@"objc"]) {
-        symbols = [symbols stringByAppendingString:@"|\\b[A-Za-z_]\\w*(?=[ \\t]*\\])"];
-        extraKeywords = [@"instancetype __block __weak __strong __bridge nullable nonnull nonatomic atomic readonly readwrite retain copy assign strong weak @optional @required @available" componentsSeparatedByString:@" "];
-        if ([_fileExtension isEqual:@"mm"])
-            extraKeywords = [extraKeywords arrayByAddingObjectsFromArray:[@"class namespace template typename using new delete virtual public private protected nullptr constexpr noexcept" componentsSeparatedByString:@" "]];
-    } else if ([language isEqual:@"cpp"] || [language isEqual:@"c"]) {
-        extraKeywords = [@"inline restrict _Bool _Atomic _Thread_local _Static_assert true false nullptr constexpr noexcept override final decltype static_assert thread_local alignas alignof concept requires co_await co_return co_yield" componentsSeparatedByString:@" "];
-    } else if ([language isEqual:@"javascript"]) {
-        preprocessor = nil;
-        strings = [@"`(?:\\\\[\\s\\S]|[^`\\\\])*(?:`|\\z)|" stringByAppendingString:strings];
-        extraKeywords = [@"async await of true false null undefined type declare abstract readonly as keyof infer unknown never" componentsSeparatedByString:@" "];
-    } else if ([language isEqual:@"python"]) {
-        comments = @"#[^\\r\\n]*";
-        preprocessor = @"^[ \\t]*@[A-Za-z_][\\w.]*";
-        strings = [@"(?:[rRuUbBfF]{0,2})(?:\"\"\"[\\s\\S]*?(?:\"\"\"|\\z)|'{3}[\\s\\S]*?(?:'{3}|\\z))|" stringByAppendingString:strings];
-        extraKeywords = [@"async await nonlocal match case" componentsSeparatedByString:@" "];
-    } else if ([language isEqual:@"swift"]) {
-        strings = [@"\"\"\"[\\s\\S]*?(?:\"\"\"|\\z)|" stringByAppendingString:strings];
-        extraKeywords = [@"actor async await some any isolated nonisolated weak unowned override final open convenience required mutating nonmutating" componentsSeparatedByString:@" "];
-    } else if ([language isEqual:@"make"] || [language isEqual:@"shell"] || [language isEqual:@"cmake"]) {
-        comments = @"(?<!\\\\)#[^\\r\\n]*";
-        preprocessor = nil;
-        types = nil;
-        constants = @"\\$\\([^\\r\\n)]*\\)|\\$\\{[^\\r\\n}]*\\}|\\$[A-Za-z_][A-Za-z0-9_]*|\\$[@<^?*%+|#0-9]";
-        if ([language isEqual:@"make"]) {
-            extraKeywords = [@"include -include sinclude ifeq ifneq ifdef ifndef else endif define endef override export unexport vpath private undefine" componentsSeparatedByString:@" "];
-            types = @"^[^\\s#:=][^\\r\\n:=]*:(?!=)";
-            symbols = @"^[ \\t]*[A-Za-z_][A-Za-z0-9_]*(?=[ \\t]*[?:+!]?=)";
-        } else if ([language isEqual:@"shell"]) {
-            extraKeywords = [@"if then else elif fi for while until do done case esac in function select time export local readonly return break continue exit source" componentsSeparatedByString:@" "];
-        } else {
-            extraKeywords = [@"if elseif else endif foreach endforeach while endwhile function endfunction macro endmacro return include find_package add_executable add_library target_link_libraries target_include_directories set option project cmake_minimum_required" componentsSeparatedByString:@" "];
-            constants = [constants stringByAppendingString:@"|\\b(?:ON|OFF|TRUE|FALSE|PUBLIC|PRIVATE|INTERFACE|REQUIRED)\\b"];
-            comments = @"#\\[\\[[\\s\\S]*?(?:\\]\\]|\\z)|#[^\\r\\n]*";
-        }
-    } else if ([language isEqual:@"json"] || [language isEqual:@"plist"] || [language isEqual:@"xml"]) {
-        extraKeywords = [@"true false null YES NO" componentsSeparatedByString:@" "];
-        preprocessor = @"<\\?[\\s\\S]*?\\?>|<!DOCTYPE[^>]*>";
-        types = @"</?[A-Za-z_][\\w:.-]*|/?>";
-        symbols = @"\\b[A-Za-z_][\\w.-]*(?=[ \\t]*=)";
-        comments = [@"<!--[\\s\\S]*?(?:-->|\\z)|" stringByAppendingString:comments];
-        if ([language isEqual:@"json"]) { types = nil; preprocessor = nil; symbols = nil; constants = nil; }
-        if ([language isEqual:@"xml"]) comments = @"<!--[\\s\\S]*?(?:-->|\\z)";
-    }
-    if (extraKeywords) {
-        NSArray *all = _keywords ? [_keywords arrayByAddingObjectsFromArray:extraKeywords] : extraKeywords;
-        ASSIGN(_keywords, all);
-    }
-    NSString *knownTypes = YCodeWordPattern(_types);
-    if (knownTypes) types = types ? [NSString stringWithFormat:@"(?:%@)|(?:%@)", types, knownTypes] : knownTypes;
-    _keywordPattern = RETAIN(YCodeTokenPattern(YCodeWordPattern(_keywords)));
-    _typePattern = RETAIN(YCodeTokenPattern(types));
-    _symbolPattern = RETAIN(YCodeTokenPattern(symbols));
-    _constantPattern = RETAIN(YCodeTokenPattern(constants));
-    _preprocessorPattern = RETAIN(YCodeTokenPattern(preprocessor));
-    _numberPattern = RETAIN(YCodeTokenPattern(@"(?<![\\w.])@?(?:0[xX][0-9a-fA-F]+|0[bB][01]+|(?:[0-9][0-9_]*(?:\\.[0-9_]*)?|\\.[0-9_]+)(?:[eE][+-]?[0-9_]+)?)[uUlLfF]*(?!\\w)"));
-    _literalPattern = RETAIN(YCodeTokenPattern([NSString stringWithFormat:@"(%@)|(?:%@)", comments, strings]));
-}
-
-- (void)setupObjectiveC
-{
-    NSArray *objcKeywords = [NSArray arrayWithObjects:@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
-                              @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
-                              @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
-                              @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while",
-                              @"@interface", @"@implementation", @"@end", @"@class", @"@protocol", @"@property",
-                              @"@synthesize", @"@dynamic", @"@selector", @"@encode", @"@try", @"@catch", @"@finally",
-                              @"@throw", @"@synchronized", @"@autoreleasepool", @"@import", @"@public", @"@private",
-                              @"@protected", @"@package", @"self", @"super", @"nil", @"Nil", @"YES", @"NO", nil];
-    NSArray *objcTypes = [NSArray arrayWithObjects:@"id", @"Class", @"SEL", @"IMP", @"BOOL", @"NSInteger", @"NSUInteger", @"CGFloat",
-                           @"NSString", @"NSArray", @"NSDictionary", @"NSObject", @"NSNumber", nil];
-    ASSIGN(_keywords, objcKeywords);
-    ASSIGN(_types, objcTypes);
-}
-
-- (void)setupC
-{
-    NSArray *cKeywords = [NSArray arrayWithObjects:@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
-                           @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
-                           @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
-                           @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while", nil];
-    NSArray *cTypes = [NSArray arrayWithObjects:@"size_t", @"ptrdiff_t", @"FILE", @"NULL", nil];
-    ASSIGN(_keywords, cKeywords);
-    ASSIGN(_types, cTypes);
-}
-
-- (void)setupCPlusPlus
-{
-    NSArray *cppKeywords = [NSArray arrayWithObjects:@"auto", @"break", @"case", @"char", @"const", @"continue", @"default", @"do",
-                             @"double", @"else", @"enum", @"extern", @"float", @"for", @"goto", @"if",
-                             @"int", @"long", @"register", @"return", @"short", @"signed", @"sizeof", @"static",
-                             @"struct", @"switch", @"typedef", @"union", @"unsigned", @"void", @"volatile", @"while",
-                             @"class", @"private", @"public", @"protected", @"virtual", @"friend", @"inline",
-                             @"operator", @"overload", @"template", @"this", @"new", @"delete", @"namespace",
-                             @"using", @"try", @"catch", @"throw", @"const_cast", @"dynamic_cast", @"reinterpret_cast",
-                             @"static_cast", @"typeid", @"typename", @"explicit", @"mutable", @"export", nil];
-    NSArray *cppTypes = [NSArray arrayWithObjects:@"bool", @"wchar_t", @"string", @"vector", @"map", @"set", @"list", @"deque", nil];
-    ASSIGN(_keywords, cppKeywords);
-    ASSIGN(_types, cppTypes);
-}
-
-- (void)setupJavaScript
-{
-    NSArray *jsKeywords = [NSArray arrayWithObjects:@"break", @"case", @"catch", @"continue", @"debugger", @"default", @"delete", @"do",
-                            @"else", @"finally", @"for", @"function", @"if", @"in", @"instanceof", @"new",
-                            @"return", @"switch", @"this", @"throw", @"try", @"typeof", @"var", @"void", @"while",
-                            @"with", @"class", @"const", @"enum", @"export", @"extends", @"import", @"super",
-                            @"implements", @"interface", @"let", @"package", @"private", @"protected", @"public",
-                            @"static", @"yield", nil];
-    NSArray *jsTypes = [NSArray arrayWithObjects:@"Array", @"Boolean", @"Date", @"Error", @"Function", @"Number", @"Object", @"RegExp", @"String", nil];
-    ASSIGN(_keywords, jsKeywords);
-    ASSIGN(_types, jsTypes);
-}
-
-- (void)setupPython
-{
-    NSArray *pythonKeywords = [NSArray arrayWithObjects:@"and", @"as", @"assert", @"break", @"class", @"continue", @"def", @"del", @"elif",
-                                @"else", @"except", @"exec", @"finally", @"for", @"from", @"global", @"if", @"import",
-                                @"in", @"is", @"lambda", @"not", @"or", @"pass", @"print", @"raise", @"return", @"try",
-                                @"while", @"with", @"yield", @"None", @"True", @"False", nil];
-    NSArray *pythonTypes = [NSArray arrayWithObjects:@"int", @"float", @"str", @"list", @"dict", @"tuple", @"set", @"bool", nil];
-    ASSIGN(_keywords, pythonKeywords);
-    ASSIGN(_types, pythonTypes);
-}
-
-- (void)setupSwift
-{
-    NSArray *swiftKeywords = [NSArray arrayWithObjects:@"associatedtype", @"class", @"deinit", @"enum", @"extension", @"func", @"import",
-                               @"init", @"inout", @"internal", @"let", @"operator", @"private", @"protocol", @"public",
-                               @"static", @"struct", @"subscript", @"typealias", @"var", @"break", @"case", @"continue",
-                               @"default", @"defer", @"do", @"else", @"fallthrough", @"for", @"guard", @"if", @"in",
-                               @"repeat", @"return", @"switch", @"where", @"while", @"as", @"catch", @"false", @"is",
-                               @"nil", @"rethrows", @"super", @"self", @"Self", @"throw", @"throws", @"true", @"try", nil];
-    NSArray *swiftTypes = [NSArray arrayWithObjects:@"Int", @"Float", @"Double", @"Bool", @"String", @"Character", @"Array", @"Dictionary", @"Set", nil];
-    ASSIGN(_keywords, swiftKeywords);
-    ASSIGN(_types, swiftTypes);
+    YCodeLanguage *provider = [[YCodeLanguageRegistry sharedRegistry] languageForFile:_fileExtension];
+    _highlightStringKeys = [provider highlightStringKeys];
+    ASSIGN(_annotationPattern, [provider patternForToken:@"annotation"]);
+    ASSIGN(_numberPattern, [provider patternForToken:@"number"]);
+    ASSIGN(_preprocessorPattern, [provider patternForToken:@"preprocessor"]);
+    ASSIGN(_keywordPattern, [provider patternForToken:@"keyword"]);
+    ASSIGN(_typePattern, [provider patternForToken:@"type"]);
+    ASSIGN(_symbolPattern, [provider patternForToken:@"symbol"]);
+    ASSIGN(_constantPattern, [provider patternForToken:@"constant"]);
+    ASSIGN(_literalPattern, [provider patternForToken:@"literal"]);
 }
 
 @end

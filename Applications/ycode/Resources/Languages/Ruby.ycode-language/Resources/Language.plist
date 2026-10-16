@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>APIVersion</key>
+	<integer>1</integer>
+	<key>Languages</key>
+	<array>
+		<dict>
+			<key>Identifier</key>
+			<string>ruby</string>
+			<key>Extensions</key>
+			<array>
+				<string>rb</string>
+				<string>rake</string>
+				<string>gemspec</string>
+				<string>ru</string>
+			</array>
+			<key>FileNames</key>
+			<array>
+				<string>Rakefile</string>
+				<string>Gemfile</string>
+				<string>Guardfile</string>
+				<string>Vagrantfile</string>
+			</array>
+			<key>Indentation</key>
+			<string>blocks</string>
+			<key>LineComment</key>
+			<string>#</string>
+			<key>Patterns</key>
+			<dict>
+				<key>keyword</key>
+				<string>(?&lt;![A-Za-z0-9_])(?:BEGIN|END|alias|and|begin|break|case|class|def|defined\?|do|else|elsif|end|ensure|false|for|if|in|module|next|nil|not|or|redo|rescue|retry|return|self|super|then|true|undef|unless|until|when|while|yield|__FILE__|__LINE__|__ENCODING__)(?![A-Za-z0-9_])</string>
+				<key>type</key>
+				<string>\b[A-Z][A-Za-z0-9_]*\b</string>
+				<key>symbol</key>
+				<string>(?&lt;!:):[A-Za-z_]\w*[!?=]?|\b[A-Za-z_]\w*[!?]?(?=[ \t]*\()|@@?[A-Za-z_]\w*|\$[A-Za-z_]\w*</string>
+				<key>constant</key>
+				<string>\b[A-Z][A-Z0-9_]+\b</string>
+				<key>number</key>
+				<string>(?&lt;![\w.])(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|[0-9][0-9_]*(?:\.[0-9_]+)?(?:[eE][+-]?[0-9_]+)?)[ri]?(?!\w)</string>
+				<key>literal</key>
+				<string>(^=begin\b[^\r\n]*[\s\S]*?(?:^=end\b[^\r\n]*|\z)|#[^\r\n]*)|(?:"(?:\\[\s\S]|[^"\\])*(?:"|\z)|\x27(?:\\[\s\S]|[^\x27\\])*(?:\x27|\z)|`(?:\\[\s\S]|[^`\\])*(?:`|\z)|%[qQwWiIxrs]?\{(?:\\[\s\S]|[^}\\])*(?:\}|\z)|%[qQwWiIxrs]?\((?:\\[\s\S]|[^)\\])*(?:\)|\z))</string>
+				<key>indentAfter</key>
+				<string>^\s*(?![^\r\n]*\bend\s*$)(?!def\s+[^\r\n]*[ \t]=[ \t])(?:(?:class|module|def|if|unless|while|until|for|case|begin|else|elsif|when|rescue|ensure)\b[^\r\n]*|[^\r\n]*\bdo(?:\s*\|[^|]*\|)?|[^\r\n]*\{)\s*$</string>
+				<key>indentBefore</key>
+				<string>^\s*(?:end|else|elsif|when|rescue|ensure)\b</string>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

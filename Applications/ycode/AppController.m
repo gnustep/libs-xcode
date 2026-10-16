@@ -232,6 +232,7 @@ YCodeFileURLFromPath(NSString *path)
     [editMenu addItem:YCodeMenuItem(@"Find...", @selector(findInFile:), @"f", self)];
     [editMenu addItem:YCodeMenuItem(@"Replace...", @selector(replaceInFile:), @"", self)];
     [editMenu addItem:[NSMenuItem separatorItem]];
+    [editMenu addItem:YCodeMenuItem(@"Comment/Uncomment Lines", @selector(toggleLineComment:), @"", nil)];
     [editMenu addItem:YCodeMenuItem(@"Convert Tabs to Spaces", @selector(convertTabsToSpaces:), @"", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"Edit" action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:editMenu];

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>APIVersion</key>
+	<integer>1</integer>
+	<key>Languages</key>
+	<array>
+		<dict>
+			<key>Identifier</key>
+			<string>java</string>
+			<key>Extensions</key>
+			<array>
+				<string>java</string>
+			</array>
+			<key>Indentation</key>
+			<string>braces</string>
+			<key>LineComment</key>
+			<string>//</string>
+			<key>ControlKeywords</key>
+			<array>
+				<string>if</string>
+				<string>while</string>
+				<string>for</string>
+				<string>switch</string>
+				<string>catch</string>
+				<string>synchronized</string>
+			</array>
+			<key>StandaloneControls</key>
+			<array>
+				<string>else</string>
+				<string>do</string>
+				<string>try</string>
+				<string>finally</string>
+			</array>
+			<key>Patterns</key>
+			<dict>
+				<key>constant</key>
+				<string>\b[A-Z][A-Z0-9_]+\b</string>
+				<key>keyword</key>
+				<string>(?&lt;![A-Za-z0-9_])(?:abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while|true|false|null|var|record|sealed|permits|non\-sealed|yield)(?![A-Za-z0-9_])</string>
+				<key>literal</key>
+				<string>(/\*[\s\S]*?(?:\*/|\z)|//[^\r\n]*)|(?:"""[\s\S]*?(?:"""|\z)|"(?:\\[\s\S]|[^"\\\r\n])*(?:"|$)|\x27(?:\\[\s\S]|[^\x27\\\r\n])*(?:\x27|$))</string>
+				<key>number</key>
+				<string>(?&lt;![\w.])(?:0[xX][0-9a-fA-F_]+(?:\.[0-9a-fA-F_]*)?(?:[pP][+-]?[0-9_]+)?|0[bB][01_]+|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9_]+)(?:[eE][+-]?[0-9_]+)?)[lLfFdD]?(?!\w)</string>
+				<key>symbol</key>
+				<string>\b[A-Za-z_]\w*(?=[ \t]*(?:\(|:))|(?&lt;=\.)[A-Za-z_]\w*|\b_[A-Za-z_]\w*</string>
+				<key>type</key>
+				<string>\b[A-Z][A-Za-z0-9_]*\b</string>
+				<key>annotation</key>
+				<string>@[A-Za-z_][\w.]*</string>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

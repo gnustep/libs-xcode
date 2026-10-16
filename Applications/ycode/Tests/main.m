@@ -49,6 +49,7 @@
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
 #import "YCodeTextView.h"
+#import "YCodeLanguage.h"
 #import "YCodeDebuggerVariables.h"
 #import "YCodeVariablesView.h"
 #import "AppController.h"
@@ -1191,6 +1192,14 @@ static void testSyntaxHighlighting(void)
 
   // Exercise filename detection and the less frequently opened source/configuration formats.
   NSArray *cases = [NSArray arrayWithObjects:
+    [NSArray arrayWithObjects:@"Example.java", @"public class Example {}", @"public", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.java", @"@Override void work() {}", @"@Override", @"preprocessorColor", nil],
+    [NSArray arrayWithObjects:@"Example.java", @"String text = \"\"\"\n// class {}\n\"\"\";", @"\"\"\"\n// class {}\n\"\"\"", @"stringColor", nil],
+    [NSArray arrayWithObjects:@"Example.rb", @"class Example\nend", @"class", @"keywordColor", nil],
+    [NSArray arrayWithObjects:@"Example.rb", @"value = :example", @":example", @"symbolColor", nil],
+    [NSArray arrayWithObjects:@"Example.rb", @"# class Example {}", @"# class Example {}", @"commentColor", nil],
+    [NSArray arrayWithObjects:@"Example.rb", @"value = \"# end {\"", @"\"# end {\"", @"stringColor", nil],
+    [NSArray arrayWithObjects:@"Rakefile", @"=begin\nclass Hidden {}\n=end", @"=begin\nclass Hidden {}\n=end", @"commentColor", nil],
     [NSArray arrayWithObjects:@"Example.swift", @"let value: Int = 42", @"let", @"keywordColor", nil],
     [NSArray arrayWithObjects:@"Example.hpp", @"constexpr int count = 1;", @"constexpr", @"keywordColor", nil],
     [NSArray arrayWithObjects:@"Example.C", @"namespace demo {}", @"namespace", @"keywordColor", nil],
@@ -3597,6 +3606,131 @@ static void testMatchingDelimiters(void)
   [saved release];
 }
 
+static void testLanguageBundles(NSString *directory)
+{
+  NSString *resources = [[NSBundle mainBundle] pathForResource:@"Languages" ofType:nil];
+  YCodeLanguageRegistry *registry = [[YCodeLanguageRegistry alloc]
+    initWithSearchPaths:[NSArray arrayWithObject:resources]];
+  testAssert([[[registry languageForFile:@"Example.m"] identifier] isEqual:@"objc"], @"Load Objective-C from bundled definitions");
+  testAssert([[[registry languageForFile:@"Example.C"] identifier] isEqual:@"cpp"] &&
+    [[[registry languageForFile:@"Example.c"] identifier] isEqual:@"c"], @"Preserve uppercase C distinction");
+  testAssert([[[registry languageForFile:@"GNUmakefile.postamble"] identifier] isEqual:@"make"] &&
+    [[[registry languageForFile:@"CMakeLists.txt"] identifier] isEqual:@"cmake"], @"Match language filename rules");
+  testAssert([registry languageForFile:@"Unknown.unrecognized"] == nil, @"Unknown extension has plain-text fallback");
+  testAssert([[[registry languageForFile:@"Example.java"] identifier] isEqual:@"java"] &&
+    [[[registry languageForFile:@"Example.rb"] identifier] isEqual:@"ruby"] &&
+    [[[registry languageForFile:@"Gemfile"] identifier] isEqual:@"ruby"], @"Discover Java and Ruby bundles including Ruby build files");
+  YCodeLanguage *python = [registry languageForFile:@"example.py"];
+  NSString *source = @"if ready: # }\n  value = \"\"\"[\n)\"\"\"\n  call()";
+  NSString *code = [python codeByMaskingLiterals:source];
+  testAssert([code length] == [source length] && [code rangeOfString:@"}"].location == NSNotFound &&
+    [code rangeOfString:@"["].location == NSNotFound && [code hasSuffix:@"call()"],
+    @"Python comments and multiline strings share offset-preserving masking");
+
+  NSString *bundle = [directory stringByAppendingPathComponent:@"Custom.ycode-language"];
+  NSString *bundleResources = [bundle stringByAppendingPathComponent:@"Resources"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:bundleResources withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *manifest = [bundleResources stringByAppendingPathComponent:@"Language.plist"];
+  NSMutableDictionary *definition = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+    @"custom", @"Identifier", [NSArray arrayWithObjects:@"demo", @"m", nil], @"Extensions",
+    [NSDictionary dictionaryWithObject:@"\\bhello\\b" forKey:@"keyword"], @"Patterns", @"preserve", @"Indentation", nil];
+  NSMutableDictionary *info = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+    [NSNumber numberWithInt:1], @"APIVersion", [NSArray arrayWithObject:definition], @"Languages", nil];
+  [[NSPropertyListSerialization dataWithPropertyList:info format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL]
+    writeToFile:manifest atomically:YES];
+  testAssert([registry loadBundleAtPath:bundle] && [[[registry languageForFile:@"file.demo"] identifier] isEqual:@"custom"] &&
+    [[[registry languageForFile:@"file.m"] identifier] isEqual:@"custom"], @"Install a new language and override an existing extension without editor changes");
+  [info setObject:[NSNumber numberWithInt:99] forKey:@"APIVersion"];
+  [[NSPropertyListSerialization dataWithPropertyList:info format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL]
+    writeToFile:manifest atomically:YES];
+  testAssert(![registry loadBundleAtPath:bundle], @"Reject unsupported bundle API version");
+  [info setObject:[NSNumber numberWithInt:1] forKey:@"APIVersion"];
+  [definition setObject:[NSDictionary dictionaryWithObject:@"(" forKey:@"keyword"] forKey:@"Patterns"];
+  [[NSPropertyListSerialization dataWithPropertyList:info format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL]
+    writeToFile:manifest atomically:YES];
+  testAssert(![registry loadBundleAtPath:bundle] && [[[registry languageForFile:@"file.demo"] identifier] isEqual:@"custom"],
+    @"Reject malformed patterns without replacing working language");
+  [registry release];
+
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:[directory stringByAppendingPathComponent:@"example.py"] content:@"if ready: # comment"];
+  YCodeTextView *view = (YCodeTextView *)[document textView];
+  NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 400, 300)
+    styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [window setReleasedWhenClosed:NO];
+  [window setContentView:[document editorView]];
+  [window makeFirstResponder:view];
+  NSUInteger width = [YCodePreferences controlIndentWidth];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  NSString *spaces = [@"" stringByPaddingToLength:width withString:@" " startingAtIndex:0];
+  testAssert([[view string] hasSuffix:[@"\n" stringByAppendingString:spaces]], @"Python suite indentation uses configured spaces after colon");
+  [document setContent:@"value = 'if ready:'"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] hasSuffix:@"'\n"], @"A colon inside a Python string does not indent");
+  [document setContent:@"  first()\r\n\r\n  second()\r\nthird()"];
+  [view setSelectedRange:NSMakeRange(0, [[view string] rangeOfString:@"third"].location)];
+  NSString *original = [[view string] copy];
+  NSUndoManager *undo = [view undoManager];
+  [undo removeAllActions];
+  [undo beginUndoGrouping];
+  [view toggleLineComment:nil];
+  [undo endUndoGrouping];
+  testAssert([[view string] isEqual:@"  # first()\r\n\r\n  # second()\r\nthird()"] && [document isModified],
+    @"Comment selection uses provider marker, preserves CRLF and marks document modified");
+  [undo undo];
+  testAssert([[view string] isEqual:original], @"Commenting lines is one undoable edit");
+  [undo redo];
+  [view setSelectedRange:NSMakeRange(0, [[view string] rangeOfString:@"third"].location)];
+  [view toggleLineComment:nil];
+  testAssert([[view string] isEqual:original], @"Uncomment restores selected lines");
+  [original release];
+  [view setFilePath:@"Example.java"];
+  [document setContent:@"if (ready)"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] hasSuffix:[@"\n" stringByAppendingString:spaces]], @"Java control statements use configured indentation");
+  [document setContent:@"class Example {"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  [view insertText:@"}"];
+  testAssert([[view string] isEqual:@"class Example {\n}"], @"Java closing brace aligns with its opening line");
+  [view setFilePath:@"Example.rb"];
+  [document setContent:@"class Example"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  [view insertText:@"def work"];
+  [view insertNewline:nil];
+  testAssert([[view string] hasSuffix:[spaces stringByAppendingString:spaces]], @"Ruby nested blocks indent by configured spaces");
+  [view insertText:@"end"];
+  testAssert([[view string] hasSuffix:[spaces stringByAppendingString:@"end"]], @"Ruby end aligns with def");
+  [view insertNewline:nil];
+  [view insertText:@"end"];
+  testAssert([[view string] hasSuffix:@"\nend"], @"Ruby outer end aligns with class");
+  [view insertNewline:nil];
+  testAssert([[view string] hasSuffix:@"end\n"], @"Ruby does not indent after end");
+  [document setContent:@"if ready"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  [view insertText:@"else"];
+  testAssert([[view string] isEqual:@"if ready\nelse"], @"Ruby else aligns with if");
+  [view insertNewline:nil];
+  testAssert([[view string] hasSuffix:[@"\n" stringByAppendingString:spaces]], @"Ruby else body indents again");
+  [document setContent:@"items.each do |item|"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] hasSuffix:spaces], @"Ruby do block indents");
+  [view setFilePath:@"notes.unknown"];
+  [document setContent:@"  if (ready)"];
+  [view setSelectedRange:NSMakeRange([[view string] length], 0)];
+  [view insertNewline:nil];
+  testAssert([[view string] isEqual:@"  if (ready)\n  "], @"Plain text preserves indentation without applying C control rules");
+  [window close]; [window release];
+  [document release];
+}
+
+
 int main(void)
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -3611,6 +3745,13 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-languages"]) {
+    testLanguageBundles(temporaryDirectory);
+    testSyntaxHighlighting();
+    [[NSFileManager defaultManager] removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode language checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-colors"]) {
     testEditorColorPreferences();
     testEditorColors();
@@ -3789,6 +3930,7 @@ int main(void)
   testApplicationIcons(temporaryDirectory);
   testHiddenRulersDebugGutter();
   testBreakpointFileTypes();
+  testLanguageBundles(temporaryDirectory);
   testSyntaxHighlighting();
   testDebuggerVariables();
   testCloseModifiedFiles(temporaryDirectory);

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>APIVersion</key>
+	<integer>1</integer>
+	<key>Languages</key>
+	<array>
+		<dict>
+			<key>Identifier</key>
+			<string>python</string>
+			<key>Extensions</key>
+			<array>
+				<string>py</string>
+				<string>pyw</string>
+			</array>
+			<key>Patterns</key>
+			<dict>
+				<key>constant</key>
+				<string>\b[A-Z][A-Z0-9_]+\b</string>
+				<key>keyword</key>
+				<string>(?&lt;![A-Za-z0-9_])(?:and|as|assert|break|class|continue|def|del|elif|else|except|exec|finally|for|from|global|if|import|in|is|lambda|not|or|pass|print|raise|return|try|while|with|yield|None|True|False|async|await|nonlocal|match|case)(?![A-Za-z0-9_])</string>
+				<key>literal</key>
+				<string>(#[^\r\n]*)|(?:(?:[rRuUbBfF]{0,2})(?:"""[\s\S]*?(?:"""|\z)|'{3}[\s\S]*?(?:'{3}|\z))|@?"(?:\\[\s\S]|[^"\\\r\n])*(?:"|$)|'(?:\\[\s\S]|[^'\\\r\n])*(?:'|$))</string>
+				<key>number</key>
+				<string>(?&lt;![\w.])@?(?:0[xX][0-9a-fA-F]+|0[bB][01]+|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9_]+)(?:[eE][+-]?[0-9_]+)?)[uUlLfF]*(?!\w)</string>
+				<key>preprocessor</key>
+				<string>^[ \t]*@[A-Za-z_][\w.]*</string>
+				<key>symbol</key>
+				<string>\b[A-Za-z_]\w*(?=[ \t]*(?:\(|:))|(?&lt;=\.)[A-Za-z_]\w*|\b_[A-Za-z_]\w*</string>
+				<key>type</key>
+				<string>(?:\b[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*\b(?![ \t]*\())|(?:(?&lt;![A-Za-z0-9_])(?:int|float|str|list|dict|tuple|set|bool)(?![A-Za-z0-9_]))</string>
+				<key>indentAfter</key>
+				<string>^\s*(?:(?:async\s+)?(?:def|for|with)|class|if|elif|else|while|try|except|finally|match|case)\b[^\r\n]*:\s*$</string>
+			</dict>
+			<key>Indentation</key>
+			<string>colon</string>
+			<key>LineComment</key>
+			<string>#</string>
+		</dict>
+	</array>
+</dict>
+</plist>

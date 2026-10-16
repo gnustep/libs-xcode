@@ -157,14 +157,7 @@
 {
     DESTROY(_syntaxHighlighter);
     if (!_textView) return;
-    NSString *extension = [self fileExtension];
-    NSString *name = [[self fileName] lowercaseString];
-    if ([name isEqual:@"gnumakefile"] || [name isEqual:@"makefile"] ||
-        [name hasPrefix:@"gnumakefile."] || [name hasPrefix:@"makefile."])
-        extension = @"make";
-    else if ([name isEqual:@"cmakelists.txt"])
-        extension = @"cmake";
-    _syntaxHighlighter = [[YCodeSyntaxHighlighter alloc] initWithFileExtension:extension];
+    _syntaxHighlighter = [[YCodeSyntaxHighlighter alloc] initWithFileExtension:[self fileName]];
     [_syntaxHighlighter setTextView:_textView];
 }
 
