@@ -60,8 +60,13 @@ targets in the project navigator. Missing or invalid project contents produce
 an error instead of opening an empty project.
 
 Opening a file associated with Ycode from GWorkspace opens its project and then
-selects that file in the editor. Ycode searches the containing directory and its
-parents, using the nearest `.xcodeproj`, `.pcproj`, or Makefile folder. At the same
+selects that file in the editor. Ycode first checks open projects and directory
+windows, choosing the most specific containing directory and bringing that window
+forward. Matching uses absolute paths with directory boundaries and resolved
+symlinks, so files with the same name in different directories remain separate.
+Files outside all open projects open a separate project window; the active
+project never receives unrelated files. Ycode searches the containing directory
+and its parents for the nearest `.xcodeproj`, `.pcproj`, or Makefile folder. At the same
 level, Xcode projects take precedence over ProjectCenter projects, then Makefile
 folders; multiple projects of the same type are ordered by name. If none is
 found, the file's containing directory opens as a directory project, even without

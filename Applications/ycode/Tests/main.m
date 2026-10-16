@@ -3356,6 +3356,40 @@ static void testWorkspaceFileOpening(NSString *temporaryDirectory)
   NSUInteger count = [[controller documents] count];
   testAssert([controller openWorkspaceFile:source error:&error] && [[controller documents] count] == count,
     @"Repeated workspace opens reuse the existing project window");
+  NSString *otherDirectory = [sources stringByAppendingString:@"-Other"];
+  [manager createDirectoryAtPath:otherDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *otherSource = [otherDirectory stringByAppendingPathComponent:@"Example.m"];
+  [@"int other;\n" writeToFile:otherSource atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([controller openWorkspaceFile:otherSource error:&error] && [[controller documents] count] == count + 1,
+    @"A file outside all open projects opens its own directory document");
+  YCodeProject *otherProject = [controller documentForURL:[NSURL fileURLWithPath:otherDirectory]];
+  testAssert(otherProject != nil && [[[[otherProject editorController] currentDocument] filePath] isEqual:otherSource] &&
+    [[[[project editorController] currentDocument] filePath] isEqual:source] &&
+    [[project editorController] documentForFilePath:otherSource] == nil,
+    @"Opening another project's file leaves the original project's tabs unchanged");
+  NSString *nested = [sources stringByAppendingPathComponent:@"Nested"];
+  [manager createDirectoryAtPath:nested withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *nestedSource = [nested stringByAppendingPathComponent:@"Example.m"];
+  [@"int nested;\n" writeToFile:nestedSource atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert([controller openWorkspaceFile:nestedSource error:&error] && [[controller documents] count] == count + 1 &&
+    [[[[project editorController] currentDocument] filePath] isEqual:nestedSource] &&
+    [[[[otherProject editorController] currentDocument] filePath] isEqual:otherSource],
+    @"Nested source reuses its open parent directory rather than the active unrelated project");
+  testAssert([[[[project editorController] currentDocument] content] isEqual:@"int nested;\n"],
+    @"Same-named files are opened from the correct directory");
+  YCodeProject *nestedProject = [controller openDocumentWithContentsOfURL:[NSURL fileURLWithPath:nested]
+    display:YES error:&error];
+  testAssert([controller openWorkspaceFile:nestedSource error:&error] &&
+    [[[[nestedProject editorController] currentDocument] filePath] isEqual:nestedSource],
+    @"The most specific open directory receives the file");
+  [nestedProject close];
+  NSString *alias = [root stringByAppendingPathComponent:@"SourceAlias"];
+  [manager createSymbolicLinkAtPath:alias withDestinationPath:sources error:NULL];
+  testAssert([controller openWorkspaceFile:[alias stringByAppendingPathComponent:@"Example.m"] error:&error] &&
+    [[controller documents] count] == count + 1 &&
+    [[[[project editorController] currentDocument] filePath] isEqual:source],
+    @"Symlink paths reuse the matching open directory and canonical source path");
+  [otherProject close];
   [project close];
   NSString *package = [root stringByAppendingPathComponent:@"Example.xcodeproj"];
   [manager copyItemAtPath:@"../Ycode.xcodeproj" toPath:package error:NULL];

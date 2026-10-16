@@ -32,12 +32,42 @@
 {
     NSFileManager *manager = [NSFileManager defaultManager];
     BOOL directory = NO;
-    path = [path stringByStandardizingPath];
+    if (![path length]) return NO;
+    if (![path isAbsolutePath]) path = [[manager currentDirectoryPath] stringByAppendingPathComponent:path];
+    path = [[path stringByStandardizingPath] stringByResolvingSymlinksInPath];
     if (![manager fileExistsAtPath:path isDirectory:&directory]) return NO;
     NSString *extension = [[path pathExtension] lowercaseString];
     if (directory || [extension isEqual:@"xcodeproj"] || [extension isEqual:@"pcproj"])
         return [self openDocumentWithContentsOfURL:[NSURL fileURLWithPath:path]
             display:YES error:error] != nil;
+
+    // Route by full directory boundaries, never by the active window or the
+    // file's basename. Prefer the most specific already-open project root.
+    YCodeProject *existing = nil;
+    NSUInteger longestRoot = 0;
+    NSEnumerator *documents = [[self documents] objectEnumerator];
+    id candidate;
+    while ((candidate = [documents nextObject]) != nil) {
+        if (![candidate isKindOfClass:[YCodeProject class]]) continue;
+        NSString *root = [[[candidate projectDirectoryPath] stringByStandardizingPath]
+            stringByResolvingSymlinksInPath];
+        if (![root length]) continue;
+        NSString *prefix = [root hasSuffix:@"/"] ? root : [root stringByAppendingString:@"/"];
+        if ([path hasPrefix:prefix] && [prefix length] > longestRoot) {
+            existing = candidate;
+            longestRoot = [prefix length];
+        }
+    }
+    if (existing) {
+        BOOL opened = [[existing editorController] openFile:path];
+        if (opened) {
+            [existing showWindows];
+            if ([[existing windowControllers] count])
+                [[[[existing windowControllers] objectAtIndex:0] window] makeKeyAndOrderFront:nil];
+            [NSApp activateIgnoringOtherApps:YES];
+        }
+        return opened;
+    }
 
     NSString *folder = [path stringByDeletingLastPathComponent];
     NSString *projectPath = nil;
