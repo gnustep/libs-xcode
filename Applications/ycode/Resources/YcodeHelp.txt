@@ -109,6 +109,8 @@ When reporting a crash, include the Ycode version or source revision, operating 
 8. TERMINAL
 
 Choose Project > Open Terminal (Product > Open Terminal on macOS), or select the Terminal tab in the bottom area. A separate interactive shell starts in your project's directory when you first open its terminal. Use it for custom make targets, Git commands, scripts, and interactive tools. Console continues to show Ycode's build and run output.
+The menu changes to Close Terminal while the terminal is visible. Closing hides
+the pane and preserves the shell session; Open Terminal brings it back.
 
 The shell stays running while you switch tabs or hide the bottom area. Closing the project hangs up its terminal. Ctrl+C interrupts the terminal's foreground job; Ctrl+D sends end-of-input. Project > Stop controls Ycode's build/run/debug operations, not the terminal. Type exit to end a shell, then press Return to start another. Restart Terminal in the context menu replaces the current session with a new shell in the original project directory.
 

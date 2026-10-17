@@ -70,6 +70,16 @@
 - (NSPasteboard *)pasteboard;
 @end
 
+@interface YCodeTerminalMenuTestController : AppController
+{
+@public
+  YCodeWindowController *terminalWindow;
+}
+@end
+@implementation YCodeTerminalMenuTestController
+- (YCodeWindowController *)currentProjectWindowController { return terminalWindow; }
+@end
+
 @interface YCodeTerminalTestView : YCodeTerminalView
 {
   NSMutableData *_captured;
@@ -415,6 +425,27 @@ static void testTerminal(NSString *temporaryDirectory)
   [terminal sendData:[@"stty size\r" dataUsingEncoding:NSUTF8StringEncoding]];
   testAssert(terminalWait(terminal, [NSString stringWithFormat:@"%d %d", expectedRows, expectedColumns]),
     @"The running shell receives the new dimensions when its tab is reopened");
+  testAssert([window isTerminalVisible], @"Selected Terminal tab is visible");
+  YCodeTerminalMenuTestController *menuController = [YCodeTerminalMenuTestController new];
+  menuController->terminalWindow = window;
+  NSMenuItem *terminalItem = [[NSMenuItem alloc] initWithTitle:@"Open Terminal" action:@selector(openTerminal:) keyEquivalent:@""];
+  testAssert([menuController validateMenuItem:terminalItem] && [[terminalItem title] isEqual:@"Close Terminal"],
+    @"Menu validation offers Close Terminal when the pane is visible");
+  [menuController openTerminal:terminalItem];
+  testAssert([[terminalItem title] isEqual:@"Open Terminal"], @"Closing immediately updates the menu title");
+  testAssert(![window isTerminalVisible] && ![window isBottomPanelVisible] && [terminal isRunning],
+    @"Close Terminal hides the pane while preserving its shell");
+  [window openTerminal:nil];
+  testAssert([window isTerminalVisible] && [[terminal valueForKey:@"_child"] intValue] == terminalChild,
+    @"Open Terminal restores the same shell after closing the pane");
+  [tabs selectTabViewItemWithIdentifier:@"console"];
+  testAssert(![window isTerminalVisible], @"A different bottom tab does not count as an open Terminal");
+  [window openTerminal:nil];
+  testAssert([window isTerminalVisible], @"Open Terminal switches from another visible bottom tab");
+  menuController->terminalWindow = nil;
+  testAssert(![menuController validateMenuItem:terminalItem] && [[terminalItem title] isEqual:@"Open Terminal"],
+    @"Terminal menu resets and disables without a project window");
+  [terminalItem release]; [menuController release];
   [project close];
   testAssert(![terminal isRunning], @"Closing the project stops the terminal session");
 #else

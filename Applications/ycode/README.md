@@ -262,6 +262,8 @@ shell starts in each project's directory the first time you open its terminal.
 It uses your `SHELL`, falling back to your account's shell or `/bin/sh`.
 Switching tabs and hiding the bottom area keep the shell running. Closing the
 project hangs up the shell and its foreground job.
+The menu changes to Close Terminal while the terminal is visible. Closing hides
+the pane and preserves the shell session; Open Terminal brings it back.
 
 Use the terminal for custom `make` targets, Git, scripts, and interactive tools.
 Console continues to display Ycode-managed build and run output. **Project > Stop**

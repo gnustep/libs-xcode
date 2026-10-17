@@ -820,7 +820,11 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
     SEL action = [item action];
-    if (action == @selector(openTerminal:)) return [self currentProject] != nil;
+    if (action == @selector(openTerminal:)) {
+        YCodeWindowController *controller = [self currentProjectWindowController];
+        [item setTitle:[controller isTerminalVisible] ? @"Close Terminal" : @"Open Terminal"];
+        return controller != nil;
+    }
     if (action == @selector(createProjectSettings:)) return [[self currentProject] canCreateSettingsFile];
     if (action == @selector(convertTabsToSpaces:))
         return [[[[self currentEditorController] currentDocument] textView] isEditable];
@@ -839,7 +843,10 @@ YCodeFileURLFromPath(NSString *path)
 }
 - (IBAction)openTerminal:(id)sender
 {
-    [[self currentProjectWindowController] openTerminal:sender];
+    YCodeWindowController *controller = [self currentProjectWindowController];
+    [controller openTerminal:sender];
+    if ([sender isKindOfClass:[NSMenuItem class]])
+        [sender setTitle:[controller isTerminalVisible] ? @"Close Terminal" : @"Open Terminal"];
 }
 - (IBAction)debugAction:(id)sender
 {

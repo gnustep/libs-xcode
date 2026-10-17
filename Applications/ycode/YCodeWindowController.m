@@ -1960,9 +1960,19 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
     }
 }
 
+- (BOOL)isTerminalVisible
+{
+    return _bottomPanelVisible && [[[_bottomTabView selectedTabViewItem] identifier] isEqual:@"terminal"];
+}
+
 - (IBAction)openTerminal:(id)sender
 {
     if (!_project) return;
+    if ([self isTerminalVisible]) {
+        [[self window] makeFirstResponder:[[_editorController currentDocument] textView]];
+        [self setBottomPanelVisible:NO];
+        return;
+    }
     [self setBottomPanelVisible:YES];
     [_bottomTabView selectTabViewItemWithIdentifier:@"terminal"];
     // Selecting an already-selected tab does not always send a delegate callback.

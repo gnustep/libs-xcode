@@ -118,7 +118,9 @@
 - (YCodeProject *)project;
 - (void)setProject:(YCodeProject *)project;
 - (void)openProject:(NSString *)projectPath;
+/** Toggle terminal visibility while preserving the shell session. */
 - (IBAction)openTerminal:(id)sender;
+- (BOOL)isTerminalVisible;
 - (void)closeProject;
 
 /**
