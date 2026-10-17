@@ -2393,6 +2393,50 @@ static void testNavigatorContextMenu(YCodeProject *project)
     @"Context menu validates Refresh Folder against the current project");
 }
 
+static void testMakefileOpening(NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  YCodeDocumentController *controller = [YCodeDocumentController sharedDocumentController];
+  NSEnumerator *names = [[NSArray arrayWithObjects:@"GNUmakefile", @"makefile", @"Makefile", nil] objectEnumerator];
+  NSString *name;
+  while ((name = [names nextObject]) != nil)
+    {
+      NSString *directory = [temporaryDirectory stringByAppendingPathComponent:
+        [@"Direct Makefile With Spaces " stringByAppendingString:name]];
+      [manager createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+      NSString *path = [directory stringByAppendingPathComponent:name];
+      NSString *contents = @"all:\n\t@echo direct-makefile-build\n";
+      [contents writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+      NSError *error = nil;
+      NSURL *url = [NSURL fileURLWithPath:path];
+      NSURL *folderURL = [NSURL fileURLWithPath:directory];
+      YCodeProject *project = [controller openDocumentWithContentsOfURL:url display:YES error:&error];
+      testAssert(project != nil && error == nil && [project isDirectoryProject],
+        @"Open a makefile directly as a directory project");
+      if (project == nil) continue;
+      testAssert([[project fileURL] isEqual:folderURL] && [[project projectDirectoryPath] isEqual:directory]
+        && [[project windowControllers] count] > 0,
+        @"Direct makefile opening displays a window rooted at the containing folder");
+      testAssert([controller openDocumentWithContentsOfURL:folderURL display:YES error:&error] == project
+        && [controller openDocumentWithContentsOfURL:url display:YES error:&error] == project,
+        @"Opening the folder and makefile reuses the same project");
+      YCodeBuildSystem *build = [project buildSystem];
+      testAssert([build build], @"Start a build after opening a makefile directly");
+      waitForBuild(build, NO);
+      testAssert([[build buildOutput] rangeOfString:@"direct-makefile-build"].location != NSNotFound,
+        @"Direct makefile project builds in its containing directory");
+      testAssert([[NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL] isEqual:contents],
+        @"Opening and building preserves the original makefile");
+      [project close];
+    }
+  NSString *unsupported = [temporaryDirectory stringByAppendingPathComponent:@"Not A Project.txt"];
+  [@"plain text" writeToFile:unsupported atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  NSError *error = nil;
+  testAssert([controller openDocumentWithContentsOfURL:[NSURL fileURLWithPath:unsupported]
+    display:YES error:&error] == nil && error != nil,
+    @"Unsupported project selections report an error");
+}
+
 static void testMakeDirectory(NSString *temporaryDirectory)
 {
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -3886,6 +3930,13 @@ int main(void)
     NSLog(@"Ycode application icon checks: %lu failures", (unsigned long)failures);
     [pool drain]; return failures ? 1 : 0;
   }
+  if ([arguments containsObject:@"--check-makefile-projects"]) {
+    testMakefileOpening(temporaryDirectory);
+    testMakeDirectory(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode makefile project checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-find-replace"]) {
     testFindReplace(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -4294,6 +4345,7 @@ int main(void)
   testResultNavigation(temporaryDirectory);
   testSearchAndTestNavigator(temporaryDirectory);
   testArchitectureSelection(temporaryDirectory);
+  testMakefileOpening(temporaryDirectory);
   testMakeDirectory(temporaryDirectory);
   testBuildAndRun(temporaryDirectory);
   testBuildIssuesPane(temporaryDirectory);

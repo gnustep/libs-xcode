@@ -314,8 +314,10 @@ leaves GDB available for another Go. A failed build never launches the debugger.
 
 ## Makefile folders
 
-Use **File → Open Project** and select a folder containing `GNUmakefile`,
-`makefile`, or `Makefile`. Ycode shows the folder's files and subfolders without
+Use **File → Open Project** and select `GNUmakefile`, `makefile`, or `Makefile`,
+or the folder containing it. Opening the makefile uses its containing folder as
+the project and reuses that folder's window if already open.
+Ycode shows the folder's files and subfolders without
 creating an Xcode project or changing its makefiles. Hidden entries and the
 `obj` and `build` directories are omitted from the navigator; directory symlinks
 are not traversed. Use the navigator's **Refresh Folder** menu after adding files

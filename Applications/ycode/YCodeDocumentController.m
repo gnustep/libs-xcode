@@ -28,6 +28,31 @@
 
 @implementation YCodeDocumentController
 
+- (id)openDocumentWithContentsOfURL:(NSURL *)url display:(BOOL)display error:(NSError **)error
+{
+    // A makefile identifies its containing project folder. Normalize before
+    // NSDocumentController looks for an existing document or records recents.
+    NSString *path = [url path];
+    BOOL directory = NO;
+    if ([url isFileURL] &&
+        [[NSArray arrayWithObjects:@"GNUmakefile", @"makefile", @"Makefile", nil]
+            containsObject:[path lastPathComponent]] &&
+        [[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&directory] && !directory) {
+        url = [NSURL fileURLWithPath:[path stringByDeletingLastPathComponent]];
+    }
+    NSError *openError = nil;
+    id document = [super openDocumentWithContentsOfURL:url display:display error:&openError];
+    if (document == nil && error != NULL) {
+        if (openError == nil)
+            openError = [NSError errorWithDomain:NSCocoaErrorDomain
+                code:NSFileReadUnknownError userInfo:[NSDictionary dictionaryWithObject:
+                    @"Choose a project folder, GNUmakefile, makefile, Makefile, or a supported project file."
+                    forKey:NSLocalizedDescriptionKey]];
+        *error = openError;
+    }
+    return document;
+}
+
 - (BOOL)openWorkspaceFile:(NSString *)path error:(NSError **)error
 {
     NSFileManager *manager = [NSFileManager defaultManager];

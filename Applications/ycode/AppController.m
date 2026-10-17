@@ -1122,8 +1122,8 @@ YCodeFileURLFromPath(NSString *path)
     [openPanel setCanChooseDirectories:YES];
     [openPanel setAllowsMultipleSelection:NO];
     [openPanel setTreatsFilePackagesAsDirectories:NO];
-    [openPanel setAllowedFileTypes:[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil]];
-    [openPanel setMessage:@"Choose a project or a folder containing GNUmakefile, makefile, or Makefile"];
+    [openPanel setAllowedFileTypes:nil];
+    [openPanel setMessage:@"Choose a project, GNUmakefile, makefile, Makefile, or project folder"];
     
     if ([openPanel runModal] == NSModalResponseOK) {
         NSString *projectPath = [[openPanel URL] path];
