@@ -12,7 +12,7 @@ Makefile settings, debugging, shortcuts, and troubleshooting.
 
 This guide covers [installation](#build-and-installation),
 [projects and navigation](#projects-and-navigation), [editing](#editing-and-search),
-[tests](#running-tests), [debugging](#debugging),
+[tests](#running-tests), [terminal](#terminal), [debugging](#debugging),
 [Makefile settings](#makefile-folders), and [architectures](#architecture-selection).
 See the [repository README](../../README.md#12-ycode) for a screenshot and overview.
 
@@ -254,6 +254,45 @@ Run the application regression checks with a working GUI display (or under
 make -C Applications/ycode/Tests check
 ```
 
+## Terminal
+
+Choose **Project > Open Terminal** (**Product > Open Terminal** on macOS), or
+select **Terminal** beside Console, Issues, and Debugger. A separate interactive
+shell starts in each project's directory the first time you open its terminal.
+It uses your `SHELL`, falling back to your account's shell or `/bin/sh`.
+Switching tabs and hiding the bottom area keep the shell running. Closing the
+project hangs up the shell and its foreground job.
+
+Use the terminal for custom `make` targets, Git, scripts, and interactive tools.
+Console continues to display Ycode-managed build and run output. **Project > Stop**
+controls those operations; in Terminal, **Ctrl+C** interrupts the foreground
+job and **Ctrl+D** sends end-of-input. Type `exit` to leave the shell; Return on
+the exited screen starts a new one. **Restart Terminal** in its context menu
+hangs up the current session and starts again in the project's original directory.
+
+Drag to select text, then use **Edit > Copy** or the context menu. **Paste**
+supports bracketed-paste mode when requested by the shell or program. Scroll
+with the mouse wheel or Shift+Page Up/Down through up to 5,000 saved lines;
+typing returns to the live screen. When a program enables mouse reporting,
+hold Shift to select text or use the context menu instead of sending mouse input.
+Resizing the pane updates the PTY size and notifies the foreground program.
+
+The bundled MIT-licensed [libvterm](https://www.leonerd.org.uk/code/libvterm/)
+0.3.3 engine handles ANSI/VT100 and many VT220/xterm sequences: cursor motion,
+erase/insert/delete, scrolling regions, saved cursors, alternate screens,
+DEC line drawing, UTF-8 with wide/combining characters, 16/256-color and
+24-bit color, bold/italic/underline/reverse/conceal/strike/blink, application
+cursor/keypad modes, function keys, mouse reporting, and terminal queries.
+The child sees `TERM=xterm-256color` and `COLORTERM=truecolor`.
+
+This is a text terminal, not complete xterm emulation. Sixel/inline graphics,
+OSC hyperlinks and clipboard access, and VT double-height/double-width line
+rendering are not implemented. Font coverage determines which Unicode glyphs
+can be displayed. Scrollback does not reflow when the pane width changes.
+Interactive sessions currently require POSIX PTYs (GNUstep on Unix or macOS);
+Windows reports that the terminal is unavailable. No external terminal app or
+separately installed libvterm is required.
+
 ## Debugging
 
 Choose **Project > Debug** to build the selected target and open a GDB session.
@@ -274,7 +313,7 @@ Step Out, and Up/Down stack-frame navigation. Debug initially waits for Go,
 so you can set breakpoints before the program starts. Select a source line and
 choose **Toggle Breakpoint at Selection** to add or remove a breakpoint;
 Ycode remembers source breakpoints per project in its user preferences.
-The bottom pane has separate **Console**, **Issues**, and **Debugger** tabs.
+The bottom pane has separate **Console**, **Issues**, **Debugger**, and **Terminal** tabs.
 The Debugger tab contains the GDB transcript, icon buttons for execution
 controls, and a command field. Hover over a button to see its action name. Build and program output remain in Console. Starting a debugger session
 or stopping at a source location selects the Debugger tab.

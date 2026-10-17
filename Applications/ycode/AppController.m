@@ -275,6 +275,8 @@ YCodeFileURLFromPath(NSString *path)
     [debugMenu addItem:YCodeMenuItem(@"Toggle Breakpoint at Selection", @selector(toggleBreakpoint:), @"", self)];
     [productMenu addItem:YCodeMenuItem(@"Run", @selector(runProject:), @"r", self)];
     [productMenu addItem:YCodeMenuItem(@"Stop", @selector(stopProject:), @".", self)];
+    [productMenu addItem:[NSMenuItem separatorItem]];
+    [productMenu addItem:YCodeMenuItem(@"Open Terminal", @selector(openTerminal:), @"", self)];
     NSArray *controlTitles = [NSArray arrayWithObjects:@"Build", @"Clean", @"Debug", @"Run", @"Stop", nil];
     {
       NSEnumerator *titleEnumerator = [controlTitles objectEnumerator];
@@ -806,6 +808,7 @@ YCodeFileURLFromPath(NSString *path)
 - (BOOL)validateMenuItem:(NSMenuItem *)item
 {
     SEL action = [item action];
+    if (action == @selector(openTerminal:)) return [self currentProject] != nil;
     if (action == @selector(createProjectSettings:)) return [[self currentProject] canCreateSettingsFile];
     if (action == @selector(convertTabsToSpaces:))
         return [[[[self currentEditorController] currentDocument] textView] isEditable];
@@ -821,6 +824,10 @@ YCodeFileURLFromPath(NSString *path)
 - (IBAction)debugProject:(id)sender
 {
     [[self currentProjectWindowController] debugProject:sender];
+}
+- (IBAction)openTerminal:(id)sender
+{
+    [[self currentProjectWindowController] openTerminal:sender];
 }
 - (IBAction)debugAction:(id)sender
 {

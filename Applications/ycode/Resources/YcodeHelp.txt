@@ -10,6 +10,7 @@ CONTENTS
 5. Debugging
 6. Preferences and shortcuts
 7. Troubleshooting
+8. Terminal
 
 1. GETTING STARTED
 
@@ -19,7 +20,7 @@ To start a new project, choose File > New Project. Choose a location, enter a na
 
 The navigator on the left shows your project's groups and files. Select a file to edit it. Double-click a file to open it in its associated application; interface files such as Gorm and XIB documents are edited externally. Double-click a group to expand or collapse it. Recent Documents in the File menu reopens previous projects.
 
-Use View to show or hide the Navigator, Inspector, and Debug Area. The bottom area contains Console, Issues, and Debugger tabs. Build and run commands are under Project on GNUstep and Product on macOS; this guide uses “Project” for both.
+Use View to show or hide the Navigator, Inspector, and Debug Area. The bottom area contains Console, Issues, Debugger, and Terminal tabs. Build and run commands are under Project on GNUstep and Product on macOS; this guide uses “Project” for both.
 
 2. FILES AND EDITING
 
@@ -104,3 +105,15 @@ Debugger cannot start: check that GDB is installed. A custom GDB path can be set
 Files missing from a folder navigator: use Refresh Folder. Hidden files, obj, and build are intentionally omitted, and directory symlinks are not traversed.
 
 When reporting a crash, include the Ycode version or source revision, operating system, project format, exact steps, and a backtrace or terminal output. A small example project helps reproduce the problem.
+
+8. TERMINAL
+
+Choose Project > Open Terminal (Product > Open Terminal on macOS), or select the Terminal tab in the bottom area. A separate interactive shell starts in your project's directory when you first open its terminal. Use it for custom make targets, Git commands, scripts, and interactive tools. Console continues to show Ycode's build and run output.
+
+The shell stays running while you switch tabs or hide the bottom area. Closing the project hangs up its terminal. Ctrl+C interrupts the terminal's foreground job; Ctrl+D sends end-of-input. Project > Stop controls Ycode's build/run/debug operations, not the terminal. Type exit to end a shell, then press Return to start another. Restart Terminal in the context menu replaces the current session with a new shell in the original project directory.
+
+Drag to select text and use Edit > Copy or the context menu. Paste sends clipboard text, using bracketed-paste mode when the program requests it. Scroll with the mouse wheel or Shift+Page Up/Down to read up to 5,000 saved lines. Typing returns to the live screen. If a program captures mouse input, hold Shift to select text or open the context menu. Resizing the pane updates the shell's terminal size.
+
+The terminal supports ANSI/VT100 and many VT220/xterm text features: cursor movement, scrolling regions, alternate screens, line drawing, UTF-8, 256 colors and truecolor, text attributes, application cursor/keypad modes, function keys, and mouse reporting. Programs see TERM=xterm-256color. Inline graphics, hyperlinks, clipboard control sequences, and double-sized text lines are not supported. Unicode appearance depends on installed fonts; scrollback does not reflow on resize.
+
+Interactive sessions require a Unix-like system with POSIX PTYs. Ycode uses SHELL from its environment, then the account shell or /bin/sh. If a terminal cannot start, check the reported error, project directory permissions, and shell availability. Terminal emulation uses the bundled MIT-licensed libvterm library; its license is included in the application's ThirdPartyLicenses resources.

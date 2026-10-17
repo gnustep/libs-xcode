@@ -57,7 +57,43 @@
 #import "AppController.h"
 #import "YCodePreferences.h"
 #import "YCSoundInspectorView.h"
+#import "YCodeTerminalView.h"
 #include <math.h>
+#ifndef _WIN32
+#include <signal.h>
+#include <errno.h>
+#endif
+
+@interface YCodeTerminalView (Testing)
+- (BOOL)cellAtRow:(NSInteger)row column:(int)column cell:(VTermScreenCell *)cell;
+- (void)queueBytes:(const char *)bytes length:(size_t)length;
+- (NSPasteboard *)pasteboard;
+@end
+
+@interface YCodeTerminalTestView : YCodeTerminalView
+{
+  NSMutableData *_captured;
+}
+- (NSData *)takeOutput;
+@end
+@implementation YCodeTerminalTestView
+- (NSPasteboard *)pasteboard
+{
+  return [NSPasteboard pasteboardWithName:@"YcodeTerminalRegression"];
+}
+- (void)queueBytes:(const char *)bytes length:(size_t)length
+{
+  if (!_captured) _captured = [NSMutableData new];
+  [_captured appendBytes:bytes length:length];
+  [super queueBytes:bytes length:length];
+}
+- (NSData *)takeOutput
+{
+  NSData *result = [NSData dataWithData:_captured ? _captured : [NSData data]];
+  [_captured setLength:0]; return result;
+}
+- (void)dealloc { [_captured release]; [super dealloc]; }
+@end
 
 @interface YCodeProjectNavigatorController (Testing)
 - (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item;
@@ -160,6 +196,203 @@ static void testApplicationStartup(void)
 #endif
   [NSApp setDelegate:nil];
   [delegate autorelease];
+}
+
+static void terminalFeed(YCodeTerminalView *view, NSString *text)
+{
+  [view consumeData:[text dataUsingEncoding:NSUTF8StringEncoding]];
+}
+
+static BOOL terminalWait(YCodeTerminalView *view, NSString *text)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:8];
+  while ([deadline timeIntervalSinceNow] > 0) {
+    if ([[view screenText] rangeOfString:text].location != NSNotFound) return YES;
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+  }
+  return NO;
+}
+
+static void testTerminal(NSString *temporaryDirectory)
+{
+  YCodeTerminalTestView *view = [[YCodeTerminalTestView alloc] initWithFrame:NSMakeRect(0, 0, 800, 400)];
+  testAssert(![view isRunning], @"Constructing a terminal does not start a shell");
+  terminalFeed(view, @"abc\rZ\033[2;4HQ\033[1;2H\033[K");
+  VTermScreenCell cell;
+  [view cellAtRow:0 column:0 cell:&cell];
+  testAssert(cell.chars[0] == 'Z', @"Terminal carriage return overwrites the current line");
+  [view cellAtRow:0 column:1 cell:&cell];
+  testAssert(cell.chars[0] == 0, @"Erase-to-end clears terminal cells");
+  [view cellAtRow:1 column:3 cell:&cell];
+  testAssert(cell.chars[0] == 'Q', @"ANSI absolute cursor addressing uses rows and columns");
+  terminalFeed(view, @"\033[H\033[38;2;12;");
+  terminalFeed(view, @"34;56;48;5;196;1;4mC");
+  [view cellAtRow:0 column:0 cell:&cell];
+  testAssert(cell.chars[0] == 'C' && cell.fg.rgb.red == 12 && cell.fg.rgb.green == 34
+    && cell.fg.rgb.blue == 56 && cell.bg.indexed.idx == 196 && cell.attrs.bold && cell.attrs.underline,
+    @"Fragmented SGR supports truecolor, indexed color, bold, and underline");
+  terminalFeed(view, @"\033[0m\033[2J\033[Hnormal\033[?1049h\033[Halternate");
+  testAssert([[view screenText] hasPrefix:@"alternate"], @"Full-screen applications get an alternate screen");
+  terminalFeed(view, @"\033[?1049l");
+  testAssert([[view screenText] hasPrefix:@"normal"], @"Leaving alternate screen restores shell contents");
+  terminalFeed(view, @"\033[2J\033[H\033(0lqk\033(B");
+  testAssert([[view screenText] hasPrefix:@"┌─┐"], @"DEC line drawing character set renders box characters");
+  terminalFeed(view, @"\033[2J\033[H");
+  NSData *unicode = [@"é中é" dataUsingEncoding:NSUTF8StringEncoding];
+  NSUInteger byte;
+  for (byte = 0; byte < [unicode length]; byte++)
+    [view consumeData:[unicode subdataWithRange:NSMakeRange(byte, 1)]];
+  testAssert([[view screenText] hasPrefix:@"é中é"], @"Split UTF-8, wide characters, and combining marks survive reads");
+  terminalFeed(view, @"\033[2J\033[H1\r\n2\r\n3\r\n4\033[2;3r\033[3;1H\n");
+  [view cellAtRow:0 column:0 cell:&cell];
+  testAssert(cell.chars[0] == '1', @"Scrolling margins preserve the line above the region");
+  [view cellAtRow:1 column:0 cell:&cell];
+  testAssert(cell.chars[0] == '3', @"Scrolling margins move only the selected region");
+  terminalFeed(view, @"\033[r\033[2J\033[HABC\033[1;2H\033[@X");
+  testAssert([[view screenText] hasPrefix:@"AXBC"], @"Insert-character shifts terminal cells");
+  terminalFeed(view, @"\033[1;2H\033[P");
+  testAssert([[view screenText] hasPrefix:@"ABC"], @"Delete-character shifts terminal cells back");
+  terminalFeed(view, @"\033]0;untrusted title\007\033[2J\033[Hsafe");
+  testAssert([[view screenText] hasPrefix:@"safe"], @"OSC title bytes are consumed without printing escape payloads");
+  int row;
+  for (row = 0; row < 100; row++) terminalFeed(view, @"history\r\n");
+  testAssert([[view valueForKey:@"_history"] count] > 0, @"Terminal retains bounded scrollback");
+  terminalFeed(view, @"\033[3J\033[2J\033[H");
+  testAssert([[view valueForKey:@"_history"] count] == 0, @"Erase-scrollback clears retained history");
+  [view takeOutput];
+  terminalFeed(view, @"\033[4;9H\033[6n");
+  testAssert([[view takeOutput] isEqual:[@"\033[4;9R" dataUsingEncoding:NSUTF8StringEncoding]],
+    @"Device status query returns the current terminal cursor position");
+  unichar arrow = NSUpArrowFunctionKey;
+  NSString *up = [NSString stringWithCharacters:&arrow length:1];
+  NSEvent *upEvent = [NSEvent keyEventWithType:NSKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+    windowNumber:0 context:nil characters:up charactersIgnoringModifiers:up isARepeat:NO keyCode:0];
+  [view keyDown:upEvent];
+  testAssert([[view takeOutput] isEqual:[@"\033[A" dataUsingEncoding:NSUTF8StringEncoding]],
+    @"Normal cursor keys send CSI sequences");
+  terminalFeed(view, @"\033[?1h");
+  [view keyDown:upEvent];
+  testAssert([[view takeOutput] isEqual:[@"\033OA" dataUsingEncoding:NSUTF8StringEncoding]],
+    @"Application cursor mode switches keyboard sequences");
+  terminalFeed(view, @"\033[?1l\033[?2004h");
+  NSPasteboard *pasteboard = [view pasteboard];
+  [pasteboard declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
+  [pasteboard setString:@"first\nsecond" forType:NSStringPboardType];
+  [view paste:nil];
+  testAssert([[view takeOutput] isEqual:[@"\033[200~first\rsecond\033[201~" dataUsingEncoding:NSUTF8StringEncoding]],
+    @"Bracketed paste wraps multiline clipboard text for supporting applications");
+  terminalFeed(view, @"\033[?2004l\033[2J\033[Hcopy me");
+  [view selectAll:nil]; [view copy:nil];
+  testAssert([[pasteboard stringForType:NSStringPboardType] hasPrefix:@"copy me\n"],
+    @"Terminal selection copies text without escape sequences");
+  [view setValue:[NSNumber numberWithInt:-1] forKey:@"_selectionStart"];
+  [view setValue:[NSNumber numberWithInt:-1] forKey:@"_selectionEnd"];
+  terminalFeed(view, @"\033[2J\033[H");
+
+  // Exercise AppKit drawing, including wide glyphs, in a real window.
+  NSWindow *preview = [[NSWindow alloc] initWithContentRect:NSMakeRect(20, 20, 800, 400)
+    styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask
+    backing:NSBackingStoreBuffered defer:NO];
+  [preview setReleasedWhenClosed:NO]; [preview setTitle:@"Ycode Terminal"];
+  [preview setContentView:view]; [preview makeKeyAndOrderFront:nil];
+  terminalFeed(view, @"Ycode Terminal — ANSI / VT100\r\n\r\n\033[1mBold\033[0m  \033[4mUnderline\033[0m  \033[3mItalic\033[0m\r\n");
+  for (row = 0; row < 16; row++) terminalFeed(view,
+    [NSString stringWithFormat:@"\033[48;5;%dm  %2d  ", row, row]);
+  terminalFeed(view, @"\033[0m\r\n\r\n\033[38;2;90;200;255mTruecolor\033[0m  UTF-8: café 中 é\r\n\r\n\033(0lqqqqqqqqqqqqqqqqqqqqk\r\nx\033(B ANSI line drawing  \033(0x\r\nmqqqqqqqqqqqqqqqqqqqqj\033(B\r\n\r\n$ ");
+  [preview display];
+  if ([[[NSProcessInfo processInfo] arguments] containsObject:@"--terminal-preview"]) {
+    NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:[view bounds]];
+    [view cacheDisplayInRect:[view bounds] toBitmapImageRep:bitmap];
+    [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]]
+      writeToFile:@"/tmp/ycode-terminal-preview.png" atomically:YES];
+  }
+#ifndef _WIN32
+  NSString *directory = [temporaryDirectory stringByAppendingPathComponent:@"Terminal Folder With Spaces"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSError *error = nil;
+  testAssert([view startInDirectory:directory error:&error] && error == nil, @"Launch interactive shell on a PTY");
+  if ([view isRunning]) {
+    int child = [[view valueForKey:@"_child"] intValue];
+    testAssert([view startInDirectory:@"/" error:&error] && [[view valueForKey:@"_child"] intValue] == child,
+      @"Repeated opening preserves the project shell");
+    [view sendData:[@"stty -echo; printf '\\033[2J\\033[H'; test -t 0 && printf '%s%s\\n' YCODE_ISTTY _YES; pwd\r"
+      dataUsingEncoding:NSUTF8StringEncoding]];
+    testAssert(terminalWait(view, @"YCODE_ISTTY_YES") && terminalWait(view, directory),
+      @"Shell has a controlling terminal and starts in the project directory with spaces");
+    [view sendData:[@"printf '%s%s\\n' YCODE_TERM_ \"$TERM\"\r" dataUsingEncoding:NSUTF8StringEncoding]];
+    testAssert(terminalWait(view, @"YCODE_TERM_xterm-256color"), @"Shell advertises the implemented terminal protocol");
+    [view setFrameSize:NSMakeSize(640, 320)];
+    NSString *dimensions = [NSString stringWithFormat:@"%@ %@", [view valueForKey:@"_rows"], [view valueForKey:@"_columns"]];
+    [view sendData:[@"stty size\r" dataUsingEncoding:NSUTF8StringEncoding]];
+    testAssert(terminalWait(view, dimensions), @"Resizing propagates row and column counts through the PTY");
+    // A foreground job must receive Ctrl-C through the PTY, not terminate Ycode.
+    [view sendData:[@"sleep 30\r" dataUsingEncoding:NSUTF8StringEncoding]];
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
+    NSEvent *interrupt = [NSEvent keyEventWithType:NSKeyDown location:NSZeroPoint modifierFlags:NSControlKeyMask
+      timestamp:0 windowNumber:[preview windowNumber] context:nil characters:@"\003"
+      charactersIgnoringModifiers:@"c" isARepeat:NO keyCode:0];
+    [view keyDown:interrupt];
+    [view sendData:[@"printf '%s%s\\n' YCODE_INTERRUPT _OK\r" dataUsingEncoding:NSUTF8StringEncoding]];
+    testAssert(terminalWait(view, @"YCODE_INTERRUPT_OK") && [view isRunning], @"Ctrl-C interrupts the job and preserves the shell");
+    if ([[NSFileManager defaultManager] isExecutableFileAtPath:@"/usr/bin/vim"]) {
+      [view sendData:[@"/usr/bin/vim -Nu NONE -i NONE -n 'terminal editor.txt'\r" dataUsingEncoding:NSUTF8StringEncoding]];
+      NSDate *editorDeadline = [NSDate dateWithTimeIntervalSinceNow:8];
+      while (![[view valueForKey:@"_alternateScreen"] boolValue] && [editorDeadline timeIntervalSinceNow] > 0)
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+      testAssert([[view valueForKey:@"_alternateScreen"] boolValue], @"Vim enters its full-screen terminal mode");
+      [view sendData:[@"iYcode terminal editor test\033:wq\r" dataUsingEncoding:NSUTF8StringEncoding]];
+      editorDeadline = [NSDate dateWithTimeIntervalSinceNow:8];
+      while ([[view valueForKey:@"_alternateScreen"] boolValue] && [editorDeadline timeIntervalSinceNow] > 0)
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+      testAssert(![[view valueForKey:@"_alternateScreen"] boolValue]
+        && [[NSString stringWithContentsOfFile:[directory stringByAppendingPathComponent:@"terminal editor.txt"]
+          encoding:NSUTF8StringEncoding error:NULL] isEqual:@"Ycode terminal editor test\n"],
+        @"An interactive Vim session edits, saves, exits, and restores the shell screen");
+    }
+    [view sendData:[@"exit\r" dataUsingEncoding:NSUTF8StringEncoding]];
+    testAssert(terminalWait(view, @"Shell exited.") && ![view isRunning], @"Shell exit drains output and releases the PTY");
+    [view restart:nil];
+    testAssert([view isRunning], @"Exited shells can be restarted");
+    child = [[view valueForKey:@"_child"] intValue];
+    [preview close];
+    testAssert(![view isRunning], @"Closing the project window hangs up its terminal");
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:3];
+    while (kill(child, 0) == 0 && [deadline timeIntervalSinceNow] > 0)
+      [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+    testAssert(kill(child, 0) < 0 && errno == ESRCH, @"Terminal cleanup reaps the shell without zombies");
+  }
+  error = nil;
+  testAssert(![view startInDirectory:[directory stringByAppendingPathComponent:@"missing"] error:&error]
+    && error != nil, @"Invalid terminal directories produce a useful error");
+#endif
+  [preview close]; [preview release]; [view release];
+
+  // Verify project integration without launching a shell during normal startup.
+  YCodeProject *project = [[YCodeProject alloc] init];
+  NSError *loadError = nil;
+  NSString *integrationDirectory = [temporaryDirectory stringByAppendingPathComponent:@"Terminal Integration"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:integrationDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  testAssert([project readFromURL:[NSURL fileURLWithPath:integrationDirectory] ofType:@"YCodeMakeProjectType" error:&loadError],
+    @"Open a directory project for terminal integration");
+  [project makeWindowControllers];
+  YCodeWindowController *window = [[project windowControllers] objectAtIndex:0];
+  NSTabView *tabs = [window valueForKey:@"_bottomTabView"];
+  YCodeTerminalView *terminal = RETAIN([window valueForKey:@"_terminalView"]);
+  testAssert([tabs indexOfTabViewItemWithIdentifier:@"terminal"] != NSNotFound && ![terminal isRunning],
+    @"Project has a Terminal tab with no shell until selected");
+#ifndef _WIN32
+  [window openTerminal:nil];
+  testAssert([terminal isRunning] && [[[tabs selectedTabViewItem] identifier] isEqual:@"terminal"],
+    @"Open Terminal reveals its tab and starts a project shell");
+  [tabs selectTabViewItemWithIdentifier:@"console"];
+  testAssert([terminal isRunning], @"Switching tabs keeps the terminal session alive");
+  [project close];
+  testAssert(![terminal isRunning], @"Closing the project stops the terminal session");
+#else
+  [project close];
+#endif
+  [project release];
+  [terminal release];
 }
 
 static void testHelp(void)
@@ -3922,6 +4155,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-terminal"]) {
+    testTerminal(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode terminal checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-help"]) {
     testHelp();
     NSLog(@"Ycode help checks: %lu failures", (unsigned long)failures);
@@ -4117,6 +4356,7 @@ int main(void)
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
   testHelp();
+  testTerminal(temporaryDirectory);
   testMatchingDelimiters();
   testExternalFileChanges(temporaryDirectory);
   testWorkspaceFileOpening(temporaryDirectory);

@@ -36,6 +36,7 @@
 @class YCEditorView;
 @class YCInspectorView;
 @class YCodeVariablesView;
+@class YCodeTerminalView;
 
 @interface YCodeWindowController : NSWindowController <YCodeBuildSystemDelegate>
 {
@@ -82,6 +83,7 @@
     IBOutlet NSView *_bottomView;
     IBOutlet NSTabView *_bottomTabView;
     IBOutlet NSTextView *_consoleTextView;
+    YCodeTerminalView *_terminalView;
     NSTextView *_debuggerTextView;
     NSTextField *_debuggerCommandField;
     NSView *_debuggerControls;
@@ -116,6 +118,7 @@
 - (YCodeProject *)project;
 - (void)setProject:(YCodeProject *)project;
 - (void)openProject:(NSString *)projectPath;
+- (IBAction)openTerminal:(id)sender;
 - (void)closeProject;
 
 /**

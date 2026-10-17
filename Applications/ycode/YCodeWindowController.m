@@ -26,6 +26,7 @@
 #import "YCodeControlIcons.h"
 #import "YCodeVariablesView.h"
 #import "YCodeWindowController.h"
+#import "YCodeTerminalView.h"
 #import "YCodeProject.h"
 #import <XCode/PBXProject.h>
 #import <XCode/PBXTarget.h>
@@ -413,6 +414,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [_terminalView stop];
     [self stopBuildClock:nil];
     [[_project buildSystem] setDelegate:nil];
     [[_project buildSystem] stop];
@@ -458,6 +460,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)setProject:(YCodeProject *)project
 {
     if (_project != project) {
+        [_terminalView stop];
         [self stopBuildClock:nil];
         _hasBuildDuration = NO;
         _buildDuration = 0;
@@ -507,6 +510,8 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 	  {
 	    [[self window] setTitle:[[_project projectPath] lastPathComponent]];
 	  }
+        if ([[[_bottomTabView selectedTabViewItem] identifier] isEqual:@"terminal"])
+            [self tabView:_bottomTabView didSelectTabViewItem:[_bottomTabView selectedTabViewItem]];
       }
 }
 
@@ -1186,6 +1191,14 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [debuggerTab setView:debuggerView];
         [_bottomTabView addTabViewItem:debuggerTab];
         RELEASE(debuggerTab);
+
+        NSTabViewItem *terminalTab = [[NSTabViewItem alloc] initWithIdentifier:@"terminal"];
+        [terminalTab setLabel:@"Terminal"];
+        _terminalView = [[YCodeTerminalView alloc] initWithFrame:[_bottomTabView contentRect]];
+        [terminalTab setView:_terminalView];
+        [_bottomTabView addTabViewItem:terminalTab];
+        RELEASE(_terminalView);
+        RELEASE(terminalTab);
     }
 }
 
@@ -1939,6 +1952,21 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
 - (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)item
 {
     if (tabView == _bottomTabView) [self sizeIssuesColumn:nil];
+    if (tabView == _bottomTabView && [[item identifier] isEqual:@"terminal"] && _project) {
+        NSError *error = nil;
+        if (![_terminalView startInDirectory:[_project projectDirectoryPath] error:&error])
+            [[NSAlert alertWithError:error] runModal];
+        [[self window] makeFirstResponder:_terminalView];
+    }
+}
+
+- (IBAction)openTerminal:(id)sender
+{
+    if (!_project) return;
+    [self setBottomPanelVisible:YES];
+    [_bottomTabView selectTabViewItemWithIdentifier:@"terminal"];
+    // Selecting an already-selected tab does not always send a delegate callback.
+    [self tabView:_bottomTabView didSelectTabViewItem:[_bottomTabView selectedTabViewItem]];
 }
 
 

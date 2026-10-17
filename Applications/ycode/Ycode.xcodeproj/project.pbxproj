@@ -4,6 +4,27 @@
     };
     objectVersion = 56;
     objects = {
+        TERMINAL_YCODETERMINALVIEW_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTerminalView.h"; sourceTree = "<group>"; };
+        TERMINAL_YCODETERMINALVIEW = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTerminalView.m"; sourceTree = "<group>"; };
+        TERMINAL_YCODETERMINALVIEW_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_YCODETERMINALVIEW; };
+        TERMINAL_ENCODING = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/encoding.c"; sourceTree = "<group>"; };
+        TERMINAL_ENCODING_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_ENCODING; };
+        TERMINAL_KEYBOARD = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/keyboard.c"; sourceTree = "<group>"; };
+        TERMINAL_KEYBOARD_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_KEYBOARD; };
+        TERMINAL_MOUSE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/mouse.c"; sourceTree = "<group>"; };
+        TERMINAL_MOUSE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_MOUSE; };
+        TERMINAL_PARSER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/parser.c"; sourceTree = "<group>"; };
+        TERMINAL_PARSER_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_PARSER; };
+        TERMINAL_PEN = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/pen.c"; sourceTree = "<group>"; };
+        TERMINAL_PEN_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_PEN; };
+        TERMINAL_SCREEN = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/screen.c"; sourceTree = "<group>"; };
+        TERMINAL_SCREEN_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_SCREEN; };
+        TERMINAL_STATE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/state.c"; sourceTree = "<group>"; };
+        TERMINAL_STATE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_STATE; };
+        TERMINAL_UNICODE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/unicode.c"; sourceTree = "<group>"; };
+        TERMINAL_UNICODE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_UNICODE; };
+        TERMINAL_VTERM = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/vterm.c"; sourceTree = "<group>"; };
+        TERMINAL_VTERM_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_VTERM; };
         DEBUGGER_REGISTRY_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeDebuggerRegistry.h; sourceTree = "<group>"; };
         DEBUGGER_REGISTRY_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeDebuggerRegistry.m; sourceTree = "<group>"; };
         DEBUGGER_REGISTRY_BUILD = { isa = PBXBuildFile; fileRef = DEBUGGER_REGISTRY_M; };
@@ -32,6 +53,8 @@
         YCODE_LANGUAGES_BUILD = { isa = PBXBuildFile; fileRef = YCODE_LANGUAGES; };
         YCODE_HELP = { isa = PBXFileReference; lastKnownFileType = text; path = Resources/YcodeHelp.txt; sourceTree = "<group>"; };
         YCODE_HELP_BUILD = { isa = PBXBuildFile; fileRef = YCODE_HELP; };
+        TERMINAL_LICENSE = { isa = PBXFileReference; lastKnownFileType = folder; path = Resources/ThirdPartyLicenses; sourceTree = "<group>"; };
+        TERMINAL_LICENSE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_LICENSE; };
         YCODE_WATCHER_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeFileWatcher.h; sourceTree = "<group>"; };
         YCODE_WATCHER_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeFileWatcher.m; sourceTree = "<group>"; };
         YCODE_WATCHER_BUILD = { isa = PBXBuildFile; fileRef = YCODE_WATCHER_M; };
@@ -77,6 +100,9 @@
 	    sourceTree = "<group>";
 	};
 	"136A431D-9AB1-F606-7715-5BF1E6B7F2A0" = {
+	    buildSettings = {
+                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Terminal/libvterm/include");
+	    };
 	    isa = XCBuildConfiguration;
 	};
 	"1645F4CB-A38D-AE0E-5EE0-DCB5F492B181" = {
@@ -110,6 +136,7 @@
 	    children = (
 		YCODE_TEXT_SOURCE,
         YCODE_TEXT_HEADER,
+        TERMINAL_YCODETERMINALVIEW_H, TERMINAL_YCODETERMINALVIEW, TERMINAL_ENCODING, TERMINAL_KEYBOARD, TERMINAL_MOUSE, TERMINAL_PARSER, TERMINAL_PEN, TERMINAL_SCREEN, TERMINAL_STATE, TERMINAL_UNICODE, TERMINAL_VTERM,
         YCODE_FILE_INSPECTOR_SOURCE,
         YCODE_IMAGE_INSPECTOR_SOURCE,
         YCODE_SOUND_INSPECTOR_SOURCE,
@@ -119,7 +146,7 @@
         YCODE_PREFERENCES_H, YCODE_PREFERENCES_M, YCODE_WATCHER_H, YCODE_WATCHER_M, YCODE_LANGUAGE_H, YCODE_LANGUAGE_M,
         YCODE_FILE_ICONS,
         YCODE_DOCUMENT_ICON_H, YCODE_DOCUMENT_ICON_C, YCODE_DOCUMENT_ICON_M, YCODE_DOCUMENT_ICON_MM,
-        YCODE_TEMPLATES, YCODE_LANGUAGES, YCODE_HELP,
+        YCODE_TEMPLATES, YCODE_LANGUAGES, YCODE_HELP, TERMINAL_LICENSE,
         YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
         YCODE_DEBUGGER_SOURCE, DEBUGGER_BACKEND_H, DEBUGGER_VARIABLES_H, DEBUGGER_BUNDLES,
@@ -152,6 +179,7 @@
 	"3EFFAD06-3C2F-A000-447C-11BA1E695B29" = {
 	    files = (
 		YCODE_TEXT_BUILD,
+                TERMINAL_YCODETERMINALVIEW_BUILD, TERMINAL_ENCODING_BUILD, TERMINAL_KEYBOARD_BUILD, TERMINAL_MOUSE_BUILD, TERMINAL_PARSER_BUILD, TERMINAL_PEN_BUILD, TERMINAL_SCREEN_BUILD, TERMINAL_STATE_BUILD, TERMINAL_UNICODE_BUILD, TERMINAL_VTERM_BUILD,
         YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD, YCODE_WATCHER_BUILD, YCODE_LANGUAGE_BUILD,
         YCODE_FILE_INSPECTOR_BUILD,
         YCODE_IMAGE_INSPECTOR_BUILD,
@@ -203,13 +231,14 @@
 	"A5517E5A-3371-9A0A-79AA-5D307EFF3750" = {
 	    files = (
                 YCODE_DOCUMENT_ICON_H_BUILD, YCODE_DOCUMENT_ICON_C_BUILD, YCODE_DOCUMENT_ICON_M_BUILD, YCODE_DOCUMENT_ICON_MM_BUILD,
-                YCODE_FILE_ICONS_BUILD, YCODE_TEMPLATES_BUILD, YCODE_LANGUAGES_BUILD, YCODE_HELP_BUILD,
+                YCODE_FILE_ICONS_BUILD, YCODE_TEMPLATES_BUILD, YCODE_LANGUAGES_BUILD, YCODE_HELP_BUILD, TERMINAL_LICENSE_BUILD,
 	    );
 	    isa = PBXResourcesBuildPhase;
 	};
 	"C7C7CF2B-4FFF-0B0B-6ECC-A438DA282C79" = {
 	    buildSettings = {
 		SDKROOT = macosx;
+                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Terminal/libvterm/include");
 	    };
 	    isa = XCBuildConfiguration;
 	    name = Release;
