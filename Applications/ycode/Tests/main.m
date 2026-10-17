@@ -271,8 +271,27 @@ static void testTerminal(NSString *temporaryDirectory)
   int row;
   for (row = 0; row < 100; row++) terminalFeed(view, @"history\r\n");
   testAssert([[view valueForKey:@"_history"] count] > 0, @"Terminal retains bounded scrollback");
+  NSScroller *historyScroller = [view valueForKey:@"_historyScroller"];
+  testAssert([historyScroller knobProportion] < 1.0 && [historyScroller doubleValue] == 1.0,
+    @"Terminal scrollbar follows live output when history is available");
+  [historyScroller setDoubleValue:0];
+  [historyScroller sendAction:[historyScroller action] to:[historyScroller target]];
+  testAssert([[view valueForKey:@"_scrollOffset"] integerValue] == [[view valueForKey:@"_history"] count],
+    @"Dragging the scrollbar to the top reaches the oldest retained output");
+  NSInteger previousOffset = [[view valueForKey:@"_scrollOffset"] integerValue];
+  terminalFeed(view, @"new output\r\n");
+  testAssert([[view valueForKey:@"_scrollOffset"] integerValue] == previousOffset + 1,
+    @"New output preserves the position while browsing history");
+  [historyScroller setDoubleValue:1];
+  [historyScroller sendAction:[historyScroller action] to:[historyScroller target]];
+  testAssert([[view valueForKey:@"_scrollOffset"] integerValue] == 0,
+    @"Dragging the scrollbar to the bottom returns to live output");
+  terminalFeed(view, @"\033[?1049h");
+  testAssert([historyScroller knobProportion] == 1.0, @"Alternate screens do not expose shell history");
+  terminalFeed(view, @"\033[?1049l");
+  testAssert([historyScroller knobProportion] < 1.0, @"Returning from an alternate screen restores the history scrollbar");
   terminalFeed(view, @"\033[3J\033[2J\033[H");
-  testAssert([[view valueForKey:@"_history"] count] == 0, @"Erase-scrollback clears retained history");
+  testAssert([[view valueForKey:@"_history"] count] == 0 && [historyScroller knobProportion] == 1.0, @"Erase-scrollback clears retained history and disables the scrollbar");
   [view takeOutput];
   terminalFeed(view, @"\033[4;9H\033[6n");
   testAssert([[view takeOutput] isEqual:[@"\033[4;9R" dataUsingEncoding:NSUTF8StringEncoding]],
@@ -400,7 +419,7 @@ static void testTerminal(NSString *temporaryDirectory)
   [window openTerminal:nil];
   testAssert([terminal isRunning] && [[[tabs selectedTabViewItem] identifier] isEqual:@"terminal"],
     @"Open Terminal reveals its tab and starts a project shell");
-  int expectedColumns = MAX(2, (int)([tabs contentRect].size.width /
+  int expectedColumns = MAX(2, (int)(([tabs contentRect].size.width - [NSScroller scrollerWidth]) /
     [[terminal valueForKey:@"_cellWidth"] doubleValue]));
   int expectedRows = MAX(2, (int)([tabs contentRect].size.height /
     [[terminal valueForKey:@"_cellHeight"] doubleValue]));
@@ -415,7 +434,7 @@ static void testTerminal(NSString *temporaryDirectory)
   int terminalChild = [[terminal valueForKey:@"_child"] intValue];
   [[window window] setContentSize:NSMakeSize(900, 600)];
   [tabs selectTabViewItemWithIdentifier:@"terminal"];
-  expectedColumns = MAX(2, (int)([tabs contentRect].size.width /
+  expectedColumns = MAX(2, (int)(([tabs contentRect].size.width - [NSScroller scrollerWidth]) /
     [[terminal valueForKey:@"_cellWidth"] doubleValue]));
   expectedRows = MAX(2, (int)([tabs contentRect].size.height /
     [[terminal valueForKey:@"_cellHeight"] doubleValue]));

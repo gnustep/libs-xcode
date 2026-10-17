@@ -31,6 +31,8 @@
   int _child;
   int _rows, _columns;
   CGFloat _cellWidth, _cellHeight;
+  NSScroller *_historyScroller;
+  CGFloat _wheelRemainder;
   NSInteger _scrollOffset;
   NSInteger _selectionStart, _selectionEnd;
   BOOL _cursorVisible, _alternateScreen, _mouseReporting;

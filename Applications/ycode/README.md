@@ -274,7 +274,7 @@ hangs up the current session and starts again in the project's original director
 
 Drag to select text, then use **Edit > Copy** or the context menu. **Paste**
 supports bracketed-paste mode when requested by the shell or program. Scroll
-with the mouse wheel or Shift+Page Up/Down through saved lines (5,000 by default);
+with the scrollbar, mouse wheel, trackpad, or Shift+Page Up/Down through saved lines (5,000 by default);
 typing returns to the live screen. When a program enables mouse reporting,
 hold Shift to select text or use the context menu instead of sending mouse input.
 Resizing the pane updates the PTY size and notifies the foreground program.

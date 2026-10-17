@@ -32,6 +32,8 @@
 - (int)popLine:(int)columns cells:(VTermScreenCell *)cells;
 - (void)clearHistory;
 - (void)resizeTerminal;
+- (void)updateScroller;
+- (void)scrollHistory:(NSScroller *)sender;
 - (void)preferencesChanged:(NSNotification *)notification;
 - (void)ringBell;
 @end
@@ -114,8 +116,16 @@ static VTermModifier terminalModifiers(NSEvent *event)
     _cellHeight = ceil([_font ascender] - [_font descender] + 3);
     _history = [NSMutableArray new];
     _pendingInput = [NSMutableData new];
+    CGFloat scrollerWidth = [NSScroller scrollerWidth];
+    _historyScroller = [[NSScroller alloc] initWithFrame:NSMakeRect(MAX(0, frame.size.width - scrollerWidth), 0,
+      scrollerWidth, frame.size.height)];
+    [_historyScroller setAutoresizingMask:NSViewMinXMargin | NSViewHeightSizable];
+    [_historyScroller setTarget:self];
+    [_historyScroller setAction:@selector(scrollHistory:)];
+    [self addSubview:_historyScroller];
+    RELEASE(_historyScroller);
     _rows = MAX(2, (int)(frame.size.height / _cellHeight));
-    _columns = MAX(2, (int)(frame.size.width / _cellWidth));
+    _columns = MAX(2, (int)(MAX(0, frame.size.width - scrollerWidth) / _cellWidth));
     _terminal = vterm_new(_rows, _columns);
     vterm_set_utf8(_terminal, 1);
     vterm_output_set_callback(_terminal, terminalOutput, self);
@@ -169,6 +179,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
   _audibleBell = [YCodePreferences terminalAudibleBell];
   _allowCursorBlink = [YCodePreferences terminalCursorBlink];
   [self resizeTerminal];
+  [self updateScroller];
   [self setNeedsDisplay:YES];
 }
 - (BOOL)isOpaque { return YES; }
@@ -240,6 +251,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
 {
   vterm_input_write(_terminal, [data bytes], [data length]);
   vterm_screen_flush_damage(_screen);
+  [self updateScroller];
 }
 - (void)queueBytes:(const char *)bytes length:(size_t)length
 {
@@ -262,7 +274,8 @@ static VTermModifier terminalModifiers(NSEvent *event)
 - (void)resizeTerminal
 {
   int rows = MIN(1000, MAX(2, (int)([self bounds].size.height / _cellHeight)));
-  int cols = MIN(1000, MAX(2, (int)([self bounds].size.width / _cellWidth)));
+  int cols = MIN(1000, MAX(2, (int)(MAX(0, [self bounds].size.width - [NSScroller scrollerWidth]) / _cellWidth)));
+  [self updateScroller];
   if (rows == _rows && cols == _columns) return;
   _rows = rows; _columns = cols;
   _selectionStart = _selectionEnd = -1;
@@ -275,6 +288,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
   }
 #endif
   vterm_screen_flush_damage(_screen);
+  [self updateScroller];
   [self setNeedsDisplay:YES];
 }
 
@@ -591,9 +605,11 @@ static VTermModifier terminalModifiers(NSEvent *event)
       && (c == NSPageUpFunctionKey || c == NSPageDownFunctionKey)) {
     _scrollOffset = MIN((NSInteger)[_history count], MAX(0,
       _scrollOffset + (c == NSPageUpFunctionKey ? _rows : -_rows)));
+    [self updateScroller];
     [self setNeedsDisplay:YES]; return;
   }
   _scrollOffset = 0; _selectionStart = _selectionEnd = -1;
+  _wheelRemainder = 0; [self updateScroller];
   VTermModifier mods = terminalModifiers(event);
   if (c == NSBackTabCharacter) mods |= VTERM_MOD_SHIFT;
   VTermKey key = VTERM_KEY_NONE;
@@ -686,11 +702,39 @@ static VTermModifier terminalModifiers(NSEvent *event)
 - (void)otherMouseUp:(NSEvent *)event { [self reportMouse:event button:2 pressed:NO]; }
 - (void)otherMouseDragged:(NSEvent *)event { [self reportMouse:event button:0 pressed:NO]; }
 - (void)mouseMoved:(NSEvent *)event { [self reportMouse:event button:0 pressed:NO]; }
+- (void)updateScroller
+{
+  NSInteger history = _alternateScreen ? 0 : [_history count];
+  _scrollOffset = MIN(history, MAX(0, _scrollOffset));
+  [_historyScroller setFloatValue:history ? 1.0 - (double)_scrollOffset / history : 1.0
+    knobProportion:(double)_rows / MAX(1, history + _rows)];
+  [_historyScroller setEnabled:history > 0];
+}
+- (void)scrollHistory:(NSScroller *)sender
+{
+  NSInteger history = _alternateScreen ? 0 : [_history count];
+  switch ([sender hitPart]) {
+    case NSScrollerDecrementLine: _scrollOffset++; break;
+    case NSScrollerIncrementLine: _scrollOffset--; break;
+    case NSScrollerDecrementPage: _scrollOffset += MAX(1, _rows - 1); break;
+    case NSScrollerIncrementPage: _scrollOffset -= MAX(1, _rows - 1); break;
+    default: _scrollOffset = lround((1.0 - [sender doubleValue]) * history); break;
+  }
+  _wheelRemainder = 0;
+  [self updateScroller];
+  [self setNeedsDisplay:YES];
+}
 - (void)scrollWheel:(NSEvent *)event
 {
+  if ([event deltaY] == 0) return;
   if ([self reportMouse:event button:[event deltaY] > 0 ? 4 : 5 pressed:YES]) return;
   if (_alternateScreen) return;
-  _scrollOffset = MIN((NSInteger)[_history count], MAX(0, _scrollOffset + (NSInteger)([event deltaY] * 3)));
+  // Preserve fractional trackpad movement instead of truncating every event.
+  _wheelRemainder += [event deltaY] * 3;
+  NSInteger lines = (NSInteger)_wheelRemainder;
+  _wheelRemainder -= lines;
+  _scrollOffset += lines;
+  [self updateScroller];
   [self setNeedsDisplay:YES];
 }
 - (void)selectAll:(id)sender
@@ -731,7 +775,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
   vterm_keyboard_start_paste(_terminal);
   [self sendData:[text dataUsingEncoding:NSUTF8StringEncoding]];
   vterm_keyboard_end_paste(_terminal);
-  _scrollOffset = 0; [self setNeedsDisplay:YES];
+  _scrollOffset = 0; _wheelRemainder = 0; [self updateScroller]; [self setNeedsDisplay:YES];
 }
 - (NSMenu *)menuForEvent:(NSEvent *)event
 {
