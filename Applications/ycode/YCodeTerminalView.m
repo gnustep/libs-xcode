@@ -215,6 +215,13 @@ static VTermModifier terminalModifiers(NSEvent *event)
 }
 - (void)sendData:(NSData *)data { [self queueBytes:[data bytes] length:[data length]]; }
 
+- (void)setFrame:(NSRect)frame
+{
+  [super setFrame:frame];
+  // NSTabView uses setFrame: when installing a selected tab. GNUstep does
+  // not route that change through setFrameSize:.
+  if (_terminal) [self resizeTerminal];
+}
 - (void)setFrameSize:(NSSize)size
 {
   [super setFrameSize:size];
@@ -241,6 +248,9 @@ static VTermModifier terminalModifiers(NSEvent *event)
 
 - (BOOL)startInDirectory:(NSString *)directory error:(NSError **)error
 {
+  // Use the final visible bounds before creating the PTY, and refresh an
+  // existing session when a previously hidden tab is selected again.
+  [self resizeTerminal];
   if ([self isRunning]) return YES;
   int failure = 0;
 #ifndef _WIN32

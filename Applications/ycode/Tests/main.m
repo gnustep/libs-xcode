@@ -215,6 +215,8 @@ static BOOL terminalWait(YCodeTerminalView *view, NSString *text)
 
 static void testTerminal(NSString *temporaryDirectory)
 {
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedWindowFrame = [[defaults objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
   YCodeTerminalTestView *view = [[YCodeTerminalTestView alloc] initWithFrame:NSMakeRect(0, 0, 800, 400)];
   testAssert(![view isRunning], @"Constructing a terminal does not start a shell");
   terminalFeed(view, @"abc\rZ\033[2;4HQ\033[1;2H\033[K");
@@ -381,11 +383,36 @@ static void testTerminal(NSString *temporaryDirectory)
   testAssert([tabs indexOfTabViewItemWithIdentifier:@"terminal"] != NSNotFound && ![terminal isRunning],
     @"Project has a Terminal tab with no shell until selected");
 #ifndef _WIN32
+  [window setBottomPanelVisible:NO];
+  [[window window] setContentSize:NSMakeSize(1100, 700)];
   [window openTerminal:nil];
   testAssert([terminal isRunning] && [[[tabs selectedTabViewItem] identifier] isEqual:@"terminal"],
     @"Open Terminal reveals its tab and starts a project shell");
+  int expectedColumns = MAX(2, (int)([tabs contentRect].size.width /
+    [[terminal valueForKey:@"_cellWidth"] doubleValue]));
+  int expectedRows = MAX(2, (int)([tabs contentRect].size.height /
+    [[terminal valueForKey:@"_cellHeight"] doubleValue]));
+  testAssert([[terminal valueForKey:@"_columns"] intValue] == expectedColumns
+    && [[terminal valueForKey:@"_rows"] intValue] == expectedRows,
+    @"Opening Terminal sizes its screen to the visible tab after the window was resized");
+  [terminal sendData:[@"stty -echo; stty size\r" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert(terminalWait(terminal, [NSString stringWithFormat:@"%d %d", expectedRows, expectedColumns]),
+    @"The shell receives the visible terminal dimensions on first opening");
   [tabs selectTabViewItemWithIdentifier:@"console"];
   testAssert([terminal isRunning], @"Switching tabs keeps the terminal session alive");
+  int terminalChild = [[terminal valueForKey:@"_child"] intValue];
+  [[window window] setContentSize:NSMakeSize(900, 600)];
+  [tabs selectTabViewItemWithIdentifier:@"terminal"];
+  expectedColumns = MAX(2, (int)([tabs contentRect].size.width /
+    [[terminal valueForKey:@"_cellWidth"] doubleValue]));
+  expectedRows = MAX(2, (int)([tabs contentRect].size.height /
+    [[terminal valueForKey:@"_cellHeight"] doubleValue]));
+  testAssert([[terminal valueForKey:@"_columns"] intValue] == expectedColumns
+    && [[terminal valueForKey:@"_child"] intValue] == terminalChild,
+    @"Returning to Terminal updates its width without restarting the shell");
+  [terminal sendData:[@"stty size\r" dataUsingEncoding:NSUTF8StringEncoding]];
+  testAssert(terminalWait(terminal, [NSString stringWithFormat:@"%d %d", expectedRows, expectedColumns]),
+    @"The running shell receives the new dimensions when its tab is reopened");
   [project close];
   testAssert(![terminal isRunning], @"Closing the project stops the terminal session");
 #else
@@ -393,6 +420,9 @@ static void testTerminal(NSString *temporaryDirectory)
 #endif
   [project release];
   [terminal release];
+  if (savedWindowFrame) [defaults setObject:savedWindowFrame forKey:@"NSWindow Frame YCodeMainWindow"];
+  else [defaults removeObjectForKey:@"NSWindow Frame YCodeMainWindow"];
+  [savedWindowFrame release];
 }
 
 static void testHelp(void)
