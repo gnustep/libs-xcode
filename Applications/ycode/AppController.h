@@ -20,6 +20,7 @@
 {
   YCodeWindowController *windowController;
   NSPanel *_preferencesPanel;
+  NSWindow *_helpWindow;
   NSMutableArray *_editorColorWells;
   NSPopUpButton *_preferencesGroup;
   NSView *_colorPreferencesView;
@@ -108,6 +109,9 @@
  * Shows the preferences panel.
  */
 - (void) showPrefPanel: (id)sender;
+
+/** Shows the bundled Ycode user guide without requiring an open project. */
+- (IBAction) showHelp: (id)sender;
 
 /**
  * Opens a project.

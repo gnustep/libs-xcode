@@ -1,0 +1,106 @@
+YCODE HELP
+
+Ycode is an editor and development environment for Xcode, ProjectCenter, and Makefile projects. This guide is available offline. You can select and copy its text.
+
+CONTENTS
+1. Getting started
+2. Files and editing
+3. Building, running, and testing
+4. Makefile projects
+5. Debugging
+6. Preferences and shortcuts
+7. Troubleshooting
+
+1. GETTING STARTED
+
+Choose File > Open Project to open an .xcodeproj or .pcproj project, a project folder, or a GNUmakefile, makefile, or Makefile. Selecting a makefile opens its containing folder. No Xcode project is required for Makefile projects.
+
+To start a new project, choose File > New Project. Choose a location, enter a name, select a project type and Xcode or ProjectCenter format, then choose Create. Ycode creates a new folder; existing nonempty folders are not overwritten.
+
+The navigator on the left shows your project's groups and files. Select a file to edit it. Double-click a file to open it in its associated application; interface files such as Gorm and XIB documents are edited externally. Double-click a group to expand or collapse it. Recent Documents in the File menu reopens previous projects.
+
+Use View to show or hide the Navigator, Inspector, and Debug Area. The bottom area contains Console, Issues, and Debugger tabs. Build and run commands are under Project on GNUstep and Product on macOS; this guide uses “Project” for both.
+
+2. FILES AND EDITING
+
+File > New File creates an editor tab. Save writes the active source file; Save As writes it to a selected location. Save All saves open edited files. Save Project saves project structure and settings separately from source edits. Close File closes the current editor tab and asks about unsaved changes.
+
+Use the navigator's context menu to add files or groups. Removing a file from an Xcode project removes its reference, leaving the original file on disk. Save Project after changing project membership. In folder projects, Add Group creates a directory on disk, and Refresh Folder updates the navigator after external changes.
+
+Edit > Find searches the current file; Edit > Replace changes matching text. The Search navigator searches across project files and lets you open matching locations. Edit > Comment/Uncomment Lines toggles comments for the selected lines. Convert Tabs to Spaces uses your configured tab width.
+
+When an unmodified open file changes on disk, Ycode reloads it. If you have unsaved edits, resolve the reported conflict before saving over the external changes.
+
+3. BUILDING, RUNNING, AND TESTING
+
+Select the target, configuration, and architecture in the toolbar as appropriate for your project. Choose Project > Build. Console shows tool output; Issues collects reported errors and warnings so you can navigate to source locations. Project > Clean removes build products using the project's build system.
+
+Project > Run builds and launches the selected executable. Project > Stop cancels a running operation. Library and resource targets do not necessarily have an executable to run. Makefile projects need an Executable setting as described below.
+
+In the Test navigator, choose Run Tests to save edits and run tests. GNUmakefile projects default to make check; other Makefile projects default to make test. Xcode projects use buildtool and xctest on GNUstep, and xcodebuild test on macOS. Test results appear in the Test navigator; Console includes full output and launch errors.
+
+4. MAKEFILE PROJECTS
+
+Ycode runs make in the folder you opened. Your makefiles remain responsible for source lists, dependencies, compiler flags, and build rules. Opening the folder does not generate an Xcode project or rewrite your makefiles.
+
+Build uses make's default target unless you configure another target. Clean uses clean. Tests use check for GNUmakefile projects and test otherwise. Hidden entries and the obj and build directories are omitted from the navigator.
+
+Optional settings are stored in .ycode.plist in the project folder. File > Create .ycode.plist creates and opens this file when it does not exist. Ycode tries to find a built executable and may ask you to choose one. Build first if needed. Cancelling the chooser leaves the settings file uncreated.
+
+Example settings:
+
+{
+    MakeTargets = (all, tools);
+    BuildTarget = all;
+    CleanTarget = clean;
+    TestTarget = check;
+    Executable = "obj/My Tool";
+}
+
+MakeTargets provides the toolbar target choices. Automatic uses BuildTarget, or make's default target when BuildTarget is absent. CleanTarget and TestTarget select their respective rules. Ycode does not discover targets by parsing arbitrary makefiles.
+
+Executable can be an absolute path or a path relative to the project folder. For an application bundle, use the executable inside the bundle. Run and Debug build first and then use this path. Reopen the project after editing settings. Save Project saves folder settings, not the makefile's source lists.
+
+5. DEBUGGING
+
+The included debugger backend uses GDB, which must be installed and available on PATH. Build with debug symbols for source stepping and variables. Choose Project > Debug to build and start the debugger. It initially waits for Go so you can set breakpoints before execution.
+
+Select a line in a source implementation file and choose Project > Debugger > Toggle Breakpoint at Selection. During debugging you can also click the breakpoint gutter; Shift-click enables or disables a breakpoint. Headers and resource files do not support source breakpoints. Red dots mark enabled breakpoints, grey dots mark disabled ones, and a yellow arrow marks the stopped line.
+
+Use Go, Pause, Continue, Restart, Next, Step Into, and Step Out from the Debugger submenu or the bottom Debugger toolbar. Up and Down move between stack frames. The variables outline shows values for the selected frame while paused; expand entries to inspect children.
+
+The Debugger command field accepts GDB commands such as backtrace and print variable. Press Return to send a command. Console and debugger output are selectable and can be copied. Project > Stop ends the debugger session.
+
+6. PREFERENCES AND SHORTCUTS
+
+On GNUstep, Preferences and Help are in Info. On macOS, Preferences is in the application menu and Ycode Help is in Help. Preferences controls pane fonts, editor colors, tab width, spaces versus tabs, indentation, rulers, and matching delimiters. Project indentation can use compiler indentation settings from the active target.
+
+Common commands and their menu keys:
+New Project: Command-N
+Open Project: Command-O
+Save: Command-S
+Close File: Command-W
+Find: Command-F
+Build: Command-B
+Clean: Command-K
+Run: Command-R
+Stop: Command-period
+Help: Command-?
+
+GNUstep's Command modifier depends on your desktop configuration, often Alt. Follow the key equivalents shown in your menus.
+
+7. TROUBLESHOOTING
+
+Project will not open: confirm the selected path exists and is readable. An Xcode package must contain a valid project.pbxproj. For a make-based project, select its makefile or the folder containing it.
+
+Build tool not found: start Ycode with the GNUstep development environment configured. Makefile projects require make and the tools referenced by their rules. Xcode builds on GNUstep require buildtool; native macOS builds require Xcode's command-line tools. Read Console for the exact failing command.
+
+Run or Debug unavailable: select a runnable target. For a folder project, build the program and configure Executable in .ycode.plist, then reopen the folder. Check that the path points to an executable file rather than an application bundle directory.
+
+Tests fail immediately: confirm the configured test target exists. GNUstep XCTest execution requires xctest on PATH. Read Console for build and runner errors before investigating individual test results.
+
+Debugger cannot start: check that GDB is installed. A custom GDB path can be set with the DebuggerPath user preference. Pending breakpoints may resolve when a shared library loads; if they remain pending, check debug symbols and source paths.
+
+Files missing from a folder navigator: use Refresh Folder. Hidden files, obj, and build are intentionally omitted, and directory symlinks are not traversed.
+
+When reporting a crash, include the Ycode version or source revision, operating system, project format, exact steps, and a backtrace or terminal output. A small example project helps reproduce the problem.

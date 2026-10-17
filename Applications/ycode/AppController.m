@@ -18,6 +18,7 @@
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeTextView.h"
+#include <float.h>
 
 @interface AppController (Private)
 - (void)updateApplicationMenuName;
@@ -115,6 +116,8 @@ YCodeFileURLFromPath(NSString *path)
   RELEASE(_fontChoices);
   RELEASE(_editorColorWells);
   RELEASE(_preferencesPanel);
+  [_helpWindow close];
+  RELEASE(_helpWindow);
   [super dealloc];
 }
 
@@ -177,7 +180,7 @@ YCodeFileURLFromPath(NSString *path)
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItem:YCodeMenuItem(@"Preferences...", @selector(showPrefPanel:), @",", self)];
 #ifdef GNUSTEP
-    [appMenu addItem:YCodeMenuItem(@"Help", @selector(showHelp:), @"?", NSApp)];
+    [appMenu addItem:YCodeMenuItem(@"Help", @selector(showHelp:), @"?", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"Info" action:NULL keyEquivalent:@""];
 #else
     [appMenu addItem:[NSMenuItem separatorItem]];
@@ -311,7 +314,7 @@ YCodeFileURLFromPath(NSString *path)
     [mainMenu addItem:YCodeMenuItem(@"Quit", @selector(terminate:), @"q", NSApp)];
 #else
     helpMenu = [[NSMenu alloc] initWithTitle:@"Help"];
-    [helpMenu addItem:YCodeMenuItem(@"Ycode Help", @selector(showHelp:), @"?", NSApp)];
+    [helpMenu addItem:YCodeMenuItem(@"Ycode Help", @selector(showHelp:), @"?", self)];
     menuItem = [[NSMenuItem alloc] initWithTitle:@"Help" action:NULL keyEquivalent:@""];
     [menuItem setSubmenu:helpMenu];
     [mainMenu addItem:menuItem];
@@ -700,6 +703,8 @@ YCodeFileURLFromPath(NSString *path)
         } else if (action == @selector(openDocument:)) {
             [item setTarget:self];
             [item setAction:@selector(openProject:)];
+        } else if (action == @selector(showHelp:)) {
+            [item setTarget:self];
         } else if (action == @selector(saveDocument:) ||
                    action == @selector(saveDocumentAs:) ||
                    action == @selector(saveDocumentTo:) ||
@@ -1112,6 +1117,49 @@ YCodeFileURLFromPath(NSString *path)
         boolForKey:@"YCodeHideEditorRulers"] ? NSOffState : NSOnState];
     [self selectPreferenceGroup:nil];
     [_preferencesPanel makeKeyAndOrderFront:sender];
+}
+
+- (IBAction) showHelp: (id)sender
+{
+    if (_helpWindow == nil) {
+        NSString *path = [[NSBundle mainBundle] pathForResource:@"YcodeHelp" ofType:@"txt"];
+        NSString *text = path ? [NSString stringWithContentsOfFile:path
+            encoding:NSUTF8StringEncoding error:NULL] : nil;
+        if (text == nil) {
+            NSRunAlertPanel(@"Ycode Help", @"The bundled user guide could not be loaded. Rebuild or reinstall Ycode to restore its help resources.",
+                @"OK", nil, nil);
+            return;
+        }
+        _helpWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 720, 600)
+            styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask
+            backing:NSBackingStoreBuffered defer:NO];
+        [_helpWindow setReleasedWhenClosed:NO];
+        [_helpWindow setTitle:@"Ycode Help"];
+        [_helpWindow setMinSize:NSMakeSize(400, 300)];
+        NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:[[_helpWindow contentView] bounds]];
+        [scroll setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [scroll setHasVerticalScroller:YES];
+        NSTextView *view = [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0,
+            [scroll contentSize].width, [scroll contentSize].height)];
+        [view setVerticallyResizable:YES];
+        [view setHorizontallyResizable:NO];
+        [view setAutoresizingMask:NSViewWidthSizable];
+        [view setMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
+        [[view textContainer] setWidthTracksTextView:YES];
+        [[view textContainer] setContainerSize:NSMakeSize([scroll contentSize].width, FLT_MAX)];
+        [view setTextContainerInset:NSMakeSize(18, 18)];
+        [view setFont:[NSFont systemFontOfSize:14]];
+        [view setString:text];
+        [view setEditable:NO];
+        [view setSelectable:YES];
+        [scroll setDocumentView:view];
+        [[_helpWindow contentView] addSubview:scroll];
+        [_helpWindow setInitialFirstResponder:view];
+        RELEASE(view);
+        RELEASE(scroll);
+        [_helpWindow center];
+    }
+    [_helpWindow makeKeyAndOrderFront:sender];
 }
 
 - (IBAction) openProject: (id)sender

@@ -30,6 +30,8 @@
         YCODE_LANGUAGE_BUILD = { isa = PBXBuildFile; fileRef = YCODE_LANGUAGE_M; };
         YCODE_LANGUAGES = { isa = PBXFileReference; lastKnownFileType = folder; path = Resources/Languages; sourceTree = "<group>"; };
         YCODE_LANGUAGES_BUILD = { isa = PBXBuildFile; fileRef = YCODE_LANGUAGES; };
+        YCODE_HELP = { isa = PBXFileReference; lastKnownFileType = text; path = Resources/YcodeHelp.txt; sourceTree = "<group>"; };
+        YCODE_HELP_BUILD = { isa = PBXBuildFile; fileRef = YCODE_HELP; };
         YCODE_WATCHER_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeFileWatcher.h; sourceTree = "<group>"; };
         YCODE_WATCHER_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeFileWatcher.m; sourceTree = "<group>"; };
         YCODE_WATCHER_BUILD = { isa = PBXBuildFile; fileRef = YCODE_WATCHER_M; };
@@ -117,7 +119,7 @@
         YCODE_PREFERENCES_H, YCODE_PREFERENCES_M, YCODE_WATCHER_H, YCODE_WATCHER_M, YCODE_LANGUAGE_H, YCODE_LANGUAGE_M,
         YCODE_FILE_ICONS,
         YCODE_DOCUMENT_ICON_H, YCODE_DOCUMENT_ICON_C, YCODE_DOCUMENT_ICON_M, YCODE_DOCUMENT_ICON_MM,
-        YCODE_TEMPLATES, YCODE_LANGUAGES,
+        YCODE_TEMPLATES, YCODE_LANGUAGES, YCODE_HELP,
         YCODE_ICONS_SOURCE,
         YCODE_ICONS_HEADER,
         YCODE_DEBUGGER_SOURCE, DEBUGGER_BACKEND_H, DEBUGGER_VARIABLES_H, DEBUGGER_BUNDLES,
@@ -201,7 +203,7 @@
 	"A5517E5A-3371-9A0A-79AA-5D307EFF3750" = {
 	    files = (
                 YCODE_DOCUMENT_ICON_H_BUILD, YCODE_DOCUMENT_ICON_C_BUILD, YCODE_DOCUMENT_ICON_M_BUILD, YCODE_DOCUMENT_ICON_MM_BUILD,
-                YCODE_FILE_ICONS_BUILD, YCODE_TEMPLATES_BUILD, YCODE_LANGUAGES_BUILD,
+                YCODE_FILE_ICONS_BUILD, YCODE_TEMPLATES_BUILD, YCODE_LANGUAGES_BUILD, YCODE_HELP_BUILD,
 	    );
 	    isa = PBXResourcesBuildPhase;
 	};

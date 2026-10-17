@@ -162,6 +162,42 @@ static void testApplicationStartup(void)
   [delegate autorelease];
 }
 
+static void testHelp(void)
+{
+  AppController *delegate = [[AppController alloc] init];
+  [delegate buildMainMenu];
+  [delegate awakeFromNib];
+#ifdef GNUSTEP
+  id item = [[[[NSApp mainMenu] itemWithTitle:@"Info"] submenu] itemWithTitle:@"Help"];
+#else
+  id item = [[[[NSApp mainMenu] itemWithTitle:@"Help"] submenu] itemWithTitle:@"Ycode Help"];
+#endif
+  testAssert([item target] == delegate && [item action] == @selector(showHelp:),
+    @"Help menu routes to the application user guide");
+  NSUInteger count = [[[NSDocumentController sharedDocumentController] documents] count];
+  testAssert([NSApp sendAction:[item action] to:[item target] from:item], @"Invoke Help through its menu action");
+  NSWindow *window = [delegate valueForKey:@"_helpWindow"];
+  testAssert([window isVisible] && [[window title] isEqual:@"Ycode Help"], @"Help displays without opening a project");
+  NSScrollView *scroll = [[[window contentView] subviews] lastObject];
+  NSTextView *view = [scroll documentView];
+  testAssert(![view isEditable] && [view isSelectable] && [scroll hasVerticalScroller],
+    @"Help is scrollable and copyable but cannot be edited");
+  testAssert([[view string] rangeOfString:@"4. MAKEFILE PROJECTS"].location != NSNotFound
+    && [[view string] rangeOfString:@"5. DEBUGGING"].location != NSNotFound
+    && [[view string] rangeOfString:@"7. TROUBLESHOOTING"].location != NSNotFound,
+    @"Help loads the bundled user documentation");
+  [delegate showHelp:nil];
+  testAssert([delegate valueForKey:@"_helpWindow"] == window, @"Repeated Help reuses its window");
+  [window close];
+  [delegate showHelp:nil];
+  testAssert([window isVisible] && [delegate valueForKey:@"_helpWindow"] == window,
+    @"Help reopens safely after closing");
+  testAssert([[[NSDocumentController sharedDocumentController] documents] count] == count,
+    @"Help does not create project documents");
+  [window close];
+  [delegate autorelease];
+}
+
 static void testRecentDocuments(YCodeProject *project, NSString *directory)
 {
   YCodeDocumentController *controller = [YCodeDocumentController sharedDocumentController];
@@ -3886,6 +3922,11 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-help"]) {
+    testHelp();
+    NSLog(@"Ycode help checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-debugger-bundles"]) {
     testDebuggerBundles(temporaryDirectory);
     testDebuggerRecords();
@@ -4075,6 +4116,7 @@ int main(void)
   testProjectCreationInSelectedDirectory(temporaryDirectory);
   testNewProjectTemplates(temporaryDirectory);
   testApplicationStartup();
+  testHelp();
   testMatchingDelimiters();
   testExternalFileChanges(temporaryDirectory);
   testWorkspaceFileOpening(temporaryDirectory);

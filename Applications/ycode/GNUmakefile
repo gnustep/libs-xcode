@@ -52,6 +52,7 @@ ADDITIONAL_INCLUDE_DIRS += -I../..
 Ycode_RESOURCE_FILES = \
 TestHost/YCodeTestHost.bundle \
 Resources/Ycode.tiff \
+Resources/YcodeHelp.txt \
 Resources/Templates \
 Resources/Languages \
 DebuggerBundles/Debuggers \

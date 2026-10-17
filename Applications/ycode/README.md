@@ -5,6 +5,11 @@ projects. It uses libs-xcode to read Xcode projects, imports and exports
 ProjectCenter projects, and works directly with Makefile folders. Interface
 files open in their associated application, such as Gorm.
 
+Choose **Info > Help** on GNUstep or **Help > Ycode Help** on macOS for the
+bundled offline user guide. Help opens in a resizable, read-only window and is
+available even with no project open. The guide covers everyday editing, builds,
+Makefile settings, debugging, shortcuts, and troubleshooting.
+
 This guide covers [installation](#build-and-installation),
 [projects and navigation](#projects-and-navigation), [editing](#editing-and-search),
 [tests](#running-tests), [debugging](#debugging),
