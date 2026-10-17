@@ -272,10 +272,24 @@ hangs up the current session and starts again in the project's original director
 
 Drag to select text, then use **Edit > Copy** or the context menu. **Paste**
 supports bracketed-paste mode when requested by the shell or program. Scroll
-with the mouse wheel or Shift+Page Up/Down through up to 5,000 saved lines;
+with the mouse wheel or Shift+Page Up/Down through saved lines (5,000 by default);
 typing returns to the live screen. When a program enables mouse reporting,
 hold Shift to select text or use the context menu instead of sending mouse input.
 Resizing the pane updates the PTY size and notifies the foreground program.
+
+**Preferences > Terminal** controls the fixed-pitch font and size, default text
+and background colors, scrollback limit, audible bell, and permission for
+programs to blink the cursor. Settings apply immediately to all open terminals
+and are saved for future sessions. Font changes update the terminal's row and
+column counts without restarting its shell. Program-specified ANSI colors stay
+intact. Scrollback can retain up to 50,000 lines; choose 0 to disable it.
+Reducing the limit discards the oldest saved lines. **Restore Defaults** resets
+only Terminal preferences, leaving editor and other pane settings unchanged.
+
+Use the font button to open the native Fonts panel
+and choose a fixed-pitch font (6–72 points). Text, background, and cursor colors
+apply immediately through the Color panel. The cursor defaults to red. Choose
+Program controlled, Block, Outline, Vertical line, or Underline for its shape.
 
 The bundled MIT-licensed [libvterm](https://www.leonerd.org.uk/code/libvterm/)
 0.3.3 engine handles ANSI/VT100 and many VT220/xterm sequences: cursor motion,

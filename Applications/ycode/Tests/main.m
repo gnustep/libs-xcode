@@ -216,6 +216,8 @@ static BOOL terminalWait(YCodeTerminalView *view, NSString *text)
 static void testTerminal(NSString *temporaryDirectory)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedTerminalPreferences = [[defaults objectForKey:@"YCodeTerminalPreferences"] retain];
+  [YCodePreferences resetTerminalPreferences];
   id savedWindowFrame = [[defaults objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
   YCodeTerminalTestView *view = [[YCodeTerminalTestView alloc] initWithFrame:NSMakeRect(0, 0, 800, 400)];
   testAssert(![view isRunning], @"Constructing a terminal does not start a shell");
@@ -423,6 +425,166 @@ static void testTerminal(NSString *temporaryDirectory)
   if (savedWindowFrame) [defaults setObject:savedWindowFrame forKey:@"NSWindow Frame YCodeMainWindow"];
   else [defaults removeObjectForKey:@"NSWindow Frame YCodeMainWindow"];
   [savedWindowFrame release];
+  if (savedTerminalPreferences) [defaults setObject:savedTerminalPreferences forKey:@"YCodeTerminalPreferences"];
+  else [defaults removeObjectForKey:@"YCodeTerminalPreferences"];
+  [savedTerminalPreferences release];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter] postNotificationName:YCodeTerminalPreferencesDidChangeNotification object:nil];
+}
+
+static void testTerminalPreferences(NSString *temporaryDirectory)
+{
+  [NSApp finishLaunching];
+  [NSApp activateIgnoringOtherApps:YES];
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey:@"YCodeTerminalPreferences"] retain];
+  id editorFonts = [[defaults objectForKey:@"YCodeFonts"] retain];
+  [defaults setObject:[NSDictionary dictionaryWithObjectsAndKeys:@"missing font", @"fontName",
+    @"bad size", @"fontSize", [NSNumber numberWithInt:-1], @"scrollbackLines",
+    [NSArray arrayWithObject:@"invalid"], @"foreground", @"invalid", @"cursorBlink", nil]
+    forKey:@"YCodeTerminalPreferences"];
+  testAssert([[YCodePreferences terminalFont] pointSize] == 13 && [YCodePreferences terminalScrollbackLines] == 5000
+    && [YCodePreferences terminalCursorBlink]
+    && colorMatches([YCodePreferences terminalForegroundColor], 230.0 / 255.0, 230.0 / 255.0, 230.0 / 255.0),
+    @"Invalid saved terminal preferences fall back to usable defaults");
+  [YCodePreferences resetTerminalPreferences];
+  YCodeTerminalView *terminal = [[YCodeTerminalView alloc] initWithFrame:NSMakeRect(0, 0, 800, 400)];
+  AppController *app = [AppController new];
+  [app showPrefPanel:nil];
+  NSPopUpButton *groups = [app valueForKey:@"_preferencesGroup"];
+  [groups selectItemWithTitle:@"Terminal"]; [groups sendAction:[groups action] to:[groups target]];
+  NSView *pane = [app valueForKey:@"_terminalPreferencesView"];
+  testAssert(![pane isHidden] && [[app valueForKey:@"_fontPreferencesView"] isHidden],
+    @"Preferences provides a separate Terminal section");
+  NSButton *fontChoice = [app valueForKey:@"_terminalFontChoice"];
+  testAssert([fontChoice isKindOfClass:[NSButton class]] && ![fontChoice isKindOfClass:[NSPopUpButton class]],
+    @"Terminal font uses the native Fonts panel");
+#ifndef _WIN32
+  [[NSFileManager defaultManager] createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSError *error = nil;
+  testAssert([terminal startInDirectory:temporaryDirectory error:&error], @"Start terminal for live preference updates");
+  int child = [[terminal valueForKey:@"_child"] intValue];
+#endif
+  [fontChoice performClick:nil];
+  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+  NSFontManager *manager = [NSFontManager sharedFontManager];
+  NSFontPanel *fontPanel = [manager fontPanel:YES];
+  [fontPanel setPanelFont:[manager convertFont:[YCodePreferences terminalFont] toSize:20] isMultiple:NO];
+  [fontPanel makeKeyAndOrderFront:nil];
+  [manager modifyFontViaPanel:fontPanel];
+  testAssert([[YCodePreferences terminalFont] pointSize] == 20 && [[terminal valueForKey:@"_font"] pointSize] == 20,
+    @"Native Fonts panel persists and updates the terminal font");
+  [fontPanel orderOut:nil];
+#ifndef _WIN32
+  testAssert([terminal isRunning] && [[terminal valueForKey:@"_child"] intValue] == child,
+    @"Changing terminal preferences preserves the live shell");
+  [terminal sendData:[@"stty -echo; stty size\r" dataUsingEncoding:NSUTF8StringEncoding]];
+  NSString *size = [NSString stringWithFormat:@"%@ %@", [terminal valueForKey:@"_rows"], [terminal valueForKey:@"_columns"]];
+  testAssert(terminalWait(terminal, size), @"Font changes update the live shell's PTY dimensions");
+#endif
+  NSColorWell *foreground = [app valueForKey:@"_terminalForegroundWell"];
+  NSColorWell *background = [app valueForKey:@"_terminalBackgroundWell"];
+  terminalFeed(terminal, @"\033[2J\033[H\033[31mX\033[0m preserved");
+  [foreground activate:YES];
+  [[NSColorPanel sharedColorPanel] setColor:[NSColor colorWithCalibratedRed:0.2 green:0.8 blue:0.6 alpha:1]];
+  [foreground deactivate];
+  [background activate:YES];
+  [[NSColorPanel sharedColorPanel] setColor:[NSColor colorWithCalibratedRed:0.1 green:0.15 blue:0.2 alpha:1]];
+  [background deactivate];
+  testAssert(colorMatches([terminal valueForKey:@"_foregroundColor"], 0.2, 0.8, 0.6)
+    && colorMatches([terminal valueForKey:@"_backgroundColor"], 0.1, 0.15, 0.2),
+    @"Terminal color controls immediately update default foreground and background");
+  VTermScreenCell cell;
+  [terminal cellAtRow:[[terminal valueForKey:@"_history"] count] column:0 cell:&cell];
+  testAssert(cell.fg.indexed.idx == 1 && [[terminal screenText] rangeOfString:@"preserved"].location != NSNotFound,
+    @"Preference changes retain terminal text and explicit ANSI colors");
+  testAssert(colorMatches([YCodePreferences terminalCursorColor], 1, 0, 0), @"Cursor defaults to red");
+  NSColorWell *cursorWell = [app valueForKey:@"_terminalCursorWell"];
+  [cursorWell activate:YES];
+  [[NSColorPanel sharedColorPanel] setColor:[NSColor greenColor]];
+  [cursorWell deactivate];
+  [[NSColorPanel sharedColorPanel] orderOut:nil];
+  NSPopUpButton *shape = [app valueForKey:@"_terminalCursorShapeChoice"];
+  NSInteger cursorShape;
+  for (cursorShape = 0; cursorShape <= 4; cursorShape++) {
+    [shape selectItemAtIndex:cursorShape]; [shape sendAction:[shape action] to:[shape target]];
+    testAssert([YCodePreferences terminalCursorShape] == cursorShape
+      && [[terminal valueForKey:@"_preferredCursorShape"] integerValue] == cursorShape,
+      @"Cursor shape selection persists and updates existing terminals");
+  }
+  testAssert(colorMatches([terminal valueForKey:@"_cursorColor"], 0, 1, 0), @"Color panel changes the live cursor color");
+  NSUInteger i;
+  for (i = 0; i < 100; i++) terminalFeed(terminal, @"scrollback\r\n");
+  testAssert([[terminal valueForKey:@"_history"] count] > 0, @"Populate scrollback before reducing its limit");
+  NSPopUpButton *scrollback = [app valueForKey:@"_terminalScrollbackChoice"];
+  [scrollback selectItemWithTitle:@"0"]; [scrollback sendAction:[scrollback action] to:[scrollback target]];
+  terminalFeed(terminal, @"more\r\n");
+  testAssert([YCodePreferences terminalScrollbackLines] == 0 && [[terminal valueForKey:@"_history"] count] == 0,
+    @"Setting scrollback to zero discards history and stops retaining new lines");
+  NSButton *bell = [app valueForKey:@"_terminalBellCheckbox"], *blink = [app valueForKey:@"_terminalBlinkCheckbox"];
+  [bell setState:NSOffState]; [bell sendAction:[bell action] to:[bell target]];
+  [blink setState:NSOffState]; [blink sendAction:[blink action] to:[blink target]];
+  testAssert(![[terminal valueForKey:@"_audibleBell"] boolValue] && ![[terminal valueForKey:@"_allowCursorBlink"] boolValue],
+    @"Bell and cursor-blink controls update existing terminals");
+  YCodeTerminalView *newTerminal = [[YCodeTerminalView alloc] initWithFrame:NSMakeRect(0, 0, 800, 400)];
+  testAssert([[newTerminal valueForKey:@"_font"] pointSize] == 20
+    && colorMatches([newTerminal valueForKey:@"_foregroundColor"], 0.2, 0.8, 0.6)
+    && ![[newTerminal valueForKey:@"_audibleBell"] boolValue], @"New terminals load saved preferences");
+  NSWindow *renderWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 400)
+    styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [renderWindow setReleasedWhenClosed:NO];
+  [renderWindow setContentView:newTerminal]; [renderWindow orderFront:nil];
+  terminalFeed(newTerminal, @"M\r\n");
+  for (cursorShape = 1; cursorShape <= 4; cursorShape++) {
+    [YCodePreferences setTerminalCursorShape:cursorShape];
+    [renderWindow display];
+    NSBitmapImageRep *bitmap = [newTerminal bitmapImageRepForCachingDisplayInRect:[newTerminal bounds]];
+    [newTerminal cacheDisplayInRect:[newTerminal bounds] toBitmapImageRep:bitmap];
+    NSUInteger x, y, cursorPixels = 0, textPixels = 0;
+    NSUInteger width = [[newTerminal valueForKey:@"_cellWidth"] unsignedIntegerValue];
+    NSUInteger height = [[newTerminal valueForKey:@"_cellHeight"] unsignedIntegerValue];
+    for (y = 0; y < height * 2; y++) for (x = 0; x < width; x++) {
+      NSColor *pixel = [bitmap colorAtX:x y:y];
+      if (colorMatches(pixel, 0, 1, 0)) cursorPixels++;
+      if (colorMatches(pixel, 0.2, 0.8, 0.6)) textPixels++;
+    }
+    NSUInteger expected = cursorShape == 1 ? width * height : cursorShape == 2 ? 2 * (width + height) - 4
+      : cursorShape == 3 ? 2 * height : 2 * width;
+    testAssert(cursorPixels == expected, @"Rendered cursor uses the selected color and shape");
+    testAssert(textPixels > 0 && colorMatches([bitmap colorAtX:400 y:200], 25.0 / 255.0, 38.0 / 255.0, 51.0 / 255.0),
+      @"Terminal renders the selected default foreground and background colors");
+  }
+  [renderWindow close]; [renderWindow release];
+  [newTerminal release];
+  NSPanel *panel = [app valueForKey:@"_preferencesPanel"];
+  [panel display];
+  if ([[[NSProcessInfo processInfo] arguments] containsObject:@"--terminal-preferences-preview"]) {
+    NSView *content = [panel contentView];
+    NSBitmapImageRep *bitmap = [content bitmapImageRepForCachingDisplayInRect:[content bounds]];
+    [content cacheDisplayInRect:[content bounds] toBitmapImageRep:bitmap];
+    [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]]
+      writeToFile:@"/tmp/ycode-terminal-preferences.png" atomically:YES];
+  }
+  NSEnumerator *controls = [[pane subviews] objectEnumerator];
+  id control; BOOL reset = NO;
+  while ((control = [controls nextObject]) != nil) {
+    if ([control isKindOfClass:[NSButton class]] && [[control title] isEqual:@"Restore Defaults"]) {
+      [control performClick:nil]; reset = YES; break;
+    }
+  }
+  testAssert(reset && [[terminal valueForKey:@"_font"] pointSize] == 13
+    && [YCodePreferences terminalScrollbackLines] == 5000 && [YCodePreferences terminalAudibleBell]
+    && [YCodePreferences terminalCursorBlink], @"Restore Defaults resets only Terminal settings and updates open views");
+  testAssert(editorFonts == [defaults objectForKey:@"YCodeFonts"] || [editorFonts isEqual:[defaults objectForKey:@"YCodeFonts"]],
+    @"Terminal preferences leave editor and other pane fonts unchanged");
+  [groups selectItemWithTitle:@"Editor"]; [groups sendAction:[groups action] to:[groups target]];
+  testAssert([pane isHidden], @"Changing preference groups hides Terminal controls");
+  [terminal stop]; [terminal release];
+  [panel close]; [app autorelease];
+  if (saved) [defaults setObject:saved forKey:@"YCodeTerminalPreferences"];
+  else [defaults removeObjectForKey:@"YCodeTerminalPreferences"];
+  [saved release]; [editorFonts release]; [defaults synchronize];
+  [[NSNotificationCenter defaultCenter] postNotificationName:YCodeTerminalPreferencesDidChangeNotification object:nil];
 }
 
 static void testHelp(void)
@@ -4185,6 +4347,12 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-terminal-preferences"]) {
+    testTerminalPreferences(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode terminal preference checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-terminal"]) {
     testTerminal(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -4387,6 +4555,7 @@ int main(void)
   testApplicationStartup();
   testHelp();
   testTerminal(temporaryDirectory);
+  testTerminalPreferences(temporaryDirectory);
   testMatchingDelimiters();
   testExternalFileChanges(temporaryDirectory);
   testWorkspaceFileOpening(temporaryDirectory);

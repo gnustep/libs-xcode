@@ -65,6 +65,18 @@
 }
 @end
 
+@interface YCodeTerminalFontButton : NSButton
+@end
+@implementation YCodeTerminalFontButton
+- (BOOL)acceptsFirstResponder { return YES; }
+- (void)changeFont:(id)sender
+{
+    [YCodePreferences setTerminalFont:[sender convertFont:[YCodePreferences terminalFont]]];
+    [[NSFontManager sharedFontManager] setSelectedFont:[YCodePreferences terminalFont] isMultiple:NO];
+    [[self target] performSelector:@selector(refreshTerminalPreferences)];
+}
+@end
+
 static NSMenuItem *
 YCodeMenuItem(NSString *title, SEL action, NSString *keyEquivalent, id target)
 {
@@ -948,15 +960,112 @@ YCodeFileURLFromPath(NSString *path)
     [_tabPreferencesView addSubview:hint];
 }
 
+- (void)refreshTerminalPreferences
+{
+    NSFont *font = [YCodePreferences terminalFont];
+    [_terminalFontChoice setTitle:[NSString stringWithFormat:@"%@ — %g pt…", [font displayName], (double)[font pointSize]]];
+    [_terminalCursorWell setColor:[YCodePreferences terminalCursorColor]];
+    [_terminalCursorShapeChoice selectItemAtIndex:[YCodePreferences terminalCursorShape]];
+    NSString *lines = [NSString stringWithFormat:@"%lu", (unsigned long)[YCodePreferences terminalScrollbackLines]];
+    if ([_terminalScrollbackChoice indexOfItemWithTitle:lines] < 0) [_terminalScrollbackChoice addItemWithTitle:lines];
+    [_terminalScrollbackChoice selectItemWithTitle:lines];
+    [_terminalForegroundWell setColor:[YCodePreferences terminalForegroundColor]];
+    [_terminalBackgroundWell setColor:[YCodePreferences terminalBackgroundColor]];
+    [_terminalBellCheckbox setState:[YCodePreferences terminalAudibleBell] ? NSOnState : NSOffState];
+    [_terminalBlinkCheckbox setState:[YCodePreferences terminalCursorBlink] ? NSOnState : NSOffState];
+}
+
+- (void)changeTerminalPreferences:(id)sender
+{
+    if (sender == _terminalCursorWell)
+        [YCodePreferences setTerminalCursorColor:[_terminalCursorWell color]];
+    else if (sender == _terminalCursorShapeChoice)
+        [YCodePreferences setTerminalCursorShape:[_terminalCursorShapeChoice indexOfSelectedItem]];
+    else if (sender == _terminalForegroundWell || sender == _terminalBackgroundWell)
+        [YCodePreferences setTerminalForegroundColor:[_terminalForegroundWell color]
+            backgroundColor:[_terminalBackgroundWell color]];
+    else if (sender == _terminalScrollbackChoice)
+        [YCodePreferences setTerminalScrollbackLines:[[_terminalScrollbackChoice titleOfSelectedItem] integerValue]];
+    else if (sender == _terminalBellCheckbox)
+        [YCodePreferences setTerminalAudibleBell:[_terminalBellCheckbox state] == NSOnState];
+    else if (sender == _terminalBlinkCheckbox)
+        [YCodePreferences setTerminalCursorBlink:[_terminalBlinkCheckbox state] == NSOnState];
+    // Do not refresh active wells here: setColor: writes back to the shared
+    // Color panel and can overwrite an in-progress color selection.
+}
+
+- (void)resetTerminalPreferences:(id)sender
+{
+    [_terminalForegroundWell deactivate];
+    [_terminalBackgroundWell deactivate];
+    [_terminalCursorWell deactivate];
+    [YCodePreferences resetTerminalPreferences];
+    [self refreshTerminalPreferences];
+}
+
+- (void)setupTerminalPreferences
+{
+    _terminalPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
+    [[_preferencesPanel contentView] addSubview:_terminalPreferencesView];
+    NSArray *labels = [NSArray arrayWithObjects:@"Fixed-pitch font", @"Text color", @"Background color", @"Cursor color", @"Cursor shape", @"Scrollback lines (0 = none)", nil];
+    CGFloat positions[] = { 410, 340, 300, 260, 220, 180 };
+    NSUInteger i;
+    for (i = 0; i < [labels count]; i++) {
+        NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, positions[i], 240, 22)]);
+        [label setStringValue:[labels objectAtIndex:i]];
+        [label setEditable:NO]; [label setBezeled:NO]; [label setDrawsBackground:NO];
+        [_terminalPreferencesView addSubview:label];
+    }
+    _terminalFontChoice = AUTORELEASE([[YCodeTerminalFontButton alloc] initWithFrame:NSMakeRect(20, 375, 350, 28)]);
+    [_terminalFontChoice setBezelStyle:NSRoundedBezelStyle];
+    [_terminalFontChoice setToolTip:@"Choose a fixed-pitch font, 6–72 points, in the Fonts panel."];
+    _terminalCursorWell = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(300, 258, 70, 28)]);
+    _terminalCursorShapeChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(195, 218, 175, 28) pullsDown:NO]);
+    [_terminalCursorShapeChoice addItemsWithTitles:[NSArray arrayWithObjects:@"Program controlled", @"Block", @"Outline", @"Vertical line", @"Underline", nil]];
+    _terminalScrollbackChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(265, 178, 105, 28) pullsDown:NO]);
+    [_terminalScrollbackChoice addItemsWithTitles:[NSArray arrayWithObjects:@"0", @"1000", @"5000", @"10000", @"50000", nil]];
+    _terminalForegroundWell = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(300, 338, 70, 28)]);
+    _terminalBackgroundWell = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(300, 298, 70, 28)]);
+    _terminalBellCheckbox = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 140, 350, 28)]);
+    [_terminalBellCheckbox setButtonType:NSSwitchButton]; [_terminalBellCheckbox setTitle:@"Audible terminal bell"];
+    _terminalBlinkCheckbox = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 105, 350, 28)]);
+    [_terminalBlinkCheckbox setButtonType:NSSwitchButton]; [_terminalBlinkCheckbox setTitle:@"Allow programs to blink the cursor"];
+    NSArray *controls = [NSArray arrayWithObjects:_terminalFontChoice, _terminalCursorWell, _terminalCursorShapeChoice, _terminalScrollbackChoice,
+        _terminalForegroundWell, _terminalBackgroundWell, _terminalBellCheckbox, _terminalBlinkCheckbox, nil];
+    NSEnumerator *enumerator = [controls objectEnumerator];
+    NSControl *control;
+    while ((control = [enumerator nextObject]) != nil) {
+        [control setTarget:self]; [control setAction:@selector(changeTerminalPreferences:)];
+        [_terminalPreferencesView addSubview:control];
+    }
+    [_terminalFontChoice setAction:@selector(chooseTerminalFont:)];
+    [_terminalForegroundWell setContinuous:YES];
+    [_terminalBackgroundWell setContinuous:YES];
+    [_terminalCursorWell setContinuous:YES];
+    NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 58, 350, 42)]);
+    [hint setStringValue:@"Changes apply immediately to all terminals.\nReducing scrollback discards the oldest lines."];
+    [hint setFont:[NSFont systemFontOfSize:12]];
+    [hint setEditable:NO]; [hint setBezeled:NO]; [hint setDrawsBackground:NO];
+    [_terminalPreferencesView addSubview:hint];
+    NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
+    [reset setTitle:@"Restore Defaults"]; [reset setBezelStyle:NSRoundedBezelStyle];
+    [reset setTarget:self]; [reset setAction:@selector(resetTerminalPreferences:)];
+    [_terminalPreferencesView addSubview:reset];
+}
+
 - (void)selectPreferenceGroup:(id)sender
 {
-    if ([_fontChoices containsObject:[_preferencesPanel firstResponder]])
+    if ([_fontChoices containsObject:[_preferencesPanel firstResponder]] || [_preferencesPanel firstResponder] == _terminalFontChoice)
         [_preferencesPanel makeFirstResponder:_preferencesGroup];
     BOOL colors = [_preferencesGroup indexOfSelectedItem] == 0;
     [_colorPreferencesView setHidden:!colors];
     [_editorPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 1];
     [_fontPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 2];
     [_tabPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 3];
+    [_terminalPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 4];
+    if ([_terminalPreferencesView isHidden]) {
+        [_terminalForegroundWell deactivate]; [_terminalBackgroundWell deactivate]; [_terminalCursorWell deactivate];
+    }
     if (!colors) {
         NSEnumerator *enumerator = [_editorColorWells objectEnumerator];
         NSColorWell *well;
@@ -992,6 +1101,16 @@ YCodeFileURLFromPath(NSString *path)
             toSize:MIN(18, MAX(12, [font pointSize]))]];
         [choice setNeedsDisplay:YES];
     }
+}
+
+- (void)chooseTerminalFont:(NSButton *)sender
+{
+    [[sender window] makeKeyAndOrderFront:nil];
+    [[sender window] makeMainWindow];
+    [[sender window] makeFirstResponder:sender];
+    NSFontManager *manager = [NSFontManager sharedFontManager];
+    [manager setSelectedFont:[YCodePreferences terminalFont] isMultiple:NO];
+    [manager orderFrontFontPanel:sender];
 }
 
 - (void)choosePreferenceFont:(NSButton *)sender
@@ -1055,7 +1174,7 @@ YCodeFileURLFromPath(NSString *path)
         NSView *content = [_preferencesPanel contentView];
         _preferencesGroup = AUTORELEASE([[NSPopUpButton alloc]
             initWithFrame:NSMakeRect(20, 458, 350, 28) pullsDown:NO]);
-        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", @"Indentation", nil]];
+        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", @"Indentation", @"Terminal", nil]];
         [_preferencesGroup setTarget:self];
         [_preferencesGroup setAction:@selector(selectPreferenceGroup:)];
         [content addSubview:_preferencesGroup];
@@ -1077,6 +1196,7 @@ YCodeFileURLFromPath(NSString *path)
         [_editorPreferencesView addSubview:_matchingDelimitersCheckbox];
         [self setupFontPreferences];
         [self setupTabPreferences];
+        [self setupTerminalPreferences];
         _editorColorWells = [NSMutableArray new];
         NSArray *labels = [NSArray arrayWithObjects:@"Editor background", @"Plain text", @"Keywords",
             @"Strings", @"Comments", @"Numbers", @"Preprocessor directives", @"Types",
@@ -1116,6 +1236,7 @@ YCodeFileURLFromPath(NSString *path)
     [self refreshEditorColorWells];
     [_matchingDelimitersCheckbox setState:[YCodePreferences highlightMatchingDelimiters] ? NSOnState : NSOffState];
     [self refreshFontPreferences];
+    [self refreshTerminalPreferences];
     [_tabWidthChoice selectItemAtIndex:[YCodePreferences tabWidth] - 1];
     [_controlIndentChoice selectItemAtIndex:[YCodePreferences controlIndentWidth] - 1];
     [_spacesForTabs setState:[YCodePreferences useSpacesForTabs] ? NSOnState : NSOffState];

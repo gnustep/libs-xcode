@@ -29,6 +29,15 @@
   NSButton *_matchingDelimitersCheckbox;
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;
+  NSView *_terminalPreferencesView;
+  NSButton *_terminalFontChoice;
+  NSPopUpButton *_terminalCursorShapeChoice;
+  NSColorWell *_terminalCursorWell;
+  NSPopUpButton *_terminalScrollbackChoice;
+  NSColorWell *_terminalForegroundWell;
+  NSColorWell *_terminalBackgroundWell;
+  NSButton *_terminalBellCheckbox;
+  NSButton *_terminalBlinkCheckbox;
   NSPopUpButton *_tabWidthChoice;
   NSPopUpButton *_controlIndentChoice;
   NSButton *_spacesForTabs;

@@ -112,7 +112,14 @@ Choose Project > Open Terminal (Product > Open Terminal on macOS), or select the
 
 The shell stays running while you switch tabs or hide the bottom area. Closing the project hangs up its terminal. Ctrl+C interrupts the terminal's foreground job; Ctrl+D sends end-of-input. Project > Stop controls Ycode's build/run/debug operations, not the terminal. Type exit to end a shell, then press Return to start another. Restart Terminal in the context menu replaces the current session with a new shell in the original project directory.
 
-Drag to select text and use Edit > Copy or the context menu. Paste sends clipboard text, using bracketed-paste mode when the program requests it. Scroll with the mouse wheel or Shift+Page Up/Down to read up to 5,000 saved lines. Typing returns to the live screen. If a program captures mouse input, hold Shift to select text or open the context menu. Resizing the pane updates the shell's terminal size.
+Drag to select text and use Edit > Copy or the context menu. Paste sends clipboard text, using bracketed-paste mode when the program requests it. Scroll with the mouse wheel or Shift+Page Up/Down to read saved lines (5,000 by default). Typing returns to the live screen. If a program captures mouse input, hold Shift to select text or open the context menu. Resizing the pane updates the shell's terminal size.
+
+Preferences > Terminal offers a fixed-pitch font and size, text and background colors, scrollback length, audible bell, and cursor blinking. Changes apply immediately to all terminals and are saved for future sessions. Changing the font updates the shell's row and column counts without restarting it. Programs can still choose their own ANSI text colors. Choose 0 scrollback lines to disable history, or retain up to 50,000 lines. Reducing the limit discards the oldest lines. Restore Defaults resets only Terminal preferences.
+
+Use the font button to open the native Fonts panel
+and choose a fixed-pitch font (6–72 points). Text, background, and cursor colors
+apply immediately through the Color panel. The cursor defaults to red. Choose
+Program controlled, Block, Outline, Vertical line, or Underline for its shape.
 
 The terminal supports ANSI/VT100 and many VT220/xterm text features: cursor movement, scrolling regions, alternate screens, line drawing, UTF-8, 256 colors and truecolor, text attributes, application cursor/keypad modes, function keys, and mouse reporting. Programs see TERM=xterm-256color. Inline graphics, hyperlinks, clipboard control sequences, and double-sized text lines are not supported. Unicode appearance depends on installed fonts; scrollback does not reflow on resize.
 

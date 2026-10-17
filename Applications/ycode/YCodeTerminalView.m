@@ -10,6 +10,7 @@
 #define _XOPEN_SOURCE 600
 #endif
 #import "YCodeTerminalView.h"
+#import "YCodePreferences.h"
 #include <math.h>
 #include <errno.h>
 #include <string.h>
@@ -31,6 +32,8 @@
 - (int)popLine:(int)columns cells:(VTermScreenCell *)cells;
 - (void)clearHistory;
 - (void)resizeTerminal;
+- (void)preferencesChanged:(NSNotification *)notification;
+- (void)ringBell;
 @end
 
 static int terminalDamage(VTermRect rect, void *user)
@@ -47,7 +50,7 @@ static int terminalProperty(VTermProp property, VTermValue *value, void *user)
 {
   return [(YCodeTerminalView *)user property:property value:value];
 }
-static int terminalBell(void *user) { NSBeep(); return 1; }
+static int terminalBell(void *user) { [(YCodeTerminalView *)user ringBell]; return 1; }
 static int terminalPush(int columns, const VTermScreenCell *cells, void *user)
 {
   return [(YCodeTerminalView *)user pushLine:columns cells:cells];
@@ -105,7 +108,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
     _cursorVisible = YES;
     _blinkOn = YES;
     _cursorShape = VTERM_PROP_CURSORSHAPE_BLOCK;
-    _font = RETAIN([NSFont userFixedPitchFontOfSize:13]);
+    _font = RETAIN([YCodePreferences terminalFont]);
     _boldFont = RETAIN([[NSFontManager sharedFontManager] convertFont:_font toHaveTrait:NSBoldFontMask]);
     _cellWidth = ceil([@"M" sizeWithAttributes:[NSDictionary dictionaryWithObject:_font forKey:NSFontAttributeName]].width);
     _cellHeight = ceil([_font ascender] - [_font descender] + 3);
@@ -120,11 +123,10 @@ static VTermModifier terminalModifiers(NSEvent *event)
     vterm_screen_set_callbacks(_screen, &terminalCallbacks, self);
     vterm_screen_enable_altscreen(_screen, 1);
     vterm_screen_set_damage_merge(_screen, VTERM_DAMAGE_SCREEN);
-    VTermColor fg, bg;
-    vterm_color_rgb(&fg, 230, 230, 230);
-    vterm_color_rgb(&bg, 24, 24, 24);
-    vterm_state_set_default_colors(vterm_obtain_state(_terminal), &fg, &bg);
     vterm_screen_reset(_screen, 1);
+    [self preferencesChanged:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(preferencesChanged:)
+      name:YCodeTerminalPreferencesDidChangeNotification object:nil];
     [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
   }
   return self;
@@ -135,10 +137,40 @@ static VTermModifier terminalModifiers(NSEvent *event)
   [self stop];
   if (_terminal) vterm_free(_terminal);
   RELEASE(_font); RELEASE(_boldFont); RELEASE(_history);
+  RELEASE(_foregroundColor); RELEASE(_backgroundColor); RELEASE(_cursorColor);
   RELEASE(_pendingInput); RELEASE(_directory);
   [super dealloc];
 }
 - (BOOL)isFlipped { return YES; }
+- (void)ringBell { if (_audibleBell) NSBeep(); }
+- (void)preferencesChanged:(NSNotification *)notification
+{
+  ASSIGN(_font, [YCodePreferences terminalFont]);
+  NSFont *bold = [[NSFontManager sharedFontManager] convertFont:_font toHaveTrait:NSBoldFontMask];
+  ASSIGN(_boldFont, bold ? bold : _font);
+  _cellWidth = ceil([@"M" sizeWithAttributes:[NSDictionary dictionaryWithObject:_font forKey:NSFontAttributeName]].width);
+  _cellHeight = ceil([_font ascender] - [_font descender] + 3);
+  ASSIGN(_foregroundColor, [YCodePreferences terminalForegroundColor]);
+  ASSIGN(_backgroundColor, [YCodePreferences terminalBackgroundColor]);
+  ASSIGN(_cursorColor, [YCodePreferences terminalCursorColor]);
+  _preferredCursorShape = [YCodePreferences terminalCursorShape];
+  VTermColor fg, bg;
+  NSColor *color = [_foregroundColor colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
+  vterm_color_rgb(&fg, lround([color redComponent] * 255), lround([color greenComponent] * 255), lround([color blueComponent] * 255));
+  color = [_backgroundColor colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
+  vterm_color_rgb(&bg, lround([color redComponent] * 255), lround([color greenComponent] * 255), lround([color blueComponent] * 255));
+  vterm_screen_set_default_colors(_screen, &fg, &bg);
+  _scrollbackLimit = [YCodePreferences terminalScrollbackLines];
+  if ([_history count] > _scrollbackLimit) {
+    [_history removeObjectsInRange:NSMakeRange(0, [_history count] - _scrollbackLimit)];
+    _selectionStart = _selectionEnd = -1;
+  }
+  _scrollOffset = MIN(_scrollOffset, (NSInteger)[_history count]);
+  _audibleBell = [YCodePreferences terminalAudibleBell];
+  _allowCursorBlink = [YCodePreferences terminalCursorBlink];
+  [self resizeTerminal];
+  [self setNeedsDisplay:YES];
+}
 - (BOOL)isOpaque { return YES; }
 - (BOOL)acceptsFirstResponder { return YES; }
 - (BOOL)becomeFirstResponder
@@ -187,7 +219,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
 - (int)pushLine:(int)columns cells:(const VTermScreenCell *)cells
 {
   [_history addObject:[NSData dataWithBytes:cells length:columns * sizeof(*cells)]];
-  if ([_history count] > 5000) {
+  if ([_history count] > _scrollbackLimit) {
     [_history removeObjectAtIndex:0];
     _selectionStart = _selectionEnd = -1;
   }
@@ -476,13 +508,15 @@ static VTermModifier terminalModifiers(NSEvent *event)
 }
 - (NSColor *)color:(VTermColor)color
 {
+  if (VTERM_COLOR_IS_DEFAULT_FG(&color)) return _foregroundColor;
+  if (VTERM_COLOR_IS_DEFAULT_BG(&color)) return _backgroundColor;
   vterm_screen_convert_color_to_rgb(_screen, &color);
   return [NSColor colorWithCalibratedRed:color.rgb.red / 255.0 green:color.rgb.green / 255.0
     blue:color.rgb.blue / 255.0 alpha:1];
 }
 - (void)drawRect:(NSRect)dirty
 {
-  [[NSColor colorWithCalibratedWhite:24.0 / 255.0 alpha:1] set]; NSRectFill(dirty);
+  [_backgroundColor set]; NSRectFill(dirty);
   NSInteger history = _alternateScreen ? 0 : [_history count];
   NSInteger first = history - _scrollOffset;
   NSInteger low = MIN(_selectionStart, _selectionEnd), high = MAX(_selectionStart, _selectionEnd);
@@ -518,14 +552,31 @@ static VTermModifier terminalModifiers(NSEvent *event)
       [NSGraphicsContext restoreGraphicsState];
     }
   }
-  if (_cursorVisible && !_scrollOffset && (!_cursorBlink || _blinkOn || ![self isRunning])) {
+  if (_cursorVisible && !_scrollOffset && (!_allowCursorBlink || !_cursorBlink || _blinkOn || ![self isRunning])) {
     VTermPos cursor; vterm_state_get_cursorpos(vterm_obtain_state(_terminal), &cursor);
-    [[NSColor whiteColor] set];
+    [_cursorColor set];
+    NSInteger shape = _preferredCursorShape;
+    if (shape == 0) shape = _cursorShape == VTERM_PROP_CURSORSHAPE_UNDERLINE ? 4
+        : (_cursorShape == VTERM_PROP_CURSORSHAPE_BAR_LEFT ? 3 : 2);
     NSRect rect = NSMakeRect(cursor.col * _cellWidth, cursor.row * _cellHeight, _cellWidth, _cellHeight);
-    if (_cursorShape == VTERM_PROP_CURSORSHAPE_UNDERLINE)
+    if (shape == 4)
       NSRectFill(NSMakeRect(rect.origin.x, NSMaxY(rect) - 2, _cellWidth, 2));
-    else if (_cursorShape == VTERM_PROP_CURSORSHAPE_BAR_LEFT)
+    else if (shape == 3)
       NSRectFill(NSMakeRect(rect.origin.x, rect.origin.y, 2, _cellHeight));
+    else if (shape == 1) {
+      NSRectFill(rect);
+      VTermScreenCell cell;
+      if (vterm_screen_get_cell(_screen, cursor, &cell) && cell.chars[0] != (uint32_t)-1 && !cell.attrs.conceal) {
+        NSColor *rgb = [_cursorColor colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
+        NSColor *ink = ([rgb redComponent] * 0.299 + [rgb greenComponent] * 0.587 + [rgb blueComponent] * 0.114) > 0.5
+          ? [NSColor blackColor] : [NSColor whiteColor];
+        [NSGraphicsContext saveGraphicsState]; NSRectClip(rect);
+        [terminalCellString(&cell) drawAtPoint:rect.origin withAttributes:
+          [NSDictionary dictionaryWithObjectsAndKeys:cell.attrs.bold ? _boldFont : _font, NSFontAttributeName,
+            ink, NSForegroundColorAttributeName, nil]];
+        [NSGraphicsContext restoreGraphicsState];
+      }
+    }
     else NSFrameRect(rect);
   }
 }

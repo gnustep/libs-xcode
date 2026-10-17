@@ -22,6 +22,10 @@
   NSString *_directory;
   NSFont *_font;
   NSFont *_boldFont;
+  NSColor *_foregroundColor, *_backgroundColor, *_cursorColor;
+  NSInteger _preferredCursorShape;
+  NSUInteger _scrollbackLimit;
+  BOOL _audibleBell, _allowCursorBlink;
   NSTimer *_timer;
   int _master;
   int _child;
