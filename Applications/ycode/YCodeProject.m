@@ -364,7 +364,8 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     if (![[self newProjectTypes] containsObject:productType] || ![path length] || ![name length]
         || ![[name lastPathComponent] isEqual:name] || [name isEqual:@"."] || [name isEqual:@".."]
         || [name rangeOfString:@"\\"].location != NSNotFound
-        || (![type isEqual:@"Xcode"] && ![type isEqual:@"ProjectCenter"])) return nil;
+        || (![type isEqual:@"Xcode"] && ![type isEqual:@"ProjectCenter"]
+            && ![type isEqual:@"GNUmakefile"])) return nil;
     NSMutableString *productName = [NSMutableString string];
     NSCharacterSet *allowed = [NSCharacterSet characterSetWithCharactersInString:
         @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"];
@@ -439,20 +440,24 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
     NSString *package = [path stringByAppendingPathComponent:[name stringByAppendingPathExtension:
         [type isEqual:@"Xcode"] ? @"xcodeproj" : @"pcproj"]];
     YCodeProject *document = AUTORELEASE([[self alloc] init]);
-    if (![document convertProjectCenterProject:metadata fromPath:package]) return nil;
-    [[[document project] mainGroup] setName:name];
-    PBXTarget *target = [[[document project] targets] objectAtIndex:0];
-    enumerator = [[[target buildConfigurationList] buildConfigurations] objectEnumerator];
-    XCBuildConfiguration *configuration;
-    while ((configuration = [enumerator nextObject]) != nil) {
-        [[configuration buildSettings] setObject:@"NO" forKey:@"CLANG_ENABLE_OBJC_ARC"];
+    if (![type isEqual:@"GNUmakefile"]) {
+        if (![document convertProjectCenterProject:metadata fromPath:package]) return nil;
+        [[[document project] mainGroup] setName:name];
+        PBXTarget *target = [[[document project] targets] objectAtIndex:0];
+        enumerator = [[[target buildConfigurationList] buildConfigurations] objectEnumerator];
+        XCBuildConfiguration *configuration;
+        while ((configuration = [enumerator nextObject]) != nil) {
+            [[configuration buildSettings] setObject:@"NO" forKey:@"CLANG_ENABLE_OBJC_ARC"];
+        }
     }
     if ([type isEqual:@"Xcode"]) {
         if (![document saveProjectToPath:package]) return nil;
     } else {
-        if (![manager createDirectoryAtPath:package withIntermediateDirectories:YES attributes:nil error:NULL]
-            || ![metadata writeToFile:[package stringByAppendingPathComponent:@"PC.project"] atomically:YES]) return nil;
-        [[document settings] setObject:metadata forKey:@"ProjectCenterMetadata"];
+        if ([type isEqual:@"ProjectCenter"]) {
+            if (![manager createDirectoryAtPath:package withIntermediateDirectories:YES attributes:nil error:NULL]
+                || ![metadata writeToFile:[package stringByAppendingPathComponent:@"PC.project"] atomically:YES]) return nil;
+            [[document settings] setObject:metadata forKey:@"ProjectCenterMetadata"];
+        }
         NSString *kind = application ? @"APP" : tool ? @"TOOL" : bundle ? @"BUNDLE" : framework ? @"FRAMEWORK" : @"LIBRARY";
         NSString *makeType = application ? @"application" : tool ? @"tool" : bundle ? @"bundle" : framework ? @"framework" : @"library";
         NSMutableString *makefile = [NSMutableString stringWithFormat:
@@ -467,6 +472,11 @@ static PBXGroup *YCodeDirectoryGroup(NSString *path)
         [makefile appendFormat:@"\ninclude $(GNUSTEP_MAKEFILES)/%@.make\n", makeType];
         if (![makefile writeToFile:[path stringByAppendingPathComponent:@"GNUmakefile"]
             atomically:YES encoding:NSUTF8StringEncoding error:NULL]) return nil;
+    }
+    if ([type isEqual:@"GNUmakefile"]) {
+        if (![document readFromURL:[NSURL fileURLWithPath:path] ofType:@"YCodeMakeProjectType" error:NULL]) return nil;
+        [document setFileType:@"YCodeMakeProjectType"];
+        return document;
     }
     [document setFileURL:[NSURL fileURLWithPath:package]];
     [document setFileType:[type isEqual:@"Xcode"] ? @"YCodeXcodeProjectType" : @"YCodeProjectCenterProjectType"];

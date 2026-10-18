@@ -47,7 +47,7 @@ installation to load the updated executable.
 ## Projects and navigation
 
 Use **File > New Project...** to choose a location, enter a project name, select
-the project type, and choose Xcode or ProjectCenter format in one panel. The
+the project type, and choose Xcode, ProjectCenter, or GNUmakefile format in one panel. The
 name field starts with `MyProject`; Create makes a new folder with that name in
 the chosen location and generates the project inside it. There is no separate
 name dialog.
@@ -56,7 +56,9 @@ Static Library. Applications start with `main.m`, `AppController.h/.m`, and a
 `MainMenu.xib` containing a window and About/Quit menu. The controller is wired
 as the application delegate and opens the window on launch. Source files,
 resources, framework linkage, and Info.plist settings are included in the
-project; ProjectCenter projects also include a GNUmakefile. Existing nonempty
+project; ProjectCenter projects also include a GNUmakefile. GNUmakefile projects
+contain the starter files and a GNUmakefile directly in the folder, without a
+`.xcodeproj` or `.pcproj` package, and open as directory projects. Existing nonempty
 project folders are never overwritten.
 
 Use **File > Open Project...** to select an `.xcodeproj` package. Ycode loads

@@ -16,7 +16,7 @@ CONTENTS
 
 Choose File > Open Project to open an .xcodeproj or .pcproj project, a project folder, or a GNUmakefile, makefile, or Makefile. Selecting a makefile opens its containing folder. No Xcode project is required for Makefile projects.
 
-To start a new project, choose File > New Project. Choose a location, enter a name, select a project type and Xcode or ProjectCenter format, then choose Create. Ycode creates a new folder; existing nonempty folders are not overwritten.
+To start a new project, choose File > New Project. Choose a location, enter a name, select a project type and Xcode, ProjectCenter, or GNUmakefile format, then choose Create. Ycode creates a new folder; existing nonempty folders are not overwritten. GNUmakefile format creates starter files and a GNUmakefile directly in the folder without a project package, and opens it as a directory project.
 
 The navigator on the left shows your project's groups and files. Select a file to edit it. Double-click a file to open it in its associated application; interface files such as Gorm and XIB documents are edited externally. Double-click a group to expand or collapse it. Recent Documents in the File menu reopens previous projects.
 

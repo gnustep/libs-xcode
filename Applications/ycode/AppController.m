@@ -373,7 +373,7 @@ YCodeFileURLFromPath(NSString *path)
         NSPopUpButton *popup = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(120, y, 228, 26) pullsDown:NO]);
         [popup setTag:100 + index];
         NSArray *values = index == 0 ? [YCodeProject newProjectTypes] :
-            [NSArray arrayWithObjects:@"Xcode", @"ProjectCenter", nil];
+            [NSArray arrayWithObjects:@"Xcode", @"ProjectCenter", @"GNUmakefile", nil];
         NSEnumerator *enumerator = [values objectEnumerator];
         NSString *value;
         while ((value = [enumerator nextObject]) != nil) {

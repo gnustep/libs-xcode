@@ -3908,8 +3908,8 @@ static void testNewProjectTemplates(NSString *temporaryDirectory)
   NSView *accessory = [controller newProjectAccessoryView];
   NSPopUpButton *types = (NSPopUpButton *)[accessory viewWithTag:100];
   NSPopUpButton *formats = (NSPopUpButton *)[accessory viewWithTag:101];
-  testAssert([types numberOfItems] == 6 && [formats numberOfItems] == 2,
-    @"New-project accessory offers six target kinds and both project formats");
+  testAssert([types numberOfItems] == 6 && [formats numberOfItems] == 3,
+    @"New-project accessory offers six target kinds and all three project formats");
   testAssert([[[types selectedItem] representedObject] isEqual:@"Application"],
     @"New projects default to the application template");
   NSUInteger originalDocumentCount = [[[NSDocumentController sharedDocumentController] documents] count];
@@ -3937,22 +3937,33 @@ static void testNewProjectTemplates(NSString *temporaryDirectory)
   NSArray *kinds = [YCodeProject newProjectTypes];
   NSArray *products = [NSArray arrayWithObjects:@"application", @"tool", @"bundle", @"framework", @"library.dynamic", @"library.static", nil];
   NSUInteger format, index;
-  for (format = 0; format < 2; format++) {
+  for (format = 0; format < 3; format++) {
     for (index = 0; index < [kinds count]; index++) {
       NSString *kind = [kinds objectAtIndex:index];
       NSString *name = [NSString stringWithFormat:@"Starter%lu%@", (unsigned long)format, kind];
       NSString *root = [temporaryDirectory stringByAppendingPathComponent:name];
-      NSString *projectFormat = format == 0 ? @"Xcode" : @"ProjectCenter";
+      NSString *projectFormat = format == 0 ? @"Xcode" : format == 1 ? @"ProjectCenter" : @"GNUmakefile";
       YCodeProject *document = [YCodeProject createNewProjectAtPath:root name:name
         type:projectFormat productType:kind];
       testAssert(document != nil, [NSString stringWithFormat:@"Create %@ %@ project", projectFormat, kind]);
       if (!document) continue;
-      PBXTarget *target = [[[document project] targets] objectAtIndex:0];
-      testAssert([[target productType] isEqual:[@"com.apple.product-type." stringByAppendingString:[products objectAtIndex:index]]],
+      PBXTarget *target = format == 2 ? nil : [[[document project] targets] objectAtIndex:0];
+      if (format != 2) testAssert([[target productType] isEqual:[@"com.apple.product-type." stringByAppendingString:[products objectAtIndex:index]]],
         @"Selected project kind determines the product type");
       YCodeProject *reopened = AUTORELEASE([YCodeProject new]);
       testAssert([reopened readFromURL:[document fileURL] ofType:[document fileType] error:NULL],
         @"Created project can be reopened in its selected format");
+      if (format == 2) {
+        testAssert([document isDirectoryProject] && [reopened isDirectoryProject]
+          && [[document projectPath] isEqual:root]
+          && [[document fileType] isEqual:@"YCodeMakeProjectType"],
+          @"GNUmakefile creation and reopening use the directory project workflow");
+        NSFileManager *manager = [NSFileManager defaultManager];
+        testAssert([manager fileExistsAtPath:[root stringByAppendingPathComponent:@"GNUmakefile"]]
+          && ![manager fileExistsAtPath:[root stringByAppendingPathComponent:[name stringByAppendingPathExtension:@"pcproj"]]]
+          && ![manager fileExistsAtPath:[root stringByAppendingPathComponent:[name stringByAppendingPathExtension:@"xcodeproj"]]],
+          @"GNUmakefile format creates a makefile without either project package");
+      }
       if ([kind isEqual:@"Application"]) {
         NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:
           [root stringByAppendingPathComponent:[name stringByAppendingString:@"Info.plist"]]];
@@ -3977,7 +3988,7 @@ static void testNewProjectTemplates(NSString *temporaryDirectory)
             if ([phase isKindOfClass:[PBXResourcesBuildPhase class]] && [[[file fileRef] path] isEqual:@"MainMenu.xib"]) resourceFound = YES;
           }
         }
-        testAssert(sourceFound && resourceFound, @"Application source and XIB participate in the build");
+        if (format != 2) testAssert(sourceFound && resourceFound, @"Application source and XIB participate in the build");
       } else {
         testAssert(![[NSFileManager defaultManager] fileExistsAtPath:[root stringByAppendingPathComponent:@"MainMenu.xib"]],
           @"Non-application templates do not include an application interface");
@@ -3994,16 +4005,16 @@ static void testProjectCreationInSelectedDirectory(NSString *temporaryDirectory)
 {
   AppController *controller = AUTORELEASE([AppController new]);
   NSUInteger format;
-  for (format = 0; format < 2; format++) {
-    NSString *name = format == 0 ? @"Selected App Folder" : @"Selected Tool Folder";
+  for (format = 0; format < 3; format++) {
+    NSString *name = format == 0 ? @"Selected App Folder" : format == 1 ? @"Selected Tool Folder" : @"Selected Make Folder";
     NSString *directory = [temporaryDirectory stringByAppendingPathComponent:name];
     [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
     [controller createNewProjectAtURL:[NSURL fileURLWithPath:directory]
-      format:format == 0 ? @"Xcode" : @"ProjectCenter" productType:format == 0 ? @"Application" : @"Tool"];
-    NSString *package = [directory stringByAppendingPathComponent:[name stringByAppendingPathExtension:
+      format:format == 0 ? @"Xcode" : format == 1 ? @"ProjectCenter" : @"GNUmakefile" productType:format == 0 ? @"Application" : @"Tool"];
+    NSString *package = format == 2 ? directory : [directory stringByAppendingPathComponent:[name stringByAppendingPathExtension:
       format == 0 ? @"xcodeproj" : @"pcproj"]];
     testAssert([[NSFileManager defaultManager] fileExistsAtPath:package],
-      @"Selected directory supplies the project name and contains its package");
+      @"Selected directory supplies the project name and contains the project");
     testAssert([[NSFileManager defaultManager] fileExistsAtPath:[directory stringByAppendingPathComponent:@"main.m"]]
       && ![[NSFileManager defaultManager] fileExistsAtPath:[directory stringByAppendingPathComponent:name]],
       @"Create writes source directly into the selected folder, without another directory");
@@ -4658,6 +4669,13 @@ int main(void)
     testArchitectureSelection(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
     NSLog(@"Ycode architecture checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
+  if ([arguments containsObject:@"--check-new-project"]) {
+    testProjectCreationInSelectedDirectory(temporaryDirectory);
+    testNewProjectTemplates(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode new-project checks: %lu failures", (unsigned long)failures);
     [pool drain]; return failures ? 1 : 0;
   }
   if ([arguments containsObject:@"--check-make-directory"]) {
