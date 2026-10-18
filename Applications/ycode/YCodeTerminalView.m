@@ -27,7 +27,9 @@
 @interface YCodeTerminalView (Private)
 - (void)poll:(NSTimer *)timer;
 - (void)queueBytes:(const char *)bytes length:(size_t)length;
-- (int)property:(VTermProp)property value:(VTermValue *)value;
+// GCC cannot encode libvterm's nested _Bool bitfields in Objective-C method
+// metadata. Keep the C callback typed and pass its value opaquely here.
+- (int)property:(VTermProp)property value:(void *)rawValue;
 - (int)pushLine:(int)columns cells:(const VTermScreenCell *)cells;
 - (int)popLine:(int)columns cells:(VTermScreenCell *)cells;
 - (void)clearHistory;
@@ -36,16 +38,22 @@
 - (void)scrollHistory:(NSScroller *)sender;
 - (void)preferencesChanged:(NSNotification *)notification;
 - (void)ringBell;
+- (void)invalidateTerminalRect:(VTermRect)rect;
+- (void)invalidateCursorAt:(VTermPos)position;
+- (BOOL)cursorCanBlink;
+- (void)advanceBlink;
+- (void)windowFocusChanged:(NSNotification *)notification;
 @end
 
 static int terminalDamage(VTermRect rect, void *user)
 {
-  [(YCodeTerminalView *)user setNeedsDisplay:YES];
+  [(YCodeTerminalView *)user invalidateTerminalRect:rect];
   return 1;
 }
 static int terminalCursor(VTermPos pos, VTermPos old, int visible, void *user)
 {
-  [(YCodeTerminalView *)user setNeedsDisplay:YES];
+  [(YCodeTerminalView *)user invalidateCursorAt:old];
+  [(YCodeTerminalView *)user invalidateCursorAt:pos];
   return 1;
 }
 static int terminalProperty(VTermProp property, VTermValue *value, void *user)
@@ -186,6 +194,8 @@ static VTermModifier terminalModifiers(NSEvent *event)
 - (BOOL)acceptsFirstResponder { return YES; }
 - (BOOL)becomeFirstResponder
 {
+  _blinkOn = YES;
+  _lastBlink = [NSDate timeIntervalSinceReferenceDate];
   [[self window] setAcceptsMouseMovedEvents:YES];
   vterm_state_focus_in(vterm_obtain_state(_terminal));
   [self setNeedsDisplay:YES]; return YES;
@@ -197,17 +207,76 @@ static VTermModifier terminalModifiers(NSEvent *event)
 }
 - (void)viewWillMoveToWindow:(NSWindow *)window
 {
-  if ([self window]) [[NSNotificationCenter defaultCenter] removeObserver:self
-    name:NSWindowWillCloseNotification object:[self window]];
-  if (window) [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowClosing:)
-    name:NSWindowWillCloseNotification object:window];
+  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+  NSEnumerator *names = [[NSArray arrayWithObjects:NSWindowWillCloseNotification,
+    NSWindowDidBecomeKeyNotification, NSWindowDidResignKeyNotification, nil] objectEnumerator];
+  NSString *name;
+  while ((name = [names nextObject]) != nil) {
+    if ([self window]) [center removeObserver:self name:name object:[self window]];
+    if (window) [center addObserver:self selector:
+      [name isEqual:NSWindowWillCloseNotification] ? @selector(windowClosing:) : @selector(windowFocusChanged:)
+      name:name object:window];
+  }
   [super viewWillMoveToWindow:window];
 }
+
+- (void)windowFocusChanged:(NSNotification *)notification
+{
+  // Show the cursor immediately on either side of a focus change.
+  _blinkOn = YES;
+  _lastBlink = [NSDate timeIntervalSinceReferenceDate];
+  [self setNeedsDisplay:YES];
+}
+
 - (void)windowClosing:(NSNotification *)notification { [self stop]; }
 - (BOOL)isRunning { return _master >= 0; }
 
-- (int)property:(VTermProp)property value:(VTermValue *)value
+- (void)invalidateTerminalRect:(VTermRect)rect
 {
+  // While browsing history, screen rows and visible rows no longer coincide.
+  if (_scrollOffset) { [self setNeedsDisplay:YES]; return; }
+  // Include neighbouring cells so either half of a wide glyph is repainted.
+  int start = MAX(0, rect.start_col - 1), end = MIN(_columns, rect.end_col + 1);
+  [self setNeedsDisplayInRect:NSMakeRect(start * _cellWidth,
+    rect.start_row * _cellHeight, (end - start) * _cellWidth,
+    (rect.end_row - rect.start_row) * _cellHeight)];
+}
+
+- (void)invalidateCursorAt:(VTermPos)position
+{
+  if (_scrollOffset) return;
+  VTermRect rect = { position.row, position.row + 1, position.col, position.col + 1 };
+  [self invalidateTerminalRect:rect];
+}
+
+- (BOOL)cursorCanBlink
+{
+  return _allowCursorBlink && _cursorBlink && [self isRunning]
+    && [NSApp isActive] && [[self window] isKeyWindow] && [[self window] firstResponder] == self;
+}
+
+- (void)advanceBlink
+{
+  _blinkOn = !_blinkOn;
+  if (![[self window] isVisible] || [self isHiddenOrHasHiddenAncestor] || ![self superview]) return;
+  if (_cursorVisible && !_scrollOffset && [self cursorCanBlink]) {
+    VTermPos cursor; vterm_state_get_cursorpos(vterm_obtain_state(_terminal), &cursor);
+    [self invalidateCursorAt:cursor];
+  }
+  // ANSI blinking text remains independent of the cursor preference/focus.
+  NSInteger first = (_alternateScreen ? 0 : [_history count]) - _scrollOffset;
+  int row, col;
+  for (row = 0; row < _rows; row++) for (col = 0; col < _columns; col++) {
+    VTermScreenCell cell;
+    if ([self cellAtRow:first + row column:col cell:&cell] && cell.attrs.blink)
+      [self setNeedsDisplayInRect:NSMakeRect(col * _cellWidth,
+        row * _cellHeight, MAX(1, cell.width) * _cellWidth, _cellHeight)];
+  }
+}
+
+- (int)property:(VTermProp)property value:(void *)rawValue
+{
+  VTermValue *value = (VTermValue *)rawValue;
   if (property == VTERM_PROP_CURSORVISIBLE) _cursorVisible = value->boolean;
   if (property == VTERM_PROP_CURSORBLINK) _cursorBlink = value->boolean;
   if (property == VTERM_PROP_CURSORSHAPE) _cursorShape = value->number;
@@ -217,8 +286,13 @@ static VTermModifier terminalModifiers(NSEvent *event)
     _selectionStart = _selectionEnd = -1;
   }
   if (property == VTERM_PROP_MOUSE) _mouseReporting = value->number != VTERM_PROP_MOUSE_NONE;
-  // Terminal titles and OSC clipboard requests never alter project UI or pasteboard.
-  [self setNeedsDisplay:YES];
+  // Mouse modes and OSC requests do not change visible cells.
+  if (property == VTERM_PROP_ALTSCREEN) [self setNeedsDisplay:YES];
+  else if (property == VTERM_PROP_CURSORVISIBLE || property == VTERM_PROP_CURSORBLINK
+      || property == VTERM_PROP_CURSORSHAPE) {
+    VTermPos cursor; vterm_state_get_cursorpos(vterm_obtain_state(_terminal), &cursor);
+    [self invalidateCursorAt:cursor];
+  }
   return 1;
 }
 - (void)clearHistory
@@ -453,8 +527,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
 {
   NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
   if (now - _lastBlink >= 0.5) {
-    _lastBlink = now; _blinkOn = !_blinkOn;
-    if ([[self window] isVisible]) [self setNeedsDisplay:YES];
+    _lastBlink = now; [self advanceBlink];
   }
 #ifndef _WIN32
   char buffer[8192]; ssize_t count; NSUInteger total = 0;
@@ -537,12 +610,18 @@ static VTermModifier terminalModifiers(NSEvent *event)
   int row, col, pass;
   // Paint backgrounds before glyphs so a wide glyph is not erased by its
   // trailing cell. Clip each glyph to its terminal cell(s), not its font advance.
-  for (pass = 0; pass < 2; pass++) for (row = 0; row < _rows; row++) {
-    for (col = 0; col < _columns; col++) {
+  int firstRow = MAX(0, (int)floor(NSMinY(dirty) / _cellHeight));
+  int lastRow = MIN(_rows, (int)ceil(NSMaxY(dirty) / _cellHeight));
+  int firstCol = MAX(0, (int)floor((NSMinX(dirty)) / _cellWidth) - 1);
+  int lastCol = MIN(_columns, (int)ceil((NSMaxX(dirty)) / _cellWidth));
+  for (pass = 0; pass < 2; pass++) for (row = firstRow; row < lastRow; row++) {
+    for (col = firstCol; col < lastCol; col++) {
       NSRect rect = NSMakeRect(col * _cellWidth, row * _cellHeight, _cellWidth, _cellHeight);
-      if (!NSIntersectsRect(rect, dirty)) continue;
       VTermScreenCell cell;
       if (![self cellAtRow:first + row column:col cell:&cell]) continue;
+      NSRect paintRect = rect;
+      if (pass == 1) paintRect.size.width *= MAX(1, cell.width);
+      if (!NSIntersectsRect(paintRect, dirty) || ![self needsToDrawRect:paintRect]) continue;
       NSColor *fg = [self color:cell.fg], *bg = [self color:cell.bg];
       if (cell.attrs.reverse) { NSColor *swap = fg; fg = bg; bg = swap; }
       NSInteger position = (first + row) * _columns + col;
@@ -551,8 +630,14 @@ static VTermModifier terminalModifiers(NSEvent *event)
       }
       if (pass == 0) { [bg set]; NSRectFill(rect); continue; }
       if (cell.chars[0] == (uint32_t)-1 || cell.attrs.conceal || (cell.attrs.blink && !_blinkOn)) continue;
+      // Keep backgrounds and decorations, but avoid shaping blank glyphs.
+      if ((cell.chars[0] == 0 || (cell.chars[0] == ' ' && !cell.chars[1]))
+          && !cell.attrs.underline && !cell.attrs.strike) continue;
       NSFont *font = cell.attrs.bold ? _boldFont : _font;
-      if (cell.attrs.italic) font = [[NSFontManager sharedFontManager] convertFont:font toHaveTrait:NSItalicFontMask];
+      if (cell.attrs.italic) {
+        NSFont *italic = [[NSFontManager sharedFontManager] convertFont:font toHaveTrait:NSItalicFontMask];
+        if (italic) font = italic;
+      }
       NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithObjectsAndKeys:
         font, NSFontAttributeName, fg, NSForegroundColorAttributeName, nil];
       if (cell.attrs.underline) [attributes setObject:[NSNumber numberWithInt:
@@ -566,7 +651,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
       [NSGraphicsContext restoreGraphicsState];
     }
   }
-  if (_cursorVisible && !_scrollOffset && (!_allowCursorBlink || !_cursorBlink || _blinkOn || ![self isRunning])) {
+  if (_cursorVisible && !_scrollOffset && (![self cursorCanBlink] || _blinkOn)) {
     VTermPos cursor; vterm_state_get_cursorpos(vterm_obtain_state(_terminal), &cursor);
     [_cursorColor set];
     NSInteger shape = _preferredCursorShape;
@@ -608,6 +693,7 @@ static VTermModifier terminalModifiers(NSEvent *event)
     [self updateScroller];
     [self setNeedsDisplay:YES]; return;
   }
+  BOOL redraw = _scrollOffset != 0 || _selectionStart >= 0;
   _scrollOffset = 0; _selectionStart = _selectionEnd = -1;
   _wheelRemainder = 0; [self updateScroller];
   VTermModifier mods = terminalModifiers(event);
@@ -655,7 +741,13 @@ static VTermModifier terminalModifiers(NSEvent *event)
       vterm_keyboard_unichar(_terminal, code, mods);
     }
   }
-  [self setNeedsDisplay:YES];
+  if (redraw) [self setNeedsDisplay:YES];
+  else if (!_blinkOn) {
+    VTermPos cursor; vterm_state_get_cursorpos(vterm_obtain_state(_terminal), &cursor);
+    [self invalidateCursorAt:cursor];
+  }
+  _blinkOn = YES;
+  _lastBlink = [NSDate timeIntervalSinceReferenceDate];
 }
 - (BOOL)performKeyEquivalent:(NSEvent *)event
 {

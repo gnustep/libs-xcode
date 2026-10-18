@@ -68,6 +68,7 @@
 - (BOOL)cellAtRow:(NSInteger)row column:(int)column cell:(VTermScreenCell *)cell;
 - (void)queueBytes:(const char *)bytes length:(size_t)length;
 - (NSPasteboard *)pasteboard;
+- (void)advanceBlink;
 @end
 
 @interface YCodeTerminalMenuTestController : AppController
@@ -223,11 +224,139 @@ static BOOL terminalWait(YCodeTerminalView *view, NSString *text)
   return NO;
 }
 
+// Exercise cursor painting without starting a shell or a polling timer.
+@interface YCodeCursorTestView : YCodeTerminalView
+{
+@public
+  NSUInteger fullInvalidations, partialInvalidations;
+}
+@end
+@implementation YCodeCursorTestView
+- (BOOL)isRunning { return YES; }
+
+- (void)setNeedsDisplay:(BOOL)flag
+{
+  if (flag) fullInvalidations++;
+  [super setNeedsDisplay:flag];
+}
+
+- (void)setNeedsDisplayInRect:(NSRect)rect
+{
+  partialInvalidations++;
+  [super setNeedsDisplayInRect:rect];
+}
+@end
+
+static BOOL terminalCursorPixelVisible(YCodeTerminalView *view)
+{
+  [view setNeedsDisplay:YES];
+  [[view window] display];
+  NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:[view bounds]];
+  [view cacheDisplayInRect:[view bounds] toBitmapImageRep:bitmap];
+  return colorMatches([bitmap colorAtX:2 y:2], 1, 0, 0);
+}
+
+static NSData *terminalRenderedPixels(YCodeTerminalView *view)
+{
+  [view lockFocus];
+  NSBitmapImageRep *bitmap = [[[NSBitmapImageRep alloc] initWithFocusedViewRect:[view bounds]] autorelease];
+  [view unlockFocus];
+  return [bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]];
+}
+
+static void testTerminalRedrawing(void)
+{
+  [NSApp finishLaunching];
+  [NSApp activateIgnoringOtherApps:YES];
+  [YCodePreferences setTerminalCursorShape:1];
+  testAssert([YCodePreferences terminalCursorBlink], @"Cursor blinking is enabled by default");
+  NSWindow *windows[2]; YCodeCursorTestView *views[2]; int i;
+  for (i = 0; i < 2; i++) {
+    windows[i] = [[NSWindow alloc] initWithContentRect:NSMakeRect(40+i*40,40,320,180)
+      styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
+    [windows[i] setReleasedWhenClosed:NO];
+    views[i] = [[YCodeCursorTestView alloc] initWithFrame:NSMakeRect(0,0,320,180)];
+    [windows[i] setContentView:views[i]];
+    [windows[i] makeKeyAndOrderFront:nil]; [windows[i] makeFirstResponder:views[i]];
+  }
+  views[0]->fullInvalidations = views[0]->partialInvalidations = 0;
+  views[1]->fullInvalidations = views[1]->partialInvalidations = 0;
+  [views[0] advanceBlink]; [views[1] advanceBlink];
+  testAssert(views[0]->fullInvalidations == 0 && views[0]->partialInvalidations == 0,
+    @"Inactive cursor blink causes no repaint");
+  testAssert(views[1]->fullInvalidations == 0 && views[1]->partialInvalidations > 0,
+    @"Active cursor blink repaints only its cells");
+  views[1]->fullInvalidations = views[1]->partialInvalidations = 0;
+  terminalFeed(views[1], @"x\b \b");
+  testAssert(views[1]->fullInvalidations == 0 && views[1]->partialInvalidations > 0,
+    @"Text and cursor updates request partial redraws");
+  views[1]->fullInvalidations = views[1]->partialInvalidations = 0;
+  NSEvent *typing = [NSEvent keyEventWithType:NSKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+    windowNumber:0 context:nil characters:@"a" charactersIgnoringModifiers:@"a" isARepeat:NO keyCode:0];
+  [views[1] keyDown:typing];
+  testAssert(views[1]->fullInvalidations == 0,
+    @"Typing at the live prompt does not invalidate the whole terminal");
+  views[1]->fullInvalidations = views[1]->partialInvalidations = 0;
+  terminalFeed(views[1], @"\033[?1000h\033[?1000l\033]0;title\007");
+  testAssert(views[1]->fullInvalidations == 0 && views[1]->partialInvalidations == 0,
+    @"Mouse modes and ignored OSC titles cause no repaint");
+  [views[0] setValue:[NSNumber numberWithBool:NO] forKey:@"_blinkOn"];
+  [views[1] setValue:[NSNumber numberWithBool:NO] forKey:@"_blinkOn"];
+  testAssert(terminalCursorPixelVisible(views[0]) && !terminalCursorPixelVisible(views[1]),
+    @"Only the active terminal hides its cursor during the blink off phase");
+  [windows[0] makeKeyAndOrderFront:nil];
+  testAssert(terminalCursorPixelVisible(views[0]) && terminalCursorPixelVisible(views[1]),
+    @"Switching active windows immediately restores both cursors");
+  [views[0] setValue:[NSNumber numberWithBool:NO] forKey:@"_blinkOn"];
+  [views[1] setValue:[NSNumber numberWithBool:NO] forKey:@"_blinkOn"];
+  testAssert(!terminalCursorPixelVisible(views[0]) && terminalCursorPixelVisible(views[1]),
+    @"Blinking follows the newly active terminal");
+  [YCodePreferences setTerminalCursorBlink:NO];
+  [views[0] setValue:[NSNumber numberWithBool:NO] forKey:@"_blinkOn"];
+  testAssert(terminalCursorPixelVisible(views[0]), @"Disabling cursor blink keeps the active cursor steady");
+  views[0]->fullInvalidations = views[0]->partialInvalidations = 0;
+  [views[0] advanceBlink];
+  testAssert(views[0]->fullInvalidations == 0 && views[0]->partialInvalidations == 0,
+    @"Disabled cursor blink causes no repaint");
+  terminalFeed(views[0], @"\033[5mX\033[0m");
+  views[0]->fullInvalidations = views[0]->partialInvalidations = 0;
+  [views[0] advanceBlink];
+  testAssert(views[0]->fullInvalidations == 0 && views[0]->partialInvalidations > 0,
+    @"ANSI blinking text still repaints with cursor blinking disabled");
+  [views[0] setHidden:YES];
+  views[0]->fullInvalidations = views[0]->partialInvalidations = 0;
+  [views[0] advanceBlink];
+  testAssert(views[0]->fullInvalidations == 0 && views[0]->partialInvalidations == 0,
+    @"Hidden terminal tabs do not redraw for blinking text");
+  [views[0] setHidden:NO];
+  terminalFeed(views[0], @"\033[2J\033[H");
+  [YCodePreferences setTerminalCursorBlink:YES];
+  terminalFeed(views[0], @"\033[?25l");
+  testAssert(!terminalCursorPixelVisible(views[0]), @"Application-requested hidden cursor remains hidden");
+  NSArray *updates = [NSArray arrayWithObjects:
+    @"\033[?25hhello", @"\rH", @"\033[2;2H中é", @"\033[2;3HX",
+    @"\033[3;1H\033[4;41m   \033[0m", @"\033[3;2H\033[K",
+    @"\033[?1049hother screen", @"\033[?1049l", @"\033[2J\033[H", nil];
+  NSEnumerator *enumerator = [updates objectEnumerator];
+  NSString *update;
+  while ((update = [enumerator nextObject]) != nil) {
+    terminalFeed(views[0], update);
+    [views[0] displayIfNeeded];
+    NSData *partial = [[terminalRenderedPixels(views[0]) copy] autorelease];
+    [views[0] setNeedsDisplay:YES]; [views[0] displayIfNeeded];
+    testAssert([partial isEqual:terminalRenderedPixels(views[0])],
+      @"Incremental painting matches a complete repaint (text, wide glyphs, decorations, alternate screen)");
+  }
+  [YCodePreferences resetTerminalPreferences];
+  for (i = 0; i < 2; i++) { [windows[i] close]; [views[i] release]; [windows[i] release]; }
+}
+
 static void testTerminal(NSString *temporaryDirectory)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   id savedTerminalPreferences = [[defaults objectForKey:@"YCodeTerminalPreferences"] retain];
   [YCodePreferences resetTerminalPreferences];
+  testTerminalRedrawing();
   id savedWindowFrame = [[defaults objectForKey:@"NSWindow Frame YCodeMainWindow"] retain];
   YCodeTerminalTestView *view = [[YCodeTerminalTestView alloc] initWithFrame:NSMakeRect(0, 0, 800, 400)];
   testAssert(![view isRunning], @"Constructing a terminal does not start a shell");
