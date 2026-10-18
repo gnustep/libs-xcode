@@ -23,6 +23,10 @@
 */
 
 #import <AppKit/AppKit.h>
+#ifdef GNUSTEP
+#import <GNUstepGUI/GSGormLoading.h>
+#import <GNUstepGUI/GSNibLoading.h>
+#endif
 #import <XCode/PBXContainer.h>
 #import <XCode/PBXProject.h>
 #import <XCode/PBXGroup.h>
@@ -45,6 +49,7 @@
 #import "YCodeProjectNavigatorItem.h"
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
+#import "YCodeEditorRegistry.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
@@ -2115,6 +2120,296 @@ static void testEditorEditing(NSString *directory)
   [[editor textView] insertTab:nil];
   testAssert([[editor text] isEqual:@"  "], @"Standalone editor uses the same editing rules");
   [editor release];
+}
+
+static BOOL modelViewContains(NSView *view, NSString *text)
+{
+  if ([view isKindOfClass:[NSTextField class]] &&
+      [[(NSTextField *)view stringValue] rangeOfString:text].location != NSNotFound) return YES;
+#ifdef GNUSTEP
+  if ([view isKindOfClass:[NSMenuView class]])
+    {
+      NSEnumerator *items = [[[(NSMenuView *)view menu] itemArray] objectEnumerator];
+      NSMenuItem *item;
+      while ((item = [items nextObject]))
+        if ([[item title] rangeOfString:text].location != NSNotFound) return YES;
+    }
+#endif
+  NSEnumerator *e = [[view subviews] objectEnumerator];
+  NSView *child;
+  while ((child = [e nextObject])) if (modelViewContains(child, text)) return YES;
+  return NO;
+}
+
+static NSView *modelWidget(NSView *view, Class widgetClass)
+{
+  if ([view isKindOfClass:widgetClass]) return view;
+  NSEnumerator *enumerator = [[view subviews] objectEnumerator];
+  NSView *child;
+  while ((child = [enumerator nextObject]))
+    {
+      NSView *found = modelWidget(child, widgetClass);
+      if (found) return found;
+    }
+  return nil;
+}
+
+static void renderModelPreview(YCodeEditorDocument *document, NSString *path)
+{
+  if (![[[NSProcessInfo processInfo] arguments] containsObject:@"--model-preview-screenshot"]) return;
+  NSWindow *preview = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 900)
+    styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [preview setReleasedWhenClosed:NO];
+  [preview setContentView:[document editorView]];
+  [preview orderFront:nil];
+  [preview display];
+  NSView *view = [preview contentView];
+  NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:[view bounds]];
+  [view cacheDisplayInRect:[view bounds] toBitmapImageRep:bitmap];
+  [[bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]] writeToFile:path atomically:YES];
+  [preview close];
+  [preview release];
+}
+
+static void testModelViewer(NSString *directory)
+{
+#ifdef GNUSTEP
+  NSString *path = [directory stringByAppendingPathComponent:@"Preview.gorm"];
+  NSString *archive = [path stringByAppendingPathComponent:@"objects.gorm"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:NULL];
+  GSNibContainer *container = [GSNibContainer new];
+  NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 360, 220)
+    styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:YES];
+  [window setReleasedWhenClosed:NO];
+  [window setTitle:@"Hidden preview window"];
+  NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(12, 20, 210, 24)];
+  [label setStringValue:@"Archived label"];
+  [[window contentView] addSubview:label];
+  [label release];
+  NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(20, 160, 120, 32)];
+  [button setTitle:@"Preview button"];
+  [button setBezelStyle:NSRoundedBezelStyle];
+  [[window contentView] addSubview:button];
+  [button release];
+  NSButton *check = [[NSButton alloc] initWithFrame:NSMakeRect(20, 110, 200, 24)];
+  [check setButtonType:NSSwitchButton];
+  [check setTitle:@"Enabled option"];
+  [check setState:NSOnState];
+  [[window contentView] addSubview:check];
+  [check release];
+  NSSlider *slider = [[NSSlider alloc] initWithFrame:NSMakeRect(20, 65, 200, 24)];
+  [slider setMinValue:0];
+  [slider setMaxValue:1];
+  [slider setNumberOfTickMarks:5];
+  [slider setDoubleValue:0.65];
+  [[window contentView] addSubview:slider];
+  [slider release];
+  NSMenu *fixtureMenu = [[NSMenu alloc] initWithTitle:@"Preview menu"];
+  [fixtureMenu setAutoenablesItems:NO];
+  [fixtureMenu addItemWithTitle:@"Open" action:NULL keyEquivalent:@"o"];
+  [fixtureMenu addItem:[NSMenuItem separatorItem]];
+  [[fixtureMenu addItemWithTitle:@"Checked item" action:NULL keyEquivalent:@""] setState:NSOnState];
+  [[container topLevelObjects] addObject:fixtureMenu];
+  [fixtureMenu release];
+  [[container nameTable] setObject:window forKey:@"Window"];
+  [[container topLevelObjects] addObject:window];
+  [[container visibleWindows] addObject:window];
+  NSWindow *customWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 160, 80)
+    styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:YES];
+  [customWindow setReleasedWhenClosed:NO];
+  [customWindow setTitle:@"Custom class window"];
+  GSWindowTemplate *custom = [[GSWindowTemplate alloc] initWithObject:customWindow
+    className:@"YCodeMissingPreviewWindowClass" superClassName:@"NSWindow"];
+  [[container nameTable] setObject:custom forKey:@"Custom window"];
+  [[container topLevelObjects] addObject:custom];
+  NSData *data = [NSArchiver archivedDataWithRootObject:container];
+  [data writeToFile:archive atomically:YES];
+  NSMenu *menu = [NSApp mainMenu];
+  id delegate = [NSApp delegate];
+  NSArray *windows = [[NSApp windows] copy];
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([[[document class] editorKind] isEqual:@"model"] && [document loadFromFile],
+    @"Gorm packages select and load the model viewer");
+  testAssert(modelViewContains([document editorView], @"Hidden preview window") &&
+    modelViewContains([document editorView], @"Archived label") &&
+    modelViewContains([document editorView], @"Custom class window"),
+    @"The embedded preview includes archived windows and their contents");
+  testAssert(![document isEditable] && ![document textView], @"Models have no text editing surface");
+  NSButton *previewButton = (NSButton *)modelWidget([document editorView], [NSButton class]);
+  NSSlider *previewSlider = (NSSlider *)modelWidget([document editorView], [NSSlider class]);
+  NSMenuView *previewMenu = (NSMenuView *)modelWidget([document editorView], [NSMenuView class]);
+  testAssert([[previewButton title] isEqual:@"Preview button"], @"Preview embeds a native button");
+  testAssert(NSEqualRects([previewButton frame], NSMakeRect(20, 160, 120, 32)),
+    @"Preview preserves archived widget geometry");
+  /* GNUstep's unkeyed slider archive stores bounds and ticks, but not value. */
+  testAssert(previewSlider != nil && [previewSlider maxValue] == 1 &&
+    [previewSlider numberOfTickMarks] == 5, @"Preview renders archived slider bounds and tick marks");
+  testAssert(previewMenu != nil && [[previewMenu menuItemCellForItemAtIndex:0] isKindOfClass:[NSMenuItemCell class]] &&
+    [[[previewMenu menu] itemAtIndex:2] state] == NSOnState,
+    @"Menus render native menu cells, separators and checked states instead of text outlines");
+  testAssert(![previewButton acceptsFirstResponder] && ![previewSlider acceptsFirstResponder],
+    @"Rendered widgets stay out of keyboard traversal");
+  renderModelPreview(document, @"/tmp/ycode-model-widgets.png");
+  NSView *canvas = [[document scrollView] documentView];
+  testAssert([canvas hitTest:NSMakePoint(30, 100)] == canvas,
+    @"Preview controls cannot receive mouse input");
+  [document setModified:YES];
+  testAssert(![document isModified] && [document saveToFile] &&
+    [data isEqual:[NSData dataWithContentsOfFile:archive]], @"Saving a preview leaves the archive untouched");
+  testAssert([document reloadFromFile] && modelViewContains([document editorView], @"Archived label"),
+    @"Repeated model loads retain the preview contents");
+  NSEnumerator *e = [[NSApp windows] objectEnumerator];
+  NSWindow *other;
+  BOOL visible = NO;
+  while ((other = [e nextObject]))
+    if (![windows containsObject:other] && [other isVisible]) visible = YES;
+  testAssert(!visible && [NSApp mainMenu] == menu && [NSApp delegate] == delegate,
+    @"Previewing does not show model windows or replace application state");
+  [document release];
+  [windows release];
+  [container release];
+  [window release];
+  [custom release];
+  [customWindow release];
+
+  NSIBObjectData *nib = [NSIBObjectData new];
+  NSWindowTemplate *nibWindow = [NSWindowTemplate new];
+  NSView *nibContent = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 160, 100)];
+  NSSlider *keyedSlider = [[NSSlider alloc] initWithFrame:NSMakeRect(10, 10, 120, 24)];
+  [keyedSlider setMinValue:0];
+  [keyedSlider setMaxValue:1];
+  [keyedSlider setDoubleValue:0.65];
+  [nibContent addSubview:keyedSlider];
+  [keyedSlider release];
+  [nibWindow setView:nibContent];
+  [nibWindow setTitle:@"Keyed NIB window"];
+  NSMapInsert([nib objects], nibWindow, nibWindow);
+  NSMutableData *nibData = [NSMutableData data];
+  NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:nibData];
+  [archiver encodeObject:nib forKey:@"IB.objectdata"];
+  [archiver finishEncoding];
+  [archiver release];
+  path = [directory stringByAppendingPathComponent:@"Preview.nib"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:NULL];
+  [nibData writeToFile:[path stringByAppendingPathComponent:@"keyedobjects.nib"] atomically:YES];
+  document = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([document loadFromFile] && modelViewContains([document editorView], @"Keyed NIB window"),
+    @"Keyed NIB packages preview window templates without awakening the model");
+  previewSlider = (NSSlider *)modelWidget([document editorView], [NSSlider class]);
+  testAssert(previewSlider != nil && fabs([previewSlider doubleValue] - 0.65) < 0.001,
+    @"Keyed NIB widget previews preserve archived values");
+  [document release];
+  [nib release];
+  [nibWindow release];
+  [nibContent release];
+
+  path = [[NSBundle mainBundle] pathForResource:@"Ycode" ofType:@"gorm"];
+  document = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([document loadFromFile] && !modelViewContains([document editorView], @"Unable to preview") &&
+    modelViewContains([document editorView], @"AppController"),
+    @"A real Gorm archive previews its application controller without constructing it");
+  testAssert([NSApp mainMenu] == menu && [NSApp delegate] == delegate,
+    @"Real Gorm model previews leave application state intact");
+  [document release];
+  NSString *resources = [[NSBundle mainBundle] pathForResource:@"Templates" ofType:nil];
+  path = [resources stringByAppendingPathComponent:@"Application/MainMenu.xib"];
+  document = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([document loadFromFile] && modelViewContains([document editorView], @"Main Window") &&
+    modelViewContains([document editorView], @"Quit"), @"XIB previews include windows and nested menus");
+  testAssert([NSApp mainMenu] == menu && [NSApp delegate] == delegate &&
+    ![NSClassSwapper isInInterfaceBuilder], @"XIB loading restores decoder state without connecting outlets");
+  renderModelPreview(document, @"/tmp/ycode-model-preview.png");
+  [document release];
+  path = [directory stringByAppendingPathComponent:@"Broken.nib"];
+  [@"invalid archive" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  document = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([document loadFromFile] && modelViewContains([document editorView], @"Unable to preview"),
+    @"Unsupported models show an explanation inside the editor pane");
+  testAssert(![NSClassSwapper isInInterfaceBuilder], @"Failed model loading restores decoder state");
+  [document release];
+#endif
+}
+
+static void testEditorBundles(void)
+{
+  NSString *resources = [[NSBundle mainBundle] pathForResource:@"Editors" ofType:nil];
+  testAssert(resources != nil, @"Editor bundles are packaged with the host");
+  YCodeEditorRegistry *registry = [[YCodeEditorRegistry alloc]
+    initWithSearchPaths:resources ? [NSArray arrayWithObject:resources] : [NSArray array]];
+  testAssert([[registry editorIdentifiers] isEqual:
+    [NSArray arrayWithObjects:@"image", @"model", @"sound", @"text", nil]],
+    @"Discover the independently loaded editor bundles");
+  Class text = [registry editorClassForFilePath:@"Source.m"];
+  Class image = [registry editorClassForFilePath:@"Picture.PNG"];
+  Class sound = [registry editorClassForFilePath:@"Audio.WAV"];
+  testAssert([[text editorIdentifier] isEqual:@"text"] &&
+    [[image editorIdentifier] isEqual:@"image"] &&
+    [[sound editorIdentifier] isEqual:@"sound"],
+    @"Specialized editors beat the text fallback, including uppercase extensions");
+  testAssert([registry editorClassForFilePath:@"Untitled-1"] == text &&
+    [registry editorClassForFilePath:@"README.unknown"] == text,
+    @"Untitled and unrecognized files use the text editor");
+  testAssert([registry editorClassForFilePath:nil] == Nil &&
+    ![registry loadBundleAtPath:@"/nonexistent/YcodeEditor.bundle"],
+    @"Missing paths and invalid bundles fail safely");
+  testAssert([[[NSBundle bundleForClass:text] bundlePath] hasSuffix:@"Text.bundle"] &&
+    [[[NSBundle bundleForClass:image] bundlePath] hasSuffix:@"Image.bundle"] &&
+    [[[NSBundle bundleForClass:sound] bundlePath] hasSuffix:@"Sound.bundle"],
+    @"Editor implementations reside in loadable bundles");
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+    initWithFilePath:@"Picture.PNG"];
+  testAssert([document class] == image && [document textView] == nil &&
+    ![document isEditable] && [document editorView] != nil,
+    @"The document factory creates a media view without a temporary text editor");
+  [document setModified:YES];
+  testAssert(![document isModified], @"Read-only editor documents never become dirty");
+  [document release];
+  [registry release];
+  registry = [[YCodeEditorRegistry alloc] initWithSearchPaths:[NSArray array]];
+  testAssert([registry editorClassForFilePath:@"Source.m"] == Nil,
+    @"An empty registry does not silently create a hard-coded editor");
+  [registry release];
+}
+
+static void testEditorBundleFiles(NSString *directory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:NULL];
+  NSString *path = [directory stringByAppendingPathComponent:@"Bundle Preview.PNG"];
+  NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
+    initWithBitmapDataPlanes:NULL pixelsWide:8 pixelsHigh:8 bitsPerSample:8
+    samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace
+    bytesPerRow:0 bitsPerPixel:0];
+  memset([bitmap bitmapData], 255, [bitmap bytesPerRow] * [bitmap pixelsHigh]);
+  NSData *data = [bitmap representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]];
+  [data writeToFile:path atomically:YES];
+  [bitmap release];
+  YCodeEditorDocument *image = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([image loadFromFile] && [image isImageDocument] && [image image] != nil &&
+    [image textView] == nil, @"The image bundle decodes images without exposing text editing");
+  NSView *view = [image editorView];
+  [image setContent:@"must not replace pixels"];
+  [image insertText:@"text" atLocation:0];
+  [image setModified:YES];
+  testAssert(![image isModified] && [image saveToFile] &&
+    [[NSData dataWithContentsOfFile:path] isEqual:data], @"Saving a preview preserves its bytes");
+  testAssert([image reloadFromFile] && [image editorView] == view,
+    @"Image reload keeps the root view installed in its tab");
+  [@"invalid" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  testAssert(![image loadFromFile] && [image textView] == nil,
+    @"Invalid images fail without falling back to a text editor");
+  [image release];
+  path = [directory stringByAppendingPathComponent:@"Bundle Text.txt"];
+  [@"original" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+  YCodeEditorDocument *text = [[YCodeEditorDocument alloc] initWithFilePath:path];
+  testAssert([text loadFromFile] && [text isEditable] && [[text content] isEqual:@"original"],
+    @"Text bundle loads UTF-8 files");
+  [text setContent:@"changed"];
+  [text setModified:YES];
+  testAssert([text isModified] && [text saveToFile] && ![text isModified] &&
+    [[NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL]
+      isEqual:@"changed"], @"Text bundle saves changes and clears its dirty state");
+  [text release];
 }
 
 static void testEditorFiles(NSString *directory)
@@ -4537,6 +4832,14 @@ int main(void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject:@"--check-editor-bundles"]) {
+    testEditorBundles();
+    testEditorBundleFiles(temporaryDirectory);
+    testModelViewer(temporaryDirectory);
+    [manager removeItemAtPath:temporaryDirectory error:NULL];
+    NSLog(@"Ycode editor bundle checks: %lu failures", (unsigned long)failures);
+    [pool drain]; return failures ? 1 : 0;
+  }
   if ([arguments containsObject:@"--check-terminal-preferences"]) {
     testTerminalPreferences(temporaryDirectory);
     [manager removeItemAtPath:temporaryDirectory error:NULL];
@@ -5017,6 +5320,9 @@ int main(void)
     }
   [document close];
   testEditorEditing(temporaryDirectory);
+  testEditorBundles();
+  testEditorBundleFiles(temporaryDirectory);
+  testModelViewer(temporaryDirectory);
   testEditorFiles(temporaryDirectory);
   testProjectCenterImport(temporaryDirectory);
   testProjectCenterExport(temporaryDirectory);

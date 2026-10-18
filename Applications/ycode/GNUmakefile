@@ -60,6 +60,7 @@ Resources/ThirdPartyLicenses \
 Resources/Templates \
 Resources/Languages \
 DebuggerBundles/Debuggers \
+EditorBundles/Editors \
 Resources/ProjectCenterIcons \
 Resources/ProjectCenterIcons/FileH.tiff \
 Resources/ProjectCenterIcons/FileC.tiff \
@@ -89,6 +90,7 @@ YCodeProjectNavigatorController.h \
 YCodeProjectNavigatorItem.h \
 YCodeEditorController.h \
 YCodeEditorDocument.h \
+YCodeEditorRegistry.h \
 YCodeFileWatcher.h \
 YCodeSyntaxHighlighter.h \
 YCodeBuildSystem.h \
@@ -121,6 +123,7 @@ YCodeProjectNavigatorController.m \
 YCodeProjectNavigatorItem.m \
 YCodeEditorController.m \
 YCodeEditorDocument.m \
+YCodeEditorRegistry.m \
 YCodeFileWatcher.m \
 YCodeSyntaxHighlighter.m \
 YCodeBuildSystem.m \

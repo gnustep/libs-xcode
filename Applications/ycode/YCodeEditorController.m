@@ -359,7 +359,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     if (!_currentDocument) {
         [defaults removeObjectForKey:key];
     } else if ([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory]
-               && !isDirectory) {
+               && (!isDirectory || [[[_currentDocument class] editorKind] isEqual:@"model"])) {
         if (![path isAbsolutePath]) {
             path = [[[NSFileManager defaultManager] currentDirectoryPath]
                 stringByAppendingPathComponent:path];
@@ -380,7 +380,8 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     BOOL isDirectory = NO;
     if (![path isKindOfClass:[NSString class]] ||
         ![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory] ||
-        isDirectory || ![self openFile:path]) {
+        (isDirectory && ![[NSArray arrayWithObjects:@"gorm", @"nib", nil]
+            containsObject:[[path pathExtension] lowercaseString]]) || ![self openFile:path]) {
         // Deleted or unreadable files must not interfere with opening the project.
         [defaults removeObjectForKey:key];
         [defaults synchronize];
@@ -659,6 +660,7 @@ NSString * const YCodeCurrentDocumentDidChangeNotification = @"YCodeCurrentDocum
     NSString *fileName = [NSString stringWithFormat:@"Untitled-%ld", (long)untitledCounter++];
     
     YCodeEditorDocument *document = [[YCodeEditorDocument alloc] initWithFilePath:fileName content:@""];
+    if (!document) { NSBeep(); return; }
     [document setEditorController:self];
     [_openDocuments addObject:document];
     

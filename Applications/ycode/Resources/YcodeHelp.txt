@@ -18,7 +18,7 @@ Choose File > Open Project to open an .xcodeproj or .pcproj project, a project f
 
 To start a new project, choose File > New Project. Choose a location, enter a name, select a project type and Xcode, ProjectCenter, or GNUmakefile format, then choose Create. Ycode creates a new folder; existing nonempty folders are not overwritten. GNUmakefile format creates starter files and a GNUmakefile directly in the folder without a project package, and opens it as a directory project.
 
-The navigator on the left shows your project's groups and files. Select a file to edit it. Double-click a file to open it in its associated application; interface files such as Gorm and XIB documents are edited externally. Double-click a group to expand or collapse it. Recent Documents in the File menu reopens previous projects.
+The navigator on the left shows your project's groups and files. Select a file to edit it. Double-click a file to open it in its associated application; Gorm, XIB, and keyed NIB models have read-only previews in the editor pane and are edited externally. Model previews show archived windows, views, and menus using available GNUstep controls; custom controls may appear as base-class placeholders. Double-click a group to expand or collapse it. Recent Documents in the File menu reopens previous projects.
 
 Use View to show or hide the Navigator, Inspector, and Debug Area. The bottom area contains Console, Issues, Debugger, and Terminal tabs. Build and run commands are under Project on GNUstep and Product on macOS; this guide uses “Project” for both.
 

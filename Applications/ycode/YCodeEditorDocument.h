@@ -31,25 +31,24 @@
 @class YCodeEditorController;
 @class YCodeSyntaxHighlighter;
 
-@interface YCodeEditorDocument : NSObject
+/** Bundle principal classes subclass YCodeEditorDocument and implement this protocol.
+ * Higher priorities win; text is the fallback. API version 1 uses manual ownership.
+ */
+@protocol YCodeEditorPlugin
++ (NSUInteger)editorAPIVersion;
++ (NSString *)editorIdentifier;
++ (NSString *)editorKind;
++ (NSInteger)editorPriority;
++ (BOOL)canOpenFilePath:(NSString *)path;
+@end
+
+@interface YCodeEditorDocument : NSObject <YCodeEditorPlugin>
 {
     NSString *_filePath;
-    NSString *_content;
-    NSString *_savedContent;
     BOOL _modified;
     BOOL _externalChange;
     NSUndoManager *_undoManager;
     NSDate *_lastModified;
-    
-    // UI Components
-    NSScrollView *_scrollView;
-    NSTextView *_textView;
-    NSRulerView *_lineNumberRuler;
-    NSImage *_image;
-    BOOL _soundDocument;
-    
-    // Syntax highlighting
-    YCodeSyntaxHighlighter *_syntaxHighlighter;
     
     // Editor controller reference
     YCodeEditorController *_editorController;
@@ -81,7 +80,10 @@
 /**
  * UI Components
  */
-/** Image previews are read-only; textView is nil for image documents. */
+/** Non-text editors return nil from textView and syntaxHighlighter. */
+- (BOOL)isEditable;
+/** Subclasses write their own format; saveToFile handles prompts and notifications. */
+- (BOOL)writeContentsToFile;
 - (BOOL)isImageDocument;
 + (BOOL)isSoundFilePath:(NSString *)path;
 - (BOOL)isSoundDocument;

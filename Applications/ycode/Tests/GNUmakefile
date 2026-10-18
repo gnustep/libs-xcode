@@ -15,7 +15,7 @@ endif
 
 TEST_TOOL_NAME = ycode_tests
 ycode_tests_HAS_RESOURCE_BUNDLE = yes
-ycode_tests_RESOURCE_FILES = ../Resources/Templates ../Resources/Languages ../DebuggerBundles/Debuggers ../Resources/ProjectCenterIcons ../TestHost/YCodeTestHost.bundle ../Resources/YcodeHelp.txt
+ycode_tests_RESOURCE_FILES = ../Resources/Templates ../Resources/Languages ../DebuggerBundles/Debuggers ../EditorBundles/Editors ../Resources/ProjectCenterIcons ../TestHost/YCodeTestHost.bundle ../Resources/YcodeHelp.txt ../Resources/Ycode.gorm
 ycode_tests_OBJC_FILES = main.m $(filter-out ../Ycode_main.m,$(wildcard ../*.m))
 ycode_tests_INCLUDE_DIRS += -I.. -I../../..
 ycode_tests_INCLUDE_DIRS += -I../Terminal/libvterm/include
@@ -33,3 +33,4 @@ include $(GNUSTEP_MAKEFILES)/test-tool.make
 before-all::
 	$(MAKE) -C ../TestHost all
 	$(MAKE) -C ../DebuggerBundles all
+	$(MAKE) -C ../EditorBundles all

@@ -501,11 +501,10 @@
             YCodeProjectNavigatorItem *navItem = (YCodeProjectNavigatorItem *)selectedItem;
             
             if ([navItem isFile]) {
-                // Single-click previews files internally. Interface documents
-                // wait for a double-click rather than launching an application
-                // while the user is only changing the navigator selection.
+                // Single-click previews supported models internally; double-click
+                // continues to open the workspace's associated application.
                 NSString *filePath = [self resolvedFilePathForNavigatorItem:navItem];
-                NSArray *interfaceTypes = [NSArray arrayWithObjects:@"gorm", @"nib", @"xib",
+                NSArray *interfaceTypes = [NSArray arrayWithObjects:
                     @"nix", @"storyboard", @"gmodel", @"cib", nil];
                 if (filePath && ![interfaceTypes containsObject:[[filePath pathExtension] lowercaseString]]) {
                     [[_project editorController] openFile:filePath];
