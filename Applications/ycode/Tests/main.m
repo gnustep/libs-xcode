@@ -2222,6 +2222,10 @@ static void testModelViewer(NSString *directory)
     className:@"YCodeMissingPreviewWindowClass" superClassName:@"NSWindow"];
   [[container nameTable] setObject:custom forKey:@"Custom window"];
   [[container topLevelObjects] addObject:custom];
+  [[container nameTable] setObject:[fixtureMenu itemAtIndex:0] forKey:@"Menu entry"];
+  [[container nameTable] setObject:[button cell] forKey:@"Button cell"];
+  [[container nameTable] setObject:AUTORELEASE([[NSTextFieldCell alloc] initTextCell:@"Cell contents"])
+    forKey:@"Text cell"];
   NSData *data = [NSArchiver archivedDataWithRootObject:container];
   [data writeToFile:archive atomically:YES];
   NSMenu *menu = [NSApp mainMenu];
@@ -2249,6 +2253,14 @@ static void testModelViewer(NSString *directory)
     @"Menus render native menu cells, separators and checked states instead of text outlines");
   testAssert(![previewButton acceptsFirstResponder] && ![previewSlider acceptsFirstResponder],
     @"Rendered widgets stay out of keyboard traversal");
+  NSScrollView *objectsPane = [[[document editorView] subviews] objectAtIndex:0];
+  NSView *objectsCanvas = [objectsPane documentView];
+  testAssert(!modelViewContains(objectsCanvas, @"NSMenuItem") &&
+    !modelViewContains(objectsCanvas, @"NSButtonCell") && !modelViewContains(objectsCanvas, @"NSTextFieldCell"),
+    @"Menu items and cell subclasses are excluded from nonvisual objects");
+  testAssert(modelViewContains(objectsCanvas, @"File's Owner") &&
+    modelWidget(objectsCanvas, [NSMenuView class]) == nil,
+    @"The left pane contains nonvisual objects separately from graphical previews");
   renderModelPreview(document, @"/tmp/ycode-model-widgets.png");
   NSView *canvas = [[document scrollView] documentView];
   testAssert([canvas hitTest:NSMakePoint(30, 100)] == canvas,
@@ -2318,6 +2330,49 @@ static void testModelViewer(NSString *directory)
     modelViewContains([document editorView], @"Quit"), @"XIB previews include windows and nested menus");
   testAssert([NSApp mainMenu] == menu && [NSApp delegate] == delegate &&
     ![NSClassSwapper isInInterfaceBuilder], @"XIB loading restores decoder state without connecting outlets");
+  NSView *modelCanvas = [[document scrollView] documentView];
+  objectsPane = [[[document editorView] subviews] objectAtIndex:0];
+  objectsCanvas = [objectsPane documentView];
+  testAssert(objectsPane != [document scrollView] &&
+    NSMaxX([objectsPane frame]) <= NSMinX([[document scrollView] frame]),
+    @"Nonvisual objects have their own scrollable pane on the left");
+  NSSize oldSize = [[document editorView] frame].size;
+  CGFloat oldWidth = [[document scrollView] frame].size.width;
+  [[document editorView] setFrameSize:NSMakeSize(oldSize.width + 120, oldSize.height + 80)];
+  testAssert([objectsPane frame].size.width == 180 &&
+    fabs([[document scrollView] frame].size.width - oldWidth - 120) < 1 &&
+    [objectsPane frame].size.height == oldSize.height + 80,
+    @"Resizing keeps the object pane at the left and expands the preview");
+  [[document editorView] setFrameSize:oldSize];
+  NSEnumerator *tiles = [[objectsCanvas subviews] objectEnumerator];
+  NSView *tile;
+  NSUInteger iconCount = 0;
+  CGFloat previousY = -1, iconX = -1;
+  while ((tile = [tiles nextObject]))
+    {
+      NSImageView *iconView = (NSImageView *)modelWidget(tile, [NSImageView class]);
+      if (!iconView) continue;
+      NSString *name = [iconView toolTip];
+      NSString *resource = @"GormUnknown";
+      if ([name isEqual:@"File's Owner"]) resource = @"GormFilesOwner";
+      if ([name isEqual:@"First Responder"]) resource = @"GormFirstResponder";
+      NSString *resourcePath = [[NSBundle bundleForClass:[document class]] pathForResource:resource ofType:@"tiff"];
+      NSImage *expected = [[NSImage alloc] initWithContentsOfFile:resourcePath];
+      testAssert(expected != nil && [[[iconView image] TIFFRepresentation] isEqual:[expected TIFFRepresentation]],
+        @"Nonvisual objects use the matching bundled Gorm icons");
+      [expected release];
+      testAssert(NSMinY([tile frame]) > previousY && (iconX < 0 || NSMinX([tile frame]) == iconX),
+        @"Object icons are stacked in the independent left pane");
+      previousY = NSMinY([tile frame]);
+      iconX = NSMinX([tile frame]);
+      iconCount++;
+    }
+  testAssert(iconCount == 4 && modelViewContains(objectsCanvas, @"File's Owner") &&
+    modelViewContains(objectsCanvas, @"First Responder"), @"XIB proxies and controllers all have labeled icons");
+  NSMenuView *firstMenu = (NSMenuView *)modelWidget(modelCanvas, [NSMenuView class]);
+  NSView *windowFrame = modelWidget(modelCanvas, NSClassFromString(@"YCModelWindowFrame"));
+  testAssert(NSMinY([firstMenu frame]) == NSMinY([windowFrame frame]) &&
+    NSMaxX([firstMenu frame]) < NSMinX([windowFrame frame]), @"Menus and windows share a horizontal preview row");
   renderModelPreview(document, @"/tmp/ycode-model-preview.png");
   [document release];
   path = [directory stringByAppendingPathComponent:@"Broken.nib"];

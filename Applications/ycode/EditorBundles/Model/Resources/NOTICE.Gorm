@@ -1,0 +1,8 @@
+GormUnknown.tiff, GormFontManager.tiff, GormFilesOwner.tiff, and
+GormFirstResponder.tiff are copied
+unchanged from GNUstep Gorm, GormCore/Images, in the apps-gorm source tree.
+Source: https://github.com/gnustep/apps-gorm
+These resources are distributed under Gorm's GNU General Public License,
+version 3 or later; see COPYING.Gorm. Copyright belongs to the original
+GNUstep Gorm contributors. Only image resources are reused; the Model bundle
+has no Gorm library or application dependency.

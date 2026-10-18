@@ -224,12 +224,14 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
 
 @interface YCodeModelEditorDocument : YCodeEditorDocument
 {
+  NSView *_editorView;
+  NSScrollView *_objectScrollView;
   NSScrollView *_scrollView;
   NSArray *_objects;
 }
 - (void)addLabel:(NSString *)label toCanvas:(NSView *)canvas y:(CGFloat *)y;
 - (void)addMenu:(NSMenu *)menu toCanvas:(NSView *)canvas y:(CGFloat *)y
-         depth:(NSUInteger)depth visited:(NSMutableSet *)visited width:(CGFloat *)width;
+         depth:(NSUInteger)depth visited:(NSMutableSet *)visited x:(CGFloat *)x height:(CGFloat *)height;
 @end
 
 @implementation YCodeModelEditorDocument
@@ -245,7 +247,16 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
 {
   if ((self = [super initWithFilePath:path]))
     {
-      _scrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 600, 400)];
+      _editorView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 600, 400)];
+      [_editorView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+      _objectScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 180, 400)];
+      [_objectScrollView setHasVerticalScroller:YES];
+      [_objectScrollView setAutohidesScrollers:YES];
+      [_objectScrollView setBorderType:NSBezelBorder];
+      [_objectScrollView setAutoresizingMask:NSViewHeightSizable];
+      [_editorView addSubview:_objectScrollView];
+      _scrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(181, 0, 419, 400)];
+      [_editorView addSubview:_scrollView];
       [_scrollView setHasVerticalScroller:YES];
       [_scrollView setHasHorizontalScroller:YES];
       [_scrollView setAutohidesScrollers:YES];
@@ -255,16 +266,18 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
 }
 - (void)dealloc
 {
+  [_editorView release];
+  [_objectScrollView release];
   [_scrollView release];
   [_objects release];
   [super dealloc];
 }
-- (NSView *)editorView { return _scrollView; }
+- (NSView *)editorView { return _editorView; }
 - (NSScrollView *)scrollView { return _scrollView; }
 
 - (void)addLabel:(NSString *)label toCanvas:(NSView *)canvas y:(CGFloat *)y
 {
-  NSTextField *field = [[NSTextField alloc] initWithFrame:NSMakeRect(20, *y, 700, 24)];
+  NSTextField *field = [[NSTextField alloc] initWithFrame:NSMakeRect(20, *y, MIN(700, [canvas frame].size.width - 40), 24)];
   [field setStringValue:label ? label : @""];
   [field setToolTip:label];
   [field setEditable:NO];
@@ -276,7 +289,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   *y += 28;
 }
 - (void)addMenu:(NSMenu *)menu toCanvas:(NSView *)canvas y:(CGFloat *)y
-         depth:(NSUInteger)depth visited:(NSMutableSet *)visited width:(CGFloat *)width
+         depth:(NSUInteger)depth visited:(NSMutableSet *)visited x:(CGFloat *)x height:(CGFloat *)height
 {
   NSEnumerator *enumerator;
   NSMenuItem *item;
@@ -284,17 +297,17 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   [visited addObject:menu];
 #ifdef GNUSTEP
   YCModelMenuView *view = [[YCModelMenuView alloc] initWithPreviewMenu:menu];
-  [view setFrameOrigin:NSMakePoint(20, *y)];
+  [view setFrameOrigin:NSMakePoint(*x, *y)];
   [canvas addSubview:view];
   YCMakeModelViewReadOnly(view, canvas);
-  *width = MAX(*width, [view frame].size.width + 40);
-  *y += [view frame].size.height + 20;
+  *x += [view frame].size.width + 24;
+  *height = MAX(*height, [view frame].size.height);
   [view release];
 #endif
   enumerator = [[menu itemArray] objectEnumerator];
   while ((item = [enumerator nextObject]))
     if ([item submenu])
-      [self addMenu:[item submenu] toCanvas:canvas y:y depth:depth + 1 visited:visited width:width];
+      [self addMenu:[item submenu] toCanvas:canvas y:y depth:depth + 1 visited:visited x:x height:height];
 }
 
 - (BOOL)loadFromFile
@@ -303,8 +316,12 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   NSString *extension = [[_filePath pathExtension] lowercaseString];
   NSString *path = _filePath;
   NSMutableArray *objects = [NSMutableArray array];
+  NSMutableDictionary *roles = [NSMutableDictionary dictionary];
+  NSMutableArray *specialObjects = [NSMutableArray array];
   NSString *problem = nil;
   YCModelCanvas *canvas;
+  YCModelCanvas *objectCanvas;
+  CGFloat objectY = 20;
   CGFloat y = 20, width = 740;
   id decoder = nil;
   id container = nil;
@@ -336,7 +353,20 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           container = [[decoder decodeObject] retain];
           if (![container isKindOfClass:[GSNibContainer class]])
             [NSException raise:NSInvalidArgumentException format:@"Not a Gorm model archive."];
-          [objects addObjectsFromArray:[[container nameTable] allValues]];
+          NSDictionary *names = [container nameTable];
+          NSEnumerator *keys = [[[names allKeys] sortedArrayUsingSelector:@selector(compare:)] objectEnumerator];
+          NSString *key;
+          while ((key = [keys nextObject]))
+            {
+              id object = [names objectForKey:key];
+              if ([key isEqual:@"NSOwner"] || [key isEqual:@"NSFirst"])
+                [specialObjects addObject:object];
+              else
+                [objects addObject:object];
+            }
+          /* Gorm keeps these proxies separately from the archived objects. */
+          [specialObjects addObject:@"File's Owner"];
+          [specialObjects addObject:@"First Responder"];
           [objects addObjectsFromArray:[[container topLevelObjects] allObjects]];
         }
       else if ([extension isEqual:@"xib"])
@@ -346,6 +376,12 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           if (![roots isKindOfClass:[NSArray class]])
             [NSException raise:NSInvalidArgumentException format:@"This XIB format is not supported by GNUstep GUI."];
           [objects addObjectsFromArray:roots];
+          NSDictionary *decoded = [(GSXibKeyedUnarchiver *)decoder decoded];
+          id owner = [decoded objectForKey:@"-2"];
+          id responder = [decoded objectForKey:@"-1"];
+          if (!owner && [roots count]) owner = [roots objectAtIndex:0];
+          if (owner) [roles setObject:@"File's Owner" forKey:[NSValue valueWithNonretainedObject:owner]];
+          if (responder) [roles setObject:@"First Responder" forKey:[NSValue valueWithNonretainedObject:responder]];
         }
       else
         {
@@ -354,6 +390,8 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           if (![container isKindOfClass:[NSIBObjectData class]])
             [NSException raise:NSInvalidArgumentException format:@"This NIB format is not supported by GNUstep GUI."];
           [objects addObjectsFromArray:NSAllMapTableKeys([(NSIBObjectData *)container objects])];
+          id owner = [(NSIBObjectData *)container root];
+          if (owner) [roles setObject:@"File's Owner" forKey:[NSValue valueWithNonretainedObject:owner]];
         }
 #else
       problem = @"Model previews require GNUstep GUI's archive decoders.";
@@ -373,6 +411,8 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
 #endif
     }
 
+  objectCanvas = [[YCModelCanvas alloc] initWithFrame:NSMakeRect(0, 0, 160, 400)];
+  [self addLabel:@"Objects" toCanvas:objectCanvas y:&objectY];
   canvas = [[YCModelCanvas alloc] initWithFrame:NSMakeRect(0, 0, width, 400)];
   [self addLabel:@"Interface preview — read only" toCanvas:canvas y:&y];
   [self addLabel:@"Custom controls use available base classes. Application code is not loaded."
@@ -382,6 +422,9 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
     {
       NSMutableSet *seen = [NSMutableSet set];
       NSMutableArray *objectLabels = [NSMutableArray array];
+      CGFloat x = 20, rowHeight = 0;
+      if ([specialObjects count])
+        [objectLabels addObjectsFromArray:[NSArray arrayWithObjects:@"File's Owner", @"First Responder", nil]];
       NSEnumerator *enumerator = [objects objectEnumerator];
       id object;
       while ((object = [enumerator nextObject]))
@@ -390,8 +433,11 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           BOOL window = NO;
           NSUInteger style = 0;
           NSString *title = NSStringFromClass([object class]);
-          if ([seen containsObject:object]) continue;
+          if ([seen containsObject:object] || [specialObjects containsObject:object]) continue;
           [seen addObject:object];
+          /* Menu entries and cells belong to their graphical owners, not the
+           * document's nonvisual object palette. Include all subclasses. */
+          if ([object isKindOfClass:[NSMenuItem class]] || [object isKindOfClass:[NSCell class]]) continue;
           if ([object isKindOfClass:[NSWindow class]])
             {
               view = [object contentView];
@@ -410,7 +456,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
             }
           else if ([object isKindOfClass:[NSCustomObject class]] ||
                    [object isKindOfClass:[YCPreviewNibItem class]])
-            title = [NSString stringWithFormat:@"Object: %@", [object className]];
+            title = [object className];
 #endif
           else if ([object isKindOfClass:[NSView class]])
             {
@@ -420,7 +466,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           else if ([object isKindOfClass:[NSMenu class]])
             {
               if ([object supermenu]) continue;
-              [self addMenu:object toCanvas:canvas y:&y depth:1 visited:[NSMutableSet set] width:&width];
+              [self addMenu:object toCanvas:canvas y:&y depth:1 visited:[NSMutableSet set] x:&x height:&rowHeight];
               continue;
             }
           if (view)
@@ -428,26 +474,66 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
               [view setAutoresizingMask:NSViewNotSizable];
               YCModelWindowFrame *frame = [[YCModelWindowFrame alloc] initWithContentView:view
                 title:title styleMask:window ? style : 0];
-              [frame setFrameOrigin:NSMakePoint(20, y)];
+              [frame setFrameOrigin:NSMakePoint(x, y)];
               YCMakeModelViewReadOnly(frame, canvas);
               [canvas addSubview:frame];
-              width = MAX(width, [frame frame].size.width + 40);
-              y += [frame frame].size.height + 24;
+              x += [frame frame].size.width + 24;
+              rowHeight = MAX(rowHeight, [frame frame].size.height);
               [frame release];
             }
           else
-            [objectLabels addObject:title];
+            {
+              NSString *role = [roles objectForKey:[NSValue valueWithNonretainedObject:object]];
+              if ([title isEqual:@"FirstResponder"]) role = @"First Responder";
+              [objectLabels addObject:role ? role : title];
+            }
         }
+      width = MAX(width, x + 20);
+      y += rowHeight ? rowHeight + 24 : 0;
       if ([objectLabels count])
         {
-          [self addLabel:@"Nonvisual objects" toCanvas:canvas y:&y];
+
           NSEnumerator *labels = [objectLabels objectEnumerator];
           NSString *label;
-          while ((label = [labels nextObject])) [self addLabel:label toCanvas:canvas y:&y];
+          while ((label = [labels nextObject]))
+            {
+              NSString *icon = @"GormUnknown";
+              if ([label isEqual:@"NSFontManager"]) icon = @"GormFontManager";
+              if ([label isEqual:@"File's Owner"]) icon = @"GormFilesOwner";
+              else if ([label isEqual:@"First Responder"]) icon = @"GormFirstResponder";
+              NSView *tile = [[NSView alloc] initWithFrame:NSMakeRect(8, objectY, 144, 100)];
+              NSString *imagePath = [[NSBundle bundleForClass:[self class]] pathForResource:icon ofType:@"tiff"];
+              NSImage *image = [[NSImage alloc] initWithContentsOfFile:imagePath];
+              NSImageView *iconView = [[NSImageView alloc] initWithFrame:NSMakeRect(48, 42, 48, 48)];
+              [iconView setImage:image];
+              [iconView setImageScaling:NSImageScaleProportionallyDown];
+              [iconView setToolTip:label];
+              [tile addSubview:iconView];
+              [iconView release];
+              [image release];
+              NSTextField *caption = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 2, 144, 36)];
+              [caption setStringValue:label];
+              [caption setToolTip:label];
+              [caption setEditable:NO];
+              [caption setBezeled:NO];
+              [caption setDrawsBackground:NO];
+              [caption setAlignment:NSCenterTextAlignment];
+              [tile addSubview:caption];
+              [caption release];
+              [objectCanvas addSubview:tile];
+              YCMakeModelViewReadOnly(tile, objectCanvas);
+              [tile release];
+              objectY += 108;
+            }
+
         }
       if (![objects count]) [self addLabel:@"No previewable objects in this model." toCanvas:canvas y:&y];
     }
   [canvas setFrameSize:NSMakeSize(width, MAX(y + 20, 400))];
+  [objectCanvas setFrameSize:NSMakeSize(160, MAX(objectY + 20, 400))];
+  [_objectScrollView setDocumentView:objectCanvas];
+  [objectCanvas release];
+  [[_objectScrollView contentView] scrollToPoint:NSZeroPoint];
   [_scrollView setDocumentView:canvas];
   [canvas release];
   ASSIGN(_objects, objects);
