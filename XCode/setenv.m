@@ -25,27 +25,28 @@
 #import "setenv.h"
 #import "GSXCBuildContext.h"
 
-int setenv(const char *key, const char *value, int overwrite)
+int
+setenv (const char *key, const char *value, int overwrite)
 {
   GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
   int result = 255; // failure...
-  char *current = getenv(key);
+  char *current = getenv (key);
 
-  if(overwrite && current)
+  if (overwrite && current)
     {
-      int key_len = strlen(key);
-      int val_len = strlen(value);
+      int key_len = strlen (key);
+      int val_len = strlen (value);
       int len = key_len + 1 + val_len + 1; // key + "=" + value + '\0'
-      char *buffer = malloc(len);
+      char *buffer = malloc (len);
 
-      memset(buffer, 0, len);
-      sprintf(buffer,"%s=%s",key,value);
-      result = putenv(buffer);
+      memset (buffer, 0, len);
+      sprintf (buffer, "%s=%s", key, value);
+      result = putenv (buffer);
 
       [ctx setObject: [NSString stringWithCString: value]
-	      forKey: [NSString stringWithCString: key]];
-      
-      free(buffer);
+              forKey: [NSString stringWithCString: key]];
+
+      free (buffer);
     }
 
   return result;

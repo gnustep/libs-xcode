@@ -27,21 +27,21 @@
 
 #import <Foundation/Foundation.h>
 
-#if	defined(__cplusplus)
-extern "C" {
+#if defined(__cplusplus)
+extern "C"
+{
 #endif
 
-NSInteger xcsystem(NSString *cmd);
+  NSInteger xcsystem (NSString *cmd);
 
-void xcputs(const char *str);
+  void xcputs (const char *str);
 
-void xcput_string(NSString *str);  
+  void xcput_string (NSString *str);
 
-int xcprintf(const char *format, ...);
+  int xcprintf (const char *format, ...);
 
-#if	defined(__cplusplus)
+#if defined(__cplusplus)
 }
 #endif
 
-#endif	/* _XCSystem_h_INCLUDE */
-
+#endif /* _XCSystem_h_INCLUDE */

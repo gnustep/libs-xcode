@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXVariantGroup.h"
 #import "PBXGroup.h"
 #import "PBXFileReference.h"
@@ -36,7 +38,7 @@
 
 - (void) setSourceTree: (NSString *)object; // setter
 {
-  ASSIGN(sourceTree,object);
+  ASSIGN (sourceTree, object);
 }
 
 - (NSString *) path // getter
@@ -46,7 +48,7 @@
 
 - (void) setPath: (NSString *)object; // setter
 {
-  ASSIGN(path,object);
+  ASSIGN (path, object);
 }
 
 - (NSMutableArray *) children // getter
@@ -56,7 +58,7 @@
 
 - (void) setChildren: (NSMutableArray *)object; // setter
 {
-  ASSIGN(children,object);
+  ASSIGN (children, object);
 }
 
 - (NSString *) name // getter
@@ -66,55 +68,61 @@
 
 - (void) setName: (NSString *)object; // setter
 {
-  ASSIGN(name,object);
+  ASSIGN (name, object);
 }
 
-- (NSString *) resolvePathFor: (id)object 
-		    withGroup: (PBXGroup *)group
-			found: (BOOL *)found
+- (NSString *) resolvePathFor: (id)object
+                   withGroup: (PBXGroup *)group
+                       found: (BOOL *)found
 {
   NSString *result = @"";
   NSArray *chldren = [group children];
   NSEnumerator *en = [chldren objectEnumerator];
   id file = nil;
-  while((file = [en nextObject]) != nil && *found == NO)
+  while ((file = [en nextObject]) != nil && *found == NO)
     {
-      if(file == self) // have we found ourselves??
-	{
-	  PBXFileReference *fileRef = [[file children] objectAtIndex: 0]; // FIXME: Assume english for now...
-	  NSString *filePath = ([fileRef path] == nil)?@"":[[fileRef path] lastPathComponent];
-	  result = filePath;
-	  *found = YES;
-	  break;
-	}
-      else if([file isKindOfClass: [PBXGroup class]])
-	{
-	  NSString *filePath = ([file path] == nil)?@"":[file path]; // lastPathComponent];
-	  result = [filePath stringByAppendingPathComponent: 
-				      [self resolvePathFor: object 
-						 withGroup: file
-						     found: found]];
-	}
+      if (file == self) // have we found ourselves??
+        {
+          PBXFileReference *fileRef = [[file children]
+              objectAtIndex: 0]; // FIXME: Assume english for now...
+          NSString *filePath = ([fileRef path] == nil)
+                                   ? @""
+                                   : [[fileRef path] lastPathComponent];
+          result = filePath;
+          *found = YES;
+          break;
+        }
+      else if ([file isKindOfClass: [PBXGroup class]])
+        {
+          NSString *filePath = ([file path] == nil)
+                                   ? @""
+                                   : [file path]; // lastPathComponent];
+          result = [filePath
+              stringByAppendingPathComponent: [self resolvePathFor: object
+                                                        withGroup: file
+                                                            found: found]];
+        }
     }
   return result;
 }
 
 - (NSString *) buildPath
 {
-  PBXGroup *mainGroup = [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
+  PBXGroup *mainGroup =
+      [[GSXCBuildContext sharedBuildContext] objectForKey: @"MAIN_GROUP"];
   BOOL found = NO;
   NSString *result = nil;
-  
+
   // Resolve path for the current file reference...
-  result = [self resolvePathFor: self 
-		      withGroup: mainGroup
-			  found: &found];
-  
+  result = [self resolvePathFor: self withGroup: mainGroup found: &found];
+
   return result;
 }
 
 - (NSString *) description
 {
-  return [NSString stringWithFormat: @"%@ - %@, %@, %@, %@", [super description], name, path, sourceTree, children];
+  return
+      [NSString stringWithFormat: @"%@ - %@, %@, %@, %@", [super description],
+                                 name, path, sourceTree, children];
 }
 @end

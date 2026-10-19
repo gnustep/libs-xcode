@@ -26,60 +26,78 @@
 #import "YCodeEditorDocument.h"
 
 @implementation YCFileInspectorView
-- (id)initWithFrame:(NSRect)frame
+- (id) initWithFrame: (NSRect)frame
 {
-  self = [super initWithFrame:frame];
+  self = [super initWithFrame: frame];
   if (self)
     {
-      NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:[self bounds]];
-      [scroll setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-      [scroll setHasVerticalScroller:YES];
-      _details = [[NSTextView alloc] initWithFrame:[scroll bounds]];
-      [_details setEditable:NO];
-      [_details setSelectable:YES];
-      [_details setFont:[NSFont systemFontOfSize:12]];
-      [_details setTextContainerInset:NSMakeSize(8, 8)];
-      [_details setAutoresizingMask:NSViewWidthSizable];
-      [_details setHorizontallyResizable:NO];
-      [[_details textContainer] setWidthTracksTextView:YES];
-      [scroll setDocumentView:_details];
-      [self addSubview:scroll];
-      RELEASE(_details);
-      RELEASE(scroll);
-      [self inspectDocument:nil];
+      NSScrollView *scroll =
+          [[NSScrollView alloc] initWithFrame: [self bounds]];
+      [scroll setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+      [scroll setHasVerticalScroller: YES];
+      _details = [[NSTextView alloc] initWithFrame: [scroll bounds]];
+      [_details setEditable: NO];
+      [_details setSelectable: YES];
+      [_details setFont: [NSFont systemFontOfSize: 12]];
+      [_details setTextContainerInset: NSMakeSize (8, 8)];
+      [_details setAutoresizingMask: NSViewWidthSizable];
+      [_details setHorizontallyResizable: NO];
+      [[_details textContainer] setWidthTracksTextView: YES];
+      [scroll setDocumentView: _details];
+      [self addSubview: scroll];
+      RELEASE (_details);
+      RELEASE (scroll);
+      [self inspectDocument: nil];
     }
   return self;
 }
 
-- (NSString *)inspectorIdentifier { return @"file"; }
-- (NSString *)inspectorTitle { return @"File"; }
+- (NSString *) inspectorIdentifier
+{
+  return @"file";
+}
+- (NSString *) inspectorTitle
+{
+  return @"File";
+}
 
-- (void)inspectDocument:(YCodeEditorDocument *)document
+- (void) inspectDocument: (YCodeEditorDocument *)document
 {
   if (!document)
     {
-      [_details setString:@"No source file selected."];
+      [_details setString: @"No source file selected."];
       return;
     }
   NSString *path = [[document filePath] stringByStandardizingPath];
   if (![path isAbsolutePath])
     path = [[[NSFileManager defaultManager] currentDirectoryPath]
-      stringByAppendingPathComponent:path];
-  NSDictionary *attributes = [[NSFileManager defaultManager]
-    attributesOfItemAtPath:path error:NULL];
+        stringByAppendingPathComponent: path];
+  NSDictionary *attributes =
+      [[NSFileManager defaultManager] attributesOfItemAtPath: path error: NULL];
   NSString *extension = [[document fileExtension] lowercaseString];
-  NSDictionary *types = [NSDictionary dictionaryWithObjectsAndKeys:
-    @"Objective-C source", @"m", @"Objective-C++ source", @"mm",
-    @"C source", @"c", @"C++ source", @"cpp", @"C++ source", @"cc",
-    @"C/C++ header", @"h", @"C++ header", @"hpp",
-    @"Swift source", @"swift", nil];
-  NSString *type = [types objectForKey:extension];
-  if (!type) type = [extension length] ? [extension stringByAppendingString:@" file"] : @"Text file";
-  NSString *size = attributes ? [NSString stringWithFormat:@"%@ bytes",
-    [attributes objectForKey:NSFileSize]] : @"Unavailable";
-  NSString *date = [[attributes objectForKey:NSFileModificationDate] description];
-  [_details setString:[NSString stringWithFormat:
-    @"Name\n%@\n\nType\n%@\n\nFull Path\n%@\n\nSize on Disk\n%@\n\nModified on Disk\n%@",
-    [document fileName], type, path, size, date ? date : @"Unavailable"]];
+  NSDictionary *types = [NSDictionary
+      dictionaryWithObjectsAndKeys: @"Objective-C source", @"m",
+                                   @"Objective-C++ source", @"mm", @"C source",
+                                   @"c", @"C++ source", @"cpp", @"C++ source",
+                                   @"cc", @"C/C++ header", @"h", @"C++ header",
+                                   @"hpp", @"Swift source", @"swift", nil];
+  NSString *type = [types objectForKey: extension];
+  if (!type)
+    type = [extension length] ? [extension stringByAppendingString: @" file"]
+                              : @"Text file";
+  NSString *size
+      = attributes
+            ? [NSString stringWithFormat: @"%@ bytes",
+                                         [attributes objectForKey: NSFileSize]]
+            : @"Unavailable";
+  NSString *date =
+      [[attributes objectForKey: NSFileModificationDate] description];
+  [_details
+      setString:
+          [NSString
+              stringWithFormat:
+                  @"Name\n%@\n\nType\n%@\n\nFull Path\n%@\n\nSize on Disk\n%@\n\nModified on Disk\n%@",
+                  [document fileName], type, path, size,
+                  date ? date : @"Unavailable"]];
 }
 @end

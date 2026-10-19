@@ -42,18 +42,18 @@
   NSTimeInterval _lastBlink;
 }
 /** Starts an interactive shell in directory. Repeated calls preserve a running shell. */
-- (BOOL)startInDirectory:(NSString *)directory error:(NSError **)error;
+- (BOOL) startInDirectory: (NSString *)directory error: (NSError **)error;
 /** Hangs up the terminal and reaps its shell, without blocking the UI. */
-- (void)stop;
-- (BOOL)isRunning;
-- (void)restart:(id)sender;
-- (void)copy:(id)sender;
-- (void)paste:(id)sender;
-- (void)selectAll:(id)sender;
+- (void) stop;
+- (BOOL) isRunning;
+- (void) restart: (id)sender;
+- (void) copy: (id)sender;
+- (void) paste: (id)sender;
+- (void) selectAll: (id)sender;
 /** Feed terminal bytes, preserving parser state across partial sequences. */
-- (void)consumeData:(NSData *)data;
+- (void) consumeData: (NSData *)data;
 /** Queue input for the PTY without blocking on a slow reader. */
-- (void)sendData:(NSData *)data;
-- (NSString *)screenText;
+- (void) sendData: (NSData *)data;
+- (NSString *) screenText;
 @end
 #endif

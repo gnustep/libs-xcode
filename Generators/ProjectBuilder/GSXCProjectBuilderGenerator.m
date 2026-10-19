@@ -48,7 +48,7 @@
     }
   else if ([type isEqualToString: @"LIBRARY"])
     {
-      return @"Library";  
+      return @"Library";
     }
   else if ([type isEqualToString: @"TOOL"])
     {
@@ -72,20 +72,20 @@
     {
       return NO;
     }
-  
+
   // Check if all elements are non-empty strings
   NSEnumerator *en = [array objectEnumerator];
   id obj = nil;
   while ((obj = [en nextObject]) != nil)
     {
-      if (![obj isKindOfClass: [NSString class]] || 
+      if (![obj isKindOfClass: [NSString class]] ||
           [(NSString *)obj length] == 0)
         {
           continue; // Skip empty strings but don't reject the whole array
         }
       return YES; // Found at least one valid string
     }
-  
+
   return NO; // No valid strings found
 }
 
@@ -95,7 +95,7 @@
     {
       return @"";
     }
-  
+
   NSString *result = [array performSelector: method];
   return result != nil ? result : @"";
 }
@@ -109,7 +109,7 @@
   NSString *projectFileName = @"PB.project";
   NSMutableDictionary *projectDict = [NSMutableDictionary dictionary];
   NSMutableDictionary *filesTable = [NSMutableDictionary dictionary];
-  
+
   NSArray *objCFiles = [context objectForKey: @"OBJC_FILES"];
   NSArray *cFiles = [context objectForKey: @"C_FILES"];
   NSArray *cppFiles = [context objectForKey: @"CPP_FILES"];
@@ -121,25 +121,27 @@
   NSString *projectType = [context objectForKey: @"PROJECT_TYPE"];
 
   // Debug output to see what we're getting from the context
-  NSDebugLog(@"=== DEBUG: ProjectBuilder Generator Context ===");
-  NSDebugLog(@"OBJC_FILES: %@", objCFiles);
-  NSDebugLog(@"C_FILES: %@", cFiles);
-  NSDebugLog(@"CPP_FILES: %@", cppFiles);
-  NSDebugLog(@"OBJCPP_FILES: %@", objCPPFiles);
-  NSDebugLog(@"HEADERS: %@", headerFiles);
-  NSDebugLog(@"RESOURCES: %@", resourceFiles);
-  NSDebugLog(@"OTHER_SOURCES: %@", otherSources);
-  NSDebugLog(@"LIBRARIES: %@", libraries);
-  NSDebugLog(@"PROJECT_TYPE: %@", projectType);
-  NSDebugLog(@"==============================================");
+  NSDebugLog (@"=== DEBUG: ProjectBuilder Generator Context ===");
+  NSDebugLog (@"OBJC_FILES: %@", objCFiles);
+  NSDebugLog (@"C_FILES: %@", cFiles);
+  NSDebugLog (@"CPP_FILES: %@", cppFiles);
+  NSDebugLog (@"OBJCPP_FILES: %@", objCPPFiles);
+  NSDebugLog (@"HEADERS: %@", headerFiles);
+  NSDebugLog (@"RESOURCES: %@", resourceFiles);
+  NSDebugLog (@"OTHER_SOURCES: %@", otherSources);
+  NSDebugLog (@"LIBRARIES: %@", libraries);
+  NSDebugLog (@"PROJECT_TYPE: %@", projectType);
+  NSDebugLog (@"==============================================");
 
   // Construct the ProjectBuilder project structure
-  xcputs("\t* Generating ProjectBuilder project");
+  xcputs ("\t* Generating ProjectBuilder project");
 
-  // Set basic project information  
+  // Set basic project information
   [projectDict setObject: appName forKey: @"PROJECTNAME"];
-  [projectDict setObject: [self projectTypeForString: [projectType uppercaseString]] forKey: @"PROJECTTYPE"];
-  
+  [projectDict
+      setObject: [self projectTypeForString: [projectType uppercaseString]]
+         forKey: @"PROJECTTYPE"];
+
   // Combine all class files (source code files)
   NSMutableArray *classFiles = [NSMutableArray array];
   if ([self arrayHasValidContent: objCFiles])
@@ -158,18 +160,18 @@
     {
       [classFiles addObjectsFromArray: objCPPFiles];
     }
-  
+
   // Build the FILESTABLE dictionary structure (as used by ProjectBuilder)
   if ([classFiles count] > 0)
     {
       [filesTable setObject: classFiles forKey: @"CLASSES"];
     }
-  
+
   if ([self arrayHasValidContent: headerFiles])
     {
       [filesTable setObject: headerFiles forKey: @"H_FILES"];
     }
-  
+
   // Separate resource files into interfaces, images, and other categories
   if ([self arrayHasValidContent: resourceFiles])
     {
@@ -178,27 +180,24 @@
       NSMutableArray *otherResources = [NSMutableArray array];
       NSEnumerator *en = [resourceFiles objectEnumerator];
       NSString *resourceFile = nil;
-      
+
       while ((resourceFile = [en nextObject]) != nil)
         {
           NSString *ext = [[resourceFile pathExtension] lowercaseString];
-          
+
           // NIB/XIB files go into INTERFACES
-          if ([ext isEqualToString: @"nib"] || 
-              [ext isEqualToString: @"xib"] ||
+          if ([ext isEqualToString: @"nib"] || [ext isEqualToString: @"xib"] ||
               [ext isEqualToString: @"gorm"])
             {
               [interfaces addObject: resourceFile];
             }
           // Image files go into IMAGES
-          else if ([ext isEqualToString: @"png"] ||
-                   [ext isEqualToString: @"jpg"] ||
-                   [ext isEqualToString: @"jpeg"] ||
+          else if ([ext isEqualToString: @"png"] || [ext isEqualToString: @"jpg"]
+                   || [ext isEqualToString: @"jpeg"] ||
                    [ext isEqualToString: @"gif"] ||
                    [ext isEqualToString: @"tiff"] ||
-                   [ext isEqualToString: @"tif"] ||
-                   [ext isEqualToString: @"bmp"] ||
-                   [ext isEqualToString: @"ico"] ||
+                   [ext isEqualToString: @"tif"] || [ext isEqualToString: @"bmp"]
+                   || [ext isEqualToString: @"ico"] ||
                    [ext isEqualToString: @"icns"] ||
                    [ext isEqualToString: @"pdf"] ||
                    [ext isEqualToString: @"svg"])
@@ -211,7 +210,7 @@
               [otherResources addObject: resourceFile];
             }
         }
-      
+
       if ([interfaces count] > 0)
         {
           [filesTable setObject: interfaces forKey: @"INTERFACES"];
@@ -240,14 +239,14 @@
     {
       [filesTable setObject: otherSources forKey: @"OTHER_LINKED"];
     }
-  
+
   if ([self arrayHasValidContent: libraries])
     {
       // Convert library flags to just library names
       NSMutableArray *cleanLibraries = [NSMutableArray array];
       NSEnumerator *en = [libraries objectEnumerator];
       NSString *lib = nil;
-      
+
       while ((lib = [en nextObject]) != nil)
         {
           if ([lib hasPrefix: @"-l"])
@@ -259,13 +258,13 @@
               [cleanLibraries addObject: lib];
             }
         }
-      
+
       if ([cleanLibraries count] > 0)
         {
           [filesTable setObject: cleanLibraries forKey: @"FRAMEWORKS"];
         }
     }
-  
+
   // Add empty arrays for any missing required ProjectBuilder sections
   if ([filesTable objectForKey: @"CLASSES"] == nil)
     {
@@ -291,26 +290,28 @@
     {
       [filesTable setObject: [NSArray array] forKey: @"IMAGES"];
     }
-  
+
   // Set the FILESTABLE in the main project dictionary
   [projectDict setObject: filesTable forKey: @"FILESTABLE"];
-  
+
   // Add ProjectBuilder-specific metadata
   [projectDict setObject: @"English" // @"2.1"
-		  forKey: @"LANGUAGE"];
+                  forKey: @"LANGUAGE"];
   [projectDict setObject: @"gnumake" /* @"NeXT Project Builder Project v2.1" */
-		  forKey: @"NEXTSTEP_BUILDTOOL"];
-  
-  NSDebugLog(@"ProjectBuilder project dict = %@", projectDict);
+                  forKey: @"NEXTSTEP_BUILDTOOL"];
+
+  NSDebugLog (@"ProjectBuilder project dict = %@", projectDict);
 
   // Write the PB.project file
   if (![projectDict writeToFile: projectFileName atomically: YES])
     {
-      xcprintf("Error writing project file %s", [projectFileName cString]);
+      xcprintf ("Error writing project file %s", [projectFileName cString]);
       return NO;
     }
-  
-  xcputs([[NSString stringWithFormat: @"=== Completed generation of %@ for target %@", projectFileName, name] cString]);
+
+  xcputs ([[NSString
+      stringWithFormat: @"=== Completed generation of %@ for target %@",
+                       projectFileName, name] cString]);
 
   return result;
 }

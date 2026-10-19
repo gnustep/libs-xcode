@@ -28,40 +28,43 @@
 extern NSString *YCodeTerminalPreferencesDidChangeNotification;
 @interface YCodePreferences : NSObject
 /** Font names and point sizes are saved separately for each text pane. */
-+ (NSArray *)fontPanes;
-+ (NSFont *)fontForPane:(NSString *)pane;
-+ (void)setFont:(NSFont *)font forPane:(NSString *)pane;
-+ (void)resetFonts;
++ (NSArray *) fontPanes;
++ (NSFont *) fontForPane: (NSString *)pane;
++ (void) setFont: (NSFont *)font forPane: (NSString *)pane;
++ (void) resetFonts;
 /** Terminal preferences apply to all project terminals, independently of editor fonts. */
-+ (NSFont *)terminalFont;
++ (NSFont *) terminalFont;
 
-+ (void)setTerminalFont:(NSFont *)font;
-+ (NSColor *)terminalForegroundColor;
-+ (NSColor *)terminalBackgroundColor;
-+ (void)setTerminalForegroundColor:(NSColor *)foreground backgroundColor:(NSColor *)background;
-+ (NSColor *)terminalCursorColor;
-+ (void)setTerminalCursorColor:(NSColor *)color;
++ (void) setTerminalFont: (NSFont *)font;
++ (NSColor *) terminalForegroundColor;
++ (NSColor *) terminalBackgroundColor;
++ (void) setTerminalForegroundColor: (NSColor *)foreground
+                   backgroundColor: (NSColor *)background;
++ (NSColor *) terminalCursorColor;
++ (void) setTerminalCursorColor: (NSColor *)color;
 /** Cursor shape: 0 program controlled, 1 block, 2 outline, 3 line, 4 underline. */
-+ (NSInteger)terminalCursorShape;
-+ (void)setTerminalCursorShape:(NSInteger)shape;
-+ (NSUInteger)terminalScrollbackLines;
-+ (void)setTerminalScrollbackLines:(NSUInteger)lines;
-+ (BOOL)terminalAudibleBell;
-+ (void)setTerminalAudibleBell:(BOOL)enabled;
-+ (BOOL)terminalCursorBlink;
-+ (void)setTerminalCursorBlink:(BOOL)enabled;
-+ (void)resetTerminalPreferences;
++ (NSInteger) terminalCursorShape;
++ (void) setTerminalCursorShape: (NSInteger)shape;
++ (NSUInteger) terminalScrollbackLines;
++ (void) setTerminalScrollbackLines: (NSUInteger)lines;
++ (BOOL) terminalAudibleBell;
++ (void) setTerminalAudibleBell: (BOOL)enabled;
++ (BOOL) terminalCursorBlink;
++ (void) setTerminalCursorBlink: (BOOL)enabled;
++ (void) resetTerminalPreferences;
 /** Saved indentation defaults, used when project formatting does not override them. */
-+ (BOOL)highlightMatchingDelimiters;
-+ (void)setHighlightMatchingDelimiters:(BOOL)enabled;
-+ (NSUInteger)tabWidth;
-+ (NSUInteger)controlIndentWidth;
-+ (void)setControlIndentWidth:(NSUInteger)width;
-+ (BOOL)useSpacesForTabs;
-+ (BOOL)useProjectIndentation;
-+ (void)setTabWidth:(NSUInteger)width useSpaces:(BOOL)spaces useProjectSettings:(BOOL)project;
++ (BOOL) highlightMatchingDelimiters;
++ (void) setHighlightMatchingDelimiters: (BOOL)enabled;
++ (NSUInteger) tabWidth;
++ (NSUInteger) controlIndentWidth;
++ (void) setControlIndentWidth: (NSUInteger)width;
++ (BOOL) useSpacesForTabs;
++ (BOOL) useProjectIndentation;
++ (void) setTabWidth: (NSUInteger)width
+             useSpaces: (BOOL)spaces
+    useProjectSettings: (BOOL)project;
 
 /** Change the base font while retaining ANSI bold and italic traits. */
-+ (void)applyFont:(NSFont *)font toText:(NSMutableAttributedString *)text;
++ (void) applyFont: (NSFont *)font toText: (NSMutableAttributedString *)text;
 @end
 #endif

@@ -28,174 +28,263 @@
 
 @implementation YCodeEditorDocument
 
-+ (NSUInteger)editorAPIVersion { return 1; }
-+ (NSString *)editorIdentifier { return nil; }
-+ (NSString *)editorKind { return @"generic"; }
-+ (NSInteger)editorPriority { return 0; }
-+ (BOOL)canOpenFilePath:(NSString *)path { return NO; }
++ (NSUInteger) editorAPIVersion
+{
+  return 1;
+}
++ (NSString *) editorIdentifier
+{
+  return nil;
+}
++ (NSString *) editorKind
+{
+  return @"generic";
+}
++ (NSInteger) editorPriority
+{
+  return 0;
+}
++ (BOOL) canOpenFilePath: (NSString *)path
+{
+  return NO;
+}
 
-- (id)initWithFilePath:(NSString *)filePath
+- (id) initWithFilePath: (NSString *)filePath
 {
   if ([self class] == [YCodeEditorDocument class])
     {
-      Class editor = [[YCodeEditorRegistry sharedRegistry] editorClassForFilePath:filePath];
+      Class editor = [[YCodeEditorRegistry sharedRegistry]
+          editorClassForFilePath: filePath];
       [self release];
-      return [[editor alloc] initWithFilePath:filePath];
+      return [[editor alloc] initWithFilePath: filePath];
     }
   self = [super init];
   if (self)
     {
-      ASSIGN(_filePath, filePath);
+      ASSIGN (_filePath, filePath);
       _undoManager = [NSUndoManager new];
       _lastModified = [[NSDate date] retain];
     }
   return self;
 }
 
-- (void)dealloc
+- (void) dealloc
 {
-  [NSObject cancelPreviousPerformRequestsWithTarget:self];
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  RELEASE(_filePath);
-  RELEASE(_undoManager);
-  RELEASE(_lastModified);
+  [NSObject cancelPreviousPerformRequestsWithTarget: self];
+  [[NSNotificationCenter defaultCenter] removeObserver: self];
+  RELEASE (_filePath);
+  RELEASE (_undoManager);
+  RELEASE (_lastModified);
   [super dealloc];
 }
 
-- (void)setFilePath:(NSString *)path { ASSIGN(_filePath, path); }
-- (BOOL)isEditable { return NO; }
-- (BOOL)isImageDocument { return [[[self class] editorKind] isEqual:@"image"]; }
-- (BOOL)isSoundDocument { return [[[self class] editorKind] isEqual:@"sound"]; }
-+ (BOOL)isSoundFilePath:(NSString *)path
+- (void) setFilePath: (NSString *)path
 {
-  Class editor = [[YCodeEditorRegistry sharedRegistry] editorClassForFilePath:path];
-  return [[editor editorKind] isEqual:@"sound"];
+  ASSIGN (_filePath, path);
 }
-- (NSImage *)image { return nil; }
-- (NSView *)editorView { return nil; }
-- (NSScrollView *)scrollView { return nil; }
-- (NSTextView *)textView { return nil; }
-- (NSString *)content { return @""; }
-- (void)setContent:(NSString *)content {}
-- (BOOL)loadFromFile { return NO; }
-- (BOOL)writeContentsToFile { return NO; }
-- (void)checkForExternalChanges {}
-- (void)insertText:(NSString *)text atLocation:(NSUInteger)location {}
-- (NSString *)selectedText { return @""; }
-- (NSRange)selectedRange { return NSMakeRange(NSNotFound, 0); }
-- (void)setSelectedRange:(NSRange)range {}
-- (YCodeSyntaxHighlighter *)syntaxHighlighter { return nil; }
-- (void)applySyntaxHighlighting {}
+- (BOOL) isEditable
+{
+  return NO;
+}
+- (BOOL) isImageDocument
+{
+  return [[[self class] editorKind] isEqual: @"image"];
+}
+- (BOOL) isSoundDocument
+{
+  return [[[self class] editorKind] isEqual: @"sound"];
+}
++ (BOOL) isSoundFilePath: (NSString *)path
+{
+  Class editor =
+      [[YCodeEditorRegistry sharedRegistry] editorClassForFilePath: path];
+  return [[editor editorKind] isEqual: @"sound"];
+}
+- (NSImage *) image
+{
+  return nil;
+}
+- (NSView *) editorView
+{
+  return nil;
+}
+- (NSScrollView *) scrollView
+{
+  return nil;
+}
+- (NSTextView *) textView
+{
+  return nil;
+}
+- (NSString *) content
+{
+  return @"";
+}
+- (void) setContent: (NSString *)content
+{
+}
+- (BOOL) loadFromFile
+{
+  return NO;
+}
+- (BOOL) writeContentsToFile
+{
+  return NO;
+}
+- (void) checkForExternalChanges
+{
+}
+- (void) insertText: (NSString *)text atLocation: (NSUInteger)location
+{
+}
+- (NSString *) selectedText
+{
+  return @"";
+}
+- (NSRange) selectedRange
+{
+  return NSMakeRange (NSNotFound, 0);
+}
+- (void) setSelectedRange: (NSRange)range
+{
+}
+- (YCodeSyntaxHighlighter *) syntaxHighlighter
+{
+  return nil;
+}
+- (void) applySyntaxHighlighting
+{
+}
 
-- (void)setModified:(BOOL)modified
+- (void) setModified: (BOOL)modified
 {
   BOOL changed = [self isEditable] && modified;
   BOOL external = _externalChange;
-  if (!modified) _externalChange = NO;
-  if (_modified == changed && external == _externalChange) return;
+  if (!modified)
+    _externalChange = NO;
+  if (_modified == changed && external == _externalChange)
+    return;
   _modified = changed;
-  [[NSNotificationCenter defaultCenter] postNotificationName:
-    @"YCodeFileModificationDidChange" object:_editorController];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeFileModificationDidChange"
+                    object: _editorController];
 }
 
-- (id)initWithFilePath:(NSString *)filePath content:(NSString *)content
+- (id) initWithFilePath: (NSString *)filePath content: (NSString *)content
 {
-    self = [self initWithFilePath:filePath];
-    if (self && content) {
-        [self setContent:content];
-        [self setModified:NO];
+  self = [self initWithFilePath: filePath];
+  if (self && content)
+    {
+      [self setContent: content];
+      [self setModified: NO];
     }
-    return self;
+  return self;
 }
 
-- (NSString *)filePath
+- (NSString *) filePath
 {
-    return _filePath;
+  return _filePath;
 }
 
-- (NSString *)fileName
+- (NSString *) fileName
 {
-    return [_filePath lastPathComponent];
+  return [_filePath lastPathComponent];
 }
 
-- (NSString *)fileExtension
+- (NSString *) fileExtension
 {
-    return [_filePath pathExtension];
+  return [_filePath pathExtension];
 }
 
-- (BOOL)isModified
+- (BOOL) isModified
 {
-    return _modified;
+  return _modified;
 }
 
-- (NSDate *)lastModified
+- (NSDate *) lastModified
 {
-    return _lastModified;
+  return _lastModified;
 }
 
-- (BOOL)reloadFromFile
+- (BOOL) reloadFromFile
 {
-    if ([self isModified]) {
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:@"Reload File?"];
-        [alert setInformativeText:@"This will discard any unsaved changes."];
-        [alert addButtonWithTitle:@"Reload"];
-        [alert addButtonWithTitle:@"Cancel"];
+  if ([self isModified])
+    {
+      NSAlert *alert = [[NSAlert alloc] init];
+      [alert setMessageText: @"Reload File?"];
+      [alert setInformativeText: @"This will discard any unsaved changes."];
+      [alert addButtonWithTitle: @"Reload"];
+      [alert addButtonWithTitle: @"Cancel"];
 
-        NSInteger result = [alert runModal];
-        RELEASE(alert);
+      NSInteger result = [alert runModal];
+      RELEASE (alert);
 
-        if (result != NSAlertFirstButtonReturn) {
-            return NO;
+      if (result != NSAlertFirstButtonReturn)
+        {
+          return NO;
         }
     }
 
-    return [self loadFromFile];
+  return [self loadFromFile];
 }
 
-- (BOOL)hasExternalChanges { return _externalChange; }
-
-- (YCodeEditorController *)editorController
+- (BOOL) hasExternalChanges
 {
-    return _editorController;
+  return _externalChange;
 }
 
-- (void)setEditorController:(YCodeEditorController *)controller
+- (YCodeEditorController *) editorController
 {
-    _editorController = controller; // weak reference
+  return _editorController;
 }
 
-- (BOOL)saveToFile
+- (void) setEditorController: (YCodeEditorController *)controller
 {
-    // Previewing an image must never overwrite its bytes with text.
-    if (![self isEditable]) return YES;
-    [self checkForExternalChanges];
-    if (_externalChange) {
-        NSAlert *alert = AUTORELEASE([[NSAlert alloc] init]);
-        [alert setMessageText:@"File Changed Outside Ycode"];
-        [alert setInformativeText:[NSString stringWithFormat:
-            @"%@ has changed or is no longer readable on disk. Overwrite it with your edits, reload the disk version, or cancel saving.", [self fileName]]];
-        [alert addButtonWithTitle:@"Overwrite"];
-        [alert addButtonWithTitle:@"Reload"];
-        [alert addButtonWithTitle:@"Cancel"];
-        NSInteger choice = [alert runModal];
-        if (choice == NSAlertSecondButtonReturn) {
-            BOOL loaded = [self loadFromFile];
-            if (loaded) [_undoManager removeAllActions];
-            return loaded;
+  _editorController = controller; // weak reference
+}
+
+- (BOOL) saveToFile
+{
+  // Previewing an image must never overwrite its bytes with text.
+  if (![self isEditable])
+    return YES;
+  [self checkForExternalChanges];
+  if (_externalChange)
+    {
+      NSAlert *alert = AUTORELEASE ([[NSAlert alloc] init]);
+      [alert setMessageText: @"File Changed Outside Ycode"];
+      [alert
+          setInformativeText:
+              [NSString
+                  stringWithFormat:
+                      @"%@ has changed or is no longer readable on disk. Overwrite it with your edits, reload the disk version, or cancel saving.",
+                      [self fileName]]];
+      [alert addButtonWithTitle: @"Overwrite"];
+      [alert addButtonWithTitle: @"Reload"];
+      [alert addButtonWithTitle: @"Cancel"];
+      NSInteger choice = [alert runModal];
+      if (choice == NSAlertSecondButtonReturn)
+        {
+          BOOL loaded = [self loadFromFile];
+          if (loaded)
+            [_undoManager removeAllActions];
+          return loaded;
         }
-        if (choice != NSAlertFirstButtonReturn) return NO;
+      if (choice != NSAlertFirstButtonReturn)
+        return NO;
     }
-    BOOL success = [self writeContentsToFile];
+  BOOL success = [self writeContentsToFile];
 
-    if (success) {
-        [self setModified:NO];
-        ASSIGN(_lastModified, [NSDate date]);
-        [[NSNotificationCenter defaultCenter] postNotificationName:
-            YCodeCurrentDocumentDidChangeNotification object:_editorController];
+  if (success)
+    {
+      [self setModified: NO];
+      ASSIGN (_lastModified, [NSDate date]);
+      [[NSNotificationCenter defaultCenter]
+          postNotificationName: YCodeCurrentDocumentDidChangeNotification
+                        object: _editorController];
     }
 
-    return success;
+  return success;
 }
 
 @end

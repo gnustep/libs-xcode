@@ -33,17 +33,17 @@
 /**
  * Finds the project filename from directory entries.
  */
-NSString *findProjectFilename(NSArray *projectDirEntries);
+NSString *findProjectFilename (NSArray *projectDirEntries);
 
 /**
  * Finds the workspace filename from directory entries.
  */
-NSString *findWorkspaceFilename(NSArray *projectDirEntries);
+NSString *findWorkspaceFilename (NSArray *projectDirEntries);
 
 /**
  * Resolves the project name and sets whether it is a project.
  */
-NSString *resolveProjectName(BOOL *isProject);
+NSString *resolveProjectName (BOOL *isProject);
 
 @interface ToolDelegate : XCAbstractDelegate
 

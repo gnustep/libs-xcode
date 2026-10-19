@@ -27,14 +27,16 @@
 #import "YCodeDebuggerBackend.h"
 
 @class YCodeDebugger;
-extern NSString * const YCodeDebuggerDidChangeNotification;
+extern NSString *const YCodeDebuggerDidChangeNotification;
 @protocol YCodeDebuggerDelegate <NSObject>
-- (void)debugger:(YCodeDebugger *)debugger sendCommand:(NSString *)command;
-- (void)debugger:(YCodeDebugger *)debugger output:(NSString *)output;
-- (void)debugger:(YCodeDebugger *)debugger stoppedAtFile:(NSString *)file line:(NSUInteger)line;
+- (void) debugger: (YCodeDebugger *)debugger sendCommand: (NSString *)command;
+- (void) debugger: (YCodeDebugger *)debugger output: (NSString *)output;
+- (void) debugger: (YCodeDebugger *)debugger
+    stoppedAtFile: (NSString *)file
+             line: (NSUInteger)line;
 @end
 @interface NSObject (YCodeDebuggerDelegateOptional)
-- (void)debugger:(YCodeDebugger *)debugger targetOutput:(NSString *)output;
+- (void) debugger: (YCodeDebugger *)debugger targetOutput: (NSString *)output;
 @end
 
 /** Backend-neutral debugger session. Transport and UI stay in the application. */
@@ -43,30 +45,31 @@ extern NSString * const YCodeDebuggerDidChangeNotification;
   id<YCodeDebuggerDelegate> _delegate;
   id<YCodeDebuggerBackend> _backend;
 }
-- (id)initWithBackendIdentifier:(NSString *)identifier;
-- (id)initWithBackend:(id<YCodeDebuggerBackend>)backend;
-- (NSString *)backendIdentifier;
-- (NSString *)displayName;
-- (void)setDelegate:(id<YCodeDebuggerDelegate>)delegate;
-- (id<YCodeDebuggerVariableSource>)variables;
-- (NSString *)launchCommandForExecutable:(NSString *)executable;
-- (NSArray *)launchArgumentsForExecutable:(NSString *)executable;
-- (BOOL)canPerformAction:(YCodeDebuggerAction)action;
-- (void)performAction:(YCodeDebuggerAction)action;
-- (void)restart;
-- (void)reset;
-- (void)setBreakpointStorageKey:(NSString *)key;
-- (void)setSourceDirectory:(NSString *)directory;
-- (NSString *)executionFile;
-- (NSUInteger)executionLine;
-- (NSDictionary *)breakpointLinesForFile:(NSString *)file;
-- (YCodeBreakpointState)breakpointStateAtFile:(NSString *)file line:(NSUInteger)line;
-- (void)toggleBreakpointEnabledAtFile:(NSString *)file line:(NSUInteger)line;
-- (BOOL)isReady;
-- (BOOL)isRunning;
-- (void)receiveData:(NSData *)data;
-- (void)consoleCommand:(NSString *)command;
-- (void)toggleBreakpointAtFile:(NSString *)file line:(NSUInteger)line;
-- (BOOL)canSetBreakpointAtFile:(NSString *)file;
+- (id) initWithBackendIdentifier: (NSString *)identifier;
+- (id) initWithBackend: (id<YCodeDebuggerBackend>)backend;
+- (NSString *) backendIdentifier;
+- (NSString *) displayName;
+- (void) setDelegate: (id<YCodeDebuggerDelegate>)delegate;
+- (id<YCodeDebuggerVariableSource>) variables;
+- (NSString *) launchCommandForExecutable: (NSString *)executable;
+- (NSArray *) launchArgumentsForExecutable: (NSString *)executable;
+- (BOOL) canPerformAction: (YCodeDebuggerAction)action;
+- (void) performAction: (YCodeDebuggerAction)action;
+- (void) restart;
+- (void) reset;
+- (void) setBreakpointStorageKey: (NSString *)key;
+- (void) setSourceDirectory: (NSString *)directory;
+- (NSString *) executionFile;
+- (NSUInteger) executionLine;
+- (NSDictionary *) breakpointLinesForFile: (NSString *)file;
+- (YCodeBreakpointState) breakpointStateAtFile: (NSString *)file
+                                         line: (NSUInteger)line;
+- (void) toggleBreakpointEnabledAtFile: (NSString *)file line: (NSUInteger)line;
+- (BOOL) isReady;
+- (BOOL) isRunning;
+- (void) receiveData: (NSData *)data;
+- (void) consoleCommand: (NSString *)command;
+- (void) toggleBreakpointAtFile: (NSString *)file line: (NSUInteger)line;
+- (BOOL) canSetBreakpointAtFile: (NSString *)file;
 @end
 #endif

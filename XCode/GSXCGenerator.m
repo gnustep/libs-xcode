@@ -25,13 +25,13 @@
 
 - (void) dealloc
 {
-  RELEASE(_target);
+  RELEASE (_target);
   [super dealloc];
 }
 
 - (void) setTarget: (PBXTarget *)target
 {
-  ASSIGN(_target, target);
+  ASSIGN (_target, target);
 }
 
 - (PBXTarget *) target
@@ -45,8 +45,8 @@
   return ([self notImplemented: _cmd] != nil);
 #else
   [NSException raise: NSInternalInconsistencyException
-	      format: @"%@ must be implemented by subclasses",
-		      NSStringFromSelector(_cmd)];
+              format: @"%@ must be implemented by subclasses",
+                     NSStringFromSelector (_cmd)];
   return NO;
 #endif
 }

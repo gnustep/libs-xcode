@@ -30,7 +30,7 @@
 - (id) init
 {
   self = [super init];
-  if(self)
+  if (self)
     {
       [self setProductType: FRAMEWORK_TYPE];
     }

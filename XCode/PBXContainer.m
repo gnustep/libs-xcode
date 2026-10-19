@@ -35,9 +35,9 @@
 
   if (self != nil)
     {
-      ASSIGNCOPY(_archiveVersion, @"1");
+      ASSIGNCOPY (_archiveVersion, @"1");
       _classes = [[NSMutableDictionary alloc] init];
-      ASSIGNCOPY(_objectVersion, @"56");
+      ASSIGNCOPY (_objectVersion, @"56");
       _objects = [[NSMutableDictionary alloc] init];
       _rootObject = nil;
       _filename = nil;
@@ -62,22 +62,22 @@
 
 - (void) dealloc
 {
-  RELEASE(_archiveVersion);
-  RELEASE(_classes);
-  RELEASE(_objectVersion);
-  RELEASE(_objects);
-  RELEASE(_filename);
-  RELEASE(_parameter);
-  RELEASE(_workspaceLink);
-  RELEASE(_workspaceLibs);
-  RELEASE(_workspaceIncludes);
-  
+  RELEASE (_archiveVersion);
+  RELEASE (_classes);
+  RELEASE (_objectVersion);
+  RELEASE (_objects);
+  RELEASE (_filename);
+  RELEASE (_parameter);
+  RELEASE (_workspaceLink);
+  RELEASE (_workspaceLibs);
+  RELEASE (_workspaceIncludes);
+
   [super dealloc];
 }
 
 - (void) setWorkspaceIncludes: (NSString *)i
 {
-  ASSIGN(_workspaceIncludes, i);
+  ASSIGN (_workspaceIncludes, i);
 }
 
 - (NSString *) workspaceIncludes
@@ -87,7 +87,7 @@
 
 - (void) setWorkspaceLibs: (NSString *)l
 {
-  ASSIGN(_workspaceLibs, l);
+  ASSIGN (_workspaceLibs, l);
 }
 
 - (NSString *) workspaceLibs
@@ -97,7 +97,7 @@
 
 - (void) setWorkspaceLink: (NSString *)w
 {
-  ASSIGN(_workspaceLink, w);
+  ASSIGN (_workspaceLink, w);
 }
 
 - (NSString *) workspaceLink
@@ -107,7 +107,7 @@
 
 - (void) setParameter: (NSString *)p
 {
-  ASSIGN(_parameter, p);
+  ASSIGN (_parameter, p);
 }
 
 - (NSString *) parameter
@@ -117,7 +117,7 @@
 
 - (void) setFilename: (NSString *)fn
 {
-  ASSIGN(_filename, fn);
+  ASSIGN (_filename, fn);
 }
 
 - (NSString *) filename
@@ -127,7 +127,7 @@
 
 - (void) setArchiveVersion: (NSString *)version
 {
-  ASSIGN(_archiveVersion,version);
+  ASSIGN (_archiveVersion, version);
 }
 
 - (NSString *) archiveVersion
@@ -137,7 +137,7 @@
 
 - (void) setClasses: (NSMutableDictionary *)dict
 {
-  ASSIGN(_classes,dict);
+  ASSIGN (_classes, dict);
 }
 
 - (NSMutableDictionary *) classes
@@ -147,7 +147,7 @@
 
 - (void) setObjectVersion: (NSString *)version
 {
-  ASSIGN(_objectVersion,version);
+  ASSIGN (_objectVersion, version);
 }
 
 - (NSString *) objectVersion
@@ -157,7 +157,7 @@
 
 - (void) setObjects: (NSMutableDictionary *)dict
 {
-  ASSIGN(_objects,dict);
+  ASSIGN (_objects, dict);
 }
 
 - (NSMutableDictionary *) objects
@@ -172,7 +172,7 @@
 
 - (void) setRootObject: (id)object
 {
-  ASSIGN(_rootObject, object);
+  ASSIGN (_rootObject, object);
 }
 
 - (void) collectHeaderFileReferences
@@ -184,27 +184,29 @@
   id obj = nil;
   NSMutableDictionary *context = [NSMutableDictionary dictionary];
 
-  while((obj = [en nextObject]) != nil)
+  while ((obj = [en nextObject]) != nil)
     {
-      if([obj isKindOfClass:[PBXFileReference class]])
-	{
-	  if([[obj lastKnownFileType] isEqualToString:@"sourcecode.c.h"])
-	    {
-	      NSString *includePath = [[obj path] stringByDeletingLastPathComponent];
-	      if([includePath isEqualToString:@""] == NO)
-		{
-		  if([dirs containsObject:includePath] == NO)
-		    {
-		      [dirs addObject:includePath];
-		      includeDirs = [includeDirs stringByAppendingFormat: @" -I./%@ ",includePath];
-		    }
-		}
-	    }
-	}
+      if ([obj isKindOfClass: [PBXFileReference class]])
+        {
+          if ([[obj lastKnownFileType] isEqualToString: @"sourcecode.c.h"])
+            {
+              NSString *includePath =
+                  [[obj path] stringByDeletingLastPathComponent];
+              if ([includePath isEqualToString: @""] == NO)
+                {
+                  if ([dirs containsObject: includePath] == NO)
+                    {
+                      [dirs addObject: includePath];
+                      includeDirs = [includeDirs
+                          stringByAppendingFormat: @" -I./%@ ", includePath];
+                    }
+                }
+            }
+        }
     }
 
   // Add to the dictionary...
-  [context setObject: includeDirs forKey:@"INCLUDE_DIRS"];
+  [context setObject: includeDirs forKey: @"INCLUDE_DIRS"];
 
   // Add workspace info to the context...
   if (_workspaceLink != nil)
@@ -212,7 +214,7 @@
       [context setObject: _workspaceLink forKey: @"WORKSPACE_LINK_LINE"];
     }
 
-  NSDebugLog(@"\n\n\nlibs = %@\n\n\n", _workspaceLibs);
+  NSDebugLog (@"\n\n\nlibs = %@\n\n\n", _workspaceLibs);
   if (_workspaceLibs != nil)
     {
       [context setObject: _workspaceLibs forKey: @"WORKSPACE_LIBS_LINE"];
@@ -259,24 +261,22 @@
 
 - (BOOL) save
 {
-  NSString *fn = [[self filename]
-		   stringByDeletingLastPathComponent];
+  NSString *fn = [[self filename] stringByDeletingLastPathComponent];
   NSString *of = @"project.pbxproj";
   NSString *dn = _parameter;
   NSFileManager *fm = [NSFileManager defaultManager];
   NSError *error = nil;
   BOOL created = [fm createDirectoryAtPath: dn
-		     withIntermediateDirectories: YES
-				attributes: NULL
-				     error: &error];
+               withIntermediateDirectories: YES
+                                attributes: NULL
+                                     error: &error];
 
-  xcprintf("=== Saving Project %s%s%s%s -> %s%s%s\n",
-	   BOLD, YELLOW, [fn cString], RESET, GREEN,
-	   [dn cString], RESET);
+  xcprintf ("=== Saving Project %s%s%s%s -> %s%s%s\n", BOLD, YELLOW,
+            [fn cString], RESET, GREEN, [dn cString], RESET);
 
   // Clear the cached objects dictionary;
   [_rootObject save]; // Setup to save...
-  
+
   // Save the project...
   if (created && !error)
     {
@@ -286,21 +286,21 @@
       BOOL result = [dictionary writeToFile: path atomically: YES];
 
       if (result)
-	{
-	  xcprintf("=== Done Saving Project %s%s%s%s\n",
-		   BOLD, GREEN, [dn cString], RESET);
-	}
+        {
+          xcprintf ("=== Done Saving Project %s%s%s%s\n", BOLD, GREEN,
+                    [dn cString], RESET);
+        }
       else
-	{
-	  xcprintf("=== Error Saving Project %s%s%s%s\n",
-		   BOLD, GREEN, [dn cString], RESET);
-	}
+        {
+          xcprintf ("=== Error Saving Project %s%s%s%s\n", BOLD, GREEN,
+                    [dn cString], RESET);
+        }
 
       return result;
     }
   else
     {
-      xcprintf("=== Error creating directory %s", dn);
+      xcprintf ("=== Error creating directory %s", dn);
     }
 
   return NO;

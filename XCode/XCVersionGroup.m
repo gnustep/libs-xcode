@@ -35,7 +35,7 @@
 
 - (void) setSourceTree: (NSString *)object; // setter
 {
-  ASSIGN(sourceTree,object);
+  ASSIGN (sourceTree, object);
 }
 
 - (PBXFileReference *) currentVersion // getter
@@ -45,7 +45,7 @@
 
 - (void) setCurrentVersion: (PBXFileReference *)object; // setter
 {
-  ASSIGN(currentVersion,object);
+  ASSIGN (currentVersion, object);
 }
 
 - (NSString *) versionGroupType // getter
@@ -55,7 +55,7 @@
 
 - (void) setVersionGroupType: (NSString *)object; // setter
 {
-  ASSIGN(versionGroupType,object);
+  ASSIGN (versionGroupType, object);
 }
 
 - (NSString *) path // getter
@@ -65,7 +65,7 @@
 
 - (void) setPath: (NSString *)object; // setter
 {
-  ASSIGN(path,object);
+  ASSIGN (path, object);
 }
 
 - (NSString *) buildPath
@@ -80,7 +80,7 @@
 
 - (void) setChildren: (NSMutableArray *)object; // setter
 {
-  ASSIGN(children,object);
+  ASSIGN (children, object);
 }
 
 - (void) setTarget: (NSString *)target
@@ -97,15 +97,15 @@
   return _totalFiles;
 }
 
-
 - (BOOL) build
 {
   NSEnumerator *en = [children objectEnumerator];
   id o = nil;
   BOOL result = YES;
-  while((o = [en nextObject]) != nil && result)
+  while ((o = [en nextObject]) != nil && result)
     {
-      xcputs([[NSString stringWithFormat: @"\tProcessing %@",[o path]] cString]);
+      xcputs (
+          [[NSString stringWithFormat: @"\tProcessing %@", [o path]] cString]);
     }
   return result;
 }

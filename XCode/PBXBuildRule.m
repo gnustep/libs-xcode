@@ -29,12 +29,12 @@
 
 - (void) dealloc
 {
-  RELEASE(_fileType);
-  RELEASE(_isEditable);
-  RELEASE(_outputFiles);
-  RELEASE(_compilerSpec);
-  RELEASE(_script);
-  RELEASE(_inputFiles);
+  RELEASE (_fileType);
+  RELEASE (_isEditable);
+  RELEASE (_outputFiles);
+  RELEASE (_compilerSpec);
+  RELEASE (_script);
+  RELEASE (_inputFiles);
 
   [super dealloc];
 }
@@ -47,7 +47,7 @@
 
 - (void) setFileType: (NSString *)object; // setter
 {
-  ASSIGN(_fileType,object);
+  ASSIGN (_fileType, object);
 }
 
 - (NSString *) isEditable // getter
@@ -57,7 +57,7 @@
 
 - (void) setIsEditable: (NSString *)object; // setter
 {
-  ASSIGN(_isEditable,object);
+  ASSIGN (_isEditable, object);
 }
 
 - (NSMutableArray *) outputFiles // getter
@@ -67,9 +67,8 @@
 
 - (void) setOutputFiles: (NSMutableArray *)object; // setter
 {
-  ASSIGN(_outputFiles,object);
+  ASSIGN (_outputFiles, object);
 }
-
 
 - (NSMutableArray *) inputFiles // getter
 {
@@ -78,7 +77,7 @@
 
 - (void) setInputFiles: (NSMutableArray *)object; // setter
 {
-  ASSIGN(_inputFiles,object);
+  ASSIGN (_inputFiles, object);
 }
 
 - (NSString *) compilerSpec // getter
@@ -88,7 +87,7 @@
 
 - (void) setCompilerSpec: (NSString *)object; // setter
 {
-  ASSIGN(_compilerSpec,object);
+  ASSIGN (_compilerSpec, object);
 }
 
 - (NSString *) script // getter
@@ -98,7 +97,7 @@
 
 - (void) setScript: (NSString *)object; // setter
 {
-  ASSIGN(_script,object);
+  ASSIGN (_script, object);
 }
 
 - (NSString *) filePatterns // getter
@@ -108,7 +107,7 @@
 
 - (void) setFilePatterns: (NSString *)object; // setter
 {
-  ASSIGN(_filePatterns,object);
+  ASSIGN (_filePatterns, object);
 }
 
 @end

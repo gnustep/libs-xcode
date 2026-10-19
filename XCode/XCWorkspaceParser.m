@@ -36,7 +36,7 @@
 
 - (id) initWithContentsOfFile: (NSString *)file
 {
-  ASSIGN(_filename, file);
+  ASSIGN (_filename, file);
   if ((self = [super init]) != nil)
     {
       NSData *data = [NSData dataWithContentsOfFile: file];
@@ -44,22 +44,22 @@
         {
           NSError *error = nil;
           NSXMLParser *parser = [[NSXMLParser alloc] initWithData: data];
-          
+
           [parser setDelegate: self];
           [parser parse];
-          
+
           error = [parser parserError];
           if (error != nil)
             {
-              NSLog(@"Error: %@", error);
+              NSLog (@"Error: %@", error);
               return nil;
             }
-          
-          RELEASE(parser);
+
+          RELEASE (parser);
         }
       else
         {
-          NSLog(@"Unable to read data");
+          NSLog (@"Unable to read data");
         }
     }
 
@@ -68,12 +68,13 @@
 
 + (id) parseWorkspaceFile: (NSString *)file
 {
-  return AUTORELEASE([[self alloc] initWithContentsOfFile: file]);
+  return AUTORELEASE ([[self alloc] initWithContentsOfFile: file]);
 }
 
 + (id) parseWorkspaceDirectory: (NSString *)dir
 {
-  NSString *datafile = [dir stringByAppendingPathComponent: @"contents.xcworkspacedata"];  
+  NSString *datafile =
+      [dir stringByAppendingPathComponent: @"contents.xcworkspacedata"];
   return [self parseWorkspaceFile: datafile];
 }
 
@@ -85,8 +86,8 @@
 
 - (void) dealloc
 {
-  RELEASE(_filename);
-  RELEASE(_workspace);
+  RELEASE (_filename);
+  RELEASE (_workspace);
   [super dealloc];
 }
 
@@ -98,15 +99,15 @@
 }
 
 - (void) parser: (NSXMLParser *)parser
-didStartElement: (NSString *)elementName
-   namespaceURI: (NSString *)namespaceURI
-  qualifiedName: (NSString *)qName
-     attributes: (NSDictionary *)attributeDict
+    didStartElement: (NSString *)elementName
+       namespaceURI: (NSString *)namespaceURI
+      qualifiedName: (NSString *)qName
+         attributes: (NSDictionary *)attributeDict
 {
   if ([elementName isEqualToString: @"Workspace"])
     {
       NSString *v = [attributeDict objectForKey: @"version"];
-      ASSIGN(_workspace, [XCWorkspace workspace]);
+      ASSIGN (_workspace, [XCWorkspace workspace]);
       [_workspace setVersion: v];
     }
   else if ([elementName isEqualToString: @"FileRef"])
@@ -121,16 +122,15 @@ didStartElement: (NSString *)elementName
     }
 }
 
--(void) parser: (NSXMLParser *)parser
-        foundCharacters: (NSString *)string
+- (void) parser: (NSXMLParser *)parser foundCharacters: (NSString *)string
 {
   // not needed for this type of file...
 }
 
 - (void) parser: (NSXMLParser *)parser
-  didEndElement: (NSString *)elementName
-   namespaceURI: (NSString *)namespaceURI
-  qualifiedName: (NSString *)qName
+    didEndElement: (NSString *)elementName
+     namespaceURI: (NSString *)namespaceURI
+    qualifiedName: (NSString *)qName
 {
 }
 

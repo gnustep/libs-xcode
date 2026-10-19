@@ -29,7 +29,7 @@
 
 + (id) operationWithFile: (PBXBuildFile *)file
 {
-  return AUTORELEASE([[self alloc] initWithFile: file]);
+  return AUTORELEASE ([[self alloc] initWithFile: file]);
 }
 
 - (id) initWithFile: (PBXBuildFile *)file
@@ -48,7 +48,7 @@
 
 - (void) setFile: (PBXBuildFile *)file
 {
-  ASSIGN(_file, file);
+  ASSIGN (_file, file);
 }
 
 - (void) main
@@ -57,4 +57,3 @@
 }
 
 @end
-

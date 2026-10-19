@@ -31,8 +31,8 @@
 /* Optional principal class of an executable language bundle. Definitions use
  * the same schema as Languages in Language.plist. No AppKit dependency. */
 @protocol YCodeLanguageProvider <NSObject>
-- (NSUInteger)languageAPIVersion;
-- (NSArray *)languageDefinitions;
+- (NSUInteger) languageAPIVersion;
+- (NSArray *) languageDefinitions;
 @end
 
 @interface YCodeLanguage : NSObject
@@ -40,18 +40,18 @@
   NSDictionary *_definition;
   NSDictionary *_patterns;
 }
-- (id)initWithDefinition:(NSDictionary *)definition;
-- (NSString *)identifier;
-- (BOOL)highlightStringKeys;
-- (NSArray *)extensions;
-- (NSArray *)fileNames;
-- (NSRegularExpression *)patternForToken:(NSString *)token;
-- (NSString *)codeByMaskingLiterals:(NSString *)text;
-- (NSString *)indentationStyle;
-- (NSArray *)controlKeywords;
-- (NSArray *)standaloneControls;
-- (NSString *)lineComment;
-- (NSDictionary *)languageServerConfiguration;
+- (id) initWithDefinition: (NSDictionary *)definition;
+- (NSString *) identifier;
+- (BOOL) highlightStringKeys;
+- (NSArray *) extensions;
+- (NSArray *) fileNames;
+- (NSRegularExpression *) patternForToken: (NSString *)token;
+- (NSString *) codeByMaskingLiterals: (NSString *)text;
+- (NSString *) indentationStyle;
+- (NSArray *) controlKeywords;
+- (NSArray *) standaloneControls;
+- (NSString *) lineComment;
+- (NSDictionary *) languageServerConfiguration;
 @end
 
 @interface YCodeLanguageRegistry : NSObject
@@ -61,11 +61,11 @@
   NSMutableArray *_providers;
   NSMutableArray *_namedLanguages;
 }
-+ (YCodeLanguageRegistry *)sharedRegistry;
++ (YCodeLanguageRegistry *) sharedRegistry;
 /* An explicit path list also permits isolated registries for tools/tests.
  * Later directories override earlier directories. */
-- (id)initWithSearchPaths:(NSArray *)paths;
-- (BOOL)loadBundleAtPath:(NSString *)path;
-- (YCodeLanguage *)languageForFile:(NSString *)path;
+- (id) initWithSearchPaths: (NSArray *)paths;
+- (BOOL) loadBundleAtPath: (NSString *)path;
+- (YCodeLanguage *) languageForFile: (NSString *)path;
 @end
 #endif

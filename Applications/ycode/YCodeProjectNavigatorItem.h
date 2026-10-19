@@ -31,83 +31,84 @@
 @class PBXFileReference;
 @class PBXGroup;
 
-typedef enum {
-    YCodeNavigatorItemTypeProject,
-    YCodeNavigatorItemTypeGroup,
-    YCodeNavigatorItemTypeFile,
-    YCodeNavigatorItemTypeTarget,
-    YCodeNavigatorItemTypeBuildPhase
+typedef enum
+{
+  YCodeNavigatorItemTypeProject,
+  YCodeNavigatorItemTypeGroup,
+  YCodeNavigatorItemTypeFile,
+  YCodeNavigatorItemTypeTarget,
+  YCodeNavigatorItemTypeBuildPhase
 } YCodeNavigatorItemType;
 
 @interface YCodeProjectNavigatorItem : NSObject
 {
-    id _representedObject;
-    YCodeNavigatorItemType _itemType;
-    
-    NSMutableArray *_children;
-    YCodeProjectNavigatorItem *_parent;
-    
-    NSString *_displayName;
-    NSImage *_icon;
-    
-    BOOL _isExpanded;
-    BOOL _isLeaf;
+  id _representedObject;
+  YCodeNavigatorItemType _itemType;
+
+  NSMutableArray *_children;
+  YCodeProjectNavigatorItem *_parent;
+
+  NSString *_displayName;
+  NSImage *_icon;
+
+  BOOL _isExpanded;
+  BOOL _isLeaf;
 }
 
 /**
  * Initialization
  */
-- (id)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type;
+- (id) initWithRepresentedObject: (id)object type: (YCodeNavigatorItemType)type;
 
 /**
  * Represented object
  */
-- (id)representedObject;
-- (void)setRepresentedObject:(id)object;
+- (id) representedObject;
+- (void) setRepresentedObject: (id)object;
 
 /**
  * Item type
  */
-- (YCodeNavigatorItemType)itemType;
-- (void)setItemType:(YCodeNavigatorItemType)type;
+- (YCodeNavigatorItemType) itemType;
+- (void) setItemType: (YCodeNavigatorItemType)type;
 
 /**
  * Display properties
  */
-- (NSString *)displayName;
-- (void)setDisplayName:(NSString *)name;
-- (NSImage *)icon;
-- (void)setIcon:(NSImage *)icon;
+- (NSString *) displayName;
+- (void) setDisplayName: (NSString *)name;
+- (NSImage *) icon;
+- (void) setIcon: (NSImage *)icon;
 
 /**
  * Tree structure
  */
-- (NSArray *)children;
-- (void)addChild:(YCodeProjectNavigatorItem *)child;
-- (void)removeChild:(YCodeProjectNavigatorItem *)child;
-- (YCodeProjectNavigatorItem *)parent;
-- (void)setParent:(YCodeProjectNavigatorItem *)parent;
+- (NSArray *) children;
+- (void) addChild: (YCodeProjectNavigatorItem *)child;
+- (void) removeChild: (YCodeProjectNavigatorItem *)child;
+- (YCodeProjectNavigatorItem *) parent;
+- (void) setParent: (YCodeProjectNavigatorItem *)parent;
 
 /**
  * State
  */
-- (BOOL)isExpanded;
-- (void)setExpanded:(BOOL)expanded;
-- (BOOL)isLeaf;
-- (void)setLeaf:(BOOL)leaf;
+- (BOOL) isExpanded;
+- (void) setExpanded: (BOOL)expanded;
+- (BOOL) isLeaf;
+- (void) setLeaf: (BOOL)leaf;
 
 /**
  * Convenience methods
  */
-- (BOOL)isGroup;
-- (BOOL)isFile;
-- (BOOL)isProject;
-- (BOOL)isTarget;
+- (BOOL) isGroup;
+- (BOOL) isFile;
+- (BOOL) isProject;
+- (BOOL) isTarget;
 
 /**
  * File path for file items
  */
-- (NSString *)filePath;
+- (NSString *) filePath;
 
 @end
 

@@ -28,233 +28,297 @@
 
 @implementation YCodeDocumentController
 
-- (id)openDocumentWithContentsOfURL:(NSURL *)url display:(BOOL)display error:(NSError **)error
+- (id) openDocumentWithContentsOfURL: (NSURL *)url
+                            display: (BOOL)display
+                              error: (NSError **)error
 {
-    // A makefile identifies its containing project folder. Normalize before
-    // NSDocumentController looks for an existing document or records recents.
-    NSString *path = [url path];
-    BOOL directory = NO;
-    if ([url isFileURL] &&
-        [[NSArray arrayWithObjects:@"GNUmakefile", @"makefile", @"Makefile", nil]
-            containsObject:[path lastPathComponent]] &&
-        [[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&directory] && !directory) {
-        url = [NSURL fileURLWithPath:[path stringByDeletingLastPathComponent]];
+  // A makefile identifies its containing project folder. Normalize before
+  // NSDocumentController looks for an existing document or records recents.
+  NSString *path = [url path];
+  BOOL directory = NO;
+  if ([url isFileURL] &&
+      [[NSArray arrayWithObjects: @"GNUmakefile", @"makefile", @"Makefile", nil]
+          containsObject: [path lastPathComponent]]
+      && [[NSFileManager defaultManager] fileExistsAtPath: path
+                                              isDirectory: &directory]
+      && !directory)
+    {
+      url = [NSURL fileURLWithPath: [path stringByDeletingLastPathComponent]];
     }
-    NSError *openError = nil;
-    id document = [super openDocumentWithContentsOfURL:url display:display error:&openError];
-    if (document == nil && error != NULL) {
-        if (openError == nil)
-            openError = [NSError errorWithDomain:NSCocoaErrorDomain
-                code:NSFileReadUnknownError userInfo:[NSDictionary dictionaryWithObject:
-                    @"Choose a project folder, GNUmakefile, makefile, Makefile, or a supported project file."
-                    forKey:NSLocalizedDescriptionKey]];
-        *error = openError;
+  NSError *openError = nil;
+  id document = [super openDocumentWithContentsOfURL: url
+                                             display: display
+                                               error: &openError];
+  if (document == nil && error != NULL)
+    {
+      if (openError == nil)
+        openError = [NSError
+            errorWithDomain: NSCocoaErrorDomain
+                       code: NSFileReadUnknownError
+                   userInfo:
+                       [NSDictionary
+                           dictionaryWithObject:
+                               @"Choose a project folder, GNUmakefile, makefile, Makefile, or a supported project file."
+                                         forKey: NSLocalizedDescriptionKey]];
+      *error = openError;
     }
-    return document;
+  return document;
 }
 
-- (BOOL)openWorkspaceFile:(NSString *)path error:(NSError **)error
+- (BOOL) openWorkspaceFile: (NSString *)path error: (NSError **)error
 {
-    NSFileManager *manager = [NSFileManager defaultManager];
-    BOOL directory = NO;
-    if (![path length]) return NO;
-    if (![path isAbsolutePath]) path = [[manager currentDirectoryPath] stringByAppendingPathComponent:path];
-    path = [[path stringByStandardizingPath] stringByResolvingSymlinksInPath];
-    if (![manager fileExistsAtPath:path isDirectory:&directory]) return NO;
-    NSString *extension = [[path pathExtension] lowercaseString];
-    if (directory || [extension isEqual:@"xcodeproj"] || [extension isEqual:@"pcproj"])
-        return [self openDocumentWithContentsOfURL:[NSURL fileURLWithPath:path]
-            display:YES error:error] != nil;
+  NSFileManager *manager = [NSFileManager defaultManager];
+  BOOL directory = NO;
+  if (![path length])
+    return NO;
+  if (![path isAbsolutePath])
+    path =
+        [[manager currentDirectoryPath] stringByAppendingPathComponent: path];
+  path = [[path stringByStandardizingPath] stringByResolvingSymlinksInPath];
+  if (![manager fileExistsAtPath: path isDirectory: &directory])
+    return NO;
+  NSString *extension = [[path pathExtension] lowercaseString];
+  if (directory || [extension isEqual: @"xcodeproj"] ||
+      [extension isEqual: @"pcproj"])
+    return [self openDocumentWithContentsOfURL: [NSURL fileURLWithPath: path]
+                                       display: YES
+                                         error: error]
+           != nil;
 
-    // Route by full directory boundaries, never by the active window or the
-    // file's basename. Prefer the most specific already-open project root.
-    YCodeProject *existing = nil;
-    NSUInteger longestRoot = 0;
-    NSEnumerator *documents = [[self documents] objectEnumerator];
-    id candidate;
-    while ((candidate = [documents nextObject]) != nil) {
-        if (![candidate isKindOfClass:[YCodeProject class]]) continue;
-        NSString *root = [[[candidate projectDirectoryPath] stringByStandardizingPath]
-            stringByResolvingSymlinksInPath];
-        if (![root length]) continue;
-        NSString *prefix = [root hasSuffix:@"/"] ? root : [root stringByAppendingString:@"/"];
-        if ([path hasPrefix:prefix] && [prefix length] > longestRoot) {
-            existing = candidate;
-            longestRoot = [prefix length];
+  // Route by full directory boundaries, never by the active window or the
+  // file's basename. Prefer the most specific already-open project root.
+  YCodeProject *existing = nil;
+  NSUInteger longestRoot = 0;
+  NSEnumerator *documents = [[self documents] objectEnumerator];
+  id candidate;
+  while ((candidate = [documents nextObject]) != nil)
+    {
+      if (![candidate isKindOfClass: [YCodeProject class]])
+        continue;
+      NSString *root = [[[candidate projectDirectoryPath]
+          stringByStandardizingPath] stringByResolvingSymlinksInPath];
+      if (![root length])
+        continue;
+      NSString *prefix =
+          [root hasSuffix: @"/"] ? root : [root stringByAppendingString: @"/"];
+      if ([path hasPrefix: prefix] && [prefix length] > longestRoot)
+        {
+          existing = candidate;
+          longestRoot = [prefix length];
         }
     }
-    if (existing) {
-        BOOL opened = [[existing editorController] openFile:path];
-        if (opened) {
-            [existing showWindows];
-            if ([[existing windowControllers] count])
-                [[[[existing windowControllers] objectAtIndex:0] window] makeKeyAndOrderFront:nil];
-            [NSApp activateIgnoringOtherApps:YES];
+  if (existing)
+    {
+      BOOL opened = [[existing editorController] openFile: path];
+      if (opened)
+        {
+          [existing showWindows];
+          if ([[existing windowControllers] count])
+            [[[[existing windowControllers] objectAtIndex: 0] window]
+                makeKeyAndOrderFront: nil];
+          [NSApp activateIgnoringOtherApps: YES];
         }
-        return opened;
+      return opened;
     }
 
-    NSString *folder = [path stringByDeletingLastPathComponent];
-    NSString *projectPath = nil;
-    NSString *search = folder;
-    while ([search length]) {
-        NSArray *entries = [[manager contentsOfDirectoryAtPath:search error:NULL]
-            sortedArrayUsingSelector:@selector(compare:)];
-        NSEnumerator *extensions = [[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] objectEnumerator];
-        NSString *projectExtension;
-        while (!projectPath && (projectExtension = [extensions nextObject]) != nil) {
-            NSEnumerator *names = [entries objectEnumerator];
-            NSString *name;
-            while ((name = [names nextObject]) != nil) {
-                if ([[[name pathExtension] lowercaseString] isEqual:projectExtension]) {
-                    projectPath = [search stringByAppendingPathComponent:name];
-                    break;
+  NSString *folder = [path stringByDeletingLastPathComponent];
+  NSString *projectPath = nil;
+  NSString *search = folder;
+  while ([search length])
+    {
+      NSArray *entries = [[manager contentsOfDirectoryAtPath: search error: NULL]
+          sortedArrayUsingSelector: @selector (compare:)];
+      NSEnumerator *extensions = [[NSArray
+          arrayWithObjects: @"xcodeproj", @"pcproj", nil] objectEnumerator];
+      NSString *projectExtension;
+      while (!projectPath
+             && (projectExtension = [extensions nextObject]) != nil)
+        {
+          NSEnumerator *names = [entries objectEnumerator];
+          NSString *name;
+          while ((name = [names nextObject]) != nil)
+            {
+              if ([[[name pathExtension] lowercaseString]
+                      isEqual: projectExtension])
+                {
+                  projectPath = [search stringByAppendingPathComponent: name];
+                  break;
                 }
             }
         }
-        if (!projectPath && [YCodeProject isMakeProjectDirectory:search]) projectPath = search;
-        if (projectPath) break;
-        NSString *parent = [search stringByDeletingLastPathComponent];
-        if ([parent isEqual:search]) break;
-        search = parent;
+      if (!projectPath && [YCodeProject isMakeProjectDirectory: search])
+        projectPath = search;
+      if (projectPath)
+        break;
+      NSString *parent = [search stringByDeletingLastPathComponent];
+      if ([parent isEqual: search])
+        break;
+      search = parent;
     }
-    if (!projectPath) projectPath = folder;
-    YCodeProject *project = [self openDocumentWithContentsOfURL:[NSURL fileURLWithPath:projectPath]
-        display:YES error:error];
-    return project != nil && [[project editorController] openFile:path];
+  if (!projectPath)
+    projectPath = folder;
+  YCodeProject *project =
+      [self openDocumentWithContentsOfURL: [NSURL fileURLWithPath: projectPath]
+                                  display: YES
+                                    error: error];
+  return project != nil && [[project editorController] openFile: path];
 }
 
-- (NSMenu *)recentDocumentsMenu
+- (NSMenu *) recentDocumentsMenu
 {
-    NSMenu *menu = AUTORELEASE([[NSMenu alloc] initWithTitle:@"Recent Documents"]);
-    [menu setDelegate:self];
-    [menu setAutoenablesItems:NO];
-    [self menuNeedsUpdate:menu];
-    return menu;
+  NSMenu *menu
+      = AUTORELEASE ([[NSMenu alloc] initWithTitle: @"Recent Documents"]);
+  [menu setDelegate: self];
+  [menu setAutoenablesItems: NO];
+  [self menuNeedsUpdate: menu];
+  return menu;
 }
 
-- (void)menuNeedsUpdate:(NSMenu *)menu
+- (void) menuNeedsUpdate: (NSMenu *)menu
 {
-    while ([menu numberOfItems]) [menu removeItemAtIndex:0];
-    NSArray *urls = [self recentDocumentURLs];
+  while ([menu numberOfItems])
+    [menu removeItemAtIndex: 0];
+  NSArray *urls = [self recentDocumentURLs];
 #ifdef GNUSTEP
-    // GNUstep stores the most recently opened URL at the end.
-    urls = [[urls reverseObjectEnumerator] allObjects];
+  // GNUstep stores the most recently opened URL at the end.
+  urls = [[urls reverseObjectEnumerator] allObjects];
 #endif
-    {
-      NSEnumerator *urlEnumerator = [urls objectEnumerator];
-      NSURL *url;
-      while ((url = [urlEnumerator nextObject]) != nil)
+  {
+    NSEnumerator *urlEnumerator = [urls objectEnumerator];
+    NSURL *url;
+    while ((url = [urlEnumerator nextObject]) != nil)
+      {
+        NSString *path = [url path];
+        NSString *title = [path lastPathComponent];
+        if (![title length])
+          title = [url absoluteString];
+        NSUInteger matches = 0;
         {
-          NSString *path = [url path];
-          NSString *title = [path lastPathComponent];
-          if (![title length]) title = [url absoluteString];
-          NSUInteger matches = 0;
-          {
-            NSEnumerator *otherEnumerator = [urls objectEnumerator];
-            NSURL *other;
-            while ((other = [otherEnumerator nextObject]) != nil)
-              if ([[[other path] lastPathComponent] isEqual:title]) matches++;
-          }
-          if (matches > 1)
-              title = [NSString stringWithFormat:@"%@ — %@", title, [path stringByDeletingLastPathComponent]];
-          NSMenuItem *item = AUTORELEASE([[NSMenuItem alloc] initWithTitle:title
-              action:@selector(openRecentProject:) keyEquivalent:@""]);
-          [item setTarget:self];
-          [item setRepresentedObject:url];
-          [item setToolTip:path];
-          [item setEnabled:[url isFileURL] && [[NSFileManager defaultManager] fileExistsAtPath:path]];
-          [menu addItem:item];
+          NSEnumerator *otherEnumerator = [urls objectEnumerator];
+          NSURL *other;
+          while ((other = [otherEnumerator nextObject]) != nil)
+            if ([[[other path] lastPathComponent] isEqual: title])
+              matches++;
         }
-    }
-    if ([urls count]) [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *clear = AUTORELEASE([[NSMenuItem alloc] initWithTitle:@"Clear Menu"
-        action:@selector(clearRecentProjects:) keyEquivalent:@""]);
-    [clear setTarget:self];
-    [clear setEnabled:[urls count] > 0];
-    [menu addItem:clear];
+        if (matches > 1)
+          title = [NSString
+              stringWithFormat: @"%@ — %@", title,
+                               [path stringByDeletingLastPathComponent]];
+        NSMenuItem *item = AUTORELEASE ([[NSMenuItem alloc]
+            initWithTitle: title
+                   action: @selector (openRecentProject:)
+            keyEquivalent: @""]);
+        [item setTarget: self];
+        [item setRepresentedObject: url];
+        [item setToolTip: path];
+        [item
+            setEnabled: [url isFileURL] &&
+                       [[NSFileManager defaultManager] fileExistsAtPath: path]];
+        [menu addItem: item];
+      }
+  }
+  if ([urls count])
+    [menu addItem: [NSMenuItem separatorItem]];
+  NSMenuItem *clear = AUTORELEASE ([[NSMenuItem alloc]
+      initWithTitle: @"Clear Menu"
+             action: @selector (clearRecentProjects:)
+      keyEquivalent: @""]);
+  [clear setTarget: self];
+  [clear setEnabled: [urls count] > 0];
+  [menu addItem: clear];
 }
 
-- (IBAction)openRecentProject:(id)sender
+- (IBAction) openRecentProject: (id)sender
 {
-    NSURL *url = [sender representedObject];
-    if (![url isKindOfClass:[NSURL class]] || ![url isFileURL]) return;
-    NSError *error = nil;
-    [self openDocumentWithContentsOfURL:url display:YES error:&error];
-    if (error) [self presentError:error];
+  NSURL *url = [sender representedObject];
+  if (![url isKindOfClass: [NSURL class]] || ![url isFileURL])
+    return;
+  NSError *error = nil;
+  [self openDocumentWithContentsOfURL: url display: YES error: &error];
+  if (error)
+    [self presentError: error];
 }
 
-- (IBAction)clearRecentProjects:(id)sender
+- (IBAction) clearRecentProjects: (id)sender
 {
-    AUTORELEASE(RETAIN(sender));
-    [self clearRecentDocuments:sender];
-    if ([sender respondsToSelector:@selector(menu)] && [sender menu])
-        [self menuNeedsUpdate:[sender menu]];
+  AUTORELEASE (RETAIN (sender));
+  [self clearRecentDocuments: sender];
+  if ([sender respondsToSelector: @selector (menu)] && [sender menu])
+    [self menuNeedsUpdate: [sender menu]];
 }
 
-- (NSString *)typeForContentsOfURL:(NSURL *)url error:(NSError **)error
+- (NSString *) typeForContentsOfURL: (NSURL *)url error: (NSError **)error
 {
-    if ([YCodeProject isProjectDirectory:[url path]] &&
-        ![[NSArray arrayWithObjects:@"xcodeproj", @"pcproj", nil] containsObject:[[url path] pathExtension]])
-        return @"YCodeMakeProjectType";
-    return [super typeForContentsOfURL:url error:error];
+  if ([YCodeProject isProjectDirectory: [url path]]
+      && ![[NSArray arrayWithObjects: @"xcodeproj", @"pcproj", nil]
+          containsObject: [[url path] pathExtension]])
+    return @"YCodeMakeProjectType";
+  return [super typeForContentsOfURL: url error: error];
 }
 
-- (NSString *)typeFromFileExtension:(NSString *)fileExtension
+- (NSString *) typeFromFileExtension: (NSString *)fileExtension
 {
-    if ([fileExtension isEqualToString:@"xcodeproj"]) {
-        return @"YCodeXcodeProjectType";
+  if ([fileExtension isEqualToString: @"xcodeproj"])
+    {
+      return @"YCodeXcodeProjectType";
     }
 
-    if ([fileExtension isEqualToString:@"pcproj"]) {
-        return @"YCodeProjectCenterProjectType";
+  if ([fileExtension isEqualToString: @"pcproj"])
+    {
+      return @"YCodeProjectCenterProjectType";
     }
 
-    return [super typeFromFileExtension:fileExtension];
+  return [super typeFromFileExtension: fileExtension];
 }
 
-- (Class)documentClassForType:(NSString *)type
+- (Class) documentClassForType: (NSString *)type
 {
-    if ([type isEqualToString:@"YCodeMakeProjectType"]) return [YCodeProject class];
-    if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
-        [type isEqualToString:@"YCodeProjectCenterProjectType"] ||
-        [type isEqualToString:@"xcodeproj"] ||
-        [type isEqualToString:@"pcproj"]) {
-        return [YCodeProject class];
+  if ([type isEqualToString: @"YCodeMakeProjectType"])
+    return [YCodeProject class];
+  if ([type isEqualToString: @"YCodeXcodeProjectType"] ||
+      [type isEqualToString: @"YCodeProjectCenterProjectType"] ||
+      [type isEqualToString: @"xcodeproj"] || [type isEqualToString: @"pcproj"])
+    {
+      return [YCodeProject class];
     }
 
-    return [super documentClassForType:type];
+  return [super documentClassForType: type];
 }
 
-- (NSArray *)fileExtensionsFromType:(NSString *)type
+- (NSArray *) fileExtensionsFromType: (NSString *)type
 {
-    if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
-        [type isEqualToString:@"xcodeproj"]) {
-        return [NSArray arrayWithObject:@"xcodeproj"];
+  if ([type isEqualToString: @"YCodeXcodeProjectType"] ||
+      [type isEqualToString: @"xcodeproj"])
+    {
+      return [NSArray arrayWithObject: @"xcodeproj"];
     }
 
-    if ([type isEqualToString:@"YCodeProjectCenterProjectType"] ||
-        [type isEqualToString:@"pcproj"]) {
-        return [NSArray arrayWithObject:@"pcproj"];
+  if ([type isEqualToString: @"YCodeProjectCenterProjectType"] ||
+      [type isEqualToString: @"pcproj"])
+    {
+      return [NSArray arrayWithObject: @"pcproj"];
     }
 
-    return [super fileExtensionsFromType:type];
+  return [super fileExtensionsFromType: type];
 }
 
-- (NSString *)displayNameForType:(NSString *)type
+- (NSString *) displayNameForType: (NSString *)type
 {
-    if ([type isEqual:@"YCodeMakeProjectType"]) return @"Project folder";
-    if ([type isEqualToString:@"YCodeXcodeProjectType"] ||
-        [type isEqualToString:@"xcodeproj"]) {
-        return @"Xcode project";
+  if ([type isEqual: @"YCodeMakeProjectType"])
+    return @"Project folder";
+  if ([type isEqualToString: @"YCodeXcodeProjectType"] ||
+      [type isEqualToString: @"xcodeproj"])
+    {
+      return @"Xcode project";
     }
 
-    if ([type isEqualToString:@"YCodeProjectCenterProjectType"] ||
-        [type isEqualToString:@"pcproj"]) {
-        return @"ProjectCenter project";
+  if ([type isEqualToString: @"YCodeProjectCenterProjectType"] ||
+      [type isEqualToString: @"pcproj"])
+    {
+      return @"ProjectCenter project";
     }
 
-    return [super displayNameForType:type];
+  return [super displayNameForType: type];
 }
 
 @end

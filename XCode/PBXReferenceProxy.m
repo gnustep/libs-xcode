@@ -29,11 +29,11 @@
 
 - (void) dealloc
 {
-  RELEASE(sourceTree);
-  RELEASE(fileType);
-  RELEASE(remoteRef);
-  RELEASE(path);
-  
+  RELEASE (sourceTree);
+  RELEASE (fileType);
+  RELEASE (remoteRef);
+  RELEASE (path);
+
   [super dealloc];
 }
 
@@ -45,7 +45,7 @@
 
 - (void) setSourceTree: (NSString *)object; // setter
 {
-  ASSIGN(sourceTree,object);
+  ASSIGN (sourceTree, object);
 }
 
 - (NSString *) fileType // getter
@@ -55,7 +55,7 @@
 
 - (void) setFileType: (NSString *)object; // setter
 {
-  ASSIGN(fileType,object);
+  ASSIGN (fileType, object);
 }
 
 - (PBXContainerItemProxy *) remoteRef // getter
@@ -65,7 +65,7 @@
 
 - (void) setRemoteRef: (PBXContainerItemProxy *)object; // setter
 {
-  ASSIGN(remoteRef,object);
+  ASSIGN (remoteRef, object);
 }
 
 - (NSString *) path // getter
@@ -75,8 +75,7 @@
 
 - (void) setPath: (NSString *)object; // setter
 {
-  ASSIGN(path,object);
+  ASSIGN (path, object);
 }
-
 
 @end

@@ -29,159 +29,214 @@
 #include <math.h>
 
 @implementation YCodeVariablesView
-- (id)initWithFrame:(NSRect)frame transcript:(NSScrollView *)transcript
+- (id) initWithFrame: (NSRect)frame transcript: (NSScrollView *)transcript
 {
-  if ((self = [super initWithFrame:frame])) {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    _fraction = [defaults doubleForKey:@"YCodeDebuggerVariablesFraction"];
-    if (!isfinite(_fraction) || _fraction < 0.1 || _fraction > 0.9) _fraction = 0.45;
-    _variablesVisible = ![defaults boolForKey:@"YCodeDebuggerVariablesHidden"];
-    [self setVertical:YES];
-    [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    _variablesScroll = [[NSScrollView alloc] initWithFrame:[self bounds]];
-    [_variablesScroll setHasVerticalScroller:YES];
-    [_variablesScroll setHasHorizontalScroller:YES];
-    [_variablesScroll setAutohidesScrollers:YES];
-    _outline = [[NSOutlineView alloc] initWithFrame:[self bounds]];
-    NSArray *names = [NSArray arrayWithObjects:@"Name", @"Value", @"Type", nil];
-    NSArray *keys = [NSArray arrayWithObjects:@"name", @"value", @"type", nil];
-    NSUInteger i;
-    for (i = 0; i < [keys count]; i++) {
-      NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:[keys objectAtIndex:i]];
-      [[column headerCell] setStringValue:[names objectAtIndex:i]];
-      [column setWidth:i == 1 ? 260 : 180];
-      [column setEditable:NO];
-      [_outline addTableColumn:column];
-      if (i == 0) [_outline setOutlineTableColumn:column];
-      RELEASE(column);
+  if ((self = [super initWithFrame: frame]))
+    {
+      NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+      _fraction = [defaults doubleForKey: @"YCodeDebuggerVariablesFraction"];
+      if (!isfinite (_fraction) || _fraction < 0.1 || _fraction > 0.9)
+        _fraction = 0.45;
+      _variablesVisible
+          = ![defaults boolForKey: @"YCodeDebuggerVariablesHidden"];
+      [self setVertical: YES];
+      [self setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+      _variablesScroll = [[NSScrollView alloc] initWithFrame: [self bounds]];
+      [_variablesScroll setHasVerticalScroller: YES];
+      [_variablesScroll setHasHorizontalScroller: YES];
+      [_variablesScroll setAutohidesScrollers: YES];
+      _outline = [[NSOutlineView alloc] initWithFrame: [self bounds]];
+      NSArray *names =
+          [NSArray arrayWithObjects: @"Name", @"Value", @"Type", nil];
+      NSArray *keys =
+          [NSArray arrayWithObjects: @"name", @"value", @"type", nil];
+      NSUInteger i;
+      for (i = 0; i < [keys count]; i++)
+        {
+          NSTableColumn *column = [[NSTableColumn alloc]
+              initWithIdentifier: [keys objectAtIndex: i]];
+          [[column headerCell] setStringValue: [names objectAtIndex: i]];
+          [column setWidth: i == 1 ? 260 : 180];
+          [column setEditable: NO];
+          [_outline addTableColumn: column];
+          if (i == 0)
+            [_outline setOutlineTableColumn: column];
+          RELEASE (column);
+        }
+      [_outline setGridStyleMask: NSTableViewGridNone];
+      [_outline setAutoresizesAllColumnsToFit: YES];
+      [_outline setDataSource: self];
+      [_outline setDelegate: self];
+      [_outline
+          setToolTip:
+              @"Variables in the paused frame. Expand a value to inspect its children. Globals are scoped to the current source file."];
+      [_variablesScroll setDocumentView: _outline];
+      _transcriptScroll = RETAIN (transcript);
+      [self addSubview: _variablesScroll];
+      [self addSubview: _transcriptScroll];
+      [self setDelegate: self];
+      [self layoutPanes];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (variablesChanged:)
+                 name: YCodeDebuggerDidChangeNotification
+               object: nil];
     }
-    [_outline setGridStyleMask:NSTableViewGridNone];
-    [_outline setAutoresizesAllColumnsToFit:YES];
-    [_outline setDataSource:self]; [_outline setDelegate:self];
-    [_outline setToolTip:@"Variables in the paused frame. Expand a value to inspect its children. Globals are scoped to the current source file."];
-    [_variablesScroll setDocumentView:_outline];
-    _transcriptScroll = RETAIN(transcript);
-    [self addSubview:_variablesScroll]; [self addSubview:_transcriptScroll];
-    [self setDelegate:self];
-    [self layoutPanes];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(variablesChanged:)
-      name:YCodeDebuggerDidChangeNotification object:nil];
-  }
   return self;
 }
-- (void)dealloc
+- (void) dealloc
 {
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  [_outline setDataSource:nil]; [_outline setDelegate:nil]; [self setDelegate:nil];
-  RELEASE(_debugger); RELEASE(_outline); RELEASE(_variablesScroll); RELEASE(_transcriptScroll);
+  [[NSNotificationCenter defaultCenter] removeObserver: self];
+  [_outline setDataSource: nil];
+  [_outline setDelegate: nil];
+  [self setDelegate: nil];
+  RELEASE (_debugger);
+  RELEASE (_outline);
+  RELEASE (_variablesScroll);
+  RELEASE (_transcriptScroll);
   [super dealloc];
 }
-- (void)setDebugger:(YCodeDebugger *)debugger
+- (void) setDebugger: (YCodeDebugger *)debugger
 {
-  if (_debugger == debugger) return;
-  [[_debugger variables] setEnabled:NO];
-  ASSIGN(_debugger, debugger);
-  [[_debugger variables] setEnabled:_variablesVisible];
-  [self variablesChanged:nil];
+  if (_debugger == debugger)
+    return;
+  [[_debugger variables] setEnabled: NO];
+  ASSIGN (_debugger, debugger);
+  [[_debugger variables] setEnabled: _variablesVisible];
+  [self variablesChanged: nil];
 }
-- (BOOL)variablesVisible { return _variablesVisible; }
-- (void)drawDividerInRect:(NSRect)rect
+- (BOOL) variablesVisible
 {
-  if (_variablesVisible) [super drawDividerInRect:rect];
+  return _variablesVisible;
 }
-- (void)mouseDown:(NSEvent *)event
+- (void) drawDividerInRect: (NSRect)rect
 {
-  if (_variablesVisible) [super mouseDown:event];
+  if (_variablesVisible)
+    [super drawDividerInRect: rect];
 }
-- (void)resetCursorRects
+- (void) mouseDown: (NSEvent *)event
 {
-  if (_variablesVisible) [super resetCursorRects];
+  if (_variablesVisible)
+    [super mouseDown: event];
 }
-- (void)layoutPanes
+- (void) resetCursorRects
+{
+  if (_variablesVisible)
+    [super resetCursorRects];
+}
+- (void) layoutPanes
 {
   _layingOut = YES;
-  CGFloat width = NSWidth([self bounds]);
-  CGFloat height = NSHeight([self bounds]);
+  CGFloat width = NSWidth ([self bounds]);
+  CGFloat height = NSHeight ([self bounds]);
   CGFloat divider = _variablesVisible ? [self dividerThickness] : 0;
-  CGFloat left = _variablesVisible ? MAX(0, width - divider) * _fraction : 0;
-  [_variablesScroll setHidden:!_variablesVisible];
-  [_variablesScroll setFrame:NSMakeRect(0, 0, left, height)];
-  if (_variablesVisible) [_outline sizeToFit];
-  [_transcriptScroll setFrame:NSMakeRect(left + divider, 0, MAX(0, width - left - divider), height)];
+  CGFloat left = _variablesVisible ? MAX (0, width - divider) * _fraction : 0;
+  [_variablesScroll setHidden: !_variablesVisible];
+  [_variablesScroll setFrame: NSMakeRect (0, 0, left, height)];
+  if (_variablesVisible)
+    [_outline sizeToFit];
+  [_transcriptScroll
+      setFrame: NSMakeRect (left + divider, 0, MAX (0, width - left - divider),
+                           height)];
   _layingOut = NO;
 }
-- (void)splitView:(NSSplitView *)split resizeSubviewsWithOldSize:(NSSize)size
+- (void) splitView: (NSSplitView *)split resizeSubviewsWithOldSize: (NSSize)size
 {
   [self layoutPanes];
 }
-- (void)splitViewDidResizeSubviews:(NSNotification *)notification
+- (void) splitViewDidResizeSubviews: (NSNotification *)notification
 {
-  if (_layingOut || !_variablesVisible) return;
-  CGFloat available = NSWidth([self bounds]) - [self dividerThickness];
-  if (available <= 0) return;
-  CGFloat fraction = NSWidth([_variablesScroll frame]) / available;
-  if (fraction < 0.1 || fraction > 0.9) return;
+  if (_layingOut || !_variablesVisible)
+    return;
+  CGFloat available = NSWidth ([self bounds]) - [self dividerThickness];
+  if (available <= 0)
+    return;
+  CGFloat fraction = NSWidth ([_variablesScroll frame]) / available;
+  if (fraction < 0.1 || fraction > 0.9)
+    return;
   _fraction = fraction;
-  [[NSUserDefaults standardUserDefaults] setDouble:_fraction forKey:@"YCodeDebuggerVariablesFraction"];
+  [[NSUserDefaults standardUserDefaults]
+      setDouble: _fraction
+         forKey: @"YCodeDebuggerVariablesFraction"];
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
-- (void)setPosition:(CGFloat)position ofDividerAtIndex:(NSInteger)index
+- (void) setPosition: (CGFloat)position ofDividerAtIndex: (NSInteger)index
 {
-  [super setPosition:position ofDividerAtIndex:index];
+  [super setPosition: position ofDividerAtIndex: index];
   // GNUstep's programmatic setter does not post the resize notification.
-  [self splitViewDidResizeSubviews:nil];
+  [self splitViewDidResizeSubviews: nil];
 }
-- (CGFloat)splitView:(NSSplitView *)split constrainMinCoordinate:(CGFloat)proposed ofSubviewAt:(NSInteger)index
+- (CGFloat) splitView: (NSSplitView *)split
+    constrainMinCoordinate: (CGFloat)proposed
+               ofSubviewAt: (NSInteger)index
 {
-  return NSWidth([self bounds]) * 0.1;
+  return NSWidth ([self bounds]) * 0.1;
 }
-- (CGFloat)splitView:(NSSplitView *)split constrainMaxCoordinate:(CGFloat)proposed ofSubviewAt:(NSInteger)index
+- (CGFloat) splitView: (NSSplitView *)split
+    constrainMaxCoordinate: (CGFloat)proposed
+               ofSubviewAt: (NSInteger)index
 {
-  return NSWidth([self bounds]) * 0.9;
+  return NSWidth ([self bounds]) * 0.9;
 }
-- (BOOL)splitView:(NSSplitView *)split shouldHideDividerAtIndex:(NSInteger)index
+- (BOOL) splitView: (NSSplitView *)split
+    shouldHideDividerAtIndex: (NSInteger)index
 {
   return !_variablesVisible;
 }
-- (IBAction)toggleVariables:(id)sender
+- (IBAction) toggleVariables: (id)sender
 {
   _variablesVisible = !_variablesVisible;
-  [[NSUserDefaults standardUserDefaults] setBool:!_variablesVisible forKey:@"YCodeDebuggerVariablesHidden"];
+  [[NSUserDefaults standardUserDefaults]
+      setBool: !_variablesVisible
+       forKey: @"YCodeDebuggerVariablesHidden"];
   [[NSUserDefaults standardUserDefaults] synchronize];
   [self layoutPanes];
-  [[_debugger variables] setEnabled:_variablesVisible];
-  [sender setImage:YCodeControlIcon(_variablesVisible ? @"variablesHide" : @"variablesShow", 20)];
-  [sender setToolTip:_variablesVisible ? @"Hide variables" : @"Show variables"];
-  [self setNeedsDisplay:YES];
-  [[self window] invalidateCursorRectsForView:self];
+  [[_debugger variables] setEnabled: _variablesVisible];
+  [sender setImage: YCodeControlIcon (_variablesVisible ? @"variablesHide"
+                                                       : @"variablesShow",
+                                     20)];
+  [sender
+      setToolTip: _variablesVisible ? @"Hide variables" : @"Show variables"];
+  [self setNeedsDisplay: YES];
+  [[self window] invalidateCursorRectsForView: self];
 }
-- (void)variablesChanged:(NSNotification *)notification
+- (void) variablesChanged: (NSNotification *)notification
 {
-  if (notification && [notification object] != _debugger) return;
+  if (notification && [notification object] != _debugger)
+    return;
   [_outline reloadData];
   NSEnumerator *groups = [[[_debugger variables] groups] objectEnumerator];
   id group;
-  while ((group = [groups nextObject]) != nil) [_outline expandItem:group];
+  while ((group = [groups nextObject]) != nil)
+    [_outline expandItem: group];
 }
-- (NSInteger)outlineView:(NSOutlineView *)outline numberOfChildrenOfItem:(id)item
+- (NSInteger) outlineView: (NSOutlineView *)outline
+    numberOfChildrenOfItem: (id)item
 {
-  return item ? [[item objectForKey:@"children"] count] : [[[_debugger variables] groups] count];
+  return item ? [[item objectForKey: @"children"] count]
+              : [[[_debugger variables] groups] count];
 }
-- (id)outlineView:(NSOutlineView *)outline child:(NSInteger)index ofItem:(id)item
+- (id) outlineView: (NSOutlineView *)outline
+            child: (NSInteger)index
+           ofItem: (id)item
 {
-  return [(item ? [item objectForKey:@"children"] : [[_debugger variables] groups]) objectAtIndex:index];
+  return [(item ? [item objectForKey: @"children"]
+                : [[_debugger variables] groups]) objectAtIndex: index];
 }
-- (BOOL)outlineView:(NSOutlineView *)outline isItemExpandable:(id)item
+- (BOOL) outlineView: (NSOutlineView *)outline isItemExpandable: (id)item
 {
-  return [[item objectForKey:@"children"] count] > 0 || [[item objectForKey:@"numchild"] integerValue] > 0;
+  return [[item objectForKey: @"children"] count] > 0 ||
+         [[item objectForKey: @"numchild"] integerValue] > 0;
 }
-- (id)outlineView:(NSOutlineView *)outline objectValueForTableColumn:(NSTableColumn *)column byItem:(id)item
+- (id) outlineView: (NSOutlineView *)outline
+    objectValueForTableColumn: (NSTableColumn *)column
+                       byItem: (id)item
 {
-  return [item objectForKey:[column identifier]] ?: @"";
+  return [item objectForKey: [column identifier]] ?: @"";
 }
-- (BOOL)outlineView:(NSOutlineView *)outline shouldExpandItem:(id)item
+- (BOOL) outlineView: (NSOutlineView *)outline shouldExpandItem: (id)item
 {
-  [[_debugger variables] loadChildren:item];
+  [[_debugger variables] loadChildren: item];
   return YES;
 }
 @end

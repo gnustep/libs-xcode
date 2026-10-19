@@ -45,10 +45,10 @@
  * Initializes the build phase with the given parameters.
  */
 - (id) initWithFiles: (NSMutableArray *)files
-	       buildActionMask: (NSString *)buildActionMask
-	  runOnlyForDeployment: (NSString *)runOnlyForDeployment
-			target: (PBXNativeTarget *)target
-                          name: (NSString *)name;
+         buildActionMask: (NSString *)buildActionMask
+    runOnlyForDeployment: (NSString *)runOnlyForDeployment
+                  target: (PBXNativeTarget *)target
+                    name: (NSString *)name;
 
 /**
  * Returns the files for this build phase.

@@ -43,30 +43,31 @@
   NSString *_storageKey;
   YCodeGDBVariables *_variables;
 }
-- (void)setDelegate:(id<YCodeDebuggerBackendDelegate>)delegate;
-- (id<YCodeDebuggerVariableSource>)variables;
-- (void)notifyChange;
-- (void)reset;
-- (void)setBreakpointStorageKey:(NSString *)key;
-- (void)setSourceDirectory:(NSString *)directory;
+- (void) setDelegate: (id<YCodeDebuggerBackendDelegate>)delegate;
+- (id<YCodeDebuggerVariableSource>) variables;
+- (void) notifyChange;
+- (void) reset;
+- (void) setBreakpointStorageKey: (NSString *)key;
+- (void) setSourceDirectory: (NSString *)directory;
 /** Source location of the selected stopped frame; cleared on resume or exit. */
-- (NSString *)executionFile;
-- (NSUInteger)executionLine;
+- (NSString *) executionFile;
+- (NSUInteger) executionLine;
 /** Map of source line numbers to YCodeBreakpointState values for this file. */
-- (NSDictionary *)breakpointLinesForFile:(NSString *)file;
-- (YCodeBreakpointState)breakpointStateAtFile:(NSString *)file line:(NSUInteger)line;
-- (void)toggleBreakpointEnabledAtFile:(NSString *)file line:(NSUInteger)line;
-- (void)restart;
-- (BOOL)isReady;
-- (BOOL)isRunning;
-- (void)receiveData:(NSData *)data;
-- (void)command:(NSString *)command;
-- (void)consoleCommand:(NSString *)command;
-- (void)toggleBreakpointAtFile:(NSString *)file line:(NSUInteger)line;
+- (NSDictionary *) breakpointLinesForFile: (NSString *)file;
+- (YCodeBreakpointState) breakpointStateAtFile: (NSString *)file
+                                         line: (NSUInteger)line;
+- (void) toggleBreakpointEnabledAtFile: (NSString *)file line: (NSUInteger)line;
+- (void) restart;
+- (BOOL) isReady;
+- (BOOL) isRunning;
+- (void) receiveData: (NSData *)data;
+- (void) command: (NSString *)command;
+- (void) consoleCommand: (NSString *)command;
+- (void) toggleBreakpointAtFile: (NSString *)file line: (NSUInteger)line;
 /** Whether the path names a source implementation file, excluding headers. */
-+ (BOOL)canSetBreakpointAtFile:(NSString *)file;
-+ (NSString *)quote:(NSString *)string;
-+ (NSDictionary *)parseRecord:(NSString *)record;
++ (BOOL) canSetBreakpointAtFile: (NSString *)file;
++ (NSString *) quote: (NSString *)string;
++ (NSDictionary *) parseRecord: (NSString *)record;
 @end
 
 #endif

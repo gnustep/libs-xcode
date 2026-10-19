@@ -29,116 +29,149 @@
 
 /* Keep XCTest optional: the test bundle supplies the runner at runtime. */
 @interface NSObject (YCodeXCTestRunner)
-+ (id)sharedRunner;
-- (BOOL)runAll;
-+ (NSArray *)testInvocations;
-+ (id)testCaseWithInvocation:(NSInvocation *)invocation;
-+ (void)setUp;
-+ (void)tearDown;
-- (void)invokeTest;
-- (NSUInteger)failureCount;
-- (NSString *)name;
++ (id) sharedRunner;
+- (BOOL) runAll;
++ (NSArray *) testInvocations;
++ (id) testCaseWithInvocation: (NSInvocation *)invocation;
++ (void) setUp;
++ (void) tearDown;
+- (void) invokeTest;
+- (NSUInteger) failureCount;
+- (NSString *) name;
 @end
 
 @interface YCodeTestHost : NSObject
-- (void)runTests;
-- (BOOL)runLegacyTests;
+- (void) runTests;
+- (BOOL) runLegacyTests;
 @end
 
 @implementation YCodeTestHost
-- (id)init
+- (id) init
 {
-    self = [super init];
-    if (self) [self performSelector:@selector(runTests) withObject:nil afterDelay:0];
-    return self;
+  self = [super init];
+  if (self)
+    [self performSelector: @selector (runTests) withObject: nil afterDelay: 0];
+  return self;
 }
 
 /* Older GNUstep XCTest installations put GSXCTestRunner only in the
  * standalone executable. Use their public XCTestCase lifecycle in that case. */
-- (BOOL)runLegacyTests
+- (BOOL) runLegacyTests
 {
-    Class base = NSClassFromString(@"XCTestCase");
-    if (![base respondsToSelector:@selector(testInvocations)]) {
-        NSLog(@"XCTest: Test discovery is unavailable.");
+  Class base = NSClassFromString (@"XCTestCase");
+  if (![base respondsToSelector: @selector (testInvocations)])
+    {
+      NSLog (@"XCTest: Test discovery is unavailable.");
+      return NO;
+    }
+  int capacity, count = 0, index;
+  Class *classes = NULL;
+  do
+    {
+      capacity = objc_getClassList (NULL, 0);
+      free (classes);
+      classes = calloc (MAX (capacity, 1), sizeof (Class));
+      if (!classes)
         return NO;
+      count = objc_getClassList (classes, capacity);
     }
-    int capacity, count = 0, index;
-    Class *classes = NULL;
-    do {
-        capacity = objc_getClassList(NULL, 0);
-        free(classes);
-        classes = calloc(MAX(capacity, 1), sizeof(Class));
-        if (!classes) return NO;
-        count = objc_getClassList(classes, capacity);
-    } while (count > capacity);
-    NSMutableArray *names = [NSMutableArray array];
-    for (index = 0; index < count; index++) {
-        Class parent;
-        for (parent = class_getSuperclass(classes[index]); parent; parent = class_getSuperclass(parent))
-            if (parent == base) { [names addObject:NSStringFromClass(classes[index])]; break; }
+  while (count > capacity);
+  NSMutableArray *names = [NSMutableArray array];
+  for (index = 0; index < count; index++)
+    {
+      Class parent;
+      for (parent = class_getSuperclass (classes[index]); parent;
+           parent = class_getSuperclass (parent))
+        if (parent == base)
+          {
+            [names addObject: NSStringFromClass (classes[index])];
+            break;
+          }
     }
-    free(classes);
-    NSEnumerator *enumerator = [[names sortedArrayUsingSelector:@selector(compare:)] objectEnumerator];
-    NSString *name;
-    NSUInteger executed = 0, failures = 0;
-    while ((name = [enumerator nextObject]) != nil) {
-        Class testClass = NSClassFromString(name);
-        NSArray *invocations = [testClass testInvocations];
-        if (![invocations count]) continue;
-        @try {
-            [testClass setUp];
-            NSEnumerator *tests = [invocations objectEnumerator];
-            NSInvocation *invocation;
-            while ((invocation = [tests nextObject]) != nil) {
-                NSAutoreleasePool *pool = [NSAutoreleasePool new];
-                id test = [testClass testCaseWithInvocation:invocation];
-                NSLog(@"Test Case '%@' started.", [test name]);
-                [test invokeTest];
-                executed++;
-                BOOL failed = [test failureCount] > 0;
-                if (failed) failures++;
-                NSLog(@"Test Case '%@' %@.", [test name], failed ? @"failed" : @"passed");
-                [pool drain];
-            }
-        }
-        @catch (NSException *exception) {
-            failures++;
-            NSLog(@"XCTest: %@ FAILED: %@", name, exception);
-        }
-        @finally {
-            @try { [testClass tearDown]; }
-            @catch (NSException *exception) {
+  free (classes);
+  NSEnumerator *enumerator =
+      [[names sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
+  NSString *name;
+  NSUInteger executed = 0, failures = 0;
+  while ((name = [enumerator nextObject]) != nil)
+    {
+      Class testClass = NSClassFromString (name);
+      NSArray *invocations = [testClass testInvocations];
+      if (![invocations count])
+        continue;
+      @try
+        {
+          [testClass setUp];
+          NSEnumerator *tests = [invocations objectEnumerator];
+          NSInvocation *invocation;
+          while ((invocation = [tests nextObject]) != nil)
+            {
+              NSAutoreleasePool *pool = [NSAutoreleasePool new];
+              id test = [testClass testCaseWithInvocation: invocation];
+              NSLog (@"Test Case '%@' started.", [test name]);
+              [test invokeTest];
+              executed++;
+              BOOL failed = [test failureCount] > 0;
+              if (failed)
                 failures++;
-                NSLog(@"XCTest: %@ tearDown FAILED: %@", name, exception);
+              NSLog (@"Test Case '%@' %@.", [test name],
+                     failed ? @"failed" : @"passed");
+              [pool drain];
+            }
+        }
+      @catch (NSException *exception)
+        {
+          failures++;
+          NSLog (@"XCTest: %@ FAILED: %@", name, exception);
+        }
+      @finally
+        {
+          @try
+            {
+              [testClass tearDown];
+            }
+          @catch (NSException *exception)
+            {
+              failures++;
+              NSLog (@"XCTest: %@ tearDown FAILED: %@", name, exception);
             }
         }
     }
-    NSLog(@"XCTest: %lu tests executed, %lu failures", (unsigned long)executed, (unsigned long)failures);
-    return executed > 0 && failures == 0;
+  NSLog (@"XCTest: %lu tests executed, %lu failures", (unsigned long)executed,
+         (unsigned long)failures);
+  return executed > 0 && failures == 0;
 }
 
-- (void)runTests
+- (void) runTests
 {
-    NSAutoreleasePool *pool = [NSAutoreleasePool new];
-    BOOL success = NO;
-    NSString *path = [[NSUserDefaults standardUserDefaults] stringForKey:@"YCodeTestBundle"];
-    @try {
-        NSBundle *bundle = [NSBundle bundleWithPath:path];
-        NSError *error = nil;
-        if (!bundle || ![bundle loadAndReturnError:&error]) {
-            NSLog(@"XCTest: Could not load hosted test bundle %@: %@", path, error);
-        } else {
-            Class runner = NSClassFromString(@"GSXCTestRunner");
-            if ([runner respondsToSelector:@selector(sharedRunner)])
-                success = [[runner sharedRunner] runAll];
-            else success = [self runLegacyTests];
+  NSAutoreleasePool *pool = [NSAutoreleasePool new];
+  BOOL success = NO;
+  NSString *path =
+      [[NSUserDefaults standardUserDefaults] stringForKey: @"YCodeTestBundle"];
+  @try
+    {
+      NSBundle *bundle = [NSBundle bundleWithPath: path];
+      NSError *error = nil;
+      if (!bundle || ![bundle loadAndReturnError: &error])
+        {
+          NSLog (@"XCTest: Could not load hosted test bundle %@: %@", path,
+                 error);
+        }
+      else
+        {
+          Class runner = NSClassFromString (@"GSXCTestRunner");
+          if ([runner respondsToSelector: @selector (sharedRunner)])
+            success = [[runner sharedRunner] runAll];
+          else
+            success = [self runLegacyTests];
         }
     }
-    @catch (NSException *exception) {
-        NSLog(@"XCTest: Hosted test execution failed: %@", exception);
+  @catch (NSException *exception)
+    {
+      NSLog (@"XCTest: Hosted test execution failed: %@", exception);
     }
-    [pool drain];
-    fflush(NULL);
-    exit(success ? 0 : 1);
+  [pool drain];
+  fflush (NULL);
+  exit (success ? 0 : 1);
 }
 @end

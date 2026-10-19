@@ -21,16 +21,19 @@
 #include <float.h>
 
 @interface AppController (Private)
-- (void)updateApplicationMenuName;
-- (void)updateApplicationNameItemsInMenu:(NSMenu *)menu appName:(NSString *)applicationName;
-- (void)connectDocumentMenuActions;
-- (void)connectDocumentMenuActionsInMenu:(NSMenu *)menu;
-- (BOOL)saveActiveProjectShowingPanel:(BOOL)showPanel;
-- (YCodeProject *)currentProject;
-- (YCodeWindowController *)currentProjectWindowController;
-- (YCodeEditorController *)currentEditorController;
-- (NSView *)newProjectAccessoryView;
-- (void)createNewProjectAtURL:(NSURL *)url format:(NSString *)format productType:(NSString *)productType;
+- (void) updateApplicationMenuName;
+- (void) updateApplicationNameItemsInMenu: (NSMenu *)menu
+                                 appName: (NSString *)applicationName;
+- (void) connectDocumentMenuActions;
+- (void) connectDocumentMenuActionsInMenu: (NSMenu *)menu;
+- (BOOL) saveActiveProjectShowingPanel: (BOOL)showPanel;
+- (YCodeProject *) currentProject;
+- (YCodeWindowController *) currentProjectWindowController;
+- (YCodeEditorController *) currentEditorController;
+- (NSView *) newProjectAccessoryView;
+- (void) createNewProjectAtURL: (NSURL *)url
+                       format: (NSString *)format
+                  productType: (NSString *)productType;
 @end
 
 /* The Fonts panel routes actions to the main window when it becomes key. */
@@ -38,9 +41,9 @@
 @end
 
 @implementation YCodePreferencesPanel
-- (BOOL)canBecomeMainWindow
+- (BOOL) canBecomeMainWindow
 {
-    return YES;
+  return YES;
 }
 @end
 
@@ -49,18 +52,19 @@
 @end
 
 @implementation YCodePreferenceFontButton
-- (BOOL)acceptsFirstResponder
+- (BOOL) acceptsFirstResponder
 {
-    return YES;
+  return YES;
 }
-- (void)changeFont:(id)sender
+- (void) changeFont: (id)sender
 {
-    NSString *pane = [[YCodePreferences fontPanes] objectAtIndex:[self tag]];
-    NSFont *font = [sender convertFont:[YCodePreferences fontForPane:pane]];
-    if (font && [font pointSize] >= 6 && [font pointSize] <= 144) {
-        [YCodePreferences setFont:font forPane:pane];
-        [[NSFontManager sharedFontManager] setSelectedFont:font isMultiple:NO];
-        [[self target] performSelector:@selector(refreshFontPreferences)];
+  NSString *pane = [[YCodePreferences fontPanes] objectAtIndex: [self tag]];
+  NSFont *font = [sender convertFont: [YCodePreferences fontForPane: pane]];
+  if (font && [font pointSize] >= 6 && [font pointSize] <= 144)
+    {
+      [YCodePreferences setFont: font forPane: pane];
+      [[NSFontManager sharedFontManager] setSelectedFont: font isMultiple: NO];
+      [[self target] performSelector: @selector (refreshFontPreferences)];
     }
 }
 @end
@@ -68,33 +72,40 @@
 @interface YCodeTerminalFontButton : NSButton
 @end
 @implementation YCodeTerminalFontButton
-- (BOOL)acceptsFirstResponder { return YES; }
-- (void)changeFont:(id)sender
+- (BOOL) acceptsFirstResponder
 {
-    [YCodePreferences setTerminalFont:[sender convertFont:[YCodePreferences terminalFont]]];
-    [[NSFontManager sharedFontManager] setSelectedFont:[YCodePreferences terminalFont] isMultiple:NO];
-    [[self target] performSelector:@selector(refreshTerminalPreferences)];
+  return YES;
+}
+- (void) changeFont: (id)sender
+{
+  [YCodePreferences
+      setTerminalFont: [sender convertFont: [YCodePreferences terminalFont]]];
+  [[NSFontManager sharedFontManager]
+      setSelectedFont: [YCodePreferences terminalFont]
+           isMultiple: NO];
+  [[self target] performSelector: @selector (refreshTerminalPreferences)];
 }
 @end
 
 static NSMenuItem *
-YCodeMenuItem(NSString *title, SEL action, NSString *keyEquivalent, id target)
+YCodeMenuItem (NSString *title, SEL action, NSString *keyEquivalent, id target)
 {
-    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title
-                                                  action:action
-                                           keyEquivalent:keyEquivalent];
-    [item setTarget:target];
-    return AUTORELEASE(item);
+  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle: title
+                                                action: action
+                                         keyEquivalent: keyEquivalent];
+  [item setTarget: target];
+  return AUTORELEASE (item);
 }
 
 static NSURL *
-YCodeFileURLFromPath(NSString *path)
+YCodeFileURLFromPath (NSString *path)
 {
-    if (path == nil || [path length] == 0) {
-        return nil;
+  if (path == nil || [path length] == 0)
+    {
+      return nil;
     }
 
-    return [NSURL fileURLWithPath:path];
+  return [NSURL fileURLWithPath: path];
 }
 
 @implementation AppController
@@ -110,7 +121,7 @@ YCodeFileURLFromPath(NSString *path)
    * [defaults setObject:anObject forKey:keyForThatObject];
    *
    */
-  
+
   [[NSUserDefaults standardUserDefaults] registerDefaults: defaults];
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -125,1210 +136,1586 @@ YCodeFileURLFromPath(NSString *path)
 
 - (void) dealloc
 {
-  RELEASE(_fontChoices);
-  RELEASE(_editorColorWells);
-  RELEASE(_preferencesPanel);
+  RELEASE (_fontChoices);
+  RELEASE (_editorColorWells);
+  RELEASE (_preferencesPanel);
   [_helpWindow close];
-  RELEASE(_helpWindow);
+  RELEASE (_helpWindow);
   [super dealloc];
 }
 
 - (void) awakeFromNib
 {
-    [self buildMainMenu];
-    [self updateApplicationMenuName];
-    [self connectDocumentMenuActions];
+  [self buildMainMenu];
+  [self updateApplicationMenuName];
+  [self connectDocumentMenuActions];
 }
 
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif
 {
-    [self buildMainMenu];
-    [self updateApplicationMenuName];
-    [self connectDocumentMenuActions];
+  [self buildMainMenu];
+  [self updateApplicationMenuName];
+  [self connectDocumentMenuActions];
 }
 
-- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)application
+- (BOOL) applicationShouldOpenUntitledFile: (NSApplication *)application
 {
-    return NO;
+  return NO;
 }
 
-- (void)buildMainMenu
+- (void) buildMainMenu
 {
-    NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"ApplicationName"];
-    NSMenu *mainMenu = nil;
-    NSMenu *appMenu = nil;
-    NSMenu *fileMenu = nil;
-    NSMenu *editMenu = nil;
-    NSMenu *viewMenu = nil;
-    NSMenu *productMenu = nil;
-    NSMenu *windowMenu = nil;
-    NSMenu *helpMenu = nil;
-    NSMenuItem *menuItem = nil;
+  NSString *applicationName =
+      [[[NSBundle mainBundle] infoDictionary] objectForKey: @"ApplicationName"];
+  NSMenu *mainMenu = nil;
+  NSMenu *appMenu = nil;
+  NSMenu *fileMenu = nil;
+  NSMenu *editMenu = nil;
+  NSMenu *viewMenu = nil;
+  NSMenu *productMenu = nil;
+  NSMenu *windowMenu = nil;
+  NSMenu *helpMenu = nil;
+  NSMenuItem *menuItem = nil;
 #ifdef GNUSTEP
-    NSString *projectMenuTitle = @"Project";
-    NSString *windowMenuTitle = @"Windows";
+  NSString *projectMenuTitle = @"Project";
+  NSString *windowMenuTitle = @"Windows";
 #else
-    NSString *projectMenuTitle = @"Product";
-    NSString *windowMenuTitle = @"Window";
+  NSString *projectMenuTitle = @"Product";
+  NSString *windowMenuTitle = @"Window";
 #endif
 
-    if ([NSApp mainMenu] != nil) {
-        return;
-    }
-
-    if (applicationName == nil || [applicationName length] == 0) {
-        applicationName = [[NSProcessInfo processInfo] processName];
-    }
-
-    mainMenu = [[NSMenu alloc] initWithTitle:applicationName];
-
-#ifdef GNUSTEP
-    appMenu = [[NSMenu alloc] initWithTitle:@"Info"];
-#else
-    appMenu = [[NSMenu alloc] initWithTitle:applicationName];
-#endif
-    [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"About %@", applicationName],
-                                   @selector(orderFrontStandardAboutPanel:), @"", NSApp)];
-    [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItem:YCodeMenuItem(@"Preferences...", @selector(showPrefPanel:), @",", self)];
-#ifdef GNUSTEP
-    [appMenu addItem:YCodeMenuItem(@"Help", @selector(showHelp:), @"?", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Info" action:NULL keyEquivalent:@""];
-#else
-    [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"Hide %@", applicationName],
-                                   @selector(hide:), @"h", NSApp)];
-    [appMenu addItem:YCodeMenuItem(@"Hide Others", @selector(hideOtherApplications:), @"h", NSApp)];
-    [[appMenu itemAtIndex:[appMenu numberOfItems] - 1]
-        setKeyEquivalentModifierMask:NSCommandKeyMask | NSAlternateKeyMask];
-    [appMenu addItem:YCodeMenuItem(@"Show All", @selector(unhideAllApplications:), @"", NSApp)];
-    [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItem:YCodeMenuItem([NSString stringWithFormat:@"Quit %@", applicationName],
-                                   @selector(terminate:), @"q", NSApp)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:applicationName action:NULL keyEquivalent:@""];
-#endif
-    [menuItem setSubmenu:appMenu];
-    [mainMenu addItem:menuItem];
-    RELEASE(menuItem);
-    RELEASE(appMenu);
-
-    fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
-    [fileMenu addItem:YCodeMenuItem(@"New Project...", @selector(newProject:), @"n", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Open Project...", @selector(openProject:), @"o", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Recent Documents" action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:[(YCodeDocumentController *)[NSDocumentController sharedDocumentController] recentDocumentsMenu]];
-    [fileMenu addItem:menuItem];
-    RELEASE(menuItem);
-    [fileMenu addItem:[NSMenuItem separatorItem]];
-    [fileMenu addItem:YCodeMenuItem(@"New File", @selector(newFile:), @"", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Close File", @selector(closeCurrentFile:), @"w", self)];
-    [fileMenu addItem:[NSMenuItem separatorItem]];
-    [fileMenu addItem:YCodeMenuItem(@"Save", @selector(saveDocument:), @"s", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Save As...", @selector(saveDocumentAs:), @"S", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Save All", @selector(saveAllDocuments:), @"", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Save Project", @selector(saveProject:), @"", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Create .ycode.plist", @selector(createProjectSettings:), @"", self)];
-    [fileMenu addItem:YCodeMenuItem(@"Export ProjectCenter Project...", @selector(exportProjectCenter:), @"", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"File" action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:fileMenu];
-    [mainMenu addItem:menuItem];
-    RELEASE(menuItem);
-    RELEASE(fileMenu);
-
-    editMenu = [[NSMenu alloc] initWithTitle:@"Edit"];
-    [editMenu addItem:YCodeMenuItem(@"Undo", @selector(undo:), @"z", nil)];
-    [editMenu addItem:YCodeMenuItem(@"Redo", @selector(redo:), @"Z", nil)];
-    [editMenu addItem:[NSMenuItem separatorItem]];
-    [editMenu addItem:YCodeMenuItem(@"Cut", @selector(cut:), @"x", nil)];
-    [editMenu addItem:YCodeMenuItem(@"Copy", @selector(copy:), @"c", nil)];
-    [editMenu addItem:YCodeMenuItem(@"Paste", @selector(paste:), @"v", nil)];
-    [editMenu addItem:YCodeMenuItem(@"Select All", @selector(selectAll:), @"a", nil)];
-    [editMenu addItem:[NSMenuItem separatorItem]];
-    [editMenu addItem:YCodeMenuItem(@"Find...", @selector(findInFile:), @"f", self)];
-    [editMenu addItem:YCodeMenuItem(@"Replace...", @selector(replaceInFile:), @"", self)];
-    [editMenu addItem:[NSMenuItem separatorItem]];
-    [editMenu addItem:YCodeMenuItem(@"Comment/Uncomment Lines", @selector(toggleLineComment:), @"", nil)];
-    [editMenu addItem:YCodeMenuItem(@"Convert Tabs to Spaces", @selector(convertTabsToSpaces:), @"", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Edit" action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:editMenu];
-    [mainMenu addItem:menuItem];
-    RELEASE(menuItem);
-    RELEASE(editMenu);
-
-    viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
-    [viewMenu addItem:YCodeMenuItem(@"Show Navigator", @selector(toggleNavigator:), @"0", self)];
-    [viewMenu addItem:YCodeMenuItem(@"Show Inspector", @selector(toggleInspector:), @"", self)];
-    [viewMenu addItem:YCodeMenuItem(@"Show Debug Area", @selector(toggleBottomPanel:), @"", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"View" action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:viewMenu];
-    [mainMenu addItem:menuItem];
-    RELEASE(menuItem);
-    RELEASE(viewMenu);
-
-    productMenu = [[NSMenu alloc] initWithTitle:projectMenuTitle];
-    [productMenu addItem:YCodeMenuItem(@"Build", @selector(buildProject:), @"b", self)];
-    [productMenu addItem:YCodeMenuItem(@"Clean", @selector(cleanProject:), @"k", self)];
-    [productMenu addItem:YCodeMenuItem(@"Debug", @selector(debugProject:), @"", self)];
-    NSMenu *debugMenu = AUTORELEASE([[NSMenu alloc] initWithTitle:@"Debugger"]);
-    NSMenuItem *debugItem = YCodeMenuItem(@"Debugger", NULL, @"", nil);
-    [debugItem setSubmenu:debugMenu];
-    [debugItem setImage:YCodeControlIcon(@"debug", 16)];
-    [productMenu addItem:debugItem];
-    NSArray *debugLabels = [NSArray arrayWithObjects:@"Go", @"Pause", @"Continue", @"Restart",
-        @"Next", @"Step Into", @"Step Out", @"Up", @"Down", nil];
-    NSArray *debugIcons = [NSArray arrayWithObjects:@"go", @"pause", @"continue", @"restart", @"next", @"stepInto", @"stepOut", @"up", @"down", nil];
-    NSUInteger i;
-    for (i = 0; i < [debugLabels count]; i++) {
-        NSMenuItem *item = YCodeMenuItem([debugLabels objectAtIndex:i], @selector(debugAction:), @"", self);
-        [item setTag:i];
-        [item setImage:YCodeControlIcon([debugIcons objectAtIndex:i], 16)];
-        [debugMenu addItem:item];
-    }
-    [debugMenu addItem:YCodeMenuItem(@"Toggle Breakpoint at Selection", @selector(toggleBreakpoint:), @"", self)];
-    [productMenu addItem:YCodeMenuItem(@"Run", @selector(runProject:), @"r", self)];
-    [productMenu addItem:YCodeMenuItem(@"Stop", @selector(stopProject:), @".", self)];
-    [productMenu addItem:[NSMenuItem separatorItem]];
-    [productMenu addItem:YCodeMenuItem(@"Open Terminal", @selector(openTerminal:), @"", self)];
-    NSArray *controlTitles = [NSArray arrayWithObjects:@"Build", @"Clean", @"Debug", @"Run", @"Stop", nil];
+  if ([NSApp mainMenu] != nil)
     {
-      NSEnumerator *titleEnumerator = [controlTitles objectEnumerator];
-      NSString *title;
-      while ((title = [titleEnumerator nextObject]) != nil)
-        [[productMenu itemWithTitle:title] setImage:YCodeControlIcon([title lowercaseString], 16)];
+      return;
     }
-    [[debugMenu itemWithTitle:@"Toggle Breakpoint at Selection"] setImage:YCodeControlIcon(@"breakpoint", 16)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:projectMenuTitle action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:productMenu];
-    [mainMenu addItem:menuItem];
-    RELEASE(menuItem);
-    RELEASE(productMenu);
 
-    windowMenu = [[NSMenu alloc] initWithTitle:windowMenuTitle];
-    [windowMenu addItem:YCodeMenuItem(@"Minimize", @selector(performMiniaturize:), @"m", nil)];
-    [windowMenu addItem:YCodeMenuItem(@"Zoom", @selector(performZoom:), @"", nil)];
-    [windowMenu addItem:YCodeMenuItem(@"Close", @selector(performClose:), @"W", nil)];
-    [windowMenu addItem:[NSMenuItem separatorItem]];
-    [windowMenu addItem:YCodeMenuItem(@"Bring All to Front", @selector(arrangeInFront:), @"", NSApp)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:windowMenuTitle action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:windowMenu];
-    [mainMenu addItem:menuItem];
-    [NSApp setWindowsMenu:windowMenu];
-    RELEASE(menuItem);
-    RELEASE(windowMenu);
+  if (applicationName == nil || [applicationName length] == 0)
+    {
+      applicationName = [[NSProcessInfo processInfo] processName];
+    }
+
+  mainMenu = [[NSMenu alloc] initWithTitle: applicationName];
 
 #ifdef GNUSTEP
-    helpMenu = [[NSMenu alloc] initWithTitle:@"Services"];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Services" action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:helpMenu];
-    [mainMenu addItem:menuItem];
-    [NSApp setServicesMenu:helpMenu];
-    RELEASE(menuItem);
-    RELEASE(helpMenu);
-    [mainMenu addItem:YCodeMenuItem(@"Hide", @selector(hide:), @"h", NSApp)];
-    [mainMenu addItem:YCodeMenuItem(@"Quit", @selector(terminate:), @"q", NSApp)];
+  appMenu = [[NSMenu alloc] initWithTitle: @"Info"];
 #else
-    helpMenu = [[NSMenu alloc] initWithTitle:@"Help"];
-    [helpMenu addItem:YCodeMenuItem(@"Ycode Help", @selector(showHelp:), @"?", self)];
-    menuItem = [[NSMenuItem alloc] initWithTitle:@"Help" action:NULL keyEquivalent:@""];
-    [menuItem setSubmenu:helpMenu];
-    [mainMenu addItem:menuItem];
-    RELEASE(menuItem);
-    RELEASE(helpMenu);
+  appMenu = [[NSMenu alloc] initWithTitle: applicationName];
+#endif
+  [appMenu
+      addItem: YCodeMenuItem (
+                  [NSString stringWithFormat: @"About %@", applicationName],
+                  @selector (orderFrontStandardAboutPanel:), @"", NSApp)];
+  [appMenu addItem: [NSMenuItem separatorItem]];
+  [appMenu addItem: YCodeMenuItem (@"Preferences...",
+                                  @selector (showPrefPanel:), @",", self)];
+#ifdef GNUSTEP
+  [appMenu addItem: YCodeMenuItem (@"Help", @selector (showHelp:), @"?", self)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"Info"
+                                        action: NULL
+                                 keyEquivalent: @""];
+#else
+  [appMenu addItem: [NSMenuItem separatorItem]];
+  [appMenu addItem: YCodeMenuItem (
+                       [NSString stringWithFormat: @"Hide %@", applicationName],
+                       @selector (hide:), @"h", NSApp)];
+  [appMenu
+      addItem: YCodeMenuItem (@"Hide Others",
+                             @selector (hideOtherApplications:), @"h", NSApp)];
+  [[appMenu itemAtIndex: [appMenu numberOfItems] - 1]
+      setKeyEquivalentModifierMask: NSCommandKeyMask | NSAlternateKeyMask];
+  [appMenu
+      addItem: YCodeMenuItem (@"Show All", @selector (unhideAllApplications:),
+                             @"", NSApp)];
+  [appMenu addItem: [NSMenuItem separatorItem]];
+  [appMenu addItem: YCodeMenuItem (
+                       [NSString stringWithFormat: @"Quit %@", applicationName],
+                       @selector (terminate:), @"q", NSApp)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: applicationName
+                                        action: NULL
+                                 keyEquivalent: @""];
+#endif
+  [menuItem setSubmenu: appMenu];
+  [mainMenu addItem: menuItem];
+  RELEASE (menuItem);
+  RELEASE (appMenu);
+
+  fileMenu = [[NSMenu alloc] initWithTitle: @"File"];
+  [fileMenu addItem: YCodeMenuItem (@"New Project...", @selector (newProject:),
+                                   @"n", self)];
+  [fileMenu addItem: YCodeMenuItem (@"Open Project...",
+                                   @selector (openProject:), @"o", self)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"Recent Documents"
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: [(YCodeDocumentController *)
+                               [NSDocumentController sharedDocumentController]
+                           recentDocumentsMenu]];
+  [fileMenu addItem: menuItem];
+  RELEASE (menuItem);
+  [fileMenu addItem: [NSMenuItem separatorItem]];
+  [fileMenu
+      addItem: YCodeMenuItem (@"New File", @selector (newFile:), @"", self)];
+  [fileMenu addItem: YCodeMenuItem (@"Close File",
+                                   @selector (closeCurrentFile:), @"w", self)];
+  [fileMenu addItem: [NSMenuItem separatorItem]];
+  [fileMenu
+      addItem: YCodeMenuItem (@"Save", @selector (saveDocument:), @"s", self)];
+  [fileMenu addItem: YCodeMenuItem (@"Save As...", @selector (saveDocumentAs:),
+                                   @"S", self)];
+  [fileMenu addItem: YCodeMenuItem (@"Save All", @selector (saveAllDocuments:),
+                                   @"", self)];
+  [fileMenu addItem: YCodeMenuItem (@"Save Project", @selector (saveProject:),
+                                   @"", self)];
+  [fileMenu
+      addItem: YCodeMenuItem (@"Create .ycode.plist",
+                             @selector (createProjectSettings:), @"", self)];
+  [fileMenu
+      addItem: YCodeMenuItem (@"Export ProjectCenter Project...",
+                             @selector (exportProjectCenter:), @"", self)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"File"
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: fileMenu];
+  [mainMenu addItem: menuItem];
+  RELEASE (menuItem);
+  RELEASE (fileMenu);
+
+  editMenu = [[NSMenu alloc] initWithTitle: @"Edit"];
+  [editMenu addItem: YCodeMenuItem (@"Undo", @selector (undo:), @"z", nil)];
+  [editMenu addItem: YCodeMenuItem (@"Redo", @selector (redo:), @"Z", nil)];
+  [editMenu addItem: [NSMenuItem separatorItem]];
+  [editMenu addItem: YCodeMenuItem (@"Cut", @selector (cut:), @"x", nil)];
+  [editMenu addItem: YCodeMenuItem (@"Copy", @selector (copy:), @"c", nil)];
+  [editMenu addItem: YCodeMenuItem (@"Paste", @selector (paste:), @"v", nil)];
+  [editMenu addItem: YCodeMenuItem (@"Select All", @selector (selectAll:), @"a",
+                                   nil)];
+  [editMenu addItem: [NSMenuItem separatorItem]];
+  [editMenu
+      addItem: YCodeMenuItem (@"Find...", @selector (findInFile:), @"f", self)];
+  [editMenu addItem: YCodeMenuItem (@"Replace...", @selector (replaceInFile:),
+                                   @"", self)];
+  [editMenu addItem: [NSMenuItem separatorItem]];
+  [editMenu addItem: YCodeMenuItem (@"Comment/Uncomment Lines",
+                                   @selector (toggleLineComment:), @"", nil)];
+  [editMenu
+      addItem: YCodeMenuItem (@"Convert Tabs to Spaces",
+                             @selector (convertTabsToSpaces:), @"", self)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"Edit"
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: editMenu];
+  [mainMenu addItem: menuItem];
+  RELEASE (menuItem);
+  RELEASE (editMenu);
+
+  viewMenu = [[NSMenu alloc] initWithTitle: @"View"];
+  [viewMenu addItem: YCodeMenuItem (@"Show Navigator",
+                                   @selector (toggleNavigator:), @"0", self)];
+  [viewMenu addItem: YCodeMenuItem (@"Show Inspector",
+                                   @selector (toggleInspector:), @"", self)];
+  [viewMenu addItem: YCodeMenuItem (@"Show Debug Area",
+                                   @selector (toggleBottomPanel:), @"", self)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"View"
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: viewMenu];
+  [mainMenu addItem: menuItem];
+  RELEASE (menuItem);
+  RELEASE (viewMenu);
+
+  productMenu = [[NSMenu alloc] initWithTitle: projectMenuTitle];
+  [productMenu
+      addItem: YCodeMenuItem (@"Build", @selector (buildProject:), @"b", self)];
+  [productMenu
+      addItem: YCodeMenuItem (@"Clean", @selector (cleanProject:), @"k", self)];
+  [productMenu
+      addItem: YCodeMenuItem (@"Debug", @selector (debugProject:), @"", self)];
+  NSMenu *debugMenu = AUTORELEASE ([[NSMenu alloc] initWithTitle: @"Debugger"]);
+  NSMenuItem *debugItem = YCodeMenuItem (@"Debugger", NULL, @"", nil);
+  [debugItem setSubmenu: debugMenu];
+  [debugItem setImage: YCodeControlIcon (@"debug", 16)];
+  [productMenu addItem: debugItem];
+  NSArray *debugLabels = [NSArray
+      arrayWithObjects: @"Go", @"Pause", @"Continue", @"Restart", @"Next",
+                       @"Step Into", @"Step Out", @"Up", @"Down", nil];
+  NSArray *debugIcons = [NSArray
+      arrayWithObjects: @"go", @"pause", @"continue", @"restart", @"next",
+                       @"stepInto", @"stepOut", @"up", @"down", nil];
+  NSUInteger i;
+  for (i = 0; i < [debugLabels count]; i++)
+    {
+      NSMenuItem *item = YCodeMenuItem ([debugLabels objectAtIndex: i],
+                                        @selector (debugAction:), @"", self);
+      [item setTag: i];
+      [item setImage: YCodeControlIcon ([debugIcons objectAtIndex: i], 16)];
+      [debugMenu addItem: item];
+    }
+  [debugMenu addItem: YCodeMenuItem (@"Toggle Breakpoint at Selection",
+                                    @selector (toggleBreakpoint:), @"", self)];
+  [productMenu
+      addItem: YCodeMenuItem (@"Run", @selector (runProject:), @"r", self)];
+  [productMenu
+      addItem: YCodeMenuItem (@"Stop", @selector (stopProject:), @".", self)];
+  [productMenu addItem: [NSMenuItem separatorItem]];
+  [productMenu addItem: YCodeMenuItem (@"Open Terminal",
+                                      @selector (openTerminal:), @"", self)];
+  NSArray *controlTitles = [NSArray
+      arrayWithObjects: @"Build", @"Clean", @"Debug", @"Run", @"Stop", nil];
+  {
+    NSEnumerator *titleEnumerator = [controlTitles objectEnumerator];
+    NSString *title;
+    while ((title = [titleEnumerator nextObject]) != nil)
+      [[productMenu itemWithTitle: title]
+          setImage: YCodeControlIcon ([title lowercaseString], 16)];
+  }
+  [[debugMenu itemWithTitle: @"Toggle Breakpoint at Selection"]
+      setImage: YCodeControlIcon (@"breakpoint", 16)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: projectMenuTitle
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: productMenu];
+  [mainMenu addItem: menuItem];
+  RELEASE (menuItem);
+  RELEASE (productMenu);
+
+  windowMenu = [[NSMenu alloc] initWithTitle: windowMenuTitle];
+  [windowMenu
+      addItem: YCodeMenuItem (@"Minimize", @selector (performMiniaturize:),
+                             @"m", nil)];
+  [windowMenu
+      addItem: YCodeMenuItem (@"Zoom", @selector (performZoom:), @"", nil)];
+  [windowMenu
+      addItem: YCodeMenuItem (@"Close", @selector (performClose:), @"W", nil)];
+  [windowMenu addItem: [NSMenuItem separatorItem]];
+  [windowMenu addItem: YCodeMenuItem (@"Bring All to Front",
+                                     @selector (arrangeInFront:), @"", NSApp)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: windowMenuTitle
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: windowMenu];
+  [mainMenu addItem: menuItem];
+  [NSApp setWindowsMenu: windowMenu];
+  RELEASE (menuItem);
+  RELEASE (windowMenu);
+
+#ifdef GNUSTEP
+  helpMenu = [[NSMenu alloc] initWithTitle: @"Services"];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"Services"
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: helpMenu];
+  [mainMenu addItem: menuItem];
+  [NSApp setServicesMenu: helpMenu];
+  RELEASE (menuItem);
+  RELEASE (helpMenu);
+  [mainMenu addItem: YCodeMenuItem (@"Hide", @selector (hide:), @"h", NSApp)];
+  [mainMenu
+      addItem: YCodeMenuItem (@"Quit", @selector (terminate:), @"q", NSApp)];
+#else
+  helpMenu = [[NSMenu alloc] initWithTitle: @"Help"];
+  [helpMenu addItem: YCodeMenuItem (@"Ycode Help", @selector (showHelp:), @"?",
+                                   self)];
+  menuItem = [[NSMenuItem alloc] initWithTitle: @"Help"
+                                        action: NULL
+                                 keyEquivalent: @""];
+  [menuItem setSubmenu: helpMenu];
+  [mainMenu addItem: menuItem];
+  RELEASE (menuItem);
+  RELEASE (helpMenu);
 #endif
 
-    [NSApp setMainMenu:mainMenu];
-    RELEASE(mainMenu);
+  [NSApp setMainMenu: mainMenu];
+  RELEASE (mainMenu);
 }
 
-- (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender
+- (NSApplicationTerminateReply) applicationShouldTerminate:
+    (NSApplication *)sender
 {
-    NSEnumerator *documents = [[[NSDocumentController sharedDocumentController] documents] objectEnumerator];
-    YCodeProject *project;
-    while ((project = [documents nextObject]) != nil)
-        if (![project canCloseDocument]) return NSTerminateCancel;
+  NSEnumerator *documents = [[[NSDocumentController sharedDocumentController]
+      documents] objectEnumerator];
+  YCodeProject *project;
+  while ((project = [documents nextObject]) != nil)
+    if (![project canCloseDocument])
+      return NSTerminateCancel;
 
-    return NSTerminateNow;
+  return NSTerminateNow;
 }
 
 - (void) applicationWillTerminate: (NSNotification *)aNotif
 {
-    // Clean up
-    if (windowController) {
-        [windowController closeProject];
+  // Clean up
+  if (windowController)
+    {
+      [windowController closeProject];
     }
 }
 
-- (NSView *)newProjectAccessoryView
+- (NSView *) newProjectAccessoryView
 {
-    NSView *view = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 76)]);
-    NSUInteger index;
-    for (index = 0; index < 2; index++) {
-        CGFloat y = index == 0 ? 42 : 8;
-        NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(12, y, 104, 24)]);
-        [label setStringValue:index == 0 ? @"Project type:" : @"Format:"];
-        [label setEditable:NO];
-        [label setBezeled:NO];
-        [label setDrawsBackground:NO];
-        [view addSubview:label];
-        NSPopUpButton *popup = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(120, y, 228, 26) pullsDown:NO]);
-        [popup setTag:100 + index];
-        NSArray *values = index == 0 ? [YCodeProject newProjectTypes] :
-            [NSArray arrayWithObjects:@"Xcode", @"ProjectCenter", @"GNUmakefile", nil];
-        NSEnumerator *enumerator = [values objectEnumerator];
-        NSString *value;
-        while ((value = [enumerator nextObject]) != nil) {
-            NSString *title = [value isEqual:@"Library"] ? @"Dynamic Library" :
-                [value isEqual:@"StaticLibrary"] ? @"Static Library" : value;
-            [popup addItemWithTitle:title];
-            [[popup lastItem] setRepresentedObject:value];
+  NSView *view = AUTORELEASE (
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 360, 76)]);
+  NSUInteger index;
+  for (index = 0; index < 2; index++)
+    {
+      CGFloat y = index == 0 ? 42 : 8;
+      NSTextField *label = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (12, y, 104, 24)]);
+      [label setStringValue: index == 0 ? @"Project type:" : @"Format:"];
+      [label setEditable: NO];
+      [label setBezeled: NO];
+      [label setDrawsBackground: NO];
+      [view addSubview: label];
+      NSPopUpButton *popup = AUTORELEASE ([[NSPopUpButton alloc]
+          initWithFrame: NSMakeRect (120, y, 228, 26)
+              pullsDown: NO]);
+      [popup setTag: 100 + index];
+      NSArray *values
+          = index == 0 ? [YCodeProject newProjectTypes]
+                       : [NSArray arrayWithObjects: @"Xcode", @"ProjectCenter",
+                                                   @"GNUmakefile", nil];
+      NSEnumerator *enumerator = [values objectEnumerator];
+      NSString *value;
+      while ((value = [enumerator nextObject]) != nil)
+        {
+          NSString *title = [value isEqual: @"Library"] ? @"Dynamic Library"
+                            : [value isEqual: @"StaticLibrary"]
+                                ? @"Static Library"
+                                : value;
+          [popup addItemWithTitle: title];
+          [[popup lastItem] setRepresentedObject: value];
         }
-        [view addSubview:popup];
+      [view addSubview: popup];
     }
-    return view;
+  return view;
 }
 
 - (IBAction) newProject: (id)sender
 {
-    // A save panel accepts a new folder name; an open panel requires an
-    // existing item and disables its confirmation button for a new name.
-    NSSavePanel *panel = [NSSavePanel savePanel];
-    [panel setCanCreateDirectories:YES];
-    [panel setAllowedFileTypes:nil];
-    [panel setNameFieldStringValue:@"MyProject"];
-    [panel setTitle:@"Create New Project"];
-    [panel setPrompt:@"Create"];
-    [panel setNameFieldLabel:@"Project name:"];
-    [panel setMessage:@"Choose a location and name for the new project folder."];
-    
-    NSView *accessory = [self newProjectAccessoryView];
-    [panel setAccessoryView:accessory];
+  // A save panel accepts a new folder name; an open panel requires an
+  // existing item and disables its confirmation button for a new name.
+  NSSavePanel *panel = [NSSavePanel savePanel];
+  [panel setCanCreateDirectories: YES];
+  [panel setAllowedFileTypes: nil];
+  [panel setNameFieldStringValue: @"MyProject"];
+  [panel setTitle: @"Create New Project"];
+  [panel setPrompt: @"Create"];
+  [panel setNameFieldLabel: @"Project name:"];
+  [panel setMessage: @"Choose a location and name for the new project folder."];
+
+  NSView *accessory = [self newProjectAccessoryView];
+  [panel setAccessoryView: accessory];
 #ifdef GNUSTEP
-    // GNUstep's runModal uses the previous filename, not nameFieldStringValue.
-    NSInteger result = [panel runModalForDirectory:[panel directory] file:@"MyProject"];
+  // GNUstep's runModal uses the previous filename, not nameFieldStringValue.
+  NSInteger result = [panel runModalForDirectory: [panel directory]
+                                            file: @"MyProject"];
 #else
-    NSInteger result = [panel runModal];
+  NSInteger result = [panel runModal];
 #endif
-    NSString *productType = [[(NSPopUpButton *)[accessory viewWithTag:100] selectedItem] representedObject];
-    NSString *format = [[(NSPopUpButton *)[accessory viewWithTag:101] selectedItem] representedObject];
-    [panel setAccessoryView:nil];
-    if (result == NSModalResponseOK) {
-        NSURL *selectedURL = [panel URL];
-        if (selectedURL) {
-            [self createNewProjectAtURL:selectedURL format:format productType:productType];
+  NSString *productType = [[(NSPopUpButton *)[accessory viewWithTag: 100]
+      selectedItem] representedObject];
+  NSString *format = [[(NSPopUpButton *)[accessory viewWithTag: 101]
+      selectedItem] representedObject];
+  [panel setAccessoryView: nil];
+  if (result == NSModalResponseOK)
+    {
+      NSURL *selectedURL = [panel URL];
+      if (selectedURL)
+        {
+          [self createNewProjectAtURL: selectedURL
+                               format: format
+                          productType: productType];
         }
     }
 }
 
-- (IBAction)newDocument:(id)sender
+- (IBAction) newDocument: (id)sender
 {
-    [self newProject:sender];
+  [self newProject: sender];
 }
 
-- (IBAction)openDocument:(id)sender
+- (IBAction) openDocument: (id)sender
 {
-    [self openProject:sender];
+  [self openProject: sender];
 }
 
-- (void) createNewProjectAtURL:(NSURL *)projectURL
+- (void) createNewProjectAtURL: (NSURL *)projectURL
 {
-    [self createNewProjectAtURL:projectURL format:@"Xcode" productType:@"Application"];
+  [self createNewProjectAtURL: projectURL
+                       format: @"Xcode"
+                  productType: @"Application"];
 }
 
-- (void)createNewProjectAtURL:(NSURL *)projectURL format:(NSString *)format productType:(NSString *)productType
+- (void) createNewProjectAtURL: (NSURL *)projectURL
+                       format: (NSString *)format
+                  productType: (NSString *)productType
 {
-    NSString *projectPath = [[projectURL path] stringByStandardizingPath];
-    NSString *projectName = [projectPath lastPathComponent];
+  NSString *projectPath = [[projectURL path] stringByStandardizingPath];
+  NSString *projectName = [projectPath lastPathComponent];
 
-    // Create the project
-    YCodeProject *newProject = [YCodeProject createNewProjectAtPath:projectPath 
-                                                               name:projectName 
-                                                               type:format productType:productType];
-    
-    if (newProject) {
-        NSURL *fileURL = YCodeFileURLFromPath([newProject projectPath]);
+  // Create the project
+  YCodeProject *newProject = [YCodeProject createNewProjectAtPath: projectPath
+                                                             name: projectName
+                                                             type: format
+                                                      productType: productType];
 
-        if (fileURL != nil) {
-            [newProject setFileURL:fileURL];
+  if (newProject)
+    {
+      NSURL *fileURL = YCodeFileURLFromPath ([newProject projectPath]);
+
+      if (fileURL != nil)
+        {
+          [newProject setFileURL: fileURL];
         }
 
-        [[NSDocumentController sharedDocumentController] addDocument:newProject];
-        [newProject makeWindowControllers];
-        [newProject showWindows];
-    } else {
-        NSAlert *errorAlert = [[NSAlert alloc] init];
-        [errorAlert setMessageText:@"Project Creation Failed"];
-        [errorAlert setInformativeText:@"Could not create the project. Choose an empty, writable folder and try again."];
-        [errorAlert addButtonWithTitle:@"OK"];
-        [errorAlert runModal];
-        RELEASE(errorAlert);
+      [[NSDocumentController sharedDocumentController] addDocument: newProject];
+      [newProject makeWindowControllers];
+      [newProject showWindows];
+    }
+  else
+    {
+      NSAlert *errorAlert = [[NSAlert alloc] init];
+      [errorAlert setMessageText: @"Project Creation Failed"];
+      [errorAlert
+          setInformativeText:
+              @"Could not create the project. Choose an empty, writable folder and try again."];
+      [errorAlert addButtonWithTitle: @"OK"];
+      [errorAlert runModal];
+      RELEASE (errorAlert);
     }
 }
 
-- (IBAction)saveDocument:(id)sender
+- (IBAction) saveDocument: (id)sender
 {
-    YCodeEditorController *editor = [self currentEditorController];
-    if ([editor currentDocument]) {
-        if (![editor saveCurrentFile]) {
-            NSAlert *alert = [[NSAlert alloc] init];
-            [alert setMessageText:@"Unable to save file"];
-            [alert setInformativeText:[NSString stringWithFormat:
-                @"Could not save %@. Your changes remain open in the editor.",
-                [[editor currentDocument] filePath]]];
-            [alert addButtonWithTitle:@"OK"];
-            [alert runModal];
-            RELEASE(alert);
+  YCodeEditorController *editor = [self currentEditorController];
+  if ([editor currentDocument])
+    {
+      if (![editor saveCurrentFile])
+        {
+          NSAlert *alert = [[NSAlert alloc] init];
+          [alert setMessageText: @"Unable to save file"];
+          [alert
+              setInformativeText:
+                  [NSString
+                      stringWithFormat:
+                          @"Could not save %@. Your changes remain open in the editor.",
+                          [[editor currentDocument] filePath]]];
+          [alert addButtonWithTitle: @"OK"];
+          [alert runModal];
+          RELEASE (alert);
         }
+      return;
+    }
+  [self saveActiveProjectShowingPanel: NO];
+}
+
+- (IBAction) saveDocumentAs: (id)sender
+{
+  [self saveActiveProjectShowingPanel: YES];
+}
+
+- (IBAction) saveProject: (id)sender
+{
+  [self saveActiveProjectShowingPanel: NO];
+}
+
+- (IBAction) createProjectSettings: (id)sender
+{
+  YCodeProject *project = [self currentProject];
+  if (![project canCreateSettingsFile])
+    return;
+  NSString *chosenExecutable = nil;
+  if (![[project settingsExecutablePath] length])
+    {
+      NSOpenPanel *panel = [NSOpenPanel openPanel];
+      [panel setTitle: @"Choose Project Executable"];
+      [panel
+          setMessage:
+              @"Select the executable to use for Run and Debug. For an application, select the executable inside its bundle."];
+      [panel setCanChooseDirectories: NO];
+      [panel setCanChooseFiles: YES];
+      [panel setAllowsMultipleSelection: NO];
+      [panel setTreatsFilePackagesAsDirectories: YES];
+      [panel
+          setDirectoryURL: [NSURL
+                              fileURLWithPath: [project projectDirectoryPath]]];
+      if ([panel runModal] != NSModalResponseOK)
         return;
-    }
-    [self saveActiveProjectShowingPanel:NO];
-}
-
-- (IBAction)saveDocumentAs:(id)sender
-{
-    [self saveActiveProjectShowingPanel:YES];
-}
-
-- (IBAction)saveProject:(id)sender
-{
-    [self saveActiveProjectShowingPanel:NO];
-}
-
-- (IBAction)createProjectSettings:(id)sender
-{
-    YCodeProject *project = [self currentProject];
-    if (![project canCreateSettingsFile]) return;
-    NSString *chosenExecutable = nil;
-    if (![[project settingsExecutablePath] length]) {
-        NSOpenPanel *panel = [NSOpenPanel openPanel];
-        [panel setTitle:@"Choose Project Executable"];
-        [panel setMessage:@"Select the executable to use for Run and Debug. For an application, select the executable inside its bundle."];
-        [panel setCanChooseDirectories:NO];
-        [panel setCanChooseFiles:YES];
-        [panel setAllowsMultipleSelection:NO];
-        [panel setTreatsFilePackagesAsDirectories:YES];
-        [panel setDirectoryURL:[NSURL fileURLWithPath:[project projectDirectoryPath]]];
-        if ([panel runModal] != NSModalResponseOK) return;
-        chosenExecutable = [[panel URL] path];
-        if (![[NSFileManager defaultManager] isExecutableFileAtPath:chosenExecutable]) {
-            NSAlert *alert = AUTORELEASE([[NSAlert alloc] init]);
-            [alert setMessageText:@"The selected file is not executable."];
-            [alert runModal];
-            return;
+      chosenExecutable = [[panel URL] path];
+      if (![[NSFileManager defaultManager]
+              isExecutableFileAtPath: chosenExecutable])
+        {
+          NSAlert *alert = AUTORELEASE ([[NSAlert alloc] init]);
+          [alert setMessageText: @"The selected file is not executable."];
+          [alert runModal];
+          return;
         }
-        NSString *root = [[project projectDirectoryPath] stringByAppendingString:@"/"];
-        if ([chosenExecutable hasPrefix:root]) chosenExecutable = [chosenExecutable substringFromIndex:[root length]];
-        [[project settings] setObject:chosenExecutable forKey:@"Executable"];
+      NSString *root =
+          [[project projectDirectoryPath] stringByAppendingString: @"/"];
+      if ([chosenExecutable hasPrefix: root])
+        chosenExecutable = [chosenExecutable substringFromIndex: [root length]];
+      [[project settings] setObject: chosenExecutable forKey: @"Executable"];
     }
-    NSError *error = nil;
-    if (![project createSettingsFile:&error]) {
-        if (chosenExecutable) [[project settings] removeObjectForKey:@"Executable"];
-        [[NSAlert alertWithError:error] runModal];
-        return;
+  NSError *error = nil;
+  if (![project createSettingsFile: &error])
+    {
+      if (chosenExecutable)
+        [[project settings] removeObjectForKey: @"Executable"];
+      [[NSAlert alertWithError: error] runModal];
+      return;
     }
-    [[project editorController] openFile:
-        [[project projectDirectoryPath] stringByAppendingPathComponent:@".ycode.plist"]];
+  [[project editorController]
+      openFile: [[project projectDirectoryPath]
+                   stringByAppendingPathComponent: @".ycode.plist"]];
 }
 
-- (IBAction)exportProjectCenter:(id)sender
+- (IBAction) exportProjectCenter: (id)sender
 {
-    YCodeProject *project = [self currentProject];
-    if (!project) return;
-    NSSavePanel *panel = [NSSavePanel savePanel];
-    [panel setTitle:@"Export ProjectCenter Project"];
-    [panel setAllowedFileTypes:[NSArray arrayWithObject:@"pcproj"]];
-    [panel setDirectoryURL:[NSURL fileURLWithPath:[project projectDirectoryPath]]];
-    NSString *name = [[[project projectPath] lastPathComponent] stringByDeletingPathExtension];
-    [panel setNameFieldStringValue:[name stringByAppendingPathExtension:@"pcproj"]];
-    if ([panel runModal] != NSModalResponseOK) return;
-    NSError *error = nil;
-    if (![project exportProjectCenterToPath:[[panel URL] path] error:&error]) {
-        NSAlert *alert = [NSAlert alertWithError:error];
-        [alert runModal];
+  YCodeProject *project = [self currentProject];
+  if (!project)
+    return;
+  NSSavePanel *panel = [NSSavePanel savePanel];
+  [panel setTitle: @"Export ProjectCenter Project"];
+  [panel setAllowedFileTypes: [NSArray arrayWithObject: @"pcproj"]];
+  [panel
+      setDirectoryURL: [NSURL fileURLWithPath: [project projectDirectoryPath]]];
+  NSString *name = [[[project projectPath] lastPathComponent]
+      stringByDeletingPathExtension];
+  [panel
+      setNameFieldStringValue: [name stringByAppendingPathExtension: @"pcproj"]];
+  if ([panel runModal] != NSModalResponseOK)
+    return;
+  NSError *error = nil;
+  if (![project exportProjectCenterToPath: [[panel URL] path] error: &error])
+    {
+      NSAlert *alert = [NSAlert alertWithError: error];
+      [alert runModal];
     }
 }
 
-- (IBAction)saveDocumentTo:(id)sender
+- (IBAction) saveDocumentTo: (id)sender
 {
-    [self saveActiveProjectShowingPanel:YES];
+  [self saveActiveProjectShowingPanel: YES];
 }
 
-- (IBAction)saveAllDocuments:(id)sender
+- (IBAction) saveAllDocuments: (id)sender
 {
-    [self saveActiveProjectShowingPanel:NO];
+  [self saveActiveProjectShowingPanel: NO];
 }
 
-- (BOOL)saveActiveProjectShowingPanel:(BOOL)showPanel
+- (BOOL) saveActiveProjectShowingPanel: (BOOL)showPanel
 {
-    YCodeProject *project = (YCodeProject *)[[NSDocumentController sharedDocumentController] currentDocument];
-    NSString *projectPath = nil;
+  YCodeProject *project
+      = (YCodeProject *)[[NSDocumentController sharedDocumentController]
+          currentDocument];
+  NSString *projectPath = nil;
 
-    if (project == nil || ![project isKindOfClass:[YCodeProject class]]) {
-        NSBeep();
-        return NO;
+  if (project == nil || ![project isKindOfClass: [YCodeProject class]])
+    {
+      NSBeep ();
+      return NO;
     }
 
-    projectPath = [project projectPath];
+  projectPath = [project projectPath];
 
-    BOOL importedProject = [[projectPath pathExtension] isEqualToString:@"pcproj"];
-    if (![project isDirectoryProject] && (showPanel || importedProject || projectPath == nil || [projectPath length] == 0)) {
-        NSSavePanel *panel = [NSSavePanel savePanel];
-        NSString *name = @"Project.xcodeproj";
+  BOOL importedProject =
+      [[projectPath pathExtension] isEqualToString: @"pcproj"];
+  if (![project isDirectoryProject]
+      && (showPanel || importedProject || projectPath == nil ||
+          [projectPath length] == 0))
+    {
+      NSSavePanel *panel = [NSSavePanel savePanel];
+      NSString *name = @"Project.xcodeproj";
 
-        if (projectPath != nil && [projectPath length] > 0) {
-            name = [projectPath lastPathComponent];
-            if (importedProject)
-                name = [[name stringByDeletingPathExtension] stringByAppendingPathExtension:@"xcodeproj"];
-            [panel setDirectoryURL:[NSURL fileURLWithPath:[project projectDirectoryPath]]];
+      if (projectPath != nil && [projectPath length] > 0)
+        {
+          name = [projectPath lastPathComponent];
+          if (importedProject)
+            name = [[name stringByDeletingPathExtension]
+                stringByAppendingPathExtension: @"xcodeproj"];
+          [panel
+              setDirectoryURL: [NSURL
+                                  fileURLWithPath: [project
+                                                      projectDirectoryPath]]];
         }
 
-        [panel setTitle:@"Save Project"];
-        [panel setNameFieldStringValue:name];
-        [panel setAllowedFileTypes:[NSArray arrayWithObject:@"xcodeproj"]];
+      [panel setTitle: @"Save Project"];
+      [panel setNameFieldStringValue: name];
+      [panel setAllowedFileTypes: [NSArray arrayWithObject: @"xcodeproj"]];
 
-        if ([panel runModal] != NSModalResponseOK) {
-            return NO;
+      if ([panel runModal] != NSModalResponseOK)
+        {
+          return NO;
         }
 
-        projectPath = [[panel URL] path];
-        if (projectPath == nil || [projectPath length] == 0) {
-            return NO;
+      projectPath = [[panel URL] path];
+      if (projectPath == nil || [projectPath length] == 0)
+        {
+          return NO;
         }
     }
 
-    if (![project saveProjectToPath:projectPath]) {
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:@"Unable to save project"];
-        [alert setInformativeText:@"The project could not be saved to the selected location."];
-        [alert addButtonWithTitle:@"OK"];
-        [alert runModal];
-        RELEASE(alert);
-        return NO;
+  if (![project saveProjectToPath: projectPath])
+    {
+      NSAlert *alert = [[NSAlert alloc] init];
+      [alert setMessageText: @"Unable to save project"];
+      [alert setInformativeText:
+                 @"The project could not be saved to the selected location."];
+      [alert addButtonWithTitle: @"OK"];
+      [alert runModal];
+      RELEASE (alert);
+      return NO;
     }
 
-    [[project windowControllers] makeObjectsPerformSelector:@selector(synchronizeWindowTitleWithDocumentName)];
-    return YES;
+  [[project windowControllers] makeObjectsPerformSelector: @selector
+                               (synchronizeWindowTitleWithDocumentName)];
+  return YES;
 }
 
-- (BOOL) application: (NSApplication *)application
-	    openFile: (NSString *)fileName
+- (BOOL) application: (NSApplication *)application openFile: (NSString *)fileName
 {
-    NSError *error = nil;
-    BOOL opened = [(YCodeDocumentController *)[NSDocumentController sharedDocumentController]
-        openWorkspaceFile:fileName error:&error];
-    if (!opened && error) [[NSDocumentController sharedDocumentController] presentError:error];
-    return opened;
+  NSError *error = nil;
+  BOOL opened = [(
+      YCodeDocumentController *)[NSDocumentController sharedDocumentController]
+      openWorkspaceFile: fileName
+                  error: &error];
+  if (!opened && error)
+    [[NSDocumentController sharedDocumentController] presentError: error];
+  return opened;
 }
 
-- (void)updateApplicationMenuName
+- (void) updateApplicationMenuName
 {
 #ifdef GNUSTEP
-    // GNUstep uses the main menu itself as the application menu.
-    return;
+  // GNUstep uses the main menu itself as the application menu.
+  return;
 #else
-    NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"ApplicationName"];
-    NSMenu *mainMenu = [NSApp mainMenu];
-    NSMenuItem *applicationItem = nil;
-    NSMenu *applicationMenu = nil;
+  NSString *applicationName =
+      [[[NSBundle mainBundle] infoDictionary] objectForKey: @"ApplicationName"];
+  NSMenu *mainMenu = [NSApp mainMenu];
+  NSMenuItem *applicationItem = nil;
+  NSMenu *applicationMenu = nil;
 
-    if (applicationName == nil || [applicationName length] == 0) {
-        applicationName = [[NSProcessInfo processInfo] processName];
+  if (applicationName == nil || [applicationName length] == 0)
+    {
+      applicationName = [[NSProcessInfo processInfo] processName];
     }
 
-    if (mainMenu == nil || [[mainMenu itemArray] count] == 0) {
-        return;
+  if (mainMenu == nil || [[mainMenu itemArray] count] == 0)
+    {
+      return;
     }
 
-    applicationItem = [[mainMenu itemArray] objectAtIndex:0];
-    applicationMenu = [applicationItem submenu];
+  applicationItem = [[mainMenu itemArray] objectAtIndex: 0];
+  applicationMenu = [applicationItem submenu];
 
-    [applicationItem setTitle:applicationName];
-    if (applicationMenu != nil) {
-        NSMenuItem *infoItem = nil;
+  [applicationItem setTitle: applicationName];
+  if (applicationMenu != nil)
+    {
+      NSMenuItem *infoItem = nil;
 
-        [applicationMenu setTitle:applicationName];
-        if ([[applicationMenu itemArray] count] > 0) {
-            infoItem = [[applicationMenu itemArray] objectAtIndex:0];
-            if ([[infoItem title] isEqualToString:@"Info"]) {
-                [infoItem setTitle:applicationName];
-                [[infoItem submenu] setTitle:applicationName];
+      [applicationMenu setTitle: applicationName];
+      if ([[applicationMenu itemArray] count] > 0)
+        {
+          infoItem = [[applicationMenu itemArray] objectAtIndex: 0];
+          if ([[infoItem title] isEqualToString: @"Info"])
+            {
+              [infoItem setTitle: applicationName];
+              [[infoItem submenu] setTitle: applicationName];
             }
         }
 
-        [self updateApplicationNameItemsInMenu:applicationMenu
-                                      appName:applicationName];
+      [self updateApplicationNameItemsInMenu: applicationMenu
+                                     appName: applicationName];
     }
 #endif
 }
 
-- (void)updateApplicationNameItemsInMenu:(NSMenu *)menu appName:(NSString *)applicationName
+- (void) updateApplicationNameItemsInMenu: (NSMenu *)menu
+                                 appName: (NSString *)applicationName
 {
-    NSEnumerator *enumerator = nil;
-    NSMenuItem *item = nil;
+  NSEnumerator *enumerator = nil;
+  NSMenuItem *item = nil;
 
-    if (menu == nil) {
-        return;
+  if (menu == nil)
+    {
+      return;
     }
 
-    enumerator = [[menu itemArray] objectEnumerator];
-    while ((item = [enumerator nextObject]) != nil) {
-        if ([[item title] isEqualToString:@"Hide"]) {
-            [item setTitle:[NSString stringWithFormat:@"Hide %@", applicationName]];
-        } else if ([[item title] isEqualToString:@"Quit"]) {
-            [item setTitle:[NSString stringWithFormat:@"Quit %@", applicationName]];
+  enumerator = [[menu itemArray] objectEnumerator];
+  while ((item = [enumerator nextObject]) != nil)
+    {
+      if ([[item title] isEqualToString: @"Hide"])
+        {
+          [item setTitle: [NSString
+                             stringWithFormat: @"Hide %@", applicationName]];
+        }
+      else if ([[item title] isEqualToString: @"Quit"])
+        {
+          [item setTitle: [NSString
+                             stringWithFormat: @"Quit %@", applicationName]];
         }
 
-        [self updateApplicationNameItemsInMenu:[item submenu]
-                                      appName:applicationName];
+      [self updateApplicationNameItemsInMenu: [item submenu]
+                                     appName: applicationName];
     }
 }
 
-- (void)connectDocumentMenuActions
+- (void) connectDocumentMenuActions
 {
-    NSMenu *mainMenu = [NSApp mainMenu];
-    NSEnumerator *enumerator = nil;
-    NSMenuItem *item = nil;
+  NSMenu *mainMenu = [NSApp mainMenu];
+  NSEnumerator *enumerator = nil;
+  NSMenuItem *item = nil;
 
-    if (mainMenu == nil) {
-        return;
+  if (mainMenu == nil)
+    {
+      return;
     }
 
-    enumerator = [[mainMenu itemArray] objectEnumerator];
-    while ((item = [enumerator nextObject]) != nil) {
-        [self connectDocumentMenuActionsInMenu:[item submenu]];
+  enumerator = [[mainMenu itemArray] objectEnumerator];
+  while ((item = [enumerator nextObject]) != nil)
+    {
+      [self connectDocumentMenuActionsInMenu: [item submenu]];
     }
 }
 
-- (void)connectDocumentMenuActionsInMenu:(NSMenu *)menu
+- (void) connectDocumentMenuActionsInMenu: (NSMenu *)menu
 {
-    NSEnumerator *enumerator = nil;
-    NSMenuItem *item = nil;
+  NSEnumerator *enumerator = nil;
+  NSMenuItem *item = nil;
 
-    if (menu == nil) {
-        return;
+  if (menu == nil)
+    {
+      return;
     }
 
-    enumerator = [[menu itemArray] objectEnumerator];
-    while ((item = [enumerator nextObject]) != nil) {
-        SEL action = [item action];
+  enumerator = [[menu itemArray] objectEnumerator];
+  while ((item = [enumerator nextObject]) != nil)
+    {
+      SEL action = [item action];
 
-        if (action == @selector(newDocument:)) {
-            [item setTarget:self];
-            [item setAction:@selector(newProject:)];
-        } else if (action == @selector(openDocument:)) {
-            [item setTarget:self];
-            [item setAction:@selector(openProject:)];
-        } else if (action == @selector(showHelp:)) {
-            [item setTarget:self];
-        } else if (action == @selector(saveDocument:) ||
-                   action == @selector(saveDocumentAs:) ||
-                   action == @selector(saveDocumentTo:) ||
-                   action == @selector(saveAllDocuments:)) {
-            [item setTarget:self];
+      if (action == @selector (newDocument:))
+        {
+          [item setTarget: self];
+          [item setAction: @selector (newProject:)];
+        }
+      else if (action == @selector (openDocument:))
+        {
+          [item setTarget: self];
+          [item setAction: @selector (openProject:)];
+        }
+      else if (action == @selector (showHelp:))
+        {
+          [item setTarget: self];
+        }
+      else if (action == @selector (saveDocument:)
+               || action == @selector (saveDocumentAs:)
+               || action == @selector (saveDocumentTo:)
+               || action == @selector (saveAllDocuments:))
+        {
+          [item setTarget: self];
         }
 
-        [self connectDocumentMenuActionsInMenu:[item submenu]];
+      [self connectDocumentMenuActionsInMenu: [item submenu]];
     }
 }
 
-- (YCodeProject *)currentProject
+- (YCodeProject *) currentProject
 {
-    id document = [[NSDocumentController sharedDocumentController] currentDocument];
+  id document =
+      [[NSDocumentController sharedDocumentController] currentDocument];
 
-    if ([document isKindOfClass:[YCodeProject class]]) {
-        return document;
+  if ([document isKindOfClass: [YCodeProject class]])
+    {
+      return document;
     }
 
-    return nil;
+  return nil;
 }
 
-- (YCodeWindowController *)currentProjectWindowController
+- (YCodeWindowController *) currentProjectWindowController
 {
-    YCodeProject *project = [self currentProject];
-    NSWindow *keyWindow = [NSApp keyWindow];
-    NSEnumerator *enumerator = nil;
-    YCodeWindowController *controller = nil;
+  YCodeProject *project = [self currentProject];
+  NSWindow *keyWindow = [NSApp keyWindow];
+  NSEnumerator *enumerator = nil;
+  YCodeWindowController *controller = nil;
 
-    if (project == nil) {
-        return nil;
+  if (project == nil)
+    {
+      return nil;
     }
 
-    enumerator = [[project windowControllers] objectEnumerator];
-    while ((controller = [enumerator nextObject]) != nil) {
-        if ([controller window] == keyWindow) {
-            return controller;
+  enumerator = [[project windowControllers] objectEnumerator];
+  while ((controller = [enumerator nextObject]) != nil)
+    {
+      if ([controller window] == keyWindow)
+        {
+          return controller;
         }
     }
 
-    return [[project windowControllers] count] > 0
-        ? [[project windowControllers] objectAtIndex:0]
-        : nil;
+  return [[project windowControllers] count] > 0
+             ? [[project windowControllers] objectAtIndex: 0]
+             : nil;
 }
 
-- (YCodeEditorController *)currentEditorController
+- (YCodeEditorController *) currentEditorController
 {
-    return [[self currentProject] editorController];
+  return [[self currentProject] editorController];
 }
 
-- (IBAction)newFile:(id)sender
+- (IBAction) newFile: (id)sender
 {
-    [[self currentEditorController] newFile:sender];
+  [[self currentEditorController] newFile: sender];
 }
 
-- (IBAction)closeCurrentFile:(id)sender
+- (IBAction) closeCurrentFile: (id)sender
 {
-    [[self currentEditorController] closeCurrentFile:sender];
+  [[self currentEditorController] closeCurrentFile: sender];
 }
 
-- (IBAction)findInFile:(id)sender
+- (IBAction) findInFile: (id)sender
 {
-    [[self currentEditorController] findInFile:sender];
+  [[self currentEditorController] findInFile: sender];
 }
 
-- (IBAction)replaceInFile:(id)sender
+- (IBAction) replaceInFile: (id)sender
 {
-    [[self currentEditorController] replaceInFile:sender];
+  [[self currentEditorController] replaceInFile: sender];
 }
 
-- (IBAction)convertTabsToSpaces:(id)sender
+- (IBAction) convertTabsToSpaces: (id)sender
 {
-    [(YCodeTextView *)[[[self currentEditorController] currentDocument] textView]
-        convertTabsToSpaces:sender];
+  [(YCodeTextView *)[[[self currentEditorController] currentDocument] textView]
+      convertTabsToSpaces: sender];
 }
 
-- (IBAction)buildProject:(id)sender
+- (IBAction) buildProject: (id)sender
 {
-    YCodeWindowController *controller = [self currentProjectWindowController];
+  YCodeWindowController *controller = [self currentProjectWindowController];
 
-    if (controller != nil) {
-        [controller buildProject:sender];
-    } else {
-        NSBeep();
+  if (controller != nil)
+    {
+      [controller buildProject: sender];
+    }
+  else
+    {
+      NSBeep ();
     }
 }
 
-- (IBAction)cleanProject:(id)sender
+- (IBAction) cleanProject: (id)sender
 {
-    YCodeProject *project = [self currentProject];
+  YCodeProject *project = [self currentProject];
 
-    if (project != nil) {
-        [project cleanProject];
-    } else {
-        NSBeep();
+  if (project != nil)
+    {
+      [project cleanProject];
+    }
+  else
+    {
+      NSBeep ();
     }
 }
 
-- (BOOL)validateMenuItem:(NSMenuItem *)item
+- (BOOL) validateMenuItem: (NSMenuItem *)item
 {
-    SEL action = [item action];
-    if (action == @selector(openTerminal:)) {
-        YCodeWindowController *controller = [self currentProjectWindowController];
-        [item setTitle:[controller isTerminalVisible] ? @"Close Terminal" : @"Open Terminal"];
-        return controller != nil;
+  SEL action = [item action];
+  if (action == @selector (openTerminal:))
+    {
+      YCodeWindowController *controller =
+          [self currentProjectWindowController];
+      [item setTitle: [controller isTerminalVisible] ? @"Close Terminal"
+                                                    : @"Open Terminal"];
+      return controller != nil;
     }
-    if (action == @selector(createProjectSettings:)) return [[self currentProject] canCreateSettingsFile];
-    if (action == @selector(convertTabsToSpaces:))
-        return [[[[self currentEditorController] currentDocument] textView] isEditable];
-    if (action == @selector(findInFile:) || action == @selector(replaceInFile:))
-        return [[[self currentEditorController] currentDocument] textView] != nil;
-    if (action == @selector(exportProjectCenter:)) return [self currentProject] != nil;
-    if (action == @selector(debugProject:) || action == @selector(debugAction:) ||
-        action == @selector(toggleBreakpoint:))
-        return [[self currentProjectWindowController] validateDebuggerAction:action tag:[item tag]];
-    return YES;
+  if (action == @selector (createProjectSettings:))
+    return [[self currentProject] canCreateSettingsFile];
+  if (action == @selector (convertTabsToSpaces:))
+    return [[[[self currentEditorController] currentDocument] textView]
+        isEditable];
+  if (action == @selector (findInFile:)
+      || action == @selector (replaceInFile:))
+    return [[[self currentEditorController] currentDocument] textView] != nil;
+  if (action == @selector (exportProjectCenter:))
+    return [self currentProject] != nil;
+  if (action == @selector (debugProject:) || action == @selector (debugAction:)
+      || action == @selector (toggleBreakpoint:))
+    return [[self currentProjectWindowController]
+        validateDebuggerAction: action
+                           tag: [item tag]];
+  return YES;
 }
 
-- (IBAction)debugProject:(id)sender
+- (IBAction) debugProject: (id)sender
 {
-    [[self currentProjectWindowController] debugProject:sender];
+  [[self currentProjectWindowController] debugProject: sender];
 }
-- (IBAction)openTerminal:(id)sender
+- (IBAction) openTerminal: (id)sender
 {
-    YCodeWindowController *controller = [self currentProjectWindowController];
-    [controller openTerminal:sender];
-    if ([sender isKindOfClass:[NSMenuItem class]])
-        [sender setTitle:[controller isTerminalVisible] ? @"Close Terminal" : @"Open Terminal"];
+  YCodeWindowController *controller = [self currentProjectWindowController];
+  [controller openTerminal: sender];
+  if ([sender isKindOfClass: [NSMenuItem class]])
+    [sender setTitle: [controller isTerminalVisible] ? @"Close Terminal"
+                                                    : @"Open Terminal"];
 }
-- (IBAction)debugAction:(id)sender
+- (IBAction) debugAction: (id)sender
 {
-    [[self currentProjectWindowController] debugAction:sender];
+  [[self currentProjectWindowController] debugAction: sender];
 }
-- (IBAction)toggleBreakpoint:(id)sender
+- (IBAction) toggleBreakpoint: (id)sender
 {
-    [[self currentProjectWindowController] toggleBreakpoint:sender];
+  [[self currentProjectWindowController] toggleBreakpoint: sender];
 }
 
-- (IBAction)runProject:(id)sender
+- (IBAction) runProject: (id)sender
 {
-    YCodeWindowController *controller = [self currentProjectWindowController];
+  YCodeWindowController *controller = [self currentProjectWindowController];
 
-    if (controller != nil) {
-        [controller runProject:sender];
-    } else {
-        NSBeep();
+  if (controller != nil)
+    {
+      [controller runProject: sender];
     }
-}
-
-- (IBAction)stopProject:(id)sender
-{
-    YCodeWindowController *controller = [self currentProjectWindowController];
-
-    if (controller != nil) {
-        [controller stopProject:sender];
-    } else {
-        NSBeep();
-    }
-}
-
-- (IBAction)toggleNavigator:(id)sender
-{
-    [[self currentProjectWindowController] toggleNavigator:sender];
-}
-
-- (IBAction)toggleInspector:(id)sender
-{
-    [[self currentProjectWindowController] toggleInspector:sender];
-}
-
-- (IBAction)toggleBottomPanel:(id)sender
-{
-    [[self currentProjectWindowController] toggleBottomPanel:sender];
-}
-
-- (void)refreshEditorColorWells
-{
-    NSArray *keys = [YCodeSyntaxHighlighter colorPreferenceKeys];
-    NSUInteger i;
-    for (i = 0; i < [_editorColorWells count]; i++)
-        [[_editorColorWells objectAtIndex:i] setColor:
-            [YCodeSyntaxHighlighter preferredColorForKey:[keys objectAtIndex:i]]];
-}
-
-- (void)changeEditorColor:(NSColorWell *)sender
-{
-    NSString *key = [[YCodeSyntaxHighlighter colorPreferenceKeys] objectAtIndex:[sender tag]];
-    [YCodeSyntaxHighlighter setPreferredColor:[sender color] forKey:key];
-    [self refreshEditorColorWells];
-}
-
-- (void)resetEditorColors:(id)sender
-{
-    [YCodeSyntaxHighlighter resetColorPreferences];
-    [self refreshEditorColorWells];
-}
-
-- (void)changeTabPreferences:(id)sender
-{
-    [YCodePreferences setControlIndentWidth:[_controlIndentChoice indexOfSelectedItem] + 1];
-    [YCodePreferences setTabWidth:[_tabWidthChoice indexOfSelectedItem] + 1
-        useSpaces:[_spacesForTabs state] == NSOnState
-        useProjectSettings:[_projectIndentation state] == NSOnState];
-}
-
-- (void)setupTabPreferences
-{
-    _tabPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
-    [[_preferencesPanel contentView] addSubview:_tabPreferencesView];
-    NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 404, 190, 24)]);
-    [label setStringValue:@"Tab / indent width (spaces):"];
-    [label setEditable:NO]; [label setSelectable:NO];
-    [label setBezeled:NO]; [label setDrawsBackground:NO];
-    [_tabPreferencesView addSubview:label];
-    _tabWidthChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(260, 401, 110, 28) pullsDown:NO]);
-    NSUInteger width;
-    for (width = 1; width <= 16; width++)
-        [_tabWidthChoice addItemWithTitle:[NSString stringWithFormat:@"%lu", (unsigned long)width]];
-    [_tabWidthChoice setTarget:self]; [_tabWidthChoice setAction:@selector(changeTabPreferences:)];
-    [_tabPreferencesView addSubview:_tabWidthChoice];
-    _spacesForTabs = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 360, 350, 28)]);
-    [_spacesForTabs setButtonType:NSSwitchButton];
-    [_spacesForTabs setTitle:@"Insert spaces instead of tab characters"];
-    [_spacesForTabs setTarget:self]; [_spacesForTabs setAction:@selector(changeTabPreferences:)];
-    [_tabPreferencesView addSubview:_spacesForTabs];
-    _projectIndentation = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 320, 350, 28)]);
-    [_projectIndentation setButtonType:NSSwitchButton];
-    [_projectIndentation setTitle:@"Honor project .clang-format settings"];
-    [_projectIndentation setTarget:self]; [_projectIndentation setAction:@selector(changeTabPreferences:)];
-    [_tabPreferencesView addSubview:_projectIndentation];
-    NSTextField *controlLabel = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 276, 230, 24)]);
-    [controlLabel setStringValue:@"Auto indentation (spaces):"];
-    [controlLabel setEditable:NO]; [controlLabel setSelectable:NO];
-    [controlLabel setBezeled:NO]; [controlLabel setDrawsBackground:NO];
-    [_tabPreferencesView addSubview:controlLabel];
-    _controlIndentChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(260, 273, 110, 28) pullsDown:NO]);
-    for (width = 1; width <= 16; width++)
-        [_controlIndentChoice addItemWithTitle:[NSString stringWithFormat:@"%lu", (unsigned long)width]];
-    [_controlIndentChoice setTarget:self]; [_controlIndentChoice setAction:@selector(changeTabPreferences:)];
-    [_tabPreferencesView addSubview:_controlIndentChoice];
-    NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 140, 350, 120)]);
-    [hint setStringValue:@"Auto indentation adds spaces after control statements and opening braces, and removes the same amount after closing braces. It is independent of tab width and project settings. Changes apply immediately; existing whitespace is preserved."];
-    [hint setEditable:NO]; [hint setSelectable:NO];
-    [hint setBezeled:NO]; [hint setDrawsBackground:NO];
-    [hint setFont:[NSFont systemFontOfSize:12]];
-    [_tabPreferencesView addSubview:hint];
-}
-
-- (void)refreshTerminalPreferences
-{
-    NSFont *font = [YCodePreferences terminalFont];
-    [_terminalFontChoice setTitle:[NSString stringWithFormat:@"%@ — %g pt…", [font displayName], (double)[font pointSize]]];
-    [_terminalCursorWell setColor:[YCodePreferences terminalCursorColor]];
-    [_terminalCursorShapeChoice selectItemAtIndex:[YCodePreferences terminalCursorShape]];
-    NSString *lines = [NSString stringWithFormat:@"%lu", (unsigned long)[YCodePreferences terminalScrollbackLines]];
-    if ([_terminalScrollbackChoice indexOfItemWithTitle:lines] < 0) [_terminalScrollbackChoice addItemWithTitle:lines];
-    [_terminalScrollbackChoice selectItemWithTitle:lines];
-    [_terminalForegroundWell setColor:[YCodePreferences terminalForegroundColor]];
-    [_terminalBackgroundWell setColor:[YCodePreferences terminalBackgroundColor]];
-    [_terminalBellCheckbox setState:[YCodePreferences terminalAudibleBell] ? NSOnState : NSOffState];
-    [_terminalBlinkCheckbox setState:[YCodePreferences terminalCursorBlink] ? NSOnState : NSOffState];
-}
-
-- (void)changeTerminalPreferences:(id)sender
-{
-    if (sender == _terminalCursorWell)
-        [YCodePreferences setTerminalCursorColor:[_terminalCursorWell color]];
-    else if (sender == _terminalCursorShapeChoice)
-        [YCodePreferences setTerminalCursorShape:[_terminalCursorShapeChoice indexOfSelectedItem]];
-    else if (sender == _terminalForegroundWell || sender == _terminalBackgroundWell)
-        [YCodePreferences setTerminalForegroundColor:[_terminalForegroundWell color]
-            backgroundColor:[_terminalBackgroundWell color]];
-    else if (sender == _terminalScrollbackChoice)
-        [YCodePreferences setTerminalScrollbackLines:[[_terminalScrollbackChoice titleOfSelectedItem] integerValue]];
-    else if (sender == _terminalBellCheckbox)
-        [YCodePreferences setTerminalAudibleBell:[_terminalBellCheckbox state] == NSOnState];
-    else if (sender == _terminalBlinkCheckbox)
-        [YCodePreferences setTerminalCursorBlink:[_terminalBlinkCheckbox state] == NSOnState];
-    // Do not refresh active wells here: setColor: writes back to the shared
-    // Color panel and can overwrite an in-progress color selection.
-}
-
-- (void)resetTerminalPreferences:(id)sender
-{
-    [_terminalForegroundWell deactivate];
-    [_terminalBackgroundWell deactivate];
-    [_terminalCursorWell deactivate];
-    [YCodePreferences resetTerminalPreferences];
-    [self refreshTerminalPreferences];
-}
-
-- (void)setupTerminalPreferences
-{
-    _terminalPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
-    [[_preferencesPanel contentView] addSubview:_terminalPreferencesView];
-    NSArray *labels = [NSArray arrayWithObjects:@"Fixed-pitch font", @"Text color", @"Background color", @"Cursor color", @"Cursor shape", @"Scrollback lines (0 = none)", nil];
-    CGFloat positions[] = { 410, 340, 300, 260, 220, 180 };
-    NSUInteger i;
-    for (i = 0; i < [labels count]; i++) {
-        NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, positions[i], 240, 22)]);
-        [label setStringValue:[labels objectAtIndex:i]];
-        [label setEditable:NO]; [label setBezeled:NO]; [label setDrawsBackground:NO];
-        [_terminalPreferencesView addSubview:label];
-    }
-    _terminalFontChoice = AUTORELEASE([[YCodeTerminalFontButton alloc] initWithFrame:NSMakeRect(20, 375, 350, 28)]);
-    [_terminalFontChoice setBezelStyle:NSRoundedBezelStyle];
-    [_terminalFontChoice setToolTip:@"Choose a fixed-pitch font, 6–72 points, in the Fonts panel."];
-    _terminalCursorWell = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(300, 258, 70, 28)]);
-    _terminalCursorShapeChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(195, 218, 175, 28) pullsDown:NO]);
-    [_terminalCursorShapeChoice addItemsWithTitles:[NSArray arrayWithObjects:@"Program controlled", @"Block", @"Outline", @"Vertical line", @"Underline", nil]];
-    _terminalScrollbackChoice = AUTORELEASE([[NSPopUpButton alloc] initWithFrame:NSMakeRect(265, 178, 105, 28) pullsDown:NO]);
-    [_terminalScrollbackChoice addItemsWithTitles:[NSArray arrayWithObjects:@"0", @"1000", @"5000", @"10000", @"50000", nil]];
-    _terminalForegroundWell = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(300, 338, 70, 28)]);
-    _terminalBackgroundWell = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(300, 298, 70, 28)]);
-    _terminalBellCheckbox = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 140, 350, 28)]);
-    [_terminalBellCheckbox setButtonType:NSSwitchButton]; [_terminalBellCheckbox setTitle:@"Audible terminal bell"];
-    _terminalBlinkCheckbox = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 105, 350, 28)]);
-    [_terminalBlinkCheckbox setButtonType:NSSwitchButton]; [_terminalBlinkCheckbox setTitle:@"Allow programs to blink the cursor"];
-    NSArray *controls = [NSArray arrayWithObjects:_terminalFontChoice, _terminalCursorWell, _terminalCursorShapeChoice, _terminalScrollbackChoice,
-        _terminalForegroundWell, _terminalBackgroundWell, _terminalBellCheckbox, _terminalBlinkCheckbox, nil];
-    NSEnumerator *enumerator = [controls objectEnumerator];
-    NSControl *control;
-    while ((control = [enumerator nextObject]) != nil) {
-        [control setTarget:self]; [control setAction:@selector(changeTerminalPreferences:)];
-        [_terminalPreferencesView addSubview:control];
-    }
-    [_terminalFontChoice setAction:@selector(chooseTerminalFont:)];
-    [_terminalForegroundWell setContinuous:YES];
-    [_terminalBackgroundWell setContinuous:YES];
-    [_terminalCursorWell setContinuous:YES];
-    NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 58, 350, 42)]);
-    [hint setStringValue:@"Changes apply immediately to all terminals.\nReducing scrollback discards the oldest lines."];
-    [hint setFont:[NSFont systemFontOfSize:12]];
-    [hint setEditable:NO]; [hint setBezeled:NO]; [hint setDrawsBackground:NO];
-    [_terminalPreferencesView addSubview:hint];
-    NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
-    [reset setTitle:@"Restore Defaults"]; [reset setBezelStyle:NSRoundedBezelStyle];
-    [reset setTarget:self]; [reset setAction:@selector(resetTerminalPreferences:)];
-    [_terminalPreferencesView addSubview:reset];
-}
-
-- (void)selectPreferenceGroup:(id)sender
-{
-    if ([_fontChoices containsObject:[_preferencesPanel firstResponder]] || [_preferencesPanel firstResponder] == _terminalFontChoice)
-        [_preferencesPanel makeFirstResponder:_preferencesGroup];
-    BOOL colors = [_preferencesGroup indexOfSelectedItem] == 0;
-    [_colorPreferencesView setHidden:!colors];
-    [_editorPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 1];
-    [_fontPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 2];
-    [_tabPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 3];
-    [_terminalPreferencesView setHidden:[_preferencesGroup indexOfSelectedItem] != 4];
-    if ([_terminalPreferencesView isHidden]) {
-        [_terminalForegroundWell deactivate]; [_terminalBackgroundWell deactivate]; [_terminalCursorWell deactivate];
-    }
-    if (!colors) {
-        NSEnumerator *enumerator = [_editorColorWells objectEnumerator];
-        NSColorWell *well;
-        while ((well = [enumerator nextObject]) != nil) [well deactivate];
+  else
+    {
+      NSBeep ();
     }
 }
 
-- (void)changeMatchingDelimiters:(NSButton *)sender
+- (IBAction) stopProject: (id)sender
 {
-    [YCodePreferences setHighlightMatchingDelimiters:[sender state] == NSOnState];
-}
+  YCodeWindowController *controller = [self currentProjectWindowController];
 
-- (void)changeEditorRulers:(NSButton *)sender
-{
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults setBool:[sender state] != NSOnState forKey:@"YCodeHideEditorRulers"];
-    [defaults synchronize];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"YCodeEditorRulersDidChange" object:nil];
-}
-
-- (void)refreshFontPreferences
-{
-    NSUInteger i;
-    NSArray *panes = [YCodePreferences fontPanes];
-    for (i = 0; i < [_fontChoices count]; i++) {
-        NSFont *font = [YCodePreferences fontForPane:[panes objectAtIndex:i]];
-        NSButton *choice = [_fontChoices objectAtIndex:i];
-        NSString *name = [font displayName];
-        if (![name length]) name = [font fontName];
-        [choice setTitle:[NSString stringWithFormat:@"%@ — %g pt", name, (double)[font pointSize]]];
-        /* Preview the chosen face while keeping the preference row readable. */
-        [choice setFont:[[NSFontManager sharedFontManager] convertFont:font
-            toSize:MIN(18, MAX(12, [font pointSize]))]];
-        [choice setNeedsDisplay:YES];
+  if (controller != nil)
+    {
+      [controller stopProject: sender];
+    }
+  else
+    {
+      NSBeep ();
     }
 }
 
-- (void)chooseTerminalFont:(NSButton *)sender
+- (IBAction) toggleNavigator: (id)sender
 {
-    [[sender window] makeKeyAndOrderFront:nil];
-    [[sender window] makeMainWindow];
-    [[sender window] makeFirstResponder:sender];
-    NSFontManager *manager = [NSFontManager sharedFontManager];
-    [manager setSelectedFont:[YCodePreferences terminalFont] isMultiple:NO];
-    [manager orderFrontFontPanel:sender];
+  [[self currentProjectWindowController] toggleNavigator: sender];
 }
 
-- (void)choosePreferenceFont:(NSButton *)sender
+- (IBAction) toggleInspector: (id)sender
 {
-    [[sender window] makeKeyAndOrderFront:nil];
-    [[sender window] makeMainWindow];
-    [[sender window] makeFirstResponder:sender];
-    NSFontManager *manager = [NSFontManager sharedFontManager];
-    [manager setSelectedFont:[YCodePreferences fontForPane:
-        [[YCodePreferences fontPanes] objectAtIndex:[sender tag]]] isMultiple:NO];
-    [manager orderFrontFontPanel:sender];
+  [[self currentProjectWindowController] toggleInspector: sender];
 }
 
-- (void)resetPreferenceFonts:(id)sender
+- (IBAction) toggleBottomPanel: (id)sender
 {
-    [YCodePreferences resetFonts];
-    [_matchingDelimitersCheckbox setState:[YCodePreferences highlightMatchingDelimiters] ? NSOnState : NSOffState];
-    [self refreshFontPreferences];
-    id responder = [_preferencesPanel firstResponder];
-    if ([_fontChoices containsObject:responder])
-        [[NSFontManager sharedFontManager] setSelectedFont:[YCodePreferences fontForPane:
-            [[YCodePreferences fontPanes] objectAtIndex:[responder tag]]] isMultiple:NO];
+  [[self currentProjectWindowController] toggleBottomPanel: sender];
 }
 
-- (void)setupFontPreferences
+- (void) refreshEditorColorWells
 {
-    _fontPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
-    [[_preferencesPanel contentView] addSubview:_fontPreferencesView];
-    _fontChoices = [NSMutableArray new];
-    NSArray *panes = [YCodePreferences fontPanes];
-    NSUInteger i;
-    for (i = 0; i < [panes count]; i++) {
-        CGFloat y = 407 - i * 85;
-        NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, y, 350, 22)]);
-        [label setStringValue:[panes objectAtIndex:i]];
-        [label setEditable:NO]; [label setBezeled:NO]; [label setDrawsBackground:NO];
-        [_fontPreferencesView addSubview:label];
-        NSButton *font = AUTORELEASE([[YCodePreferenceFontButton alloc]
-            initWithFrame:NSMakeRect(20, y - 34, 350, 30)]);
-        [font setBezelStyle:NSRoundedBezelStyle];
-        [font setTag:i];
-        [font setToolTip:@"Choose the font and size in the Fonts panel"];
-        [font setTarget:self]; [font setAction:@selector(choosePreferenceFont:)];
-        [_fontPreferencesView addSubview:font]; [_fontChoices addObject:font];
+  NSArray *keys = [YCodeSyntaxHighlighter colorPreferenceKeys];
+  NSUInteger i;
+  for (i = 0; i < [_editorColorWells count]; i++)
+    [[_editorColorWells objectAtIndex: i]
+        setColor: [YCodeSyntaxHighlighter
+                     preferredColorForKey: [keys objectAtIndex: i]]];
+}
+
+- (void) changeEditorColor: (NSColorWell *)sender
+{
+  NSString *key = [[YCodeSyntaxHighlighter colorPreferenceKeys]
+      objectAtIndex: [sender tag]];
+  [YCodeSyntaxHighlighter setPreferredColor: [sender color] forKey: key];
+  [self refreshEditorColorWells];
+}
+
+- (void) resetEditorColors: (id)sender
+{
+  [YCodeSyntaxHighlighter resetColorPreferences];
+  [self refreshEditorColorWells];
+}
+
+- (void) changeTabPreferences: (id)sender
+{
+  [YCodePreferences
+      setControlIndentWidth: [_controlIndentChoice indexOfSelectedItem] + 1];
+  [YCodePreferences setTabWidth: [_tabWidthChoice indexOfSelectedItem] + 1
+                      useSpaces: [_spacesForTabs state] == NSOnState
+             useProjectSettings: [_projectIndentation state] == NSOnState];
+}
+
+- (void) setupTabPreferences
+{
+  _tabPreferencesView = AUTORELEASE (
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+  [[_preferencesPanel contentView] addSubview: _tabPreferencesView];
+  NSTextField *label = AUTORELEASE (
+      [[NSTextField alloc] initWithFrame: NSMakeRect (20, 404, 190, 24)]);
+  [label setStringValue: @"Tab / indent width (spaces):"];
+  [label setEditable: NO];
+  [label setSelectable: NO];
+  [label setBezeled: NO];
+  [label setDrawsBackground: NO];
+  [_tabPreferencesView addSubview: label];
+  _tabWidthChoice = AUTORELEASE ([[NSPopUpButton alloc]
+      initWithFrame: NSMakeRect (260, 401, 110, 28)
+          pullsDown: NO]);
+  NSUInteger width;
+  for (width = 1; width <= 16; width++)
+    [_tabWidthChoice
+        addItemWithTitle: [NSString
+                             stringWithFormat: @"%lu", (unsigned long)width]];
+  [_tabWidthChoice setTarget: self];
+  [_tabWidthChoice setAction: @selector (changeTabPreferences:)];
+  [_tabPreferencesView addSubview: _tabWidthChoice];
+  _spacesForTabs = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (20, 360, 350, 28)]);
+  [_spacesForTabs setButtonType: NSSwitchButton];
+  [_spacesForTabs setTitle: @"Insert spaces instead of tab characters"];
+  [_spacesForTabs setTarget: self];
+  [_spacesForTabs setAction: @selector (changeTabPreferences:)];
+  [_tabPreferencesView addSubview: _spacesForTabs];
+  _projectIndentation = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (20, 320, 350, 28)]);
+  [_projectIndentation setButtonType: NSSwitchButton];
+  [_projectIndentation setTitle: @"Honor project .clang-format settings"];
+  [_projectIndentation setTarget: self];
+  [_projectIndentation setAction: @selector (changeTabPreferences:)];
+  [_tabPreferencesView addSubview: _projectIndentation];
+  NSTextField *controlLabel = AUTORELEASE (
+      [[NSTextField alloc] initWithFrame: NSMakeRect (20, 276, 230, 24)]);
+  [controlLabel setStringValue: @"Auto indentation (spaces):"];
+  [controlLabel setEditable: NO];
+  [controlLabel setSelectable: NO];
+  [controlLabel setBezeled: NO];
+  [controlLabel setDrawsBackground: NO];
+  [_tabPreferencesView addSubview: controlLabel];
+  _controlIndentChoice = AUTORELEASE ([[NSPopUpButton alloc]
+      initWithFrame: NSMakeRect (260, 273, 110, 28)
+          pullsDown: NO]);
+  for (width = 1; width <= 16; width++)
+    [_controlIndentChoice
+        addItemWithTitle: [NSString
+                             stringWithFormat: @"%lu", (unsigned long)width]];
+  [_controlIndentChoice setTarget: self];
+  [_controlIndentChoice setAction: @selector (changeTabPreferences:)];
+  [_tabPreferencesView addSubview: _controlIndentChoice];
+  NSTextField *hint = AUTORELEASE (
+      [[NSTextField alloc] initWithFrame: NSMakeRect (20, 140, 350, 120)]);
+  [hint
+      setStringValue:
+          @"Auto indentation adds spaces after control statements and opening braces, and removes the same amount after closing braces. It is independent of tab width and project settings. Changes apply immediately; existing whitespace is preserved."];
+  [hint setEditable: NO];
+  [hint setSelectable: NO];
+  [hint setBezeled: NO];
+  [hint setDrawsBackground: NO];
+  [hint setFont: [NSFont systemFontOfSize: 12]];
+  [_tabPreferencesView addSubview: hint];
+}
+
+- (void) refreshTerminalPreferences
+{
+  NSFont *font = [YCodePreferences terminalFont];
+  [_terminalFontChoice
+      setTitle: [NSString stringWithFormat: @"%@ — %g pt…", [font displayName],
+                                          (double)[font pointSize]]];
+  [_terminalCursorWell setColor: [YCodePreferences terminalCursorColor]];
+  [_terminalCursorShapeChoice
+      selectItemAtIndex: [YCodePreferences terminalCursorShape]];
+  NSString *lines = [NSString
+      stringWithFormat: @"%lu", (unsigned long)
+                                   [YCodePreferences terminalScrollbackLines]];
+  if ([_terminalScrollbackChoice indexOfItemWithTitle: lines] < 0)
+    [_terminalScrollbackChoice addItemWithTitle: lines];
+  [_terminalScrollbackChoice selectItemWithTitle: lines];
+  [_terminalForegroundWell
+      setColor: [YCodePreferences terminalForegroundColor]];
+  [_terminalBackgroundWell
+      setColor: [YCodePreferences terminalBackgroundColor]];
+  [_terminalBellCheckbox setState: [YCodePreferences terminalAudibleBell]
+                                      ? NSOnState
+                                      : NSOffState];
+  [_terminalBlinkCheckbox setState: [YCodePreferences terminalCursorBlink]
+                                       ? NSOnState
+                                       : NSOffState];
+}
+
+- (void) changeTerminalPreferences: (id)sender
+{
+  if (sender == _terminalCursorWell)
+    [YCodePreferences setTerminalCursorColor: [_terminalCursorWell color]];
+  else if (sender == _terminalCursorShapeChoice)
+    [YCodePreferences setTerminalCursorShape: [_terminalCursorShapeChoice
+                                                 indexOfSelectedItem]];
+  else if (sender == _terminalForegroundWell
+           || sender == _terminalBackgroundWell)
+    [YCodePreferences
+        setTerminalForegroundColor: [_terminalForegroundWell color]
+                   backgroundColor: [_terminalBackgroundWell color]];
+  else if (sender == _terminalScrollbackChoice)
+    [YCodePreferences
+        setTerminalScrollbackLines: [[_terminalScrollbackChoice
+                                       titleOfSelectedItem] integerValue]];
+  else if (sender == _terminalBellCheckbox)
+    [YCodePreferences
+        setTerminalAudibleBell: [_terminalBellCheckbox state] == NSOnState];
+  else if (sender == _terminalBlinkCheckbox)
+    [YCodePreferences
+        setTerminalCursorBlink: [_terminalBlinkCheckbox state] == NSOnState];
+  // Do not refresh active wells here: setColor: writes back to the shared
+  // Color panel and can overwrite an in-progress color selection.
+}
+
+- (void) resetTerminalPreferences: (id)sender
+{
+  [_terminalForegroundWell deactivate];
+  [_terminalBackgroundWell deactivate];
+  [_terminalCursorWell deactivate];
+  [YCodePreferences resetTerminalPreferences];
+  [self refreshTerminalPreferences];
+}
+
+- (void) setupTerminalPreferences
+{
+  _terminalPreferencesView = AUTORELEASE (
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+  [[_preferencesPanel contentView] addSubview: _terminalPreferencesView];
+  NSArray *labels = [NSArray
+      arrayWithObjects: @"Fixed-pitch font", @"Text color", @"Background color",
+                       @"Cursor color", @"Cursor shape",
+                       @"Scrollback lines (0 = none)", nil];
+  CGFloat positions[] = { 410, 340, 300, 260, 220, 180 };
+  NSUInteger i;
+  for (i = 0; i < [labels count]; i++)
+    {
+      NSTextField *label = AUTORELEASE ([[NSTextField alloc]
+          initWithFrame: NSMakeRect (20, positions[i], 240, 22)]);
+      [label setStringValue: [labels objectAtIndex: i]];
+      [label setEditable: NO];
+      [label setBezeled: NO];
+      [label setDrawsBackground: NO];
+      [_terminalPreferencesView addSubview: label];
     }
-    NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
-    [reset setTitle:@"Restore Defaults"]; [reset setBezelStyle:NSRoundedBezelStyle];
-    [reset setTarget:self]; [reset setAction:@selector(resetPreferenceFonts:)];
-    [_fontPreferencesView addSubview:reset];
+  _terminalFontChoice = AUTORELEASE ([[YCodeTerminalFontButton alloc]
+      initWithFrame: NSMakeRect (20, 375, 350, 28)]);
+  [_terminalFontChoice setBezelStyle: NSRoundedBezelStyle];
+  [_terminalFontChoice
+      setToolTip:
+          @"Choose a fixed-pitch font, 6–72 points, in the Fonts panel."];
+  _terminalCursorWell = AUTORELEASE (
+      [[NSColorWell alloc] initWithFrame: NSMakeRect (300, 258, 70, 28)]);
+  _terminalCursorShapeChoice = AUTORELEASE ([[NSPopUpButton alloc]
+      initWithFrame: NSMakeRect (195, 218, 175, 28)
+          pullsDown: NO]);
+  [_terminalCursorShapeChoice
+      addItemsWithTitles: [NSArray arrayWithObjects: @"Program controlled",
+                                                   @"Block", @"Outline",
+                                                   @"Vertical line",
+                                                   @"Underline", nil]];
+  _terminalScrollbackChoice = AUTORELEASE ([[NSPopUpButton alloc]
+      initWithFrame: NSMakeRect (265, 178, 105, 28)
+          pullsDown: NO]);
+  [_terminalScrollbackChoice
+      addItemsWithTitles: [NSArray arrayWithObjects: @"0", @"1000", @"5000",
+                                                   @"10000", @"50000", nil]];
+  _terminalForegroundWell = AUTORELEASE (
+      [[NSColorWell alloc] initWithFrame: NSMakeRect (300, 338, 70, 28)]);
+  _terminalBackgroundWell = AUTORELEASE (
+      [[NSColorWell alloc] initWithFrame: NSMakeRect (300, 298, 70, 28)]);
+  _terminalBellCheckbox = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (20, 140, 350, 28)]);
+  [_terminalBellCheckbox setButtonType: NSSwitchButton];
+  [_terminalBellCheckbox setTitle: @"Audible terminal bell"];
+  _terminalBlinkCheckbox = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (20, 105, 350, 28)]);
+  [_terminalBlinkCheckbox setButtonType: NSSwitchButton];
+  [_terminalBlinkCheckbox setTitle: @"Allow programs to blink the cursor"];
+  NSArray *controls = [NSArray
+      arrayWithObjects: _terminalFontChoice, _terminalCursorWell,
+                       _terminalCursorShapeChoice, _terminalScrollbackChoice,
+                       _terminalForegroundWell, _terminalBackgroundWell,
+                       _terminalBellCheckbox, _terminalBlinkCheckbox, nil];
+  NSEnumerator *enumerator = [controls objectEnumerator];
+  NSControl *control;
+  while ((control = [enumerator nextObject]) != nil)
+    {
+      [control setTarget: self];
+      [control setAction: @selector (changeTerminalPreferences:)];
+      [_terminalPreferencesView addSubview: control];
+    }
+  [_terminalFontChoice setAction: @selector (chooseTerminalFont:)];
+  [_terminalForegroundWell setContinuous: YES];
+  [_terminalBackgroundWell setContinuous: YES];
+  [_terminalCursorWell setContinuous: YES];
+  NSTextField *hint = AUTORELEASE (
+      [[NSTextField alloc] initWithFrame: NSMakeRect (20, 58, 350, 42)]);
+  [hint
+      setStringValue:
+          @"Changes apply immediately to all terminals.\nReducing scrollback discards the oldest lines."];
+  [hint setFont: [NSFont systemFontOfSize: 12]];
+  [hint setEditable: NO];
+  [hint setBezeled: NO];
+  [hint setDrawsBackground: NO];
+  [_terminalPreferencesView addSubview: hint];
+  NSButton *reset = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (215, 16, 155, 30)]);
+  [reset setTitle: @"Restore Defaults"];
+  [reset setBezelStyle: NSRoundedBezelStyle];
+  [reset setTarget: self];
+  [reset setAction: @selector (resetTerminalPreferences:)];
+  [_terminalPreferencesView addSubview: reset];
+}
+
+- (void) selectPreferenceGroup: (id)sender
+{
+  if ([_fontChoices containsObject: [_preferencesPanel firstResponder]] ||
+      [_preferencesPanel firstResponder] == _terminalFontChoice)
+    [_preferencesPanel makeFirstResponder: _preferencesGroup];
+  BOOL colors = [_preferencesGroup indexOfSelectedItem] == 0;
+  [_colorPreferencesView setHidden: !colors];
+  [_editorPreferencesView
+      setHidden: [_preferencesGroup indexOfSelectedItem] != 1];
+  [_fontPreferencesView
+      setHidden: [_preferencesGroup indexOfSelectedItem] != 2];
+  [_tabPreferencesView setHidden: [_preferencesGroup indexOfSelectedItem] != 3];
+  [_terminalPreferencesView
+      setHidden: [_preferencesGroup indexOfSelectedItem] != 4];
+  if ([_terminalPreferencesView isHidden])
+    {
+      [_terminalForegroundWell deactivate];
+      [_terminalBackgroundWell deactivate];
+      [_terminalCursorWell deactivate];
+    }
+  if (!colors)
+    {
+      NSEnumerator *enumerator = [_editorColorWells objectEnumerator];
+      NSColorWell *well;
+      while ((well = [enumerator nextObject]) != nil)
+        [well deactivate];
+    }
+}
+
+- (void) changeMatchingDelimiters: (NSButton *)sender
+{
+  [YCodePreferences
+      setHighlightMatchingDelimiters: [sender state] == NSOnState];
+}
+
+- (void) changeEditorRulers: (NSButton *)sender
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  [defaults setBool: [sender state] != NSOnState
+             forKey: @"YCodeHideEditorRulers"];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeEditorRulersDidChange"
+                    object: nil];
+}
+
+- (void) refreshFontPreferences
+{
+  NSUInteger i;
+  NSArray *panes = [YCodePreferences fontPanes];
+  for (i = 0; i < [_fontChoices count]; i++)
+    {
+      NSFont *font = [YCodePreferences fontForPane: [panes objectAtIndex: i]];
+      NSButton *choice = [_fontChoices objectAtIndex: i];
+      NSString *name = [font displayName];
+      if (![name length])
+        name = [font fontName];
+      [choice setTitle: [NSString stringWithFormat: @"%@ — %g pt", name,
+                                                  (double)[font pointSize]]];
+      /* Preview the chosen face while keeping the preference row readable. */
+      [choice setFont: [[NSFontManager sharedFontManager]
+                          convertFont: font
+                               toSize: MIN (18, MAX (12, [font pointSize]))]];
+      [choice setNeedsDisplay: YES];
+    }
+}
+
+- (void) chooseTerminalFont: (NSButton *)sender
+{
+  [[sender window] makeKeyAndOrderFront: nil];
+  [[sender window] makeMainWindow];
+  [[sender window] makeFirstResponder: sender];
+  NSFontManager *manager = [NSFontManager sharedFontManager];
+  [manager setSelectedFont: [YCodePreferences terminalFont] isMultiple: NO];
+  [manager orderFrontFontPanel: sender];
+}
+
+- (void) choosePreferenceFont: (NSButton *)sender
+{
+  [[sender window] makeKeyAndOrderFront: nil];
+  [[sender window] makeMainWindow];
+  [[sender window] makeFirstResponder: sender];
+  NSFontManager *manager = [NSFontManager sharedFontManager];
+  [manager setSelectedFont: [YCodePreferences
+                               fontForPane: [[YCodePreferences fontPanes]
+                                               objectAtIndex: [sender tag]]]
+                isMultiple: NO];
+  [manager orderFrontFontPanel: sender];
+}
+
+- (void) resetPreferenceFonts: (id)sender
+{
+  [YCodePreferences resetFonts];
+  [_matchingDelimitersCheckbox
+      setState: [YCodePreferences highlightMatchingDelimiters] ? NSOnState
+                                                              : NSOffState];
+  [self refreshFontPreferences];
+  id responder = [_preferencesPanel firstResponder];
+  if ([_fontChoices containsObject: responder])
+    [[NSFontManager sharedFontManager]
+        setSelectedFont: [YCodePreferences
+                            fontForPane: [[YCodePreferences fontPanes]
+                                            objectAtIndex: [responder tag]]]
+             isMultiple: NO];
+}
+
+- (void) setupFontPreferences
+{
+  _fontPreferencesView = AUTORELEASE (
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+  [[_preferencesPanel contentView] addSubview: _fontPreferencesView];
+  _fontChoices = [NSMutableArray new];
+  NSArray *panes = [YCodePreferences fontPanes];
+  NSUInteger i;
+  for (i = 0; i < [panes count]; i++)
+    {
+      CGFloat y = 407 - i * 85;
+      NSTextField *label = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, y, 350, 22)]);
+      [label setStringValue: [panes objectAtIndex: i]];
+      [label setEditable: NO];
+      [label setBezeled: NO];
+      [label setDrawsBackground: NO];
+      [_fontPreferencesView addSubview: label];
+      NSButton *font = AUTORELEASE ([[YCodePreferenceFontButton alloc]
+          initWithFrame: NSMakeRect (20, y - 34, 350, 30)]);
+      [font setBezelStyle: NSRoundedBezelStyle];
+      [font setTag: i];
+      [font setToolTip: @"Choose the font and size in the Fonts panel"];
+      [font setTarget: self];
+      [font setAction: @selector (choosePreferenceFont:)];
+      [_fontPreferencesView addSubview: font];
+      [_fontChoices addObject: font];
+    }
+  NSButton *reset = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (215, 16, 155, 30)]);
+  [reset setTitle: @"Restore Defaults"];
+  [reset setBezelStyle: NSRoundedBezelStyle];
+  [reset setTarget: self];
+  [reset setAction: @selector (resetPreferenceFonts:)];
+  [_fontPreferencesView addSubview: reset];
 }
 
 - (void) showPrefPanel: (id)sender
 {
-    if (!_preferencesPanel) {
-        _preferencesPanel = [[YCodePreferencesPanel alloc] initWithContentRect:NSMakeRect(0, 0, 390, 500)
-            styleMask:NSTitledWindowMask | NSClosableWindowMask
-            backing:NSBackingStoreBuffered defer:NO];
-        [_preferencesPanel setTitle:@"Preferences"];
-        [_preferencesPanel setReleasedWhenClosed:NO];
-        [_preferencesPanel center];
-        NSView *content = [_preferencesPanel contentView];
-        _preferencesGroup = AUTORELEASE([[NSPopUpButton alloc]
-            initWithFrame:NSMakeRect(20, 458, 350, 28) pullsDown:NO]);
-        [_preferencesGroup addItemsWithTitles:[NSArray arrayWithObjects:@"Editor Colors", @"Editor", @"Fonts", @"Indentation", @"Terminal", nil]];
-        [_preferencesGroup setTarget:self];
-        [_preferencesGroup setAction:@selector(selectPreferenceGroup:)];
-        [content addSubview:_preferencesGroup];
-        _colorPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
-        [content addSubview:_colorPreferencesView];
-        _editorPreferencesView = AUTORELEASE([[NSView alloc] initWithFrame:NSMakeRect(0, 0, 390, 450)]);
-        [content addSubview:_editorPreferencesView];
-        _showEditorRulers = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 401, 350, 28)]);
-        [_showEditorRulers setButtonType:NSSwitchButton];
-        [_showEditorRulers setTitle:@"Show editor rulers (lines and columns)"];
-        [_showEditorRulers setTarget:self];
-        [_showEditorRulers setAction:@selector(changeEditorRulers:)];
-        [_editorPreferencesView addSubview:_showEditorRulers];
-        _matchingDelimitersCheckbox = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(20, 361, 350, 28)]);
-        [_matchingDelimitersCheckbox setButtonType:NSSwitchButton];
-        [_matchingDelimitersCheckbox setTitle:@"Highlight matching delimiters"];
-        [_matchingDelimitersCheckbox setTarget:self];
-        [_matchingDelimitersCheckbox setAction:@selector(changeMatchingDelimiters:)];
-        [_editorPreferencesView addSubview:_matchingDelimitersCheckbox];
-        [self setupFontPreferences];
-        [self setupTabPreferences];
-        [self setupTerminalPreferences];
-        _editorColorWells = [NSMutableArray new];
-        NSArray *labels = [NSArray arrayWithObjects:@"Editor background", @"Plain text", @"Keywords",
-            @"Strings", @"Comments", @"Numbers", @"Preprocessor directives", @"Types",
-            @"Symbols", @"Constants", @"Insertion cursor", nil];
-        NSUInteger i;
-        for (i = 0; i < [labels count]; i++) {
-            CGFloat y = 405 - i * 30;
-            NSTextField *label = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, y, 250, 24)]);
-            [label setStringValue:[labels objectAtIndex:i]];
-            [label setEditable:NO];
-            [label setSelectable:NO];
-            [label setBezeled:NO];
-            [label setDrawsBackground:NO];
-            [_colorPreferencesView addSubview:label];
-            NSColorWell *well = AUTORELEASE([[NSColorWell alloc] initWithFrame:NSMakeRect(290, y, 80, 26)]);
-            [well setTag:i];
-            [well setTarget:self];
-            [well setAction:@selector(changeEditorColor:)];
-            [well setContinuous:YES];
-            [_colorPreferencesView addSubview:well];
-            [_editorColorWells addObject:well];
+  if (!_preferencesPanel)
+    {
+      _preferencesPanel = [[YCodePreferencesPanel alloc]
+          initWithContentRect: NSMakeRect (0, 0, 390, 500)
+                    styleMask: NSTitledWindowMask | NSClosableWindowMask
+                      backing: NSBackingStoreBuffered
+                        defer: NO];
+      [_preferencesPanel setTitle: @"Preferences"];
+      [_preferencesPanel setReleasedWhenClosed: NO];
+      [_preferencesPanel center];
+      NSView *content = [_preferencesPanel contentView];
+      _preferencesGroup = AUTORELEASE ([[NSPopUpButton alloc]
+          initWithFrame: NSMakeRect (20, 458, 350, 28)
+              pullsDown: NO]);
+      [_preferencesGroup
+          addItemsWithTitles: [NSArray arrayWithObjects: @"Editor Colors",
+                                                       @"Editor", @"Fonts",
+                                                       @"Indentation",
+                                                       @"Terminal", nil]];
+      [_preferencesGroup setTarget: self];
+      [_preferencesGroup setAction: @selector (selectPreferenceGroup:)];
+      [content addSubview: _preferencesGroup];
+      _colorPreferencesView = AUTORELEASE (
+          [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+      [content addSubview: _colorPreferencesView];
+      _editorPreferencesView = AUTORELEASE (
+          [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+      [content addSubview: _editorPreferencesView];
+      _showEditorRulers = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (20, 401, 350, 28)]);
+      [_showEditorRulers setButtonType: NSSwitchButton];
+      [_showEditorRulers setTitle: @"Show editor rulers (lines and columns)"];
+      [_showEditorRulers setTarget: self];
+      [_showEditorRulers setAction: @selector (changeEditorRulers:)];
+      [_editorPreferencesView addSubview: _showEditorRulers];
+      _matchingDelimitersCheckbox = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (20, 361, 350, 28)]);
+      [_matchingDelimitersCheckbox setButtonType: NSSwitchButton];
+      [_matchingDelimitersCheckbox setTitle: @"Highlight matching delimiters"];
+      [_matchingDelimitersCheckbox setTarget: self];
+      [_matchingDelimitersCheckbox
+          setAction: @selector (changeMatchingDelimiters:)];
+      [_editorPreferencesView addSubview: _matchingDelimitersCheckbox];
+      [self setupFontPreferences];
+      [self setupTabPreferences];
+      [self setupTerminalPreferences];
+      _editorColorWells = [NSMutableArray new];
+      NSArray *labels = [NSArray
+          arrayWithObjects: @"Editor background", @"Plain text", @"Keywords",
+                           @"Strings", @"Comments", @"Numbers",
+                           @"Preprocessor directives", @"Types", @"Symbols",
+                           @"Constants", @"Insertion cursor", nil];
+      NSUInteger i;
+      for (i = 0; i < [labels count]; i++)
+        {
+          CGFloat y = 405 - i * 30;
+          NSTextField *label = AUTORELEASE (
+              [[NSTextField alloc] initWithFrame: NSMakeRect (20, y, 250, 24)]);
+          [label setStringValue: [labels objectAtIndex: i]];
+          [label setEditable: NO];
+          [label setSelectable: NO];
+          [label setBezeled: NO];
+          [label setDrawsBackground: NO];
+          [_colorPreferencesView addSubview: label];
+          NSColorWell *well = AUTORELEASE (
+              [[NSColorWell alloc] initWithFrame: NSMakeRect (290, y, 80, 26)]);
+          [well setTag: i];
+          [well setTarget: self];
+          [well setAction: @selector (changeEditorColor:)];
+          [well setContinuous: YES];
+          [_colorPreferencesView addSubview: well];
+          [_editorColorWells addObject: well];
         }
-        NSTextField *hint = AUTORELEASE([[NSTextField alloc] initWithFrame:NSMakeRect(20, 58, 350, 22)]);
-        [hint setStringValue:@"Changes are saved and applied immediately."];
-        [hint setEditable:NO];
-        [hint setBezeled:NO];
-        [hint setDrawsBackground:NO];
-        [hint setFont:[NSFont systemFontOfSize:12]];
-        [_colorPreferencesView addSubview:hint];
-        NSButton *reset = AUTORELEASE([[NSButton alloc] initWithFrame:NSMakeRect(215, 16, 155, 30)]);
-        [reset setTitle:@"Restore Defaults"];
-        [reset setBezelStyle:NSRoundedBezelStyle];
-        [reset setTarget:self];
-        [reset setAction:@selector(resetEditorColors:)];
-        [_colorPreferencesView addSubview:reset];
+      NSTextField *hint = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, 58, 350, 22)]);
+      [hint setStringValue: @"Changes are saved and applied immediately."];
+      [hint setEditable: NO];
+      [hint setBezeled: NO];
+      [hint setDrawsBackground: NO];
+      [hint setFont: [NSFont systemFontOfSize: 12]];
+      [_colorPreferencesView addSubview: hint];
+      NSButton *reset = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (215, 16, 155, 30)]);
+      [reset setTitle: @"Restore Defaults"];
+      [reset setBezelStyle: NSRoundedBezelStyle];
+      [reset setTarget: self];
+      [reset setAction: @selector (resetEditorColors:)];
+      [_colorPreferencesView addSubview: reset];
     }
-    [self refreshEditorColorWells];
-    [_matchingDelimitersCheckbox setState:[YCodePreferences highlightMatchingDelimiters] ? NSOnState : NSOffState];
-    [self refreshFontPreferences];
-    [self refreshTerminalPreferences];
-    [_tabWidthChoice selectItemAtIndex:[YCodePreferences tabWidth] - 1];
-    [_controlIndentChoice selectItemAtIndex:[YCodePreferences controlIndentWidth] - 1];
-    [_spacesForTabs setState:[YCodePreferences useSpacesForTabs] ? NSOnState : NSOffState];
-    [_projectIndentation setState:[YCodePreferences useProjectIndentation] ? NSOnState : NSOffState];
-    [_showEditorRulers setState:[[NSUserDefaults standardUserDefaults]
-        boolForKey:@"YCodeHideEditorRulers"] ? NSOffState : NSOnState];
-    [self selectPreferenceGroup:nil];
-    [_preferencesPanel makeKeyAndOrderFront:sender];
+  [self refreshEditorColorWells];
+  [_matchingDelimitersCheckbox
+      setState: [YCodePreferences highlightMatchingDelimiters] ? NSOnState
+                                                              : NSOffState];
+  [self refreshFontPreferences];
+  [self refreshTerminalPreferences];
+  [_tabWidthChoice selectItemAtIndex: [YCodePreferences tabWidth] - 1];
+  [_controlIndentChoice
+      selectItemAtIndex: [YCodePreferences controlIndentWidth] - 1];
+  [_spacesForTabs
+      setState: [YCodePreferences useSpacesForTabs] ? NSOnState : NSOffState];
+  [_projectIndentation setState: [YCodePreferences useProjectIndentation]
+                                    ? NSOnState
+                                    : NSOffState];
+  [_showEditorRulers setState: [[NSUserDefaults standardUserDefaults]
+                                  boolForKey: @"YCodeHideEditorRulers"]
+                                  ? NSOffState
+                                  : NSOnState];
+  [self selectPreferenceGroup: nil];
+  [_preferencesPanel makeKeyAndOrderFront: sender];
 }
 
 - (IBAction) showHelp: (id)sender
 {
-    if (_helpWindow == nil) {
-        NSString *path = [[NSBundle mainBundle] pathForResource:@"YcodeHelp" ofType:@"txt"];
-        NSString *text = path ? [NSString stringWithContentsOfFile:path
-            encoding:NSUTF8StringEncoding error:NULL] : nil;
-        if (text == nil) {
-            NSRunAlertPanel(@"Ycode Help", @"The bundled user guide could not be loaded. Rebuild or reinstall Ycode to restore its help resources.",
-                @"OK", nil, nil);
-            return;
+  if (_helpWindow == nil)
+    {
+      NSString *path = [[NSBundle mainBundle] pathForResource: @"YcodeHelp"
+                                                       ofType: @"txt"];
+      NSString *text
+          = path ? [NSString stringWithContentsOfFile: path
+                                             encoding: NSUTF8StringEncoding
+                                                error: NULL]
+                 : nil;
+      if (text == nil)
+        {
+          NSRunAlertPanel (
+              @"Ycode Help",
+              @"The bundled user guide could not be loaded. Rebuild or reinstall Ycode to restore its help resources.",
+              @"OK", nil, nil);
+          return;
         }
-        _helpWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 720, 600)
-            styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask
-            backing:NSBackingStoreBuffered defer:NO];
-        [_helpWindow setReleasedWhenClosed:NO];
-        [_helpWindow setTitle:@"Ycode Help"];
-        [_helpWindow setMinSize:NSMakeSize(400, 300)];
-        NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:[[_helpWindow contentView] bounds]];
-        [scroll setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-        [scroll setHasVerticalScroller:YES];
-        NSTextView *view = [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0,
-            [scroll contentSize].width, [scroll contentSize].height)];
-        [view setVerticallyResizable:YES];
-        [view setHorizontallyResizable:NO];
-        [view setAutoresizingMask:NSViewWidthSizable];
-        [view setMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
-        [[view textContainer] setWidthTracksTextView:YES];
-        [[view textContainer] setContainerSize:NSMakeSize([scroll contentSize].width, FLT_MAX)];
-        [view setTextContainerInset:NSMakeSize(18, 18)];
-        [view setFont:[NSFont systemFontOfSize:14]];
-        [view setString:text];
-        [view setEditable:NO];
-        [view setSelectable:YES];
-        [scroll setDocumentView:view];
-        [[_helpWindow contentView] addSubview:scroll];
-        [_helpWindow setInitialFirstResponder:view];
-        RELEASE(view);
-        RELEASE(scroll);
-        [_helpWindow center];
+      _helpWindow = [[NSWindow alloc]
+          initWithContentRect: NSMakeRect (0, 0, 720, 600)
+                    styleMask: NSTitledWindowMask | NSClosableWindowMask
+                              | NSMiniaturizableWindowMask
+                              | NSResizableWindowMask
+                      backing: NSBackingStoreBuffered
+                        defer: NO];
+      [_helpWindow setReleasedWhenClosed: NO];
+      [_helpWindow setTitle: @"Ycode Help"];
+      [_helpWindow setMinSize: NSMakeSize (400, 300)];
+      NSScrollView *scroll = [[NSScrollView alloc]
+          initWithFrame: [[_helpWindow contentView] bounds]];
+      [scroll setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+      [scroll setHasVerticalScroller: YES];
+      NSTextView *view = [[NSTextView alloc]
+          initWithFrame: NSMakeRect (0, 0, [scroll contentSize].width,
+                                    [scroll contentSize].height)];
+      [view setVerticallyResizable: YES];
+      [view setHorizontallyResizable: NO];
+      [view setAutoresizingMask: NSViewWidthSizable];
+      [view setMaxSize: NSMakeSize (FLT_MAX, FLT_MAX)];
+      [[view textContainer] setWidthTracksTextView: YES];
+      [[view textContainer]
+          setContainerSize: NSMakeSize ([scroll contentSize].width, FLT_MAX)];
+      [view setTextContainerInset: NSMakeSize (18, 18)];
+      [view setFont: [NSFont systemFontOfSize: 14]];
+      [view setString: text];
+      [view setEditable: NO];
+      [view setSelectable: YES];
+      [scroll setDocumentView: view];
+      [[_helpWindow contentView] addSubview: scroll];
+      [_helpWindow setInitialFirstResponder: view];
+      RELEASE (view);
+      RELEASE (scroll);
+      [_helpWindow center];
     }
-    [_helpWindow makeKeyAndOrderFront:sender];
+  [_helpWindow makeKeyAndOrderFront: sender];
 }
 
 - (IBAction) openProject: (id)sender
 {
-    NSOpenPanel *openPanel = [NSOpenPanel openPanel];
-    NSError *error = nil;
-    [openPanel setCanChooseFiles:YES];
-    [openPanel setCanChooseDirectories:YES];
-    [openPanel setAllowsMultipleSelection:NO];
-    [openPanel setTreatsFilePackagesAsDirectories:NO];
-    [openPanel setAllowedFileTypes:nil];
-    [openPanel setMessage:@"Choose a project, GNUmakefile, makefile, Makefile, or project folder"];
-    
-    if ([openPanel runModal] == NSModalResponseOK) {
-        NSString *projectPath = [[openPanel URL] path];
-        NSURL *projectURL = YCodeFileURLFromPath(projectPath);
+  NSOpenPanel *openPanel = [NSOpenPanel openPanel];
+  NSError *error = nil;
+  [openPanel setCanChooseFiles: YES];
+  [openPanel setCanChooseDirectories: YES];
+  [openPanel setAllowsMultipleSelection: NO];
+  [openPanel setTreatsFilePackagesAsDirectories: NO];
+  [openPanel setAllowedFileTypes: nil];
+  [openPanel
+      setMessage:
+          @"Choose a project, GNUmakefile, makefile, Makefile, or project folder"];
 
-        if (projectURL == nil) {
-            NSBeep();
-            return;
+  if ([openPanel runModal] == NSModalResponseOK)
+    {
+      NSString *projectPath = [[openPanel URL] path];
+      NSURL *projectURL = YCodeFileURLFromPath (projectPath);
+
+      if (projectURL == nil)
+        {
+          NSBeep ();
+          return;
         }
 
-        [[NSDocumentController sharedDocumentController]
-            openDocumentWithContentsOfURL:projectURL
-                                  display:YES
-                                    error:&error];
+      [[NSDocumentController sharedDocumentController]
+          openDocumentWithContentsOfURL: projectURL
+                                display: YES
+                                  error: &error];
 
-        if (error != nil) {
-            NSAlert *alert = [[NSAlert alloc] init];
-            [alert setMessageText:@"Unable to open project"];
-            [alert setInformativeText:[error localizedDescription]];
-            [alert addButtonWithTitle:@"OK"];
-            [alert runModal];
-            RELEASE(alert);
+      if (error != nil)
+        {
+          NSAlert *alert = [[NSAlert alloc] init];
+          [alert setMessageText: @"Unable to open project"];
+          [alert setInformativeText: [error localizedDescription]];
+          [alert addButtonWithTitle: @"OK"];
+          [alert runModal];
+          RELEASE (alert);
         }
     }
 }

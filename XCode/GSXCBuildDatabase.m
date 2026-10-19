@@ -53,7 +53,7 @@
   self = [super init];
   if (self != nil)
     {
-      ASSIGN(_dictionary, [dict mutableCopy]);
+      ASSIGN (_dictionary, [dict mutableCopy]);
     }
   return self;
 }
@@ -63,14 +63,14 @@
   self = [super init];
   if (self != nil)
     {
-      ASSIGN(_dictionary, [NSMutableDictionary dictionary]);
+      ASSIGN (_dictionary, [NSMutableDictionary dictionary]);
     }
   return self;
 }
 
 - (void) dealloc
 {
-  RELEASE(_dictionary);
+  RELEASE (_dictionary);
 
   [super dealloc];
 }
@@ -103,7 +103,7 @@
 
       [self setFileName: fn];
       [self setDateModified: dm];
-      [self setDateBuilt: db];      
+      [self setDateBuilt: db];
     }
   return self;
 }
@@ -120,54 +120,57 @@
       NSString *fileName = [fullPath lastPathComponent];
       NSDictionary *attrs = [mgr attributesOfItemAtPath: fullPath error: &error];
 
-      ASSIGN(_fileReference, fr);
+      ASSIGN (_fileReference, fr);
       [self setFileName: fileName];
-      
+
       if (error == nil)
-	{
-	  NSDate *srcModified = [attrs objectForKey: NSFileModificationDate];
-	  NSString *outputPath = [path stringByAppendingPathComponent: 
-					 [fileName stringByAppendingString: @".o"]];
-	  NSDictionary *objAttrs = [mgr attributesOfItemAtPath: outputPath error: &error];
+        {
+          NSDate *srcModified = [attrs objectForKey: NSFileModificationDate];
+          NSString *outputPath =
+              [path stringByAppendingPathComponent:
+                        [fileName stringByAppendingString: @".o"]];
+          NSDictionary *objAttrs = [mgr attributesOfItemAtPath: outputPath
+                                                         error: &error];
 
-	  if (srcModified == nil)
-	    {
-	      srcModified = [attrs objectForKey: NSFileCreationDate];
-	      [self setDateModified: srcModified];
-	    }
-	  else
-	    {
-	      [self setDateModified: srcModified];
-	    }
+          if (srcModified == nil)
+            {
+              srcModified = [attrs objectForKey: NSFileCreationDate];
+              [self setDateModified: srcModified];
+            }
+          else
+            {
+              [self setDateModified: srcModified];
+            }
 
-	  if (error == nil)
-	    {
-	      NSDate *objModified = [objAttrs objectForKey: NSFileModificationDate];
-	      if (objModified == nil)
-		{
-		  objModified = [objAttrs objectForKey: NSFileCreationDate];
-		}
+          if (error == nil)
+            {
+              NSDate *objModified =
+                  [objAttrs objectForKey: NSFileModificationDate];
+              if (objModified == nil)
+                {
+                  objModified = [objAttrs objectForKey: NSFileCreationDate];
+                }
 
-	      [self setDateBuilt: objModified];
-	    }
-	  else
-	    {
-	      [self setDateBuilt: [NSDate distantPast]];
-	    }	  
-	}
+              [self setDateBuilt: objModified];
+            }
+          else
+            {
+              [self setDateBuilt: [NSDate distantPast]];
+            }
+        }
       else
-	{
-	  NSDebugLog(@"file = %@, error = %@", fullPath, error);
-	}
+        {
+          NSDebugLog (@"file = %@, error = %@", fullPath, error);
+        }
 
-      NSDebugLog(@"%@ - %@, %@", _fileName, _dateModified, _dateBuilt);
+      NSDebugLog (@"%@ - %@, %@", _fileName, _dateModified, _dateBuilt);
     }
   return self;
 }
 
 + (id) recordWithBuildFile: (PBXBuildFile *)f path: (NSString *)path
 {
-  return AUTORELEASE( [[self alloc] initWithFile: f path: path] );
+  return AUTORELEASE ([[self alloc] initWithFile: f path: path]);
 }
 
 - (id) copyWithZone: (NSZone *)z
@@ -180,17 +183,17 @@
 
 - (void) dealloc
 {
-  RELEASE(_fileName);
-  RELEASE(_dateModified);
-  RELEASE(_dateBuilt);
+  RELEASE (_fileName);
+  RELEASE (_dateModified);
+  RELEASE (_dateBuilt);
 
   [super dealloc];
 }
 
 - (void) setFileName: (NSString *)fn
 {
-  [_dictionary setObject: fn forKey:  @"fileName"];
-  ASSIGN(_fileName, fn);
+  [_dictionary setObject: fn forKey: @"fileName"];
+  ASSIGN (_fileName, fn);
 }
 
 - (NSString *) fileName
@@ -200,8 +203,8 @@
 
 - (void) setDateModified: (NSDate *)d
 {
-  [_dictionary setObject: d forKey:  @"dateModified"];
-  ASSIGN(_dateModified, d);
+  [_dictionary setObject: d forKey: @"dateModified"];
+  ASSIGN (_dateModified, d);
 }
 
 - (NSDate *) dateModified
@@ -211,8 +214,8 @@
 
 - (void) setDateBuilt: (NSDate *)d
 {
-  [_dictionary setObject: d forKey:  @"dateBuilt"];
-  ASSIGN(_dateBuilt, d);
+  [_dictionary setObject: d forKey: @"dateBuilt"];
+  ASSIGN (_dateBuilt, d);
 }
 
 - (NSDate *) dateBuilt
@@ -231,7 +234,7 @@
 
 + (id) buildDatabaseWithTarget: (PBXTarget *)target
 {
-  return AUTORELEASE( [[self alloc] initWithTarget: target] );
+  return AUTORELEASE ([[self alloc] initWithTarget: target]);
 }
 
 - (BOOL) _construct
@@ -252,35 +255,42 @@
     {
       return NO;
     }
-  
+
   buildDir = [buildDir stringByAppendingPathComponent: [_target name]];
-  
-  xcprintf("=== Evaluating existing build... %s\n", [[_target name] cStringUsingEncoding: NSUTF8StringEncoding]);
-  while ( (p = [en nextObject]) != nil )
+
+  xcprintf ("=== Evaluating existing build... %s\n",
+            [[_target name] cStringUsingEncoding: NSUTF8StringEncoding]);
+  while ((p = [en nextObject]) != nil)
     {
-      NSDebugLog(@"Phase = %@", p);
-	   
+      NSDebugLog (@"Phase = %@", p);
+
       if ([p isKindOfClass: [PBXSourcesBuildPhase class]])
-	{
-	  NSArray *files = [p files];
-	  NSEnumerator *fen = [files objectEnumerator];
-	  PBXBuildFile *bf = nil;
+        {
+          NSArray *files = [p files];
+          NSEnumerator *fen = [files objectEnumerator];
+          PBXBuildFile *bf = nil;
 
-	  while ( (bf = [fen nextObject]) != nil )
-	    {
-	      GSXCFileRecord *fr = [GSXCFileRecord recordWithBuildFile: bf path: buildDir];
+          while ((bf = [fen nextObject]) != nil)
+            {
+              GSXCFileRecord *fr =
+                  [GSXCFileRecord recordWithBuildFile: bf path: buildDir];
 
-	      if ([[fr dateModified] compare: [fr dateBuilt]] == NSOrderedDescending)
-		{
-		  xcprintf("\t* Checking %s%s%s%s - %smodified%s\n", BOLD, CYAN, [[fr fileName] cString], RESET, GREEN, RESET);
-		  [self addRecord: fr];
-		}
-	      else
-		{
-		  xcprintf("\t* Checking %s%s%s%s - %salready built%s\n", BOLD, CYAN, [[fr fileName] cString], RESET, YELLOW, RESET);		  
-		}
-	    }	  
-	}
+              if ([[fr dateModified] compare: [fr dateBuilt]]
+                  == NSOrderedDescending)
+                {
+                  xcprintf ("\t* Checking %s%s%s%s - %smodified%s\n", BOLD,
+                            CYAN, [[fr fileName] cString], RESET, GREEN,
+                            RESET);
+                  [self addRecord: fr];
+                }
+              else
+                {
+                  xcprintf ("\t* Checking %s%s%s%s - %salready built%s\n",
+                            BOLD, CYAN, [[fr fileName] cString], RESET, YELLOW,
+                            RESET);
+                }
+            }
+        }
     }
 
   return YES;
@@ -304,17 +314,17 @@
     {
       _records = [[NSMutableArray alloc] initWithCapacity: 10];
       [self setTarget: target];
-      if( [self _construct] == NO )
-	{
-	  return nil;
-	}
+      if ([self _construct] == NO)
+        {
+          return nil;
+        }
     }
   return self;
 }
 
 - (void) dealloc
 {
-  RELEASE(_records);
+  RELEASE (_records);
   _target = nil;
 
   [super dealloc];

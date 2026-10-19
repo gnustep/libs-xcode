@@ -30,42 +30,43 @@
 #import "GSXCBuildDatabase.h"
 
 static BOOL
-GSXCIsImageResourcePath(NSString *path)
+GSXCIsImageResourcePath (NSString *path)
 {
   NSString *extension = [[path pathExtension] lowercaseString];
-  NSArray *imageExtensions = [NSArray arrayWithObjects:
-    @"bmp", @"gif", @"heic", @"heif", @"icns", @"ico", @"jpeg",
-    @"jpg", @"pdf", @"png", @"svg", @"tif", @"tiff", @"webp", nil];
+  NSArray *imageExtensions =
+      [NSArray arrayWithObjects: @"bmp", @"gif", @"heic", @"heif", @"icns",
+                                @"ico", @"jpeg", @"jpg", @"pdf", @"png",
+                                @"svg", @"tif", @"tiff", @"webp", nil];
 
   return (extension != nil && [imageExtensions containsObject: extension]);
 }
 
 static BOOL
-GSXCIsSynchronizedResourcePath(NSString *path)
+GSXCIsSynchronizedResourcePath (NSString *path)
 {
   NSString *extension = [[path pathExtension] lowercaseString];
 
-  return ([extension isEqualToString: @"xcassets"]
-	  || [extension isEqualToString: @"xib"]
-	  || [extension isEqualToString: @"nib"]
-	  || [extension isEqualToString: @"gorm"]
-	  || GSXCIsImageResourcePath(path));
+  return ([extension isEqualToString: @"xcassets"] ||
+          [extension isEqualToString: @"xib"] ||
+          [extension isEqualToString: @"nib"] ||
+          [extension isEqualToString: @"gorm"]
+          || GSXCIsImageResourcePath (path));
 }
 
 @implementation PBXTarget
 
 - (void) dealloc
 {
-  RELEASE(_dependencies);
-  RELEASE(_buildConfigurationList);
-  RELEASE(_productName);
-  RELEASE(_buildPhases);
-  RELEASE(_name);
-  RELEASE(_project);
-  RELEASE(_productType);
-  RELEASE(_fileSystemSynchronizedGroups);
-  RELEASE(_packageProductDepedencies);
-  
+  RELEASE (_dependencies);
+  RELEASE (_buildConfigurationList);
+  RELEASE (_productName);
+  RELEASE (_buildPhases);
+  RELEASE (_name);
+  RELEASE (_project);
+  RELEASE (_productType);
+  RELEASE (_fileSystemSynchronizedGroups);
+  RELEASE (_packageProductDepedencies);
+
   [super dealloc];
 }
 
@@ -77,7 +78,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setFileSystemSynchronizedGroups: (NSMutableArray *)object
 {
-  ASSIGN(_fileSystemSynchronizedGroups, object);
+  ASSIGN (_fileSystemSynchronizedGroups, object);
 }
 
 - (NSMutableArray *) packageProductDependencies
@@ -87,7 +88,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setPackageProductDependencies: (NSMutableArray *)object
 {
-  ASSIGN(_packageProductDepedencies, object);
+  ASSIGN (_packageProductDepedencies, object);
 }
 
 - (PBXProject *) project
@@ -97,7 +98,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setProject: (PBXProject *)project
 {
-  ASSIGN(_project, project); 
+  ASSIGN (_project, project);
 }
 
 - (NSMutableArray *) dependencies // getter
@@ -107,7 +108,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setDependencies: (NSMutableArray *)object; // setter
 {
-  ASSIGN(_dependencies,object);
+  ASSIGN (_dependencies, object);
 }
 
 - (XCConfigurationList *) buildConfigurationList // getter
@@ -117,7 +118,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setBuildConfigurationList: (XCConfigurationList *)object; // setter
 {
-  ASSIGN(_buildConfigurationList,object);
+  ASSIGN (_buildConfigurationList, object);
 }
 
 - (NSString *) productName // getter
@@ -128,7 +129,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 - (void) setProductName: (NSString *)object; // setter
 {
   NSString *newName = [object stringByEliminatingSpecialCharacters];
-  ASSIGN(_productName,newName);
+  ASSIGN (_productName, newName);
 }
 
 - (NSString *) name // getter
@@ -139,7 +140,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 - (void) setName: (NSString *)object; // setter
 {
   NSString *newName = [object stringByEliminatingSpecialCharacters];
-  ASSIGN(_name, newName);
+  ASSIGN (_name, newName);
 }
 
 - (NSMutableArray *) buildPhases // getter
@@ -149,12 +150,12 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setBuildPhases: (NSMutableArray *)object; // setter
 {
-  ASSIGN(_buildPhases,object);
+  ASSIGN (_buildPhases, object);
 }
 
 - (void) setDatabase: (GSXCBuildDatabase *)db
 {
-  ASSIGN(_database, db);
+  ASSIGN (_database, db);
 }
 
 - (GSXCBuildDatabase *) database
@@ -169,7 +170,7 @@ GSXCIsSynchronizedResourcePath(NSString *path)
 
 - (void) setProductType: (NSString *)object; // setter
 {
-  ASSIGN(_productType,object);
+  ASSIGN (_productType, object);
 }
 
 - (NSArray *) synchronizedSources
@@ -185,24 +186,24 @@ GSXCIsSynchronizedResourcePath(NSString *path)
       PBXBuildFile *buildFile = nil;
 
       while ((buildFile = [cen nextObject]) != nil)
-	{
-	  PBXFileReference *fr = [buildFile fileRef];
-	  NSString *name = [fr path];
+        {
+          PBXFileReference *fr = [buildFile fileRef];
+          NSString *name = [fr path];
 
-	  // NSLog(@"path = %@", name);
-	  if ([[name pathExtension] isEqualToString: @"m"]
-	      || [[name pathExtension] isEqualToString: @"mm"]
-	      || [[name pathExtension] isEqualToString: @"M"]
-	      || [[name pathExtension] isEqualToString: @"c"]
-	      || [[name pathExtension] isEqualToString: @"cc"]
-	      || [[name pathExtension] isEqualToString: @"C"]
-	      || [[name pathExtension] isEqualToString: @"swift"])
-	    {
-	      [result addObject: buildFile];
-	    }
-	}
+          // NSLog(@"path = %@", name);
+          if ([[name pathExtension] isEqualToString: @"m"] ||
+              [[name pathExtension] isEqualToString: @"mm"] ||
+              [[name pathExtension] isEqualToString: @"M"] ||
+              [[name pathExtension] isEqualToString: @"c"] ||
+              [[name pathExtension] isEqualToString: @"cc"] ||
+              [[name pathExtension] isEqualToString: @"C"] ||
+              [[name pathExtension] isEqualToString: @"swift"])
+            {
+              [result addObject: buildFile];
+            }
+        }
     }
-  
+
   return result;
 }
 
@@ -219,18 +220,18 @@ GSXCIsSynchronizedResourcePath(NSString *path)
       PBXBuildFile *buildFile = nil;
 
       while ((buildFile = [cen nextObject]) != nil)
-	{
-	  PBXFileReference *fr = [buildFile fileRef];
-	  NSString *name = [fr path];
+        {
+          PBXFileReference *fr = [buildFile fileRef];
+          NSString *name = [fr path];
 
-	  if ([[name pathExtension] isEqualToString: @"h"])
-	    {
-	      [result addObject: buildFile];
-	    }
-	}
+          if ([[name pathExtension] isEqualToString: @"h"])
+            {
+              [result addObject: buildFile];
+            }
+        }
     }
-  
-  return result;  
+
+  return result;
 }
 
 - (NSArray *) synchronizedResources
@@ -246,38 +247,38 @@ GSXCIsSynchronizedResourcePath(NSString *path)
       PBXBuildFile *buildFile = nil;
 
       while ((buildFile = [cen nextObject]) != nil)
-	{
-	  PBXFileReference *fr = [buildFile fileRef];
-	  NSString *name = [fr path];
+        {
+          PBXFileReference *fr = [buildFile fileRef];
+          NSString *name = [fr path];
 
-	  if (GSXCIsSynchronizedResourcePath(name))
-	    {
-	      [result addObject: buildFile];
-	    }
-	}
+          if (GSXCIsSynchronizedResourcePath (name))
+            {
+              [result addObject: buildFile];
+            }
+        }
     }
-  
+
   return result;
 }
 
 - (BOOL) build
 {
   GSXCBuildDatabase *db = [GSXCBuildDatabase buildDatabaseWithTarget: self];
-  
+
   [self setDatabase: db];
-  
+
   return YES;
 }
 
 - (BOOL) clean
 {
-  xcputs([[NSString stringWithFormat: @"Cleaning %@",self] cString]);
+  xcputs ([[NSString stringWithFormat: @"Cleaning %@", self] cString]);
   return YES;
 }
 
 - (BOOL) install
 {
-  xcputs([[NSString stringWithFormat: @"Installing %@",self] cString]);
+  xcputs ([[NSString stringWithFormat: @"Installing %@", self] cString]);
   return YES;
 }
 

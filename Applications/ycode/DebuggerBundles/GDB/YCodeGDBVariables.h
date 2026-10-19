@@ -39,11 +39,11 @@
   BOOL _stopped;
   NSString *_file;
 }
-- (id)initWithDebugger:(YCodeGDBDebugger *)debugger;
-- (NSArray *)groups;
-- (void)setEnabled:(BOOL)enabled;
-- (void)reset;
-- (BOOL)handleRecord:(NSDictionary *)record;
-- (void)loadChildren:(NSMutableDictionary *)node;
+- (id) initWithDebugger: (YCodeGDBDebugger *)debugger;
+- (NSArray *) groups;
+- (void) setEnabled: (BOOL)enabled;
+- (void) reset;
+- (BOOL) handleRecord: (NSDictionary *)record;
+- (void) loadChildren: (NSMutableDictionary *)node;
 @end
 #endif

@@ -33,17 +33,23 @@
 @implementation PBXHeadersBuildPhase
 - (BOOL) build
 {
-  xcputs("=== Executing Headers Build Phase");
-  NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
-  if([productType isEqualToString: BUNDLE_TYPE] ||
-     [productType isEqualToString: TOOL_TYPE] ||
-     [productType isEqualToString: APPLICATION_TYPE])
+  xcputs ("=== Executing Headers Build Phase");
+  NSString *productType =
+      [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
+  if ([productType isEqualToString: BUNDLE_TYPE] ||
+      [productType isEqualToString: TOOL_TYPE] ||
+      [productType isEqualToString: APPLICATION_TYPE])
     {
-      xcputs([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t* %s%sWARN%s: No need to process headers for product type %@",
+              BOLD, YELLOW, RESET, productType] cString]);
       return YES;
     }
 
-  xcputs([[NSString stringWithFormat: @"\t* Copying headers to derived sources folder..."] cString]);
+  xcputs ([[NSString
+      stringWithFormat: @"\t* Copying headers to derived sources folder..."]
+      cString]);
   NSFileManager *defaultManager = [NSFileManager defaultManager];
   id file = nil;
   BOOL result = YES;
@@ -52,82 +58,97 @@
 
   // Use the new allFiles method to include files from groups
   NSArray *allFiles = [self allFiles];
-  
+
   NSEnumerator *en = [allFiles objectEnumerator];
-  NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
-  while((file = [en nextObject]) != nil && result)
+  NSString *derivedSourceHeaderDir =
+      [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
+  while ((file = [en nextObject]) != nil && result)
     {
       NSString *path = [[file fileRef] path];
       NSString *srcFile = [[file fileRef] buildPath];
-      NSString *dstFile = [derivedSourceHeaderDir stringByAppendingPathComponent: [path lastPathComponent]];
+      NSString *dstFile = [derivedSourceHeaderDir
+          stringByAppendingPathComponent: [path lastPathComponent]];
       BOOL copyResult = [defaultManager copyItemAtPath: srcFile
-						toPath: dstFile
-						 error: &error];
-      xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, GREEN, dstFile, RESET] cString]);
-      if(!copyResult)
-	{
-	  xcputs([[NSString stringWithFormat: @"\t* Already exists"] cString]);
-	}
+                                                toPath: dstFile
+                                                 error: &error];
+      xcputs ([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW,
+                                          srcFile, RESET, GREEN, dstFile,
+                                          RESET] cString]);
+      if (!copyResult)
+        {
+          xcputs ([[NSString stringWithFormat: @"\t* Already exists"] cString]);
+        }
     }
 
   // Only copy into the framework header folder, if it's a framework...
-  if([productType isEqualToString: FRAMEWORK_TYPE])
+  if ([productType isEqualToString: FRAMEWORK_TYPE])
     {
-      xcputs([[NSString stringWithFormat: @"\t* Copying headers to framework header folder..."] cString]);
-      
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t* Copying headers to framework header folder..."] cString]);
+
       // Filter for header files only in framework case
       NSMutableArray *headerFiles = [NSMutableArray array];
       NSEnumerator *allEn = [allFiles objectEnumerator];
       id headerFile = nil;
-      
+
       while ((headerFile = [allEn nextObject]) != nil)
         {
           if ([headerFile isKindOfClass: [PBXBuildFile class]])
             {
               PBXFileReference *fr = [headerFile fileRef];
               NSString *name = [fr path];
-              
-              if ([[name pathExtension] isEqualToString: @"h"]
-                  || [[name pathExtension] isEqualToString: @"hpp"]
-                  || [[name pathExtension] isEqualToString: @"hh"])
+
+              if ([[name pathExtension] isEqualToString: @"h"] ||
+                  [[name pathExtension] isEqualToString: @"hpp"] ||
+                  [[name pathExtension] isEqualToString: @"hh"])
                 {
                   [headerFiles addObject: headerFile];
                 }
             }
         }
-      
+
       en = [headerFiles objectEnumerator];
       NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
-      while((file = [en nextObject]) != nil && result)
-	{
-	  NSString *path = [[file fileRef] path];
-	  NSString *srcFile = [[file fileRef] buildPath];
-	  NSString *dstFile = [headerDir stringByAppendingPathComponent: [path lastPathComponent]];
-	  BOOL copyResult = [defaultManager copyItemAtPath: srcFile
-						    toPath: dstFile
-						     error: &error];
-          xcputs([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s", YELLOW, srcFile, RESET, GREEN, dstFile, RESET] cString]);
-	  if(!copyResult)
-	    {
-	      xcputs([[NSString stringWithFormat: @"\t* Already exists"] cString]);
-	    }
-	}
+      while ((file = [en nextObject]) != nil && result)
+        {
+          NSString *path = [[file fileRef] path];
+          NSString *srcFile = [[file fileRef] buildPath];
+          NSString *dstFile = [headerDir
+              stringByAppendingPathComponent: [path lastPathComponent]];
+          BOOL copyResult = [defaultManager copyItemAtPath: srcFile
+                                                    toPath: dstFile
+                                                     error: &error];
+          xcputs ([[NSString stringWithFormat: @"\tCopy %s%@%s -> %s%@%s",
+                                              YELLOW, srcFile, RESET, GREEN,
+                                              dstFile, RESET] cString]);
+          if (!copyResult)
+            {
+              xcputs (
+                  [[NSString stringWithFormat: @"\t* Already exists"] cString]);
+            }
+        }
     }
 
-  xcputs([[NSString stringWithFormat: @"=== Completed Headers Build Phase"] cString]);
+  xcputs ([[NSString stringWithFormat: @"=== Completed Headers Build Phase"]
+      cString]);
 
   return result;
 }
 
 - (BOOL) generate
 {
-  xcputs("=== Executing Headers Build Phase (Generate)");
-  NSString *productType = [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
-  if([productType isEqualToString: BUNDLE_TYPE] ||
-     [productType isEqualToString: TOOL_TYPE] ||
-     [productType isEqualToString: APPLICATION_TYPE])
+  xcputs ("=== Executing Headers Build Phase (Generate)");
+  NSString *productType =
+      [[GSXCBuildContext sharedBuildContext] objectForKey: @"PRODUCT_TYPE"];
+  if ([productType isEqualToString: BUNDLE_TYPE] ||
+      [productType isEqualToString: TOOL_TYPE] ||
+      [productType isEqualToString: APPLICATION_TYPE])
     {
-      xcputs([[NSString stringWithFormat: @"\t* %s%sWARN%s: No need to process headers for product type %@",BOLD, YELLOW, RESET, productType] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t* %s%sWARN%s: No need to process headers for product type %@",
+              BOLD, YELLOW, RESET, productType] cString]);
       return YES;
     }
 
@@ -136,20 +157,24 @@
 
   // Use the new allFiles method to include files from groups
   NSArray *allFiles = [self allFiles];
-  
+
   // NSString *derivedSourceHeaderDir = [context objectForKey: @"DERIVED_SOURCE_HEADER_DIR"];
   [context setObject: allFiles forKey: @"DERIVED_HEADERS"];
-  xcputs([[NSString stringWithFormat: @"\tAdding entry for derived header files"] cString]);
+  xcputs ([[NSString
+      stringWithFormat: @"\tAdding entry for derived header files"] cString]);
 
   // Only copy into the framework header folder, if it's a framework...
-  if([productType isEqualToString: FRAMEWORK_TYPE])
+  if ([productType isEqualToString: FRAMEWORK_TYPE])
     {
       // NSString *headerDir = [context objectForKey: @"HEADER_DIR"];
       [context setObject: allFiles forKey: @"HEADERS"];
-      xcputs([[NSString stringWithFormat: @"\tAdding entry for derived header"] cString]);    
+      xcputs ([[NSString stringWithFormat: @"\tAdding entry for derived header"]
+          cString]);
     }
 
-  xcputs([[NSString stringWithFormat: @"=== Completed Headers Build Phase (Generate)"] cString]);
+  xcputs ([[NSString
+      stringWithFormat: @"=== Completed Headers Build Phase (Generate)"]
+      cString]);
 
   return result;
 }
@@ -158,7 +183,7 @@
 - (NSArray *) filesFromGroups
 {
   NSMutableArray *result = [NSMutableArray array];
-  
+
   if (_target != nil)
     {
       // Only get header files for the headers build phase
@@ -168,7 +193,7 @@
           [result addObjectsFromArray: synchronizedHeaders];
         }
     }
-  
+
   return result;
 }
 

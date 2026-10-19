@@ -33,8 +33,8 @@
 
 - (void) dealloc
 {
-  RELEASE(_buildArgumentsString);
-  RELEASE(_buildToolPath);
+  RELEASE (_buildArgumentsString);
+  RELEASE (_buildToolPath);
   //  RELEASE(_dependencies);
   [super dealloc];
 }
@@ -46,7 +46,7 @@
 
 - (void) setBuildArgumentsString: (NSString *)string
 {
-  ASSIGN(_buildArgumentsString, string);
+  ASSIGN (_buildArgumentsString, string);
 }
 
 - (NSString *) buildToolPath
@@ -56,7 +56,7 @@
 
 - (void) setBuildToolPath: (NSString *)path
 {
-  ASSIGN(_buildToolPath, path);
+  ASSIGN (_buildToolPath, path);
 }
 
 /*
@@ -83,19 +83,19 @@
 
 - (BOOL) build
 {
-  return xcsystem(_buildToolPath);
+  return xcsystem (_buildToolPath);
 }
 
 - (BOOL) clean
 {
   NSString *build_cmd = [_buildToolPath stringByAppendingString: @" clean"];
-  return xcsystem(build_cmd);
+  return xcsystem (build_cmd);
 }
 
 - (BOOL) install
 {
   NSString *build_cmd = [_buildToolPath stringByAppendingString: @" install"];
-  return xcsystem(build_cmd);
+  return xcsystem (build_cmd);
 }
 
 @end

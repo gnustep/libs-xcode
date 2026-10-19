@@ -37,48 +37,55 @@
 #import "ToolDelegate.h"
 #import "ArgPair.h"
 
-NSString *findProjectFilename(NSArray *projectDirEntries)
+NSString *
+findProjectFilename (NSArray *projectDirEntries)
 {
   NSEnumerator *e = [projectDirEntries objectEnumerator];
-  NSString     *fileName;
+  NSString *fileName;
 
   while ((fileName = [e nextObject]))
     {
-      NSRange range = [fileName rangeOfString:@"._"];
-      if ([[fileName pathExtension] isEqual: @"xcodeproj"] && range.location == NSNotFound)
-	{
-	  return [fileName stringByAppendingPathComponent: @"project.pbxproj"];
-	}
+      NSRange range = [fileName rangeOfString: @"._"];
+      if ([[fileName pathExtension] isEqual: @"xcodeproj"]
+          && range.location == NSNotFound)
+        {
+          return [fileName stringByAppendingPathComponent: @"project.pbxproj"];
+        }
     }
 
   return nil;
 }
 
-NSString *findWorkspaceFilename(NSArray *projectDirEntries)
+NSString *
+findWorkspaceFilename (NSArray *projectDirEntries)
 {
   NSEnumerator *e = [projectDirEntries objectEnumerator];
-  NSString     *fileName;
+  NSString *fileName;
 
   while ((fileName = [e nextObject]))
     {
-      NSRange range = [fileName rangeOfString:@"._"];
-      if ([[fileName pathExtension] isEqual: @"xcworkspace"] && range.location == NSNotFound)
-	{
-	  return [fileName stringByAppendingPathComponent: @"contents.xcworkspacedata"];
-	}
+      NSRange range = [fileName rangeOfString: @"._"];
+      if ([[fileName pathExtension] isEqual: @"xcworkspace"]
+          && range.location == NSNotFound)
+        {
+          return [fileName
+              stringByAppendingPathComponent: @"contents.xcworkspacedata"];
+        }
     }
 
   return nil;
 }
 
-NSString *resolveProjectName(BOOL *isProject)
+NSString *
+resolveProjectName (BOOL *isProject)
 {
-  NSString      *fileName = nil;
+  NSString *fileName = nil;
   NSFileManager *fileManager = [NSFileManager defaultManager];
-  NSString      *projectDir = [fileManager currentDirectoryPath];
-  NSArray       *projectDirEntries = [fileManager directoryContentsAtPath: projectDir];
+  NSString *projectDir = [fileManager currentDirectoryPath];
+  NSArray *projectDirEntries =
+      [fileManager directoryContentsAtPath: projectDir];
 
-  fileName = findWorkspaceFilename(projectDirEntries);
+  fileName = findWorkspaceFilename (projectDirEntries);
   if (fileName != nil)
     {
       *isProject = NO;
@@ -86,34 +93,38 @@ NSString *resolveProjectName(BOOL *isProject)
   else
     {
       *isProject = YES;
-      fileName = findProjectFilename(projectDirEntries);
+      fileName = findProjectFilename (projectDirEntries);
     }
 
   return fileName;
 }
 
-static BOOL optionTakesValue(NSString *option)
+static BOOL
+optionTakesValue (NSString *option)
 {
-  NSArray *options = [NSArray arrayWithObjects:
-    @"-project", @"-workspace", @"-target", @"-scheme",
-    @"-configuration", @"-sdk", @"-arch", @"-destination",
-    @"-derivedDataPath", @"-archivePath", @"-jobs", @"-write",
-    @"generate", @"save", nil];
+  NSArray *options = [NSArray
+      arrayWithObjects: @"-project", @"-workspace", @"-target", @"-scheme",
+                       @"-configuration", @"-sdk", @"-arch", @"-destination",
+                       @"-derivedDataPath", @"-archivePath", @"-jobs",
+                       @"-write", @"generate", @"save", nil];
 
   return [options containsObject: option];
 }
 
-static BOOL optionTakesNoValue(NSString *option)
+static BOOL
+optionTakesNoValue (NSString *option)
 {
-  NSArray *options = [NSArray arrayWithObjects:
-    @"-alltargets", @"-parallelizeTargets", @"-quiet", @"-verbose",
-    @"-list", @"-showBuildSettings", @"-license", @"build",
-    @"install", @"clean", @"link", nil];
+  NSArray *options =
+      [NSArray arrayWithObjects: @"-alltargets", @"-parallelizeTargets",
+                                @"-quiet", @"-verbose", @"-list",
+                                @"-showBuildSettings", @"-license", @"build",
+                                @"install", @"clean", @"link", nil];
 
   return [options containsObject: option];
 }
 
-static NSString *projectFileForPath(NSString *path, BOOL *isProject)
+static NSString *
+projectFileForPath (NSString *path, BOOL *isProject)
 {
   NSString *fileName = nil;
   NSString *ext = [path pathExtension];
@@ -121,21 +132,21 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
   if ([ext isEqualToString: @"xcworkspace"])
     {
       *isProject = NO;
-      fileName = [path stringByAppendingPathComponent:
-			 @"contents.xcworkspacedata"];
+      fileName =
+          [path stringByAppendingPathComponent: @"contents.xcworkspacedata"];
     }
   else if ([ext isEqualToString: @"xcodeproj"])
     {
       *isProject = YES;
-      fileName = [path stringByAppendingPathComponent:
-			 @"project.pbxproj"];
+      fileName = [path stringByAppendingPathComponent: @"project.pbxproj"];
     }
   else if ([[path lastPathComponent] isEqualToString: @"project.pbxproj"])
     {
       *isProject = YES;
       fileName = path;
     }
-  else if ([[path lastPathComponent] isEqualToString: @"contents.xcworkspacedata"])
+  else if ([[path lastPathComponent]
+               isEqualToString: @"contents.xcworkspacedata"])
     {
       *isProject = NO;
       fileName = path;
@@ -155,39 +166,39 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
   NSEnumerator *en = [args objectEnumerator];
   id obj = nil;
   BOOL parse_val = NO;
-  ArgPair *pair = AUTORELEASE([[ArgPair alloc] init]);
-  
+  ArgPair *pair = AUTORELEASE ([[ArgPair alloc] init]);
+
   while ((obj = [en nextObject]) != nil)
     {
       if (parse_val)
-	{
-	  [pair setValue: obj];
-	  [result setObject: pair forKey: [pair argument]];
-	  parse_val = NO;
-	  continue;
-	}
+        {
+          [pair setValue: obj];
+          [result setObject: pair forKey: [pair argument]];
+          parse_val = NO;
+          continue;
+        }
       else
-	{
-	  pair = AUTORELEASE([[ArgPair alloc] init]);
+        {
+          pair = AUTORELEASE ([[ArgPair alloc] init]);
 
-	  if (optionTakesValue(obj))
-	    {
-	      [pair setArgument: obj];
-	      parse_val = YES;	      
-	    }
+          if (optionTakesValue (obj))
+            {
+              [pair setArgument: obj];
+              parse_val = YES;
+            }
 
-	  if (optionTakesNoValue(obj))
-	    {
-	      [pair setArgument: obj];
-	      parse_val = NO;	      
-	    }
+          if (optionTakesNoValue (obj))
+            {
+              [pair setArgument: obj];
+              parse_val = NO;
+            }
 
-	  // If there is no parameter for the argument, set it anyway...
-	  if (parse_val == NO)
-	    {
-	      [result setObject: pair forKey: obj];
-	    }
-	}
+          // If there is no parameter for the argument, set it anyway...
+          if (parse_val == NO)
+            {
+              [result setObject: pair forKey: obj];
+            }
+        }
     }
 
   if (parse_val == YES)
@@ -199,8 +210,7 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
   return result;
 }
 
-- (BOOL) applyTargetName: (NSString *)targetName
-	       toProject: (PBXProject *)project
+- (BOOL) applyTargetName: (NSString *)targetName toProject: (PBXProject *)project
 {
   NSMutableArray *matchingTargets = [NSMutableArray array];
   NSEnumerator *en = [[project targets] objectEnumerator];
@@ -209,9 +219,9 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
   while ((target = [en nextObject]) != nil)
     {
       if ([[target name] isEqualToString: targetName])
-	{
-	  [matchingTargets addObject: target];
-	}
+        {
+          [matchingTargets addObject: target];
+        }
     }
 
   if ([matchingTargets count] == 0)
@@ -225,16 +235,18 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
 }
 
 - (void) applyConfigurationName: (NSString *)configurationName
-		      toProject: (PBXProject *)project
+                     toProject: (PBXProject *)project
 {
   NSEnumerator *en = [[project targets] objectEnumerator];
   PBXTarget *target = nil;
 
-  [[project buildConfigurationList] setDefaultConfigurationName: configurationName];
+  [[project buildConfigurationList]
+      setDefaultConfigurationName: configurationName];
 
   while ((target = [en nextObject]) != nil)
     {
-      [[target buildConfigurationList] setDefaultConfigurationName: configurationName];
+      [[target buildConfigurationList]
+          setDefaultConfigurationName: configurationName];
     }
 }
 
@@ -247,10 +259,10 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
   BOOL isProject = NO;
   BOOL success = NO;
   NSString *parameter = nil; //  @"cmake";
-  
+
   // NSLog(@"args = %@", args);
   // NSLog(@"file = %@", file);
-  
+
   // Get the file to write out to...
   NSString *outputFile = nil;
 
@@ -258,7 +270,7 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
     {
       return NO;
     }
-  
+
   opt = [args objectForKey: @"-project"];
   if (opt != nil)
     {
@@ -273,22 +285,23 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
 
   if (file != nil)
     {
-      fileName = projectFileForPath(file, &isProject);
+      fileName = projectFileForPath (file, &isProject);
       if (fileName == nil)
-	{
-	  [self postMessage: @"# Unsupported project path: %@", file];
-	  return NO;
-	}	  
+        {
+          [self postMessage: @"# Unsupported project path: %@", file];
+          return NO;
+        }
     }
   else
     {
-      fileName = resolveProjectName(&isProject);
+      fileName = resolveProjectName (&isProject);
     }
 
-  if (fileName == nil ||
-      ![[NSFileManager defaultManager] fileExistsAtPath: fileName])
+  if (fileName == nil
+      || ![[NSFileManager defaultManager] fileExistsAtPath: fileName])
     {
-      [self postMessage: @"# Project or workspace file not found: %@", fileName];
+      [self
+          postMessage: @"# Project or workspace file not found: %@", fileName];
       return NO;
     }
 
@@ -297,146 +310,152 @@ static NSString *projectFileForPath(NSString *path, BOOL *isProject)
   if (opt != nil)
     {
       outputFile = [opt value];
-      NSLog(@"outputFile = %@", outputFile);
+      NSLog (@"outputFile = %@", outputFile);
     }
 
   if (opt == nil)
     {
       NSString *function = nil;
-      
+
       // Get the current function...
       opt = [args objectForKey: @"build"];
       if (opt != nil)
-	{
-	  function = @"build";
-	}
-      
+        {
+          function = @"build";
+        }
+
       opt = [args objectForKey: @"install"];
       if (opt != nil)
-	{
-	  function = @"install";
-	}
-      
+        {
+          function = @"install";
+        }
+
       opt = [args objectForKey: @"clean"];
       if (opt != nil)
-	{
-	  function = @"clean";
-	}
-      
+        {
+          function = @"clean";
+        }
+
       opt = [args objectForKey: @"generate"];
       if (opt != nil)
-	{
-	  function = @"generate";
-	  ASSIGN(parameter, [opt value]);
-	}
-      
+        {
+          function = @"generate";
+          ASSIGN (parameter, [opt value]);
+        }
+
       opt = [args objectForKey: @"link"];
       if (opt != nil)
-	{
-	  function = @"link";
-	}
-      
+        {
+          function = @"link";
+        }
+
       opt = [args objectForKey: @"save"];
       if (opt != nil)
-	{
-	  function = @"save";
-	  ASSIGN(parameter, [opt value]);
-	}
-      
+        {
+          function = @"save";
+          ASSIGN (parameter, [opt value]);
+        }
+
       // if no function is specified, build is the default...
       if (function == nil)
-	{
-	  function = @"build";
-	}
-      
+        {
+          function = @"build";
+        }
+
       // Execute..
       if (function != nil)
-	{
-	  NS_DURING
-	    {
-	      NSString *display = [function stringByCapitalizingFirstCharacter];
-	      SEL operation = NSSelectorFromString(function);
-	      
-	      if (fileName == nil)
-		{
-		  fileName = resolveProjectName(&isProject);
-		}
-	      
-	      if (isProject)
-		{
-		  PBXCoder *coder = nil;
-		  PBXContainer *container = nil;	  
+        {
+          NS_DURING
+          {
+            NSString *display = [function stringByCapitalizingFirstCharacter];
+            SEL operation = NSSelectorFromString (function);
 
-		  // Unarchive...
-		  coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
-		  container = [coder unarchive];
-		  [container setParameter: parameter];
+            if (fileName == nil)
+              {
+                fileName = resolveProjectName (&isProject);
+              }
 
-		  opt = [args objectForKey: @"-configuration"];
-		  if (opt != nil)
-		    {
-		      [self applyConfigurationName: [opt value]
-					 toProject: [container rootObject]];
-		    }
+            if (isProject)
+              {
+                PBXCoder *coder = nil;
+                PBXContainer *container = nil;
 
-		  opt = [args objectForKey: @"-target"];
-		  if (opt == nil)
-		    {
-		      opt = [args objectForKey: @"-scheme"];
-		    }
-		  if (opt != nil &&
-		      [args objectForKey: @"-alltargets"] == nil &&
-		      [self applyTargetName: [opt value]
-				  toProject: [container rootObject]] == NO)
-		    {
-		      RELEASE(coder);
-		      return NO;
-		    }
-		  		  
-		  [coder setDelegate: self];
-		  
-		  // Build...
-		  if ([container respondsToSelector: operation])
-		    {        
-		      // build...
-		      [self postMessage: @"\033[1;32m**\033[0m Start operation %@", display]; 
-		      BOOL (*invoke)(id, SEL) = (BOOL (*)(id, SEL))
-                        [container methodForSelector: operation];
-                      success = invoke(container, operation);
-		      if (success)
-			{
-			  [self postMessage: @"\033[1;32m**\033[0m %@ Succeeded", display];
-			}
-		      else
-			{
-			  [self postMessage: @"\033[1;31m**\033[0m %@ Failed", display];
-			}
-		    }
-		  else
-		    {
-		      [self postMessage: @"Unknown build operation \"%@\" for %@", display, container];
-		    }
-		}
-	      else
-		{
-		  XCWorkspaceParser *p = [XCWorkspaceParser parseWorkspaceFile: fileName];
-		  XCWorkspace *w = [p workspace];
-		  
-		  if ([w respondsToSelector: operation])
-		    {
-		      BOOL (*invoke)(id, SEL) = (BOOL (*)(id, SEL))
-                        [w methodForSelector: operation];
-                      success = invoke(w, operation);
-		    }
-		}
-	    }
-	  NS_HANDLER
-	    {
-	      NSLog(@"%@", localException);
-              success = NO;
-	    }
-	  NS_ENDHANDLER;
-	}
+                // Unarchive...
+                coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
+                container = [coder unarchive];
+                [container setParameter: parameter];
+
+                opt = [args objectForKey: @"-configuration"];
+                if (opt != nil)
+                  {
+                    [self applyConfigurationName: [opt value]
+                                       toProject: [container rootObject]];
+                  }
+
+                opt = [args objectForKey: @"-target"];
+                if (opt == nil)
+                  {
+                    opt = [args objectForKey: @"-scheme"];
+                  }
+                if (opt != nil && [args objectForKey: @"-alltargets"] == nil &&
+                    [self applyTargetName: [opt value]
+                                toProject: [container rootObject]]
+                        == NO)
+                  {
+                    RELEASE (coder);
+                    return NO;
+                  }
+
+                [coder setDelegate: self];
+
+                // Build...
+                if ([container respondsToSelector: operation])
+                  {
+                    // build...
+                    [self
+                        postMessage: @"\033[1;32m**\033[0m Start operation %@",
+                                    display];
+                    BOOL (*invoke) (id, SEL) = (BOOL (*) (
+                        id, SEL))[container methodForSelector: operation];
+                    success = invoke (container, operation);
+                    if (success)
+                      {
+                        [self postMessage: @"\033[1;32m**\033[0m %@ Succeeded",
+                                          display];
+                      }
+                    else
+                      {
+                        [self postMessage: @"\033[1;31m**\033[0m %@ Failed",
+                                          display];
+                      }
+                  }
+                else
+                  {
+                    [self postMessage: @"Unknown build operation \"%@\" for %@",
+                                      display, container];
+                  }
+              }
+            else
+              {
+                XCWorkspaceParser *p =
+                    [XCWorkspaceParser parseWorkspaceFile: fileName];
+                XCWorkspace *w = [p workspace];
+
+                if ([w respondsToSelector: operation])
+                  {
+                    BOOL (*invoke) (id, SEL)
+                        = (BOOL (*) (id, SEL))[w methodForSelector: operation];
+                    success = invoke (w, operation);
+                  }
+              }
+          }
+          NS_HANDLER
+          {
+            NSLog (@"%@", localException);
+            success = NO;
+          }
+          NS_ENDHANDLER;
+        }
     }
   return success;
 }

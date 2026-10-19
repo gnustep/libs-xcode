@@ -30,3 +30,12 @@ SUBPROJECTS = \
 -include GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/aggregate.make
 -include GNUmakefile.postamble
+
+# Source-policy checks are separate from ordinary build prerequisites.
+.PHONY: check-style check-objc1
+check-style:
+	python3 Tests/test-source-format.py
+	python3 Tools/format-source.py --check
+
+check-objc1: check-style
+	python3 Tools/check-objc1.py

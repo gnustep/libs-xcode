@@ -7,7 +7,7 @@
    
    Application Controller
 */
- 
+
 #ifndef _PCAPPPROJ_APPCONTROLLER_H
 #define _PCAPPPROJ_APPCONTROLLER_H
 
@@ -48,7 +48,7 @@
 /**
  * Initializes the class.
  */
-+ (void)  initialize;
++ (void) initialize;
 
 /**
  * Initializes the controller.
@@ -74,7 +74,7 @@
  * Called when the application finishes launching.
  */
 - (void) applicationDidFinishLaunching: (NSNotification *)aNotif;
-- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)application;
+- (BOOL) applicationShouldOpenUntitledFile: (NSApplication *)application;
 
 /**
  * Creates a new project.
@@ -84,7 +84,7 @@
 /**
  * Creates a new project in the specified directory, using its name.
  */
-- (void) createNewProjectAtURL:(NSURL *)projectURL;
+- (void) createNewProjectAtURL: (NSURL *)projectURL;
 
 /**
  * Saves the active source file, or the project when no source file is open.
@@ -101,7 +101,8 @@
 /**
  * Determines whether the application should terminate.
  */
-- (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender;
+- (NSApplicationTerminateReply) applicationShouldTerminate:
+    (NSApplication *)sender;
 
 /**
  * Called when the application will terminate.
@@ -111,8 +112,7 @@
 /**
  * Called when the application should open a file.
  */
-- (BOOL) application: (NSApplication *)application
-	    openFile: (NSString *)fileName;
+- (BOOL) application: (NSApplication *)application openFile: (NSString *)fileName;
 
 /**
  * Shows the preferences panel.

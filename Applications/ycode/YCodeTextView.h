@@ -40,15 +40,15 @@
   NSDictionary *_delimiterMatches;
   NSRange _matchingDelimiterRange;
 }
-- (void)setFilePath:(NSString *)path;
-- (NSUInteger)editorTabWidth;
-- (NSUInteger)editorIndentWidth;
-- (BOOL)editorUsesTabs;
-- (void)setEditorTabWidth:(NSUInteger)width;
-- (void)setEditorUsesTabs:(BOOL)usesTabs;
-- (void)updateEditorParagraphStyle;
-- (IBAction)toggleLineComment:(id)sender;
-- (IBAction)convertTabsToSpaces:(id)sender;
+- (void) setFilePath: (NSString *)path;
+- (NSUInteger) editorTabWidth;
+- (NSUInteger) editorIndentWidth;
+- (BOOL) editorUsesTabs;
+- (void) setEditorTabWidth: (NSUInteger)width;
+- (void) setEditorUsesTabs: (BOOL)usesTabs;
+- (void) updateEditorParagraphStyle;
+- (IBAction) toggleLineComment: (id)sender;
+- (IBAction) convertTabsToSpaces: (id)sender;
 @end
 
 #endif

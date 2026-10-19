@@ -41,90 +41,95 @@
   PBXProject *_project;
   PBXContainer *_container;
   NSString *_projectPath;
-  
+
   // Controllers
   YCodeProjectNavigatorController *_navigatorController;
   YCodeEditorController *_editorController;
   YCodeBuildSystem *_buildSystem;
-  
+
   // Project settings
   NSMutableDictionary *_settings;
-  
 }
 
 /** Supported target kinds for the new-project accessory view. */
-+ (NSArray *)newProjectTypes;
-+ (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name type:(NSString *)type;
++ (NSArray *) newProjectTypes;
++ (YCodeProject *) createNewProjectAtPath: (NSString *)path
+                                    name: (NSString *)name
+                                    type: (NSString *)type;
 /** Create the selected target kind in Xcode or ProjectCenter format. */
-+ (YCodeProject *)createNewProjectAtPath:(NSString *)path name:(NSString *)name
-                                 type:(NSString *)type productType:(NSString *)productType;
++ (YCodeProject *) createNewProjectAtPath: (NSString *)path
+                                    name: (NSString *)name
+                                    type: (NSString *)type
+                             productType: (NSString *)productType;
 
 /**
  * Project access
  */
-- (PBXProject *)project;
-- (void)setProject:(PBXProject *)project;
-- (PBXContainer *)container;
-- (void)setContainer:(PBXContainer *)container;
+- (PBXProject *) project;
+- (void) setProject: (PBXProject *)project;
+- (PBXContainer *) container;
+- (void) setContainer: (PBXContainer *)container;
 
 /**
  * Project path management
  */
-- (NSString *)projectPath;
-- (void)setProjectPath:(NSString *)path;
-- (NSString *)projectDirectoryPath;
+- (NSString *) projectPath;
+- (void) setProjectPath: (NSString *)path;
+- (NSString *) projectDirectoryPath;
 /** Open a directory containing GNUmakefile, makefile, or Makefile. */
-+ (BOOL)isMakeProjectDirectory:(NSString *)path;
-+ (BOOL)isProjectDirectory:(NSString *)path;
-- (BOOL)isDirectoryProject;
-- (BOOL)canCreateSettingsFile;
-- (NSString *)settingsExecutablePath;
-- (BOOL)createSettingsFile:(NSError **)error;
-- (void)refreshDirectoryFiles;
++ (BOOL) isMakeProjectDirectory: (NSString *)path;
++ (BOOL) isProjectDirectory: (NSString *)path;
+- (BOOL) isDirectoryProject;
+- (BOOL) canCreateSettingsFile;
+- (NSString *) settingsExecutablePath;
+- (BOOL) createSettingsFile: (NSError **)error;
+- (void) refreshDirectoryFiles;
 
 /**
  * Controllers
  */
-- (YCodeProjectNavigatorController *)navigatorController;
-- (YCodeEditorController *)editorController;
-- (YCodeBuildSystem *)buildSystem;
+- (YCodeProjectNavigatorController *) navigatorController;
+- (YCodeEditorController *) editorController;
+- (YCodeBuildSystem *) buildSystem;
 
 /**
  * Project operations
  */
-- (BOOL)buildProject;
-- (BOOL)cleanProject;
-- (BOOL)runProject;
-- (BOOL)saveProjectToPath:(NSString *)path;
+- (BOOL) buildProject;
+- (BOOL) cleanProject;
+- (BOOL) runProject;
+- (BOOL) saveProjectToPath: (NSString *)path;
 /** Export the selected target as a ProjectCenter package without changing this document. */
-- (BOOL)exportProjectCenterToPath:(NSString *)path error:(NSError **)error;
+- (BOOL) exportProjectCenterToPath: (NSString *)path error: (NSError **)error;
 
 /**
  * File management
  */
-- (void)addFilesToProject:(NSArray *)filePaths;
-- (void)removeFilesFromProject:(NSArray *)filePaths;
+- (void) addFilesToProject: (NSArray *)filePaths;
+- (void) removeFilesFromProject: (NSArray *)filePaths;
 /** Remove a reference and its build-phase entries, preserving the file on disk. */
-- (void)removeFileReferenceFromProject:(PBXFileReference *)reference;
-- (BOOL)addGroupToProject:(NSString *)groupName;
+- (void) removeFileReferenceFromProject: (PBXFileReference *)reference;
+- (BOOL) addGroupToProject: (NSString *)groupName;
 
 /**
  * Project settings
  */
-- (NSMutableDictionary *)settings;
-- (void)setSettings:(NSMutableDictionary *)settings;
+- (NSMutableDictionary *) settings;
+- (void) setSettings: (NSMutableDictionary *)settings;
 
 /**
  * File watching
  */
-- (void)startWatchingFiles;
-- (void)stopWatchingFiles;
+- (void) startWatchingFiles;
+- (void) stopWatchingFiles;
 
 /**
  * Project conversion
  */
-- (PBXContainer *)convertProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path;
-- (PBXContainer *)loadProjectCenterProject:(NSDictionary *)projectDict fromPath:(NSString *)path;
+- (PBXContainer *) convertProjectCenterProject: (NSDictionary *)projectDict
+                                     fromPath: (NSString *)path;
+- (PBXContainer *) loadProjectCenterProject: (NSDictionary *)projectDict
+                                  fromPath: (NSString *)path;
 
 @end
 

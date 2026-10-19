@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "PBXCommon.h"
+*/
+
+#import "PBXCommon.h"
 #import "PBXApplicationTarget.h"
 
 @implementation PBXApplicationTarget
@@ -28,7 +30,7 @@
 - (id) init
 {
   self = [super init];
-  if(self)
+  if (self)
     {
       [self setProductType: APPLICATION_TYPE];
     }

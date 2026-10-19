@@ -30,10 +30,8 @@
 
 @interface YCTreeView : NSView
 {
-
 }
 
 @end
 
 #endif // _YCTREEVIEW_H_
-

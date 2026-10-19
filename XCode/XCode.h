@@ -22,7 +22,7 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-   */ 
+   */
 
 #ifndef __XCode_h_GNUSTEP_INCLUDE
 #define __XCode_h_GNUSTEP_INCLUDE

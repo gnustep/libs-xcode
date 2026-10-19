@@ -1,0 +1,13 @@
+# Use Tools/format-source.py to also apply GNUstep Objective-C spacing.
+# Keep the formatter version pinned for reproducible output.
+BasedOnStyle: GNU
+ColumnLimit: 79
+IndentWidth: 2
+UseTab: Never
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+SortIncludes: Never
+ReflowComments: false
+BreakStringLiterals: false
+BreakAdjacentStringLiterals: true

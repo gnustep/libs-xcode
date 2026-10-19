@@ -35,14 +35,12 @@
  */
 @interface YCInspectorView : NSView
 {
-
 }
 
-- (NSString *)inspectorIdentifier;
-- (NSString *)inspectorTitle;
-- (void)inspectDocument:(YCodeEditorDocument *)document;
+- (NSString *) inspectorIdentifier;
+- (NSString *) inspectorTitle;
+- (void) inspectDocument: (YCodeEditorDocument *)document;
 
 @end
 
 #endif // _YCINSPECTORVIEW_H_
-

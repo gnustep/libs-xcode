@@ -44,7 +44,7 @@
   NSString *_productType;
   NSMutableArray *_fileSystemSynchronizedGroups;
   NSMutableArray *_packageProductDepedencies;
-  
+
   PBXProject *_project;
   GSXCBuildDatabase *_database;
 }

@@ -10,10 +10,10 @@
 #import "YCodeDocumentController.h"
 #import "AppController.h"
 
-int 
-main(int argc, const char *argv[])
+int
+main (int argc, const char *argv[])
 {
-  CREATE_AUTORELEASE_POOL(pool);
+  CREATE_AUTORELEASE_POOL (pool);
   AppController *delegate = nil;
 
   [YCodeDocumentController sharedDocumentController];
@@ -23,10 +23,10 @@ main(int argc, const char *argv[])
   [NSApp setDelegate: delegate];
   [delegate buildMainMenu];
 
-  RELEASE(pool);
+  RELEASE (pool);
 
-// Uncomment if your application is Renaissance application
-/*  CREATE_AUTORELEASE_POOL (pool);
+  // Uncomment if your application is Renaissance application
+  /*  CREATE_AUTORELEASE_POOL (pool);
   [NSApplication sharedApplication];
   [NSApp setDelegate: [AppController new]];
 

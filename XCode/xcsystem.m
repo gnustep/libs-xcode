@@ -33,7 +33,8 @@
 #import <unistd.h>
 #endif
 
-NSString *contextString()
+NSString *
+contextString ()
 {
   NSString *result = @"\n# Context variables\n\n";
   GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
@@ -45,111 +46,130 @@ NSString *contextString()
   while ((k = [en nextObject]) != nil)
     {
       if (![k isEqualToString: @"OUTPUT_FILES"]) // exclude some vars
-	{
-	  id v = [dict objectForKey: k];
-	  if ([v isKindOfClass: [NSString class]])
-	    {
-	      if ([v containsString: @"%"] == NO)
-		{
-		  if ([v containsString: @"\""] ) // val is already quoted
-		    {
-		      result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=%@\n", k, v]];
-		    }
-		  else
-		    {
-		      result = [result stringByAppendingString: [NSString stringWithFormat: @"export %@=\"%@\"\n", k, v]];
-		    }
-		}          
-	    }
-	}
+        {
+          id v = [dict objectForKey: k];
+          if ([v isKindOfClass: [NSString class]])
+            {
+              if ([v containsString: @"%"] == NO)
+                {
+                  if ([v containsString: @"\""]) // val is already quoted
+                    {
+                      result = [result
+                          stringByAppendingString:
+                              [NSString
+                                  stringWithFormat: @"export %@=%@\n", k, v]];
+                    }
+                  else
+                    {
+                      result = [result
+                          stringByAppendingString:
+                              [NSString stringWithFormat: @"export %@=\"%@\"\n",
+                                                         k, v]];
+                    }
+                }
+            }
+        }
     }
 
-  result = [result stringByAppendingString: @"# Done with context setup...\n\n"];
-  
+  result =
+      [result stringByAppendingString: @"# Done with context setup...\n\n"];
+
   return result;
 }
 
-NSInteger xcsystem(NSString *cmd)
+NSInteger
+xcsystem (NSString *cmd)
 {
   GSXCBuildContext *ctx = [GSXCBuildContext sharedBuildContext];
   NSDictionary *dict = [ctx config];
   NSString *setupScript = [dict objectForKey: @"setupScript"];
   NSInteger r = 0;
 
-  if(setupScript == nil)
+  if (setupScript == nil)
     {
 #ifdef _WIN32
       NSString *win_cmd = [cmd execPathForString];
-      
-      NSDebugLog(@"win_cmd = %@", win_cmd);
-      r = system([win_cmd cString]);
+
+      NSDebugLog (@"win_cmd = %@", win_cmd);
+      r = system ([win_cmd cString]);
 #else
-      r = system([cmd cString]);
+      r = system ([cmd cString]);
 #endif
     }
   else
     {
-      NSString *scriptFormat = @"#!/bin/bash\n"
-	@"set -eo pipefail\n"
-	@"shopt -s inherit_errexit 2>/dev/null || true\n\n"
-	@"%@\n\n"
-	@"exit $?\n";
+      NSString *scriptFormat
+          = @"#!/bin/bash\n"
+            @"set -eo pipefail\n"
+            @"shopt -s inherit_errexit 2>/dev/null || true\n\n"
+            @"%@\n\n"
+            @"exit $?\n";
       NSString *body = @"";
       NSString *script = nil;
-      NSString *c = [cmd stringByReplacingOccurrencesOfString: @"$(SRCROOT)" withString: @"."];
+      NSString *c = [cmd stringByReplacingOccurrencesOfString: @"$(SRCROOT)"
+                                                   withString: @"."];
       NSUUID *uuid = [NSUUID UUID];
-      
-      body = [body stringByAppendingString: [NSString stringWithFormat: @". %@ > /dev/null\n", setupScript]];
-      body = [body stringByAppendingString: contextString()];
-      body = [body stringByAppendingString: [NSString stringWithFormat: @"%@\n", c]];
+
+      body = [body
+          stringByAppendingString: [NSString
+                                      stringWithFormat: @". %@ > /dev/null\n",
+                                                       setupScript]];
+      body = [body stringByAppendingString: contextString ()];
+      body = [body
+          stringByAppendingString: [NSString stringWithFormat: @"%@\n", c]];
 
       script = [NSString stringWithFormat: scriptFormat, body];
 
-      NSString *filename = [NSString stringWithFormat: @"bt_%@.sh", [uuid UUIDString]]; // [script hash]];
-      NSString *scriptCmd = [NSString stringWithFormat: @"./build/%@", filename];
+      NSString *filename = [NSString
+          stringWithFormat: @"bt_%@.sh", [uuid UUIDString]]; // [script hash]];
+      NSString *scriptCmd =
+          [NSString stringWithFormat: @"./build/%@", filename];
       BOOL f = [script writeToFile: scriptCmd
-			atomically: YES
-			  encoding: NSUTF8StringEncoding
-			     error: NULL];
+                        atomically: YES
+                          encoding: NSUTF8StringEncoding
+                             error: NULL];
       if (f)
-	{
+        {
 #ifdef _WIN32
-	  NSString *win_cmd = [scriptCmd execPathForString];
-	  NSDebugLog(@"win_cmd = %@", win_cmd);
-	  r = system([win_cmd cString]);
+          NSString *win_cmd = [scriptCmd execPathForString];
+          NSDebugLog (@"win_cmd = %@", win_cmd);
+          r = system ([win_cmd cString]);
 #else
-	  r = system([scriptCmd cString]);
+          r = system ([scriptCmd cString]);
 #endif
-	}
+        }
       else
-	{
-	  NSLog(@"Failed to write out temporary script %@", scriptCmd);
-	}
+        {
+          NSLog (@"Failed to write out temporary script %@", scriptCmd);
+        }
     }
   return r;
 }
 
-void xcputs(const char *str)
+void
+xcputs (const char *str)
 {
-  puts(str);
-  fflush(stdout);
+  puts (str);
+  fflush (stdout);
 }
 
-void xcput_string(NSString *str)
+void
+xcput_string (NSString *str)
 {
-  xcputs([str cString]);
+  xcputs ([str cString]);
 }
 
-int xcprintf(const char *format, ...)
+int
+xcprintf (const char *format, ...)
 {
-    int result;
-    va_list args;
+  int result;
+  va_list args;
 
-    va_start(args, format);
-    result = vprintf(format, args);
-    va_end(args);
+  va_start (args, format);
+  result = vprintf (format, args);
+  va_end (args);
 
-    fflush(stdout);
+  fflush (stdout);
 
-    return result;
+  return result;
 }

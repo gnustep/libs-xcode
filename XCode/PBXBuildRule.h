@@ -27,7 +27,6 @@
 // Local includes
 #import "PBXCoder.h"
 
-
 @interface PBXBuildRule : NSObject
 {
   NSString *_fileType;

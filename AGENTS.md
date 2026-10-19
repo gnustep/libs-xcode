@@ -60,9 +60,17 @@ instead of invoking the test binary from an arbitrary directory: tests read
 
 ## Objective-C and formatting conventions
 
-- Match the surrounding file. Established GNUstep style uses two-space
-  indentation, braces on separate lines, and indented control-flow braces.
-  Existing files mix tabs and spaces; avoid unrelated whitespace rewrites.
+- Use the repository's GNU formatting with two-space indentation, braces on
+  separate lines, and indented control-flow braces. Run
+  `python3 Tools/format-source.py` with clang-format 19, then `make check-style`.
+  The wrapper preserves GNUstep method and selector spacing. It covers all
+  tracked C/Objective-C sources, including templates and bundled C code.
+- Use Objective-C 1.0 syntax and manual reference counting only: no properties,
+  dot-message syntax, fast enumeration, blocks, class extensions, collection or
+  boxed literals, object subscripting, ARC, or modern ownership qualifiers.
+  `make check-objc1` adds a GNUstep compiler/AST audit (Clang and GCC required).
+  Source strings used to test syntax highlighting may contain other languages
+  and newer syntax; they are test data, not compiled Objective-C.
 - Preserve Objective-C spacing such as `- (id) initWithName: (NSString *)name`
   and `[object setName: name]`; align multiline selector arguments with nearby
   code. Keep actual tabs in makefile recipes.

@@ -35,10 +35,10 @@
   NSMutableDictionary *_classes;
   NSMutableArray *_bundles;
 }
-+ (YCodeEditorRegistry *)sharedRegistry;
-- (id)initWithSearchPaths:(NSArray *)paths;
-- (BOOL)loadBundleAtPath:(NSString *)path;
-- (NSArray *)editorIdentifiers;
-- (Class)editorClassForFilePath:(NSString *)path;
++ (YCodeEditorRegistry *) sharedRegistry;
+- (id) initWithSearchPaths: (NSArray *)paths;
+- (BOOL) loadBundleAtPath: (NSString *)path;
+- (NSArray *) editorIdentifiers;
+- (Class) editorClassForFilePath: (NSString *)path;
 @end
 #endif

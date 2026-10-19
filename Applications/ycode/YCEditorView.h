@@ -35,125 +35,128 @@
 
 @interface YCEditorView : NSView <NSTextViewDelegate>
 {
-    NSScrollView *_scrollView;
-    NSTextView *_textView;
-    NSRulerView *_lineNumberView;
-    
-    YCodeEditorDocument *_document;
-    YCodeSyntaxHighlighter *_syntaxHighlighter;
-    
-    // Editor settings
-    NSFont *_font;
-    NSColor *_textColor;
-    NSColor *_backgroundColor;
-    NSColor *_selectionColor;
-    NSColor *_currentLineColor;
-    
-    BOOL _showLineNumbers;
-    BOOL _highlightCurrentLine;
-    BOOL _autoIndent;
-    BOOL _syntaxHighlighting;
-    
-    NSInteger _tabWidth;
-    BOOL _useSpacesForTabs;
-    
-    // Find and replace
-    NSString *_findString;
-    NSString *_replaceString;
-    BOOL _caseSensitive;
-    BOOL _useRegex;
+  NSScrollView *_scrollView;
+  NSTextView *_textView;
+  NSRulerView *_lineNumberView;
+
+  YCodeEditorDocument *_document;
+  YCodeSyntaxHighlighter *_syntaxHighlighter;
+
+  // Editor settings
+  NSFont *_font;
+  NSColor *_textColor;
+  NSColor *_backgroundColor;
+  NSColor *_selectionColor;
+  NSColor *_currentLineColor;
+
+  BOOL _showLineNumbers;
+  BOOL _highlightCurrentLine;
+  BOOL _autoIndent;
+  BOOL _syntaxHighlighting;
+
+  NSInteger _tabWidth;
+  BOOL _useSpacesForTabs;
+
+  // Find and replace
+  NSString *_findString;
+  NSString *_replaceString;
+  BOOL _caseSensitive;
+  BOOL _useRegex;
 }
 
 /**
  * Document association
  */
-- (YCodeEditorDocument *)document;
-- (void)setDocument:(YCodeEditorDocument *)document;
+- (YCodeEditorDocument *) document;
+- (void) setDocument: (YCodeEditorDocument *)document;
 
 /**
  * Text view access
  */
-- (NSTextView *)textView;
-- (NSScrollView *)scrollView;
+- (NSTextView *) textView;
+- (NSScrollView *) scrollView;
 
 /**
  * Content management
  */
-- (NSString *)text;
-- (void)setText:(NSString *)text;
-- (BOOL)hasSelection;
-- (NSString *)selectedText;
-- (NSRange)selectedRange;
-- (void)setSelectedRange:(NSRange)range;
+- (NSString *) text;
+- (void) setText: (NSString *)text;
+- (BOOL) hasSelection;
+- (NSString *) selectedText;
+- (NSRange) selectedRange;
+- (void) setSelectedRange: (NSRange)range;
 
 /**
  * Editor settings
  */
-- (NSFont *)font;
-- (void)setFont:(NSFont *)font;
-- (NSColor *)textColor;
-- (void)setTextColor:(NSColor *)color;
-- (NSColor *)backgroundColor;
-- (void)setBackgroundColor:(NSColor *)color;
-- (BOOL)showLineNumbers;
-- (void)setShowLineNumbers:(BOOL)show;
-- (BOOL)highlightCurrentLine;
-- (void)setHighlightCurrentLine:(BOOL)highlight;
-- (NSInteger)tabWidth;
-- (void)setTabWidth:(NSInteger)width;
-- (BOOL)useSpacesForTabs;
-- (void)setUseSpacesForTabs:(BOOL)useSpaces;
+- (NSFont *) font;
+- (void) setFont: (NSFont *)font;
+- (NSColor *) textColor;
+- (void) setTextColor: (NSColor *)color;
+- (NSColor *) backgroundColor;
+- (void) setBackgroundColor: (NSColor *)color;
+- (BOOL) showLineNumbers;
+- (void) setShowLineNumbers: (BOOL)show;
+- (BOOL) highlightCurrentLine;
+- (void) setHighlightCurrentLine: (BOOL)highlight;
+- (NSInteger) tabWidth;
+- (void) setTabWidth: (NSInteger)width;
+- (BOOL) useSpacesForTabs;
+- (void) setUseSpacesForTabs: (BOOL)useSpaces;
 
 /**
  * Syntax highlighting
  */
-- (BOOL)syntaxHighlighting;
-- (void)setSyntaxHighlighting:(BOOL)highlighting;
-- (YCodeSyntaxHighlighter *)syntaxHighlighter;
-- (void)applySyntaxHighlighting;
+- (BOOL) syntaxHighlighting;
+- (void) setSyntaxHighlighting: (BOOL)highlighting;
+- (YCodeSyntaxHighlighter *) syntaxHighlighter;
+- (void) applySyntaxHighlighting;
 
 /**
  * Text operations
  */
-- (void)insertText:(NSString *)text;
-- (void)insertText:(NSString *)text atLocation:(NSUInteger)location;
-- (void)deleteSelectedText;
-- (void)selectAll;
-- (void)copy;
-- (void)cut;
-- (void)paste;
+- (void) insertText: (NSString *)text;
+- (void) insertText: (NSString *)text atLocation: (NSUInteger)location;
+- (void) deleteSelectedText;
+- (void) selectAll;
+- (void) copy;
+- (void) cut;
+- (void) paste;
 
 /**
  * Line operations
  */
-- (NSUInteger)currentLineNumber;
-- (NSUInteger)totalLineCount;
-- (NSRange)rangeOfLine:(NSUInteger)lineNumber;
-- (void)goToLine:(NSUInteger)lineNumber;
-- (void)selectLine:(NSUInteger)lineNumber;
+- (NSUInteger) currentLineNumber;
+- (NSUInteger) totalLineCount;
+- (NSRange) rangeOfLine: (NSUInteger)lineNumber;
+- (void) goToLine: (NSUInteger)lineNumber;
+- (void) selectLine: (NSUInteger)lineNumber;
 
 /**
  * Find and replace
  */
-- (void)findText:(NSString *)searchText options:(NSStringCompareOptions)options;
-- (void)replaceText:(NSString *)searchText withText:(NSString *)replaceText options:(NSStringCompareOptions)options;
-- (void)findNext;
-- (void)findPrevious;
+- (void) findText: (NSString *)searchText
+         options: (NSStringCompareOptions)options;
+- (void) replaceText: (NSString *)searchText
+           withText: (NSString *)replaceText
+            options: (NSStringCompareOptions)options;
+- (void) findNext;
+- (void) findPrevious;
 
 /**
  * Indentation
  */
-- (void)indentSelectedLines;
-- (void)unindentSelectedLines;
-- (void)commentSelectedLines;
-- (void)uncommentSelectedLines;
+- (void) indentSelectedLines;
+- (void) unindentSelectedLines;
+- (void) commentSelectedLines;
+- (void) uncommentSelectedLines;
 
 /**
  * Folding (basic support)
  */
-- (BOOL)canFoldAtLine:(NSUInteger)lineNumber;
-- (void)foldAtLine:(NSUInteger)lineNumber;
-- (void)unfoldAtLine:(NSUInteger)lineNumber;
+- (BOOL) canFoldAtLine: (NSUInteger)lineNumber;
+- (void) foldAtLine: (NSUInteger)lineNumber;
+- (void) unfoldAtLine: (NSUInteger)lineNumber;
 
 @end
 
@@ -162,32 +165,33 @@
  */
 @interface YCEditorRulerView : NSRulerView
 {
-    YCodeDebugger *_debugger;
-    NSString *_debugFile;
-    BOOL _debugGutterVisible;
+  YCodeDebugger *_debugger;
+  NSString *_debugFile;
+  BOOL _debugGutterVisible;
 }
 /** Associate this source ruler with its project's debugger. */
-- (void)setDebugger:(YCodeDebugger *)debugger file:(NSString *)file active:(BOOL)active;
-- (BOOL)debugGutterVisible;
+- (void) setDebugger: (YCodeDebugger *)debugger
+               file: (NSString *)file
+             active: (BOOL)active;
+- (BOOL) debugGutterVisible;
 /** Apply ruler preferences without hiding the debugger gutter. */
-- (void)updateRulerVisibility;
+- (void) updateRulerVisibility;
 /** One-based source line at a point in ruler coordinates, or zero outside text. */
-- (NSUInteger)sourceLineAtPoint:(NSPoint)point;
+- (NSUInteger) sourceLineAtPoint: (NSPoint)point;
 @end
 
 @interface YCEditorLineNumberView : NSRulerView
 {
-    YCEditorView *_editorView;
-    NSColor *_backgroundColor;
-    NSColor *_textColor;
-    NSFont *_font;
+  YCEditorView *_editorView;
+  NSColor *_backgroundColor;
+  NSColor *_textColor;
+  NSFont *_font;
 }
 
-- (id)initWithEditorView:(YCEditorView *)editorView;
-- (YCEditorView *)editorView;
-- (void)setEditorView:(YCEditorView *)editorView;
+- (id) initWithEditorView: (YCEditorView *)editorView;
+- (YCEditorView *) editorView;
+- (void) setEditorView: (YCEditorView *)editorView;
 
 @end
 
 #endif // _YCEDITORVIEW_H_
-

@@ -10,23 +10,22 @@
 #import "PLCPG.h"
 
 int
-main(int argc, const char *argv[])
+main (int argc, const char *argv[])
 {
   id pool = [[NSAutoreleasePool alloc] init];
 
   // Your code here...
-  if(argc > 0)
-  {
-    NSString *argument = [[NSString alloc] initWithCString: argv[1]];
-    PLCPG *plcpg = [[PLCPG alloc] initWithPlist: argument];
-    [plcpg generate];
-    [argument release];
-    [plcpg release];
-  }
+  if (argc > 0)
+    {
+      NSString *argument = [[NSString alloc] initWithCString: argv[1]];
+      PLCPG *plcpg = [[PLCPG alloc] initWithPlist: argument];
+      [plcpg generate];
+      [argument release];
+      [plcpg release];
+    }
   // The end...
 
   [pool release];
 
   return 0;
 }
-

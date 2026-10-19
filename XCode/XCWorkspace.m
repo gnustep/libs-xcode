@@ -38,7 +38,7 @@
 
 + (id) workspace
 {
-  return AUTORELEASE([[self alloc] init]);
+  return AUTORELEASE ([[self alloc] init]);
 }
 
 - (id) init
@@ -61,7 +61,7 @@
 
 - (void) setVersion: (NSString *)v
 {
-  ASSIGN(_version, v);
+  ASSIGN (_version, v);
 }
 
 - (NSArray *) fileRefs
@@ -71,7 +71,7 @@
 
 - (void) setFileRefs: (NSArray *)refs
 {
-  ASSIGN(_fileRefs, refs);
+  ASSIGN (_fileRefs, refs);
 }
 
 - (NSString *) filename
@@ -81,7 +81,7 @@
 
 - (void) setFilename: (NSString *)filename
 {
-  ASSIGN(_filename, filename);
+  ASSIGN (_filename, filename);
 }
 
 - (NSString *) _collectWorkspaceLinkDirs
@@ -89,7 +89,7 @@
   NSString *result = @"";
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
-  
+
   while ((ref = [en nextObject]) != nil)
     {
       NSString *loc = [ref location];
@@ -99,15 +99,17 @@
       NSArray *targets = [ref targets];
       NSEnumerator *ten = [targets objectEnumerator];
       PBXNativeTarget *t = nil;
-      
+
       while ((t = [ten nextObject]) != nil)
-	{
-	  NSString *name = [t productName];
-	  NSString *targetDir = [[buildDir stringByAppendingPathComponent: name]
-				  stringByReplacingOccurrencesOfString: @"group:" withString: @""];
-	  NSString *prodDir = [targetDir stringByAppendingPathComponent: @"Products"];
-	  result = [result stringByAppendingFormat: @" -L./%@ ", prodDir];
-	}
+        {
+          NSString *name = [t productName];
+          NSString *targetDir = [[buildDir stringByAppendingPathComponent: name]
+              stringByReplacingOccurrencesOfString: @"group:"
+                                        withString: @""];
+          NSString *prodDir =
+              [targetDir stringByAppendingPathComponent: @"Products"];
+          result = [result stringByAppendingFormat: @" -L./%@ ", prodDir];
+        }
     }
 
   return result;
@@ -118,26 +120,28 @@
   NSString *result = @"";
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
-  
+
   while ((ref = [en nextObject]) != nil)
     {
       NSArray *targets = [ref targets];
       NSEnumerator *ten = [targets objectEnumerator];
       PBXNativeTarget *t = nil;
-      
-      while ((t = [ten nextObject]) != nil)
-	{
-	  NSString *type = [t productType];
 
-	  if ([type isEqualToString: LIBRARY_TYPE]
-	      || [type isEqualToString: DYNAMIC_LIBRARY_TYPE]
-	      || [type isEqualToString: FRAMEWORK_TYPE])
-	    {	     
-	      NSString *name = [t productName];
-	      NSString *libName = [name stringByReplacingOccurrencesOfString: @"group:" withString: @""];
-	      result = [result stringByAppendingFormat: @" -l%@ ", libName];
-	    }
-	}
+      while ((t = [ten nextObject]) != nil)
+        {
+          NSString *type = [t productType];
+
+          if ([type isEqualToString: LIBRARY_TYPE] ||
+              [type isEqualToString: DYNAMIC_LIBRARY_TYPE] ||
+              [type isEqualToString: FRAMEWORK_TYPE])
+            {
+              NSString *name = [t productName];
+              NSString *libName =
+                  [name stringByReplacingOccurrencesOfString: @"group:"
+                                                  withString: @""];
+              result = [result stringByAppendingFormat: @" -l%@ ", libName];
+            }
+        }
     }
 
   return result;
@@ -148,7 +152,7 @@
   NSString *result = @"";
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
-  
+
   while ((ref = [en nextObject]) != nil)
     {
       NSString *loc = [ref location];
@@ -157,12 +161,14 @@
       NSArray *targets = [ref targets];
       NSEnumerator *ten = [targets objectEnumerator];
       PBXNativeTarget *t = nil;
-      
+
       while ((t = [ten nextObject]) != nil)
-	{
-	  NSString *targetDir = [projRoot stringByReplacingOccurrencesOfString: @"group:" withString: @""];
-	  result = [result stringByAppendingFormat: @" -I./%@ ", targetDir];
-	}
+        {
+          NSString *targetDir =
+              [projRoot stringByReplacingOccurrencesOfString: @"group:"
+                                                  withString: @""];
+          result = [result stringByAppendingFormat: @" -I./%@ ", targetDir];
+        }
     }
 
   return result;
@@ -170,18 +176,18 @@
 
 - (BOOL) build
 {
-  NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init]; // start pool for workspace
+  NSAutoreleasePool *p =
+      [[NSAutoreleasePool alloc] init]; // start pool for workspace
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
-  NSString *display = [[self filename]
-                        stringByDeletingLastPathComponent];
+  NSString *display = [[self filename] stringByDeletingLastPathComponent];
   NSString *workspaceLinkDirs = [self _collectWorkspaceLinkDirs];
   NSString *workspaceIncDirs = [self _collectWorkspaceIncludeDirs];
   NSString *workspaceLinkLibs = [self _collectWorkspaceLinkLibs];
-  
-  NSDebugLog(@"\n\n\nWorkspace Include Dirs = %@\n\n\n", workspaceIncDirs);
-  NSDebugLog(@"\n\n\nWorkspace Link Libs = %@\n\n\n", workspaceLinkLibs);
-  printf("+++ Building projects workspace.. %s\n", [display cString]);
+
+  NSDebugLog (@"\n\n\nWorkspace Include Dirs = %@\n\n\n", workspaceIncDirs);
+  NSDebugLog (@"\n\n\nWorkspace Link Libs = %@\n\n\n", workspaceLinkLibs);
+  printf ("+++ Building projects workspace.. %s\n", [display cString]);
 
   while ((ref = [en nextObject]) != nil)
     {
@@ -191,13 +197,13 @@
       BOOL s = [ref build];
       if (s == NO)
         {
-          printf("+++ Workspace build FAILED %s\n", [display cString]);
+          printf ("+++ Workspace build FAILED %s\n", [display cString]);
           return NO;
         }
-      }
-  printf("+++ Workspace build completed... %s\n", [display cString]);
+    }
+  printf ("+++ Workspace build completed... %s\n", [display cString]);
 
-  RELEASE(p);
+  RELEASE (p);
 
   return YES;
 }
@@ -207,7 +213,8 @@
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
 
-  printf("+++ Cleaning projects in workspace.. %s\n", [[[self filename] stringByDeletingLastPathComponent] cString]);
+  printf ("+++ Cleaning projects in workspace.. %s\n",
+          [[[self filename] stringByDeletingLastPathComponent] cString]);
   while ((ref = [en nextObject]) != nil)
     {
       BOOL s = [ref clean];
@@ -216,8 +223,8 @@
           return NO;
         }
     }
-  printf("+++ Workspace clean complete\n");
-  
+  printf ("+++ Workspace clean complete\n");
+
   return YES;
 }
 
@@ -226,8 +233,8 @@
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
 
-  printf("+++ Installing projects in workspace.. %s\n",
-         [[[self filename] stringByDeletingLastPathComponent] cString]);
+  printf ("+++ Installing projects in workspace.. %s\n",
+          [[[self filename] stringByDeletingLastPathComponent] cString]);
   while ((ref = [en nextObject]) != nil)
     {
       BOOL s = [ref install];
@@ -236,8 +243,8 @@
           return NO;
         }
     }
-  printf("+++ Workspace install complete\n");
-  
+  printf ("+++ Workspace install complete\n");
+
   return YES;
 }
 
@@ -245,23 +252,22 @@
 {
   NSEnumerator *en = [_fileRefs reverseObjectEnumerator];
   XCFileRef *ref = nil;
-  NSString *display = [[self filename]
-                        stringByDeletingLastPathComponent];
-  
-  printf("+++ Building projects workspace.. %s\n", [display cString]);
+  NSString *display = [[self filename] stringByDeletingLastPathComponent];
+
+  printf ("+++ Building projects workspace.. %s\n", [display cString]);
   while ((ref = [en nextObject]) != nil)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
       BOOL s = [ref link];
       if (s == NO)
         {
-          printf("+++ Workspace build FAILED %s\n", [display cString]);
+          printf ("+++ Workspace build FAILED %s\n", [display cString]);
           return NO;
         }
-      RELEASE(p);
+      RELEASE (p);
     }
-  printf("+++ Workspace build completed... %s\n", [display cString]);
-  
+  printf ("+++ Workspace build completed... %s\n", [display cString]);
+
   return YES;
 }
 

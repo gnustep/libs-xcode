@@ -28,10 +28,10 @@
 @implementation PBXBuildPhase
 
 - (id) initWithFiles: (NSMutableArray *)files
-	       buildActionMask: (NSString *)buildActionMask
-	  runOnlyForDeployment: (NSString *)runOnlyForDeployment
-			target: (PBXNativeTarget *)target
-			  name: (NSString *)name
+         buildActionMask: (NSString *)buildActionMask
+    runOnlyForDeployment: (NSString *)runOnlyForDeployment
+                  target: (PBXNativeTarget *)target
+                    name: (NSString *)name
 {
   self = [super init];
   if (self != nil)
@@ -47,11 +47,11 @@
 
 - (void) dealloc
 {
-  RELEASE(_files);
-  RELEASE(_buildActionMask);
-  RELEASE(_runOnlyForDeploymentPostprocessing);
-  RELEASE(_target);
-  RELEASE(_name);
+  RELEASE (_files);
+  RELEASE (_buildActionMask);
+  RELEASE (_runOnlyForDeploymentPostprocessing);
+  RELEASE (_target);
+  RELEASE (_name);
   [super dealloc];
 }
 
@@ -63,7 +63,7 @@
 
 - (void) setFiles: (NSMutableArray *)object; // setter
 {
-  ASSIGN(_files,object);
+  ASSIGN (_files, object);
 }
 
 - (NSString *) buildActionMask // getter
@@ -73,7 +73,7 @@
 
 - (void) setBuildActionMask: (NSString *)object; // setter
 {
-  ASSIGN(_buildActionMask,object);
+  ASSIGN (_buildActionMask, object);
 }
 
 - (NSString *) runOnlyForDeploymentPostprocessing // getter
@@ -83,7 +83,7 @@
 
 - (void) setRunOnlyForDeploymentPostprocessing: (NSString *)object; // setter
 {
-  ASSIGN(_runOnlyForDeploymentPostprocessing,object);
+  ASSIGN (_runOnlyForDeploymentPostprocessing, object);
 }
 
 - (BOOL) showEnvVarsInLog; // setter
@@ -108,7 +108,7 @@
 
 - (void) setName: (NSString *)n
 {
-  ASSIGN(_name, n);
+  ASSIGN (_name, n);
 }
 
 - (NSString *) name
@@ -118,19 +118,19 @@
 
 - (BOOL) build
 {
-  NSDebugLog(@"Abstract build... %@, %@", self, _files);
+  NSDebugLog (@"Abstract build... %@, %@", self, _files);
   return YES;
 }
 
 - (BOOL) generate
 {
-  NSLog(@"Abstract generate... %@, %@", self, _files);
+  NSLog (@"Abstract generate... %@, %@", self, _files);
   return YES;
 }
 
 - (BOOL) link
 {
-  NSLog(@"Abstract link... %@, %@", self, _files);
+  NSLog (@"Abstract link... %@, %@", self, _files);
   return YES;
 }
 

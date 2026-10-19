@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "GSXCBuildContext.h"
+*/
+
+#import "GSXCBuildContext.h"
 
 id _sharedBuildContext = nil;
 
@@ -28,7 +30,7 @@ id _sharedBuildContext = nil;
 
 + (id) sharedBuildContext
 {
-  if(_sharedBuildContext == nil)
+  if (_sharedBuildContext == nil)
     {
       _sharedBuildContext = [[GSXCBuildContext alloc] init];
     }
@@ -37,22 +39,23 @@ id _sharedBuildContext = nil;
 
 - (id) init
 {
-  if((self = [super init]) != nil)
+  if ((self = [super init]) != nil)
     {
       stack = [[NSMutableArray alloc] initWithCapacity: 10];
       contextDictionary = [[NSMutableDictionary alloc] init];
-      config = [[NSDictionary alloc] initWithContentsOfFile: @"buildtool.plist"];
-      NSDebugLog(@"%@",config);
+      config =
+          [[NSDictionary alloc] initWithContentsOfFile: @"buildtool.plist"];
+      NSDebugLog (@"%@", config);
     }
   return self;
 }
 
 - (void) dealloc
 {
-  RELEASE(stack);
-  RELEASE(contextDictionary);
-  RELEASE(config);
-  
+  RELEASE (stack);
+  RELEASE (contextDictionary);
+  RELEASE (config);
+
   [super dealloc];
 }
 
@@ -64,13 +67,15 @@ id _sharedBuildContext = nil;
 - (NSDictionary *) configForTargetName: (NSString *)name
 {
   NSDictionary *targetDict = [config objectForKey: name];
-  NSMutableDictionary *result = [NSMutableDictionary dictionaryWithDictionary: config];
+  NSMutableDictionary *result =
+      [NSMutableDictionary dictionaryWithDictionary: config];
 
   if (targetDict != nil)
     {
-      [result addEntriesFromDictionary: targetDict]; // override existing entries.
+      [result
+          addEntriesFromDictionary: targetDict]; // override existing entries.
     }
-  
+
   return result;
 }
 
@@ -115,7 +120,9 @@ id _sharedBuildContext = nil;
 
 - (NSString *) description
 {
-  return [NSString stringWithFormat: @"%@ -- contextDictionary = %@, \n currentContext = %@, \n stack = %@ \n\n",
-		   [super description], contextDictionary, currentContext, stack];
+  return [NSString
+      stringWithFormat:
+          @"%@ -- contextDictionary = %@, \n currentContext = %@, \n stack = %@ \n\n",
+          [super description], contextDictionary, currentContext, stack];
 }
 @end

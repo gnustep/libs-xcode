@@ -37,7 +37,7 @@
 {
   if ((self = [super init]) != nil)
     {
-      _cpus = [[NSProcessInfo processInfo] processorCount];      
+      _cpus = [[NSProcessInfo processInfo] processorCount];
       _queue = [[NSOperationQueue alloc] init];
       [_queue setMaxConcurrentOperationCount: _cpus];
     }
@@ -46,7 +46,7 @@
 
 - (void) dealloc
 {
-  RELEASE(_queue);
+  RELEASE (_queue);
   [super dealloc];
 }
 
@@ -62,9 +62,10 @@
   NSMutableArray *ops = [NSMutableArray array];
   NSEnumerator *en = nil;
   NSString *buildType = [config objectForKey: @"buildType"];
-  
-  NSDebugLog(@"config = %@", config);
-  if ([buildType isEqualToString: @"linear"] == YES || buildType == nil) // linear is the default
+
+  NSDebugLog (@"config = %@", config);
+  if ([buildType isEqualToString: @"linear"] == YES
+      || buildType == nil) // linear is the default
     {
       [_queue setMaxConcurrentOperationCount: 1];
     }
@@ -73,42 +74,44 @@
       NSString *mct = [config objectForKey: @"maxConcurrentOperationCount"];
 
       if (mct != nil)
-	{
-	  NSUInteger t = [mct intValue];
+        {
+          NSUInteger t = [mct intValue];
 
-	  if (t > 0)
-	    {
-	      _cpus = t;
-	      [_queue setMaxConcurrentOperationCount: _cpus];
-	    }
-	}
-      
-      xcprintf("\t* Parallel build using %ld CPUs...\n", _cpus);
+          if (t > 0)
+            {
+              _cpus = t;
+              [_queue setMaxConcurrentOperationCount: _cpus];
+            }
+        }
+
+      xcprintf ("\t* Parallel build using %ld CPUs...\n", _cpus);
     }
 
-  xcputs("=== Executing Sources Build Phase");
-  
+  xcputs ("=== Executing Sources Build Phase");
+
   // Use the new allFiles method which includes files from groups
   NSArray *allFiles = [self allFiles];
-  
+
   // Check if we should use the database instead
   BOOL usingSynchronizedGroups = NO;
   NSArray *synchronizedFiles = [_target synchronizedSources];
   if ([synchronizedFiles count] > 0)
     {
       usingSynchronizedGroups = YES;
-      xcputs([[NSString stringWithFormat: @"%s+++ Using synchronized group...%s", YELLOW, RESET] cString]);      
+      xcputs (
+          [[NSString stringWithFormat: @"%s+++ Using synchronized group...%s",
+                                      YELLOW, RESET] cString]);
     }
-  
+
   // if the database is present use it's list of files...
   if (db != nil && !usingSynchronizedGroups)
     {
       if ([db isEmpty])
-	{
-	  xcputs("\t++++ No files modified, nothing to build. ++++\n");
-	  return YES;
-	}
-      
+        {
+          xcputs ("\t++++ No files modified, nothing to build. ++++\n");
+          return YES;
+        }
+
       files = [db files];
     }
   else
@@ -116,61 +119,61 @@
       // Use all files from groups and regular files
       files = allFiles;
     }
-  
+
   en = [files objectEnumerator];
-  while((file = [en nextObject]) != nil && result)
+  while ((file = [en nextObject]) != nil && result)
     {
       NSAutoreleasePool *p = [[NSAutoreleasePool alloc] init];
       GSXCBuildOperation *op = [GSXCBuildOperation operationWithFile: file];
-      
+
       [file setTarget: _target];
       [file setTotalFiles: [files count]];
       [file setCurrentFile: i];
       [ops addObject: op];
 
       i++;
-      
-      RELEASE(p);
+
+      RELEASE (p);
     }
 
   // Handle the error...
   NS_DURING
-    {
-      [_queue addOperations: ops waitUntilFinished: YES];
-    }
+  {
+    [_queue addOperations: ops waitUntilFinished: YES];
+  }
   NS_HANDLER
-    {
-      [_queue cancelAllOperations];
-      NSLog(@"Compilation halted.");
-    }
+  {
+    [_queue cancelAllOperations];
+    NSLog (@"Compilation halted.");
+  }
   NS_ENDHANDLER;
-  
-  xcputs("=== Sources Build Phase Completed");
+
+  xcputs ("=== Sources Build Phase Completed");
 
   // if (db != nil)
-    {
-      [self link]; // generate the rest of the output file entries
-    }
-  
+  {
+    [self link]; // generate the rest of the output file entries
+  }
+
   return result;
 }
 
 - (BOOL) generate
 {
-  xcputs("=== Generating using Sources Build Phase");
-  
+  xcputs ("=== Generating using Sources Build Phase");
+
   // Use the new allFiles method to include files from groups
   NSArray *allFiles = [self allFiles];
   NSEnumerator *en = [allFiles objectEnumerator];
   id file = nil;
   BOOL result = YES;
-  
-  while((file = [en nextObject]) != nil && result)
+
+  while ((file = [en nextObject]) != nil && result)
     {
       [file setTarget: _target];
       result = [file generate];
     }
-  xcputs("=== Sources Build Phase generation completed");
+  xcputs ("=== Sources Build Phase generation completed");
 
   return result;
 }
@@ -179,7 +182,7 @@
 - (NSArray *) filesFromGroups
 {
   NSMutableArray *result = [NSMutableArray array];
-  
+
   if (_target != nil)
     {
       // Only get source files for the sources build phase
@@ -189,7 +192,7 @@
           [result addObjectsFromArray: synchronizedSources];
         }
     }
-  
+
   return result;
 }
 
@@ -210,36 +213,40 @@
   // Use the new allFiles method to include files from groups
   NSArray *allFiles = [self allFiles];
   en = [allFiles objectEnumerator];
-  
-  xcputs("=== Executing Sources Build Phase (LINK)");
-  while((file = [en nextObject]) != nil && result)
+
+  xcputs ("=== Executing Sources Build Phase (LINK)");
+  while ((file = [en nextObject]) != nil && result)
     {
       PBXFileReference *fr = [file fileRef];
       NSString *fileName = [[fr path] lastPathComponent];
-      NSString *outputPath = [buildDir stringByAppendingPathComponent: 
-				    [fileName stringByAppendingString: @".o"]];
+      NSString *outputPath = [buildDir
+          stringByAppendingPathComponent: [fileName
+                                             stringByAppendingString: @".o"]];
 
-      outputFiles = [[outputFiles stringByAppendingString: [NSString stringWithFormat: @"'%@'",outputPath]] 
-		      stringByAppendingString: @" "];
-      
+      outputFiles = [[outputFiles
+          stringByAppendingString: [NSString
+                                      stringWithFormat: @"'%@'", outputPath]]
+          stringByAppendingString: @" "];
+
       // NSLog(@"name = %@", [fr path]);
-      xcprintf("\t+ Collecting %s%s%s%s ... ", BOLD, MAGENTA, [outputPath cString], RESET);
+      xcprintf ("\t+ Collecting %s%s%s%s ... ", BOLD, MAGENTA,
+                [outputPath cString], RESET);
 
       if ([mgr fileExistsAtPath: outputPath] == YES)
-	{
-	  xcprintf("%s%sfound%s\n", BOLD, GREEN, RESET);
-	}
+        {
+          xcprintf ("%s%sfound%s\n", BOLD, GREEN, RESET);
+        }
       else
-	{
-	  xcprintf("%s%smissing%s\n", BOLD, RED, RESET);
-	  result = NO;
-	  break;
-	}
+        {
+          xcprintf ("%s%smissing%s\n", BOLD, RED, RESET);
+          result = NO;
+          break;
+        }
     }
 
   [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
   // NSLog(@"Output files %@", outputFiles);
-  xcputs("=== Sources Build Phase Completed (LINK)");
+  xcputs ("=== Sources Build Phase Completed (LINK)");
 
   return result;
 }

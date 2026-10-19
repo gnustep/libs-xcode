@@ -26,30 +26,42 @@
 #import "YCodeEditorDocument.h"
 
 @implementation YCImageInspectorView
-- (NSString *)inspectorIdentifier { return @"image"; }
-- (NSString *)inspectorTitle { return @"Image"; }
+- (NSString *) inspectorIdentifier
+{
+  return @"image";
+}
+- (NSString *) inspectorTitle
+{
+  return @"Image";
+}
 
-- (void)inspectDocument:(YCodeEditorDocument *)document
+- (void) inspectDocument: (YCodeEditorDocument *)document
 {
   if (![document isImageDocument])
     {
-      [_details setString:@"No image selected."];
+      [_details setString: @"No image selected."];
       return;
     }
-  [super inspectDocument:document];
-  NSImageRep *representation = [[[document image] representations] firstObject];
+  [super inspectDocument: document];
+  NSImageRep *representation =
+      [[[document image] representations] firstObject];
   NSString *dimensions = @"Unavailable";
   if ([representation pixelsWide] > 0 && [representation pixelsHigh] > 0)
-    dimensions = [NSString stringWithFormat:@"%ld × %ld pixels",
-      (long)[representation pixelsWide], (long)[representation pixelsHigh]];
-  NSString *depth = [representation bitsPerSample] > 0
-    ? [NSString stringWithFormat:@"%ld bits per sample", (long)[representation bitsPerSample]]
-    : @"Unavailable";
+    dimensions = [NSString stringWithFormat: @"%ld × %ld pixels",
+                                            (long)[representation pixelsWide],
+                                            (long)[representation pixelsHigh]];
+  NSString *depth =
+      [representation bitsPerSample] > 0
+          ? [NSString stringWithFormat: @"%ld bits per sample",
+                                       (long)[representation bitsPerSample]]
+          : @"Unavailable";
   NSString *colorSpace = [representation colorSpaceName];
-  NSString *details = [NSString stringWithFormat:
-    @"%@\n\nDimensions\n%@\n\nColor Space\n%@\n\nColor Depth\n%@\n\nTransparency\n%@\n\nEditing\nRead-only preview",
-    [_details string], dimensions, colorSpace ? colorSpace : @"Unavailable",
-    depth, [representation hasAlpha] ? @"Yes" : @"No"];
-  [_details setString:details];
+  NSString *details = [NSString
+      stringWithFormat:
+          @"%@\n\nDimensions\n%@\n\nColor Space\n%@\n\nColor Depth\n%@\n\nTransparency\n%@\n\nEditing\nRead-only preview",
+          [_details string], dimensions,
+          colorSpace ? colorSpace : @"Unavailable", depth,
+          [representation hasAlpha] ? @"Yes" : @"No"];
+  [_details setString: details];
 }
 @end

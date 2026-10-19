@@ -30,12 +30,12 @@
   NSMutableDictionary *_classes;
   NSMutableArray *_bundles;
 }
-+ (YCodeDebuggerRegistry *)sharedRegistry;
-- (id)initWithSearchPaths:(NSArray *)paths;
-- (BOOL)loadBundleAtPath:(NSString *)path;
-- (NSArray *)backendIdentifiers;
++ (YCodeDebuggerRegistry *) sharedRegistry;
+- (id) initWithSearchPaths: (NSArray *)paths;
+- (BOOL) loadBundleAtPath: (NSString *)path;
+- (NSArray *) backendIdentifiers;
 /* Returns a retained session, or nil. Nil identifier uses user default
  * YCodeDebuggerBackend, then gdb. Unknown explicit identifiers never fall back. */
-- (id<YCodeDebuggerBackend>)newBackendWithIdentifier:(NSString *)identifier;
+- (id<YCodeDebuggerBackend>) newBackendWithIdentifier: (NSString *)identifier;
 @end
 #endif

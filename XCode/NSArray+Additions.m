@@ -33,7 +33,7 @@
   NSString *result = @"";
   NSEnumerator *en = [self objectEnumerator];
   id object = nil;
-  while((object = [en nextObject]) != nil)
+  while ((object = [en nextObject]) != nil)
     {
       NSString *obj = [separator stringByAppendingString: object];
       result = [result stringByAppendingString: obj];
@@ -69,7 +69,7 @@
   NSEnumerator *en = [self objectEnumerator];
   NSString *obj = nil;
   NSMutableArray *result = [NSMutableArray arrayWithCapacity: [self count]];
-  
+
   while ((obj = [en nextObject]) != nil)
     {
       NSString *s = [obj stringByAddingQuotationMarks];
@@ -79,30 +79,33 @@
   return [NSArray arrayWithArray: result];
 }
 
-
 - (NSString *) arrayToLinkList
 {
   NSString *result = @"";
   NSEnumerator *en = [self objectEnumerator];
   NSString *aname = nil;
 
-  while((aname = [en nextObject]) != nil)
+  while ((aname = [en nextObject]) != nil)
     {
       if ([aname isEqualToString: [self firstObject]] == YES)
         {
-          result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+          result = [result
+              stringByAppendingString: [NSString
+                                          stringWithFormat: @"%@ ", aname]];
         }
       else
         {
-          result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+          result = [result
+              stringByAppendingString: [NSString
+                                          stringWithFormat: @"\t%@ ", aname]];
         }
-      
+
       if ([aname isEqualToString: [self lastObject]] == NO)
         {
           result = [result stringByAppendingString: @"\\\n"];
         }
     }
-  
+
   return result;
 }
 
@@ -112,15 +115,17 @@
   NSEnumerator *en = [self objectEnumerator];
   NSString *aname = nil;
 
-  while((aname = [en nextObject]) != nil)
+  while ((aname = [en nextObject]) != nil)
     {
-      result = [result stringByAppendingString: [NSString stringWithFormat: @"\t-I./%@ ", aname]];
+      result = [result
+          stringByAppendingString: [NSString
+                                      stringWithFormat: @"\t-I./%@ ", aname]];
       if ([aname isEqualToString: [self lastObject]] == NO)
         {
           result = [result stringByAppendingString: @"\\\n"];
         }
     }
-  
+
   return result;
 }
 
@@ -129,10 +134,10 @@
   NSString *result = @"";
   NSEnumerator *en = [self objectEnumerator];
   id o = nil;
-  
-  while((o = [en nextObject]) != nil)
+
+  while ((o = [en nextObject]) != nil)
     {
-      NSString *aname = nil;          
+      NSString *aname = nil;
       if ([o isKindOfClass: [NSString class]])
         {
           aname = o;
@@ -148,20 +153,24 @@
         {
           if ([aname isEqualToString: [self firstObject]] == YES)
             {
-              result = [result stringByAppendingString: [NSString stringWithFormat: @"%@ ", aname]];
+              result = [result
+                  stringByAppendingString: [NSString
+                                              stringWithFormat: @"%@ ", aname]];
             }
           else
             {
-              result = [result stringByAppendingString: [NSString stringWithFormat: @"\t%@ ", aname]];
+              result = [result
+                  stringByAppendingString: [NSString stringWithFormat: @"\t%@ ",
+                                                                     aname]];
             }
-          
+
           if ([aname isEqualToString: [self lastObject]] == NO)
             {
               result = [result stringByAppendingString: @"\\\n"];
             }
         }
     }
-  
+
   return result;
 }
 

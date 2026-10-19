@@ -20,7 +20,7 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ 
+*/
 
 #import <Foundation/Foundation.h>
 
@@ -31,36 +31,36 @@
 /* Darwin frameworks must obtain the live environment through crt_externs. */
 #ifdef __APPLE__
 #include <crt_externs.h>
-#define GSXCEnvironment() (*_NSGetEnviron())
+#define GSXCEnvironment() (*_NSGetEnviron ())
 #else
 extern char **environ;
 #define GSXCEnvironment() environ
 #endif
 
 #ifndef ASSIGN
-#define ASSIGN(object, value) \
-  do \
-    { \
-      id gsxcNewValue = (id)(value); \
-      id gsxcOldValue = (id)(object); \
-      if (gsxcNewValue != gsxcOldValue) \
-        { \
-          (object) = [gsxcNewValue retain]; \
-          [gsxcOldValue release]; \
-        } \
-    } \
+#define ASSIGN(object, value)                                                 \
+  do                                                                          \
+    {                                                                         \
+      id gsxcNewValue = (id)(value);                                          \
+      id gsxcOldValue = (id)(object);                                         \
+      if (gsxcNewValue != gsxcOldValue)                                       \
+        {                                                                     \
+          (object) = [gsxcNewValue retain];                                   \
+          [gsxcOldValue release];                                             \
+        }                                                                     \
+    }                                                                         \
   while (0)
 #endif
 
 #ifndef ASSIGNCOPY
-#define ASSIGNCOPY(object, value) \
-  do \
-    { \
-      id gsxcNewValue = [(id)(value) copy]; \
-      id gsxcOldValue = (id)(object); \
-      (object) = gsxcNewValue; \
-      [gsxcOldValue release]; \
-    } \
+#define ASSIGNCOPY(object, value)                                             \
+  do                                                                          \
+    {                                                                         \
+      id gsxcNewValue = [(id)(value) copy];                                   \
+      id gsxcOldValue = (id)(object);                                         \
+      (object) = gsxcNewValue;                                                \
+      [gsxcOldValue release];                                                 \
+    }                                                                         \
   while (0)
 #endif
 
@@ -73,24 +73,24 @@ extern char **environ;
 #endif
 
 #ifndef DESTROY
-#define DESTROY(object) \
-  do \
-    { \
-      [(object) release]; \
-      (object) = nil; \
-    } \
+#define DESTROY(object)                                                       \
+  do                                                                          \
+    {                                                                         \
+      [(object) release];                                                     \
+      (object) = nil;                                                         \
+    }                                                                         \
   while (0)
 #endif
 
 #ifndef NSDebugLog
 #ifdef DEBUG
-#define NSDebugLog(format, ...) NSLog(format, ##__VA_ARGS__)
+#define NSDebugLog(format, ...) NSLog (format, ##__VA_ARGS__)
 #else
 #define NSDebugLog(format, ...)
 #endif
 #endif
 
-// product types...  
+// product types...
 #define LIBRARY_TYPE @"com.apple.product-type.library.static"
 #define FRAMEWORK_TYPE @"com.apple.product-type.framework"
 #define DYNAMIC_LIBRARY_TYPE @"com.apple.product-type.library.dynamic"

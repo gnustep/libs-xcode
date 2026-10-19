@@ -30,19 +30,17 @@
 
 @interface YCodeDocumentController : NSDocumentController
 #ifndef GNUSTEP
-    <NSMenuDelegate>
+                                     <NSMenuDelegate>
 #endif
 {
-
 }
 
 /** A menu backed by the document controller's persistent recent-project history. */
-- (NSMenu *)recentDocumentsMenu;
-- (BOOL)openWorkspaceFile:(NSString *)path error:(NSError **)error;
-- (IBAction)openRecentProject:(id)sender;
-- (IBAction)clearRecentProjects:(id)sender;
+- (NSMenu *) recentDocumentsMenu;
+- (BOOL) openWorkspaceFile: (NSString *)path error: (NSError **)error;
+- (IBAction) openRecentProject: (id)sender;
+- (IBAction) clearRecentProjects: (id)sender;
 
 @end
 
 #endif // _YCODEDOCUMENTCONTROLLER_H_
-

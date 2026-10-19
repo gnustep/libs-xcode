@@ -39,12 +39,12 @@
 
 - (void) dealloc
 {
-  RELEASE(_sourceTree);
-  RELEASE(_children);
-  RELEASE(_name);
-  RELEASE(_tabWidth);
-  RELEASE(_usesTabs);
-  RELEASE(_path);
+  RELEASE (_sourceTree);
+  RELEASE (_children);
+  RELEASE (_name);
+  RELEASE (_tabWidth);
+  RELEASE (_usesTabs);
+  RELEASE (_path);
 
   [super dealloc];
 }
@@ -57,7 +57,7 @@
 
 - (void) setSourceTree: (NSString *)object; // setter
 {
-  ASSIGN(_sourceTree, object);
+  ASSIGN (_sourceTree, object);
 }
 
 - (NSMutableArray *) children // getter
@@ -67,7 +67,7 @@
 
 - (void) setChildren: (NSMutableArray *)object; // setter
 {
-  ASSIGN(_children, object);
+  ASSIGN (_children, object);
 }
 
 - (NSString *) name // getter
@@ -77,7 +77,7 @@
 
 - (void) setName: (NSString *)object; // setter
 {
-  ASSIGN(_name, object);
+  ASSIGN (_name, object);
 }
 
 - (NSString *) path // getter
@@ -87,13 +87,13 @@
 
 - (void) setPath: (NSString *)object; // setter
 {
-  ASSIGN(_path, object);
+  ASSIGN (_path, object);
 }
 
 - (NSString *) description
 {
   return [NSString stringWithFormat: @"<%@ - name = %@, path = %@>",
-		   [super description], _name, _path];
+                                    [super description], _name, _path];
 }
 
 @end

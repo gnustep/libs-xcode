@@ -42,7 +42,7 @@
  * Initializes the build configuration with the given name and build settings.
  */
 - (id) initWithName: (NSString *)theName
-                buildSettings: (NSMutableDictionary *)settings;
+     buildSettings: (NSMutableDictionary *)settings;
 
 /**
  * Initializes the build configuration with the given name.

@@ -26,5 +26,5 @@
 #define _YCODECONTROLICONS_H_
 #import <AppKit/AppKit.h>
 /** Shared, resolution-independent drawing for toolbar and menu controls. */
-NSImage *YCodeControlIcon(NSString *name, CGFloat size);
+NSImage *YCodeControlIcon (NSString *name, CGFloat size);
 #endif

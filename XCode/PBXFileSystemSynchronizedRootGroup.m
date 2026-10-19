@@ -35,7 +35,7 @@
 {
   // _target is not retained, so just clear the reference
   _target = nil;
-  
+
   [super dealloc];
 }
 
@@ -44,54 +44,56 @@
   NSFileManager *fm = [NSFileManager defaultManager];
   NSString *groupPath = [self path];
   NSMutableArray *result = [NSMutableArray array];
-  
+
   if (groupPath == nil)
     {
       return result;
     }
-    
+
   NSDirectoryEnumerator *den = [fm enumeratorAtPath: groupPath];
   NSString *filePath = nil;
   NSMutableArray *fp = [NSMutableArray array];
-  
+
   if (den == nil)
     {
-      NSLog(@"Warning: Could not enumerate path '%@' for PBXFileSystemSynchronizedRootGroup", groupPath);
+      NSLog (
+          @"Warning: Could not enumerate path '%@' for PBXFileSystemSynchronizedRootGroup",
+          groupPath);
       return result;
     }
-  
+
   while ((filePath = [den nextObject]) != nil)
     {
       BOOL isDir = NO;
       NSString *fullPath = [groupPath stringByAppendingPathComponent: filePath];
-      
+
       if ([fm fileExistsAtPath: fullPath isDirectory: &isDir] && isDir == NO)
-	{
-	  PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
-	  PBXFileReference *fileRef = nil;
-	  NSString *fpc = [filePath firstPathComponent];
-	  NSString *path = filePath;
+        {
+          PBXBuildFile *buildFile = [[PBXBuildFile alloc] init];
+          PBXFileReference *fileRef = nil;
+          NSString *fpc = [filePath firstPathComponent];
+          NSString *path = filePath;
 
-	  AUTORELEASE(buildFile);
-	  
-	  if ([[fpc pathExtension] isEqualToString: @"xcassets"])
-	    {
-	      path = fpc;
-	    }
+          AUTORELEASE (buildFile);
 
-	  if ([fp containsObject: path] == NO)
-	    {
-	      fileRef = [[PBXFileReference alloc] initWithPath: path];
-	      
-	      // NSLog(@"fileRef = %@", fileRef);
-	      AUTORELEASE(fileRef);
-	      [buildFile setFileRef: fileRef];
-	      [result addObject: buildFile];
-	      [fp addObject: path];
-	    }
-	}
+          if ([[fpc pathExtension] isEqualToString: @"xcassets"])
+            {
+              path = fpc;
+            }
+
+          if ([fp containsObject: path] == NO)
+            {
+              fileRef = [[PBXFileReference alloc] initWithPath: path];
+
+              // NSLog(@"fileRef = %@", fileRef);
+              AUTORELEASE (fileRef);
+              [buildFile setFileRef: fileRef];
+              [result addObject: buildFile];
+              [fp addObject: path];
+            }
+        }
     }
-  
+
   // NSLog(@"result = %@", result);
 
   return result;
@@ -125,7 +127,7 @@
   NSEnumerator *en = [children objectEnumerator];
   PBXBuildFile *buildFile = nil;
   BOOL result = YES;
-  
+
   while ((buildFile = [en nextObject]) != nil && result)
     {
       if (_target != nil)
@@ -134,7 +136,7 @@
         }
       result = [buildFile build];
     }
-  
+
   return result;
 }
 
@@ -144,9 +146,12 @@
   NSEnumerator *en = [children objectEnumerator];
   PBXBuildFile *buildFile = nil;
   BOOL result = YES;
-  
-  xcputs([[NSString stringWithFormat: @"=== Processing PBXFileSystemSynchronizedRootGroup: %@", [self path]] cString]);
-  
+
+  xcputs (
+      [[NSString stringWithFormat:
+                     @"=== Processing PBXFileSystemSynchronizedRootGroup: %@",
+                     [self path]] cString]);
+
   while ((buildFile = [en nextObject]) != nil && result)
     {
       if (_target != nil)
@@ -155,9 +160,11 @@
         }
       result = [buildFile generate];
     }
-  
-  xcputs([[NSString stringWithFormat: @"=== Completed PBXFileSystemSynchronizedRootGroup: %@", [self path]] cString]);
-  
+
+  xcputs ([[NSString
+      stringWithFormat: @"=== Completed PBXFileSystemSynchronizedRootGroup: %@",
+                       [self path]] cString]);
+
   return result;
 }
 

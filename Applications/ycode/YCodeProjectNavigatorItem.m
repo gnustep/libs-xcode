@@ -28,249 +28,273 @@
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXGroup.h>
 
-static NSImage *YCodeProjectCenterIcon(NSString *name)
+static NSImage *
+YCodeProjectCenterIcon (NSString *name)
 {
-    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"tiff"
-        inDirectory:@"ProjectCenterIcons"];
-    return path ? AUTORELEASE([[NSImage alloc] initWithContentsOfFile:path]) : nil;
+  NSString *path =
+      [[NSBundle mainBundle] pathForResource: name
+                                      ofType: @"tiff"
+                                 inDirectory: @"ProjectCenterIcons"];
+  return path ? AUTORELEASE ([[NSImage alloc] initWithContentsOfFile: path])
+              : nil;
 }
 
 @implementation YCodeProjectNavigatorItem
 
-- (id)initWithRepresentedObject:(id)object type:(YCodeNavigatorItemType)type
+- (id) initWithRepresentedObject: (id)object type: (YCodeNavigatorItemType)type
 {
-    self = [super init];
-    if (self) {
-        _representedObject = [object retain];
-        _itemType = type;
-        _children = [[NSMutableArray alloc] init];
-        _isExpanded = NO;
-        _isLeaf = (type == YCodeNavigatorItemTypeFile);
-        
-        [self updateDisplayProperties];
+  self = [super init];
+  if (self)
+    {
+      _representedObject = [object retain];
+      _itemType = type;
+      _children = [[NSMutableArray alloc] init];
+      _isExpanded = NO;
+      _isLeaf = (type == YCodeNavigatorItemTypeFile);
+
+      [self updateDisplayProperties];
     }
-    return self;
+  return self;
 }
 
-- (void)dealloc
+- (void) dealloc
 {
-    RELEASE(_representedObject);
-    RELEASE(_children);
-    RELEASE(_displayName);
-    RELEASE(_icon);
-    [super dealloc];
+  RELEASE (_representedObject);
+  RELEASE (_children);
+  RELEASE (_displayName);
+  RELEASE (_icon);
+  [super dealloc];
 }
 
-- (void)updateDisplayProperties
+- (void) updateDisplayProperties
 {
-    switch (_itemType) {
-        case YCodeNavigatorItemTypeProject:
-            if ([_representedObject respondsToSelector:@selector(name)]) {
-                [self setDisplayName:[_representedObject name]];
-            } else {
-                [self setDisplayName:@"Project"];
-            }
-            [self setIcon:YCodeProjectCenterIcon(@"FileProject")];
-            break;
-            
-        case YCodeNavigatorItemTypeGroup:
-            if ([_representedObject respondsToSelector:@selector(name)]) {
-                NSString *groupName = [_representedObject name];
-                [self setDisplayName:groupName ? groupName : @"Group"];
-            } else {
-                [self setDisplayName:@"Group"];
-            }
-            [self setIcon:[[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode('fldr')]];
-            break;
-            
-        case YCodeNavigatorItemTypeFile:
-            if ([_representedObject respondsToSelector:@selector(path)]) {
-                NSString *path = [_representedObject path];
-                [self setDisplayName:[path lastPathComponent]];
-                [self setIcon:[self iconForFileExtension:[path pathExtension]]];
-            } else {
-                [self setDisplayName:@"File"];
-                [self setIcon:[self iconForFileExtension:@""]];
-            }
-            break;
-            
-        case YCodeNavigatorItemTypeTarget:
-            if ([_representedObject respondsToSelector:@selector(name)]) {
-                [self setDisplayName:[_representedObject name]];
-            } else {
-                [self setDisplayName:@"Target"];
-            }
-            [self setIcon:[NSImage imageNamed:@"target"]];
-            break;
-            
-        case YCodeNavigatorItemTypeBuildPhase:
-            [self setDisplayName:@"Build Phase"];
-            [self setIcon:[NSImage imageNamed:@"buildphase"]];
-            break;
+  switch (_itemType)
+    {
+    case YCodeNavigatorItemTypeProject:
+      if ([_representedObject respondsToSelector: @selector (name)])
+        {
+          [self setDisplayName: [_representedObject name]];
+        }
+      else
+        {
+          [self setDisplayName: @"Project"];
+        }
+      [self setIcon: YCodeProjectCenterIcon (@"FileProject")];
+      break;
+
+    case YCodeNavigatorItemTypeGroup:
+      if ([_representedObject respondsToSelector: @selector (name)])
+        {
+          NSString *groupName = [_representedObject name];
+          [self setDisplayName: groupName ? groupName : @"Group"];
+        }
+      else
+        {
+          [self setDisplayName: @"Group"];
+        }
+      [self setIcon: [[NSWorkspace sharedWorkspace]
+                        iconForFileType: NSFileTypeForHFSTypeCode ('fldr')]];
+      break;
+
+    case YCodeNavigatorItemTypeFile:
+      if ([_representedObject respondsToSelector: @selector (path)])
+        {
+          NSString *path = [_representedObject path];
+          [self setDisplayName: [path lastPathComponent]];
+          [self setIcon: [self iconForFileExtension: [path pathExtension]]];
+        }
+      else
+        {
+          [self setDisplayName: @"File"];
+          [self setIcon: [self iconForFileExtension: @""]];
+        }
+      break;
+
+    case YCodeNavigatorItemTypeTarget:
+      if ([_representedObject respondsToSelector: @selector (name)])
+        {
+          [self setDisplayName: [_representedObject name]];
+        }
+      else
+        {
+          [self setDisplayName: @"Target"];
+        }
+      [self setIcon: [NSImage imageNamed: @"target"]];
+      break;
+
+    case YCodeNavigatorItemTypeBuildPhase:
+      [self setDisplayName: @"Build Phase"];
+      [self setIcon: [NSImage imageNamed: @"buildphase"]];
+      break;
     }
 }
 
-- (NSImage *)iconForFileExtension:(NSString *)extension
+- (NSImage *) iconForFileExtension: (NSString *)extension
 {
-    NSString *ext = [extension lowercaseString];
-    if ([YCodeEditorDocument isSoundFilePath:[@"sound." stringByAppendingString:ext ?: @""]])
-        return YCodeControlIcon(@"sound", 16);
-    NSString *name = nil;
-    if ([ext isEqualToString:@"m"])
-        name = @"FileM";
-    else if ([ext isEqualToString:@"mm"])
-        name = @"FileMM";
-    else if ([[NSArray arrayWithObjects:@"h", @"hh", @"hpp", @"hxx", @"h++", nil]
-        containsObject:ext])
-        name = @"FileH";
-    else if ([[NSArray arrayWithObjects:@"c", @"cc", @"cp", @"cpp", @"cxx", @"c++", nil]
-        containsObject:ext])
-        name = @"FileC";
-    NSImage *image = name ? YCodeProjectCenterIcon(name) : nil;
-    if (!image)
-        image = [[NSWorkspace sharedWorkspace] iconForFileType:ext ? ext : @""];
-    if (!image)
-        image = [[NSWorkspace sharedWorkspace] iconForFileType:@"unknown"];
-    return image;
+  NSString *ext = [extension lowercaseString];
+  if ([YCodeEditorDocument
+          isSoundFilePath: [@"sound." stringByAppendingString: ext ?: @""]])
+    return YCodeControlIcon (@"sound", 16);
+  NSString *name = nil;
+  if ([ext isEqualToString: @"m"])
+    name = @"FileM";
+  else if ([ext isEqualToString: @"mm"])
+    name = @"FileMM";
+  else if ([[NSArray arrayWithObjects: @"h", @"hh", @"hpp", @"hxx", @"h++", nil]
+               containsObject: ext])
+    name = @"FileH";
+  else if ([[NSArray arrayWithObjects: @"c", @"cc", @"cp", @"cpp", @"cxx",
+                                      @"c++", nil] containsObject: ext])
+    name = @"FileC";
+  NSImage *image = name ? YCodeProjectCenterIcon (name) : nil;
+  if (!image)
+    image = [[NSWorkspace sharedWorkspace] iconForFileType: ext ? ext : @""];
+  if (!image)
+    image = [[NSWorkspace sharedWorkspace] iconForFileType: @"unknown"];
+  return image;
 }
 
 #pragma mark - Accessors
 
-- (id)representedObject
+- (id) representedObject
 {
-    return _representedObject;
+  return _representedObject;
 }
 
-- (void)setRepresentedObject:(id)object
+- (void) setRepresentedObject: (id)object
 {
-    ASSIGN(_representedObject, object);
-    [self updateDisplayProperties];
+  ASSIGN (_representedObject, object);
+  [self updateDisplayProperties];
 }
 
-- (YCodeNavigatorItemType)itemType
+- (YCodeNavigatorItemType) itemType
 {
-    return _itemType;
+  return _itemType;
 }
 
-- (void)setItemType:(YCodeNavigatorItemType)type
+- (void) setItemType: (YCodeNavigatorItemType)type
 {
-    _itemType = type;
-    _isLeaf = (type == YCodeNavigatorItemTypeFile);
-    [self updateDisplayProperties];
+  _itemType = type;
+  _isLeaf = (type == YCodeNavigatorItemTypeFile);
+  [self updateDisplayProperties];
 }
 
-- (NSString *)displayName
+- (NSString *) displayName
 {
-    return _displayName;
+  return _displayName;
 }
 
-- (void)setDisplayName:(NSString *)name
+- (void) setDisplayName: (NSString *)name
 {
-    ASSIGN(_displayName, name);
+  ASSIGN (_displayName, name);
 }
 
-- (NSImage *)icon
+- (NSImage *) icon
 {
-    return _icon;
+  return _icon;
 }
 
-- (void)setIcon:(NSImage *)icon
+- (void) setIcon: (NSImage *)icon
 {
-    // Workspace images are shared; resize only our own copy.
-    NSImage *smallIcon = [icon copy];
-    NSSize size = [smallIcon size];
-    if (size.width > 0 && size.height > 0) {
-        CGFloat scale = MIN(16 / size.width, 16 / size.height);
-        [smallIcon setSize:NSMakeSize(size.width * scale, size.height * scale)];
+  // Workspace images are shared; resize only our own copy.
+  NSImage *smallIcon = [icon copy];
+  NSSize size = [smallIcon size];
+  if (size.width > 0 && size.height > 0)
+    {
+      CGFloat scale = MIN (16 / size.width, 16 / size.height);
+      [smallIcon setSize: NSMakeSize (size.width * scale, size.height * scale)];
     }
-    RELEASE(_icon);
-    _icon = smallIcon;
+  RELEASE (_icon);
+  _icon = smallIcon;
 }
 
 #pragma mark - Tree Structure
 
-- (NSArray *)children
+- (NSArray *) children
 {
-    return _children;
+  return _children;
 }
 
-- (void)addChild:(YCodeProjectNavigatorItem *)child
+- (void) addChild: (YCodeProjectNavigatorItem *)child
 {
-    if (child && ![_children containsObject:child]) {
-        [_children addObject:child];
-        [child setParent:self];
+  if (child && ![_children containsObject: child])
+    {
+      [_children addObject: child];
+      [child setParent: self];
     }
 }
 
-- (void)removeChild:(YCodeProjectNavigatorItem *)child
+- (void) removeChild: (YCodeProjectNavigatorItem *)child
 {
-    if ([_children containsObject:child]) {
-        [child setParent:nil];
-        [_children removeObject:child];
+  if ([_children containsObject: child])
+    {
+      [child setParent: nil];
+      [_children removeObject: child];
     }
 }
 
-- (YCodeProjectNavigatorItem *)parent
+- (YCodeProjectNavigatorItem *) parent
 {
-    return _parent;
+  return _parent;
 }
 
-- (void)setParent:(YCodeProjectNavigatorItem *)parent
+- (void) setParent: (YCodeProjectNavigatorItem *)parent
 {
-    _parent = parent; // weak reference to avoid cycles
+  _parent = parent; // weak reference to avoid cycles
 }
 
 #pragma mark - State
 
-- (BOOL)isExpanded
+- (BOOL) isExpanded
 {
-    return _isExpanded;
+  return _isExpanded;
 }
 
-- (void)setExpanded:(BOOL)expanded
+- (void) setExpanded: (BOOL)expanded
 {
-    _isExpanded = expanded;
+  _isExpanded = expanded;
 }
 
-- (BOOL)isLeaf
+- (BOOL) isLeaf
 {
-    return _isLeaf;
+  return _isLeaf;
 }
 
-- (void)setLeaf:(BOOL)leaf
+- (void) setLeaf: (BOOL)leaf
 {
-    _isLeaf = leaf;
+  _isLeaf = leaf;
 }
 
 #pragma mark - Convenience Methods
 
-- (BOOL)isGroup
+- (BOOL) isGroup
 {
-    return _itemType == YCodeNavigatorItemTypeGroup;
+  return _itemType == YCodeNavigatorItemTypeGroup;
 }
 
-- (BOOL)isFile
+- (BOOL) isFile
 {
-    return _itemType == YCodeNavigatorItemTypeFile;
+  return _itemType == YCodeNavigatorItemTypeFile;
 }
 
-- (BOOL)isProject
+- (BOOL) isProject
 {
-    return _itemType == YCodeNavigatorItemTypeProject;
+  return _itemType == YCodeNavigatorItemTypeProject;
 }
 
-- (BOOL)isTarget
+- (BOOL) isTarget
 {
-    return _itemType == YCodeNavigatorItemTypeTarget;
+  return _itemType == YCodeNavigatorItemTypeTarget;
 }
 
-- (NSString *)filePath
+- (NSString *) filePath
 {
-    if (_itemType == YCodeNavigatorItemTypeFile && 
-        [_representedObject respondsToSelector:@selector(path)]) {
-        return [_representedObject path];
+  if (_itemType == YCodeNavigatorItemTypeFile &&
+      [_representedObject respondsToSelector: @selector (path)])
+    {
+      return [_representedObject path];
     }
-    return nil;
+  return nil;
 }
 
 @end

@@ -85,12 +85,13 @@
  * Returns the string value for the given environment variable with a default.
  */
 + (NSString *) stringForEnvironmentVariable: (NSString *)v
-                               defaultValue: (NSString *)d;
+                              defaultValue: (NSString *)d;
 
 /**
  * Returns a string with trailing characters from the set trimmed.
  */
-- (NSString *) stringByTrimmingTrailingCharactersInSet: (NSCharacterSet *)characterSet;
+- (NSString *) stringByTrimmingTrailingCharactersInSet:
+    (NSCharacterSet *)characterSet;
 
 /**
  * Returns a string with the path resolved.

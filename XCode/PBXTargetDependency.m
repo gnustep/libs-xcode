@@ -29,9 +29,9 @@
 
 - (void) dealloc
 {
-  RELEASE(_targetProxy);
-  RELEASE(_name);
-  RELEASE(_target);
+  RELEASE (_targetProxy);
+  RELEASE (_name);
+  RELEASE (_target);
 
   [super dealloc];
 }
@@ -44,7 +44,7 @@
 
 - (void) setTargetProxy: (PBXContainerItemProxy *)object; // setter
 {
-  ASSIGN(_targetProxy,object);
+  ASSIGN (_targetProxy, object);
 }
 
 - (NSString *) name // getter
@@ -54,10 +54,10 @@
 
 - (void) setName: (NSString *)object; // setter
 {
-  ASSIGN(_name,object);
+  ASSIGN (_name, object);
 }
 
-- (PBXNativeTarget *)target
+- (PBXNativeTarget *) target
 {
   return _target;
 }

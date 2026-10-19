@@ -31,5 +31,4 @@
 /**
  * Sets an environment variable.
  */
-int setenv(const char *key, const char *value, int overwrite);
-
+int setenv (const char *key, const char *value, int overwrite);

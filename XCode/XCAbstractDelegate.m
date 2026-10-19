@@ -33,14 +33,14 @@
 - (void) postMessage: (NSString *)format, ...
 {
   va_list args;
-  va_start(args, format);
+  va_start (args, format);
 
-  NSString *formattedString = [[NSString alloc] initWithFormat: format arguments: args];
-  AUTORELEASE(formattedString);
-  va_end(args);
-  
-  xcput_string(formattedString);
+  NSString *formattedString = [[NSString alloc] initWithFormat: format
+                                                     arguments: args];
+  AUTORELEASE (formattedString);
+  va_end (args);
+
+  xcput_string (formattedString);
 }
 
 @end
-

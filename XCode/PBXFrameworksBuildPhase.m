@@ -40,21 +40,24 @@
 - (NSString *) _gsConfigString
 {
   NSString *configString = nil;
-  
+
   configString = @"gnustep-config";
-    
+
   return configString;
 }
 
 - (NSString *) linkerForBuild
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  BOOL linkWithCpp = [[context objectForKey: @"LINK_WITH_CPP"] isEqualToString: @"YES"];
-  NSString *compiler = [NSString stringWithFormat: @"`%@ --variable=CC`", [self _gsConfigString]];
+  BOOL linkWithCpp =
+      [[context objectForKey: @"LINK_WITH_CPP"] isEqualToString: @"YES"];
+  NSString *compiler = [NSString
+      stringWithFormat: @"`%@ --variable=CC`", [self _gsConfigString]];
 
   if (linkWithCpp)
     {
-      compiler = [NSString stringWithFormat: @"`%@ --variable=CXX`", [self _gsConfigString]];
+      compiler = [NSString
+          stringWithFormat: @"`%@ --variable=CXX`", [self _gsConfigString]];
     }
 
   return compiler;
@@ -62,8 +65,8 @@
 
 - (NSString *) processOutputFilesString
 {
-  NSString *outputFiles = [[GSXCBuildContext sharedBuildContext] objectForKey: 
-								   @"OUTPUT_FILES"];
+  NSString *outputFiles =
+      [[GSXCBuildContext sharedBuildContext] objectForKey: @"OUTPUT_FILES"];
   return outputFiles;
 }
 
@@ -72,220 +75,259 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
   NSString *outputDir = [[context objectForKey: @"PROJECT_ROOT"]
-			  stringByAppendingPathComponent: @"derived_src"];
-  NSString *fileName = [NSString stringWithFormat: @"NSFramework_%@.m",executableName];
+      stringByAppendingPathComponent: @"derived_src"];
+  NSString *fileName =
+      [NSString stringWithFormat: @"NSFramework_%@.m", executableName];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: fileName];
   NSString *buildDir = [context objectForKey: @"TARGET_BUILD_DIR"];
   NSString *objDir = [context objectForKey: @"BUILT_PRODUCTS_DIR"];
   NSString *scriptPath = [[NSBundle bundleForClass: [self class]]
-			   pathForResource: @"create-dummy-class" ofType: @"sh"];
+      pathForResource: @"create-dummy-class"
+               ofType: @"sh"];
   NSString *of = [self processOutputFilesString];
-  NSString *outputFiles = (of == nil)?@"":of;
-  NSString *files = [outputFiles stringByReplacingOccurrencesOfString: @"'" withString: @""];
-  
+  NSString *outputFiles = (of == nil) ? @"" : of;
+  NSString *files = [outputFiles stringByReplacingOccurrencesOfString: @"'"
+                                                           withString: @""];
+
   objDir = (objDir == nil) ? buildDir : objDir;
 
   BOOL f = NO;
-  NSString *classesCommand = [NSString stringWithFormat: @"%@ '%@' '%@'", scriptPath, files, executableName];  
+  NSString *classesCommand = [NSString
+      stringWithFormat: @"%@ '%@' '%@'", scriptPath, files, executableName];
   // NSLog(@"classesCommand = %@\n", classesCommand); // [context currentContext]);
-  f = xcsystem(classesCommand) == 0;
+  f = xcsystem (classesCommand) == 0;
 
-  if( f )
+  if (f)
     {
-      NSString *compiler = nil; 
+      NSString *compiler = nil;
       NSString *buildPath = outputPath;
-      NSString *objPath = [objDir stringByAppendingPathComponent: [fileName stringByAppendingString: @".o"]];
-      if([compiler isEqualToString: @""] || compiler == nil)
-	{
-	  compiler = [self linkerForBuild]; 
-	}
+      NSString *objPath = [objDir
+          stringByAppendingPathComponent: [fileName
+                                             stringByAppendingString: @".o"]];
+      if ([compiler isEqualToString: @""] || compiler == nil)
+        {
+          compiler = [self linkerForBuild];
+        }
 
-      NSString *configString = [context objectForKey: @"CONFIG_STRING"]; 
+      NSString *configString = [context objectForKey: @"CONFIG_STRING"];
       NSString *buildTemplate = @"%@ %@ -c %@ -o %@";
-      NSString *buildCommand = [NSString stringWithFormat: buildTemplate, 
-					 compiler,
-					 [buildPath stringByEscapingSpecialCharacters],
-					 configString,
-					 [objPath stringByEscapingSpecialCharacters]];
+      NSString *buildCommand = [NSString
+          stringWithFormat: buildTemplate, compiler,
+                           [buildPath stringByEscapingSpecialCharacters],
+                           configString,
+                           [objPath stringByEscapingSpecialCharacters]];
       NSString *of = [self processOutputFilesString];
-      NSString *outputFiles = (of == nil)?@"":of;
+      NSString *outputFiles = (of == nil) ? @"" : of;
       //NSLog(@"\t%@ %@",buildCommand, outputFiles);
-      BOOL success = xcsystem(buildCommand) == 0;
+      BOOL success = xcsystem (buildCommand) == 0;
       if (success)
-	{
-	  outputFiles = [outputFiles stringByAppendingString: [NSString stringWithFormat: @" %@", objPath]];
-	  [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
-	}
+        {
+          outputFiles = [outputFiles
+              stringByAppendingString: [NSString
+                                          stringWithFormat: @" %@", objPath]];
+          [context setObject: outputFiles forKey: @"OUTPUT_FILES"];
+        }
       else
-	{
-	  NSLog(@"** build of framework dummy class failed.");
-	}
+        {
+          NSLog (@"** build of framework dummy class failed.");
+        }
     }
   else
     {
-      NSLog(@"** failed to run dummy class generation script");
+      NSLog (@"** failed to run dummy class generation script");
     }
 }
 
-- (NSString *) frameworkLinkString: (NSString*)framework
+- (NSString *) frameworkLinkString: (NSString *)framework
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *path = [[NSBundle bundleForClass: [self class]]
-                     pathForResource: @"Framework-mapping" ofType: @"plist"];
-  NSDictionary *propList = [[NSString stringWithContentsOfFile: path] propertyList];
+      pathForResource: @"Framework-mapping"
+               ofType: @"plist"];
+  NSDictionary *propList =
+      [[NSString stringWithContentsOfFile: path] propertyList];
   NSMutableArray *ignored = [[propList objectForKey: @"Ignored"] mutableCopy];
-  NSMutableDictionary *mapped = [[propList objectForKey: @"Mapped"] mutableCopy];
-  NSDictionary *configDict = [context configForTargetName: [[self target] name]];
+  NSMutableDictionary *mapped =
+      [[propList objectForKey: @"Mapped"] mutableCopy];
+  NSDictionary *configDict =
+      [context configForTargetName: [[self target] name]];
   NSString *result = nil;
   NSString *fw = [framework copy];
 
   if ([fw hasPrefix: @"lib"])
     {
-      fw = [fw stringByReplacingCharactersInRange: NSMakeRange(0,3)
-				       withString: @""];
+      fw = [fw stringByReplacingCharactersInRange: NSMakeRange (0, 3)
+                                       withString: @""];
     }
-  
-  NSDebugLog(@"\t* config = %@", configDict);
-  NSDebugLog(@"\t* target = %@", [[self target] name]);
-  
+
+  NSDebugLog (@"\t* config = %@", configDict);
+  NSDebugLog (@"\t* target = %@", [[self target] name]);
+
   if ([configDict objectForKey: @"mapped"] != nil)
     {
       [mapped addEntriesFromDictionary: [configDict objectForKey: @"mapped"]];
     }
-  
+
   if ([configDict objectForKey: @"ignored"] != nil)
     {
       [ignored addObjectsFromArray: [configDict objectForKey: @"ignored"]];
     }
-  
-  NSDebugLog(@"path = %@", path);
-  NSDebugLog(@"%@", fw);
+
+  NSDebugLog (@"path = %@", path);
+  NSDebugLog (@"%@", fw);
 
   if ([ignored containsObject: fw])
     {
-      xcprintf("\t- Ignored: %s\n",[fw cString]);
+      xcprintf ("\t- Ignored: %s\n", [fw cString]);
       return @"";
     }
   else
     {
-      NSDebugLog(@"%@ not found in %@", fw, ignored);
+      NSDebugLog (@"%@ not found in %@", fw, ignored);
     }
-  
+
   result = [mapped objectForKey: fw];
   if (result == nil)
     {
-      result =  [NSString stringWithFormat: @"-l%@ ", fw];
-      xcprintf("\t* Linking: %s\n", [result cString]);
+      result = [NSString stringWithFormat: @"-l%@ ", fw];
+      xcprintf ("\t* Linking: %s\n", [result cString]);
     }
   else
     {
       result = [result stringByAppendingString: @" "];
-      xcprintf("\t+ Remapped: %s -> %s\n", [fw cString], [result cString]);
+      xcprintf ("\t+ Remapped: %s -> %s\n", [fw cString], [result cString]);
     }
-  
+
   return result;
-} 
+}
 
 - (NSString *) linkString
 {
   NSString *cfgString = [self _gsConfigString];
-  NSString *systemLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
-  NSString *localLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
-  NSString *userLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
-  NSString *buildDir = [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR" defaultValue: @"build"];
-  NSString *uninstalledProductsDir = [buildDir stringByAppendingPathComponent: @"Products"];
-  NSString *linkString = [NSString stringWithFormat: @"-L/usr/local/lib -L/opt/local/lib -L%@ -L%@ -L%@ ",
-				   userLibDir,
-				   localLibDir,
-				   systemLibDir];;
+  NSString *systemLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
+  NSString *localLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
+  NSString *userLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
+  NSString *buildDir =
+      [NSString stringForEnvironmentVariable: @"TARGET_BUILD_DIR"
+                                defaultValue: @"build"];
+  NSString *uninstalledProductsDir =
+      [buildDir stringByAppendingPathComponent: @"Products"];
+  NSString *linkString = [NSString
+      stringWithFormat: @"-L/usr/local/lib -L/opt/local/lib -L%@ -L%@ -L%@ ",
+                       userLibDir, localLibDir, systemLibDir];
+  ;
   NSFileManager *manager = [NSFileManager defaultManager];
-  NSDirectoryEnumerator *dirEnumerator = [manager enumeratorAtPath:uninstalledProductsDir];
+  NSDirectoryEnumerator *dirEnumerator =
+      [manager enumeratorAtPath: uninstalledProductsDir];
   NSEnumerator *en = [_files objectEnumerator];
   id file = nil;
   NSString *lpath = nil;
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  NSDictionary *configDict = [context configForTargetName: [[self target] name]];
+  NSDictionary *configDict =
+      [context configForTargetName: [[self target] name]];
   NSArray *linkerPaths = [configDict objectForKey: @"linkerPaths"];
   NSString *wsLink = [context objectForKey: @"WORKSPACE_LINK_LINE"];
   NSString *wsLibs = [context objectForKey: @"WORKSPACE_LIBS_LINE"];
-  
+
   // If the workspace link string exists, add it...
   if (wsLink != nil)
     {
       linkString = [linkString stringByAppendingString: wsLink];
-      NSDebugLog(@"linkString = %@", linkString);
+      NSDebugLog (@"linkString = %@", linkString);
     }
-  
+
   if (wsLibs != nil)
     {
       linkString = [linkString stringByAppendingString: wsLibs];
-      xcprintf("\t* Linking from Workspace: %s\n", [wsLibs cString]);
-      NSDebugLog(@"linkString = %@", linkString);
+      xcprintf ("\t* Linking from Workspace: %s\n", [wsLibs cString]);
+      NSDebugLog (@"linkString = %@", linkString);
     }
-  
+
   en = [linkerPaths objectEnumerator];
-  while((lpath = [en nextObject]) != nil)
+  while ((lpath = [en nextObject]) != nil)
     {
-      linkString = [linkString stringByAppendingString: [NSString stringWithFormat: @"-L%@ ", lpath]];
+      linkString = [linkString
+          stringByAppendingString: [NSString stringWithFormat: @"-L%@ ", lpath]];
     }
-  
+
   // Other targets' products (e.g. static libraries) live in build/<target>/Products.
-  NSArray *buildSubdirs = [manager contentsOfDirectoryAtPath: @"build" error: NULL];
-  en = [[buildSubdirs sortedArrayUsingSelector: @selector(compare:)] objectEnumerator];
-  while((lpath = [en nextObject]) != nil)
+  NSArray *buildSubdirs = [manager contentsOfDirectoryAtPath: @"build"
+                                                       error: NULL];
+  en = [[buildSubdirs sortedArrayUsingSelector: @selector (compare:)]
+      objectEnumerator];
+  while ((lpath = [en nextObject]) != nil)
     {
       NSString *productsDir = [[@"build" stringByAppendingPathComponent: lpath]
-				stringByAppendingPathComponent: @"Products"];
+          stringByAppendingPathComponent: @"Products"];
       BOOL isDir = NO;
-      if ([manager fileExistsAtPath: productsDir isDirectory: &isDir] && isDir
-	  && [productsDir isEqualToString: uninstalledProductsDir] == NO)
-	{
-	  linkString = [linkString stringByAppendingFormat: @"-L%@ ",
-				   [productsDir stringByEscapingSpecialCharacters]];
-	}
+      if ([manager fileExistsAtPath: productsDir isDirectory: &isDir] && isDir &&
+          [productsDir isEqualToString: uninstalledProductsDir] == NO)
+        {
+          linkString = [linkString
+              stringByAppendingFormat: @"-L%@ ",
+                                      [productsDir
+                                          stringByEscapingSpecialCharacters]];
+        }
     }
 
   en = [_files objectEnumerator];
-  while((file = [en nextObject]) != nil)
+  while ((file = [en nextObject]) != nil)
     {
       PBXFileReference *fileRef = [file fileRef];
-      NSString *name = [[[fileRef path] lastPathComponent] stringByDeletingPathExtension];
-      
-      linkString = [linkString stringByAppendingString: [self frameworkLinkString: name]];
+      NSString *name =
+          [[[fileRef path] lastPathComponent] stringByDeletingPathExtension];
+
+      linkString =
+          [linkString stringByAppendingString: [self frameworkLinkString: name]];
     }
 
   // Find any frameworks and add them to the -L directive...
-  while((file = [dirEnumerator nextObject]) != nil)
+  while ((file = [dirEnumerator nextObject]) != nil)
     {
       NSString *ext = [file pathExtension];
-      if([ext isEqualToString:@"framework"])
-	{
-	  NSString *headerDir = [file stringByAppendingPathComponent:@"Headers"];
-	  linkString = [linkString stringByAppendingString:
-                                [NSString stringWithFormat:@"-I%@ ",
-                                          [uninstalledProductsDir stringByAppendingPathComponent:headerDir]]];
-	  linkString = [linkString stringByAppendingString:
-                                [NSString stringWithFormat:@"-L%@ ",
-                                          [uninstalledProductsDir stringByAppendingPathComponent:file]]];
-	}
+      if ([ext isEqualToString: @"framework"])
+        {
+          NSString *headerDir =
+              [file stringByAppendingPathComponent: @"Headers"];
+          linkString = [linkString
+              stringByAppendingString:
+                  [NSString
+                      stringWithFormat:
+                          @"-I%@ ",
+                          [uninstalledProductsDir
+                              stringByAppendingPathComponent: headerDir]]];
+          linkString = [linkString
+              stringByAppendingString:
+                  [NSString
+                      stringWithFormat:
+                          @"-L%@ ", [uninstalledProductsDir
+                                        stringByAppendingPathComponent: file]]];
+        }
     }
 
   NSArray *otherLDFlags = [context objectForKey: @"OTHER_LDFLAGS"];
-  NSDebugLog(@"OTHER_LDFLAGS = %@", otherLDFlags);
+  NSDebugLog (@"OTHER_LDFLAGS = %@", otherLDFlags);
   en = [otherLDFlags objectEnumerator];
-  while((file = [en nextObject]) != nil)
+  while ((file = [en nextObject]) != nil)
     {
       if ([file isEqualToString: @"-framework"])
         {
           NSString *framework = [en nextObject];
           if (framework == nil)
-            [NSException raise: NSInvalidArgumentException format: @"OTHER_LDFLAGS: -framework requires a name"];
-          linkString = [linkString stringByAppendingString: [self frameworkLinkString: framework]];
+            [NSException raise: NSInvalidArgumentException
+                        format: @"OTHER_LDFLAGS: -framework requires a name"];
+          linkString = [linkString
+              stringByAppendingString: [self frameworkLinkString: framework]];
         }
       else
         {
           // Keep ordinary linker arguments as well as framework declarations.
-          NSString *quoted = [file stringByReplacingOccurrencesOfString: @"'" withString: @"'\"'\"'"];
+          NSString *quoted =
+              [file stringByReplacingOccurrencesOfString: @"'"
+                                              withString: @"'\"'\"'"];
           linkString = [linkString stringByAppendingFormat: @"'%@' ", quoted];
         }
     }
@@ -295,25 +337,26 @@
   if ([[context objectForKey: @"PRODUCT_TYPE"] isEqualToString: TEST_TYPE])
     {
       NSString *testLibrary = [self frameworkLinkString: @"XCTest"];
-      if ([testLibrary length] && [linkString rangeOfString: testLibrary].location == NSNotFound)
+      if ([testLibrary length] &&
+          [linkString rangeOfString: testLibrary].location == NSNotFound)
         linkString = [linkString stringByAppendingString: testLibrary];
     }
 
   // linkString = [linkString stringByAppendingString: @" -lpthread -lobjc -lm "];
   linkString = [linkString stringByAppendingString: @" -lobjc "];
-  
+
   // Do substitutions and additions for buildtool.plist...
   NSDictionary *substitutionList = [configDict objectForKey: @"substitutions"];
   NSArray *additionalFlags = [configDict objectForKey: @"additional"];
   // NSNumber *flag = [configDict objectForKey: @"translateDylibs"];
-  
-  NSDebugLog(@"%@",configDict);
-  NSDebugLog(@"%@", additionalFlags);
+
+  NSDebugLog (@"%@", configDict);
+  NSDebugLog (@"%@", additionalFlags);
   if (additionalFlags != nil)
     {
       [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
     }
-  
+
   // Replace anything that needs substitution... not all libraries on macos map directly...
   en = [[substitutionList allKeys] objectEnumerator];
   id o = nil;
@@ -330,9 +373,9 @@
   while ((o = [en nextObject]) != nil)
     {
       linkString = [linkString stringByAppendingFormat: @" %@ ", o];
-      xcprintf("\t+ Additional: %s\n",[o cString]);
+      xcprintf ("\t+ Additional: %s\n", [o cString]);
     }
-  
+
   return linkString;
 }
 
@@ -341,123 +384,131 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *cfgString = [self _gsConfigString];
 
-  xcputs([[NSString stringWithFormat: @"=== Executing Frameworks / Linking Build Phase (Tool)"] cString]);
+  xcputs ([[NSString
+      stringWithFormat:
+          @"=== Executing Frameworks / Linking Build Phase (Tool)"] cString]);
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *outputPath =
+      [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
-  linkString = [linkString stringByAppendingString: [NSString stringWithFormat:
-								@" `%@ --base-libs` `%@ --variable=LDFLAGS` -lgnustep-base ",
-						     cfgString, cfgString]];
+  linkString = [linkString
+      stringByAppendingString:
+          [NSString
+              stringWithFormat:
+                  @" `%@ --base-libs` `%@ --variable=LDFLAGS` -lgnustep-base ",
+                  cfgString, cfgString]];
 
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
-  NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
-				compiler, 
-				outputPath,
-				outputFiles,
-				linkString];
-  
+  NSString *command = [NSString
+      stringWithFormat:
+          @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+          compiler, outputPath, outputFiles, linkString];
+
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       outputPath = [outputPath stringByAppendingPathExtension: @"exe"];
-      command = [NSString stringWithFormat: 
-			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
-			  compiler, 
-			  outputPath,
-			  outputFiles,
-			  linkString];
+      command = [NSString
+          stringWithFormat: @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+                           compiler, outputPath, outputFiles, linkString];
     }
 
-  NSDebugLog(@"command = %@", command);
+  NSDebugLog (@"command = %@", command);
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
-  if([modified isEqualToString: @"YES"])
+  if ([modified isEqualToString: @"YES"])
     {
-      result = xcsystem(command);
+      result = xcsystem (command);
       if (result != 0)
         {
-          NSLog(@"%sReturn Value:%s %d", RED, RESET, result);
-          NSLog(@"%sCommand:%s %s%@%s", RED, RESET, GREEN, command, RESET);
+          NSLog (@"%sReturn Value:%s %d", RED, RESET, result);
+          NSLog (@"%sCommand:%s %s%@%s", RED, RESET, GREEN, command, RESET);
         }
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for %@, no modifications.", outputPath]
+          cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildApp
 {
-  xcputs("=== Executing Frameworks / Linking Build Phase (Application)");
+  xcputs ("=== Executing Frameworks / Linking Build Phase (Application)");
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   // NSString *errorPath = [outputDir stringByAppendingPathComponent: @"linker.err"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *outputPath =
+      [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   NSString *cfgString = [self _gsConfigString];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
 
-  NSDebugLog(@"Output files = %@", outputFiles);
+  NSDebugLog (@"Output files = %@", outputFiles);
 
   if (outputFiles == nil)
     {
-      xcputs("\t++++ No object files found. Nothing to link  ++++\n");
+      xcputs ("\t++++ No object files found. Nothing to link  ++++\n");
       return YES;
     }
 
-  linkString = [NSString stringWithFormat: [linkString stringByAppendingString: @" `%@ --objc-flags --objc-libs " \
-						       @"--base-libs --gui-libs` `%@ --variable=LDFLAGS` " \
-						       @"-lgnustep-base -lgnustep-gui "], cfgString, cfgString];
-  NSDebugLog(@"LINK: %@", linkString);
-           
+  linkString = [NSString
+      stringWithFormat:
+          [linkString stringByAppendingString:
+                          @" `%@ --objc-flags --objc-libs "
+                          @"--base-libs --gui-libs` `%@ --variable=LDFLAGS` "
+                          @"-lgnustep-base -lgnustep-gui "],
+          cfgString, cfgString];
+  NSDebugLog (@"LINK: %@", linkString);
+
   NSString *command = nil;
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       outputPath = [outputPath stringByAppendingPathExtension: @"exe"];
-      command = [NSString stringWithFormat: 
-			    @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
-			  compiler,
-			  outputPath,
-			  outputFiles,
-			  linkString];
+      command = [NSString
+          stringWithFormat: @"%@ -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+                           compiler, outputPath, outputFiles, linkString];
     }
   else
     {
-      command = [NSString stringWithFormat: 
-			    @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
-			  compiler,
-			  outputPath,
-			  outputFiles,
-			  linkString];
+      command = [NSString
+          stringWithFormat:
+              @"%@ -rdynamic -shared-libgcc -fgnu-runtime -o \"%@\" %@ %@",
+              compiler, outputPath, outputFiles, linkString];
     }
-  
+
   // NSLog(@"Link command = %@", command);
   // NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
-  if(YES) // [modified isEqualToString: @"YES"])
+  if (YES) // [modified isEqualToString: @"YES"])
     {
-      xcputs([[NSString stringWithFormat: @"\t* Linking \"%@\"",outputPath] cString]);
-      result = xcsystem(command);
+      xcputs ([[NSString stringWithFormat: @"\t* Linking \"%@\"", outputPath]
+          cString]);
+      result = xcsystem (command);
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for \"%@\", no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for \"%@\", no modifications.",
+              outputPath] cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
-  fflush(stdout);
-  
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
+  fflush (stdout);
+
   return (result == 0);
 }
 
@@ -466,13 +517,13 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *name = [context objectForKey: @"EXECUTABLE_NAME"];
 
-  if( name == nil )
+  if (name == nil)
     {
       name = [context objectForKey: @"PRODUCT_NAME"];
-      if ( name == nil )
-	{
-	  name = [context objectForKey: @"TARGET_NAME"];
-	}
+      if (name == nil)
+        {
+          name = [context objectForKey: @"TARGET_NAME"];
+        }
     }
 
   return name;
@@ -483,7 +534,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
 
-  if( outputDir == nil )
+  if (outputDir == nil)
     {
       outputDir = [@"./build" stringByAppendingPathComponent: [self _execName]];
       outputDir = [outputDir stringByAppendingPathComponent: @"Products"];
@@ -501,30 +552,34 @@
   // NSString *libpfx = [ctarget isEqualToString: @"msvc"] ? @"" : @"lib";
   NSString *outputFiles = [self processOutputFilesString];
   NSString *outputDir = [self _productOutputDir];
-  NSString *executableName = [[[_target productReference] path] lastPathComponent];
+  NSString *executableName =
+      [[[_target productReference] path] lastPathComponent];
   // [[NSString stringWithFormat: @"%@%@", libpfx,[self _execName]]
   //			       stringByReplacingPathExtensionWith: libext];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *outputPath =
+      [outputDir stringByAppendingPathComponent: executableName];
   NSString *commandTemplate = @"ar rc %@ %@; ranlib %@";
-  NSString *command = [NSString stringWithFormat: commandTemplate,
-				outputPath,
-				outputFiles,
-				outputPath];
+  NSString *command = [NSString
+      stringWithFormat: commandTemplate, outputPath, outputFiles, outputPath];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
 
-  xcputs("=== Executing Frameworks / Archiving Build Phase (Static Library)");  
-  if([modified isEqualToString: @"YES"])
+  xcputs ("=== Executing Frameworks / Archiving Build Phase (Static Library)");
+  if ([modified isEqualToString: @"YES"])
     {
-      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
-      result = xcsystem(command);
+      xcputs (
+          [[NSString stringWithFormat: @"\t* Linking %@", outputPath] cString]);
+      result = xcsystem (command);
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for %@, no modifications.", outputPath]
+          cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
 
   return (result == 0);
 }
@@ -538,91 +593,89 @@
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  NSString *executableNameStripped = [executableName stringByDeletingPathExtension];
-  NSString *libName = [NSString stringWithFormat: @"%@.so",executableNameStripped];
+  NSString *executableNameStripped =
+      [executableName stringByDeletingPathExtension];
+  NSString *libName =
+      [NSString stringWithFormat: @"%@.so", executableNameStripped];
   NSString *outputPath = [outputDir stringByAppendingPathComponent: libName];
 
   NSString *libraryPath = [outputDir stringByAppendingPathComponent: libName];
   NSString *cfgString = [self _gsConfigString];
-  NSString *systemLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
-  NSString *localLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
-  NSString *userLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
+  NSString *systemLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
+  NSString *localLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
+  NSString *userLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
   NSString *compiler = [self linkerForBuild];
   NSString *command = nil;
   NSString *commandTemplate = nil;
   NSInteger result = 0;
-  
-  xcputs("=== Executing Frameworks / Linking Build Phase (Dynamic Library");
+
+  xcputs ("=== Executing Frameworks / Linking Build Phase (Dynamic Library");
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       if ([ctarget containsString: @"msvc"])
-	{
-	  outputPath = [outputPath stringByReplacingOccurrencesOfString: @"lib" withString: @""];
+        {
+          outputPath = [outputPath stringByReplacingOccurrencesOfString: @"lib"
+                                                             withString: @""];
 
-	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
-          NSString *dllLibname = [libraryPath stringByReplacingPathExtensionWith: @"dll"];
-          
-	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` "	    
-	    @"-L%@ -L%@ -L%@";
-	  libraryPath = [outputDir stringByAppendingPathComponent: msvcLibname];
+          NSString *msvcLibname =
+              [outputPath stringByAppendingPathExtension: @"lib"];
+          NSString *dllLibname =
+              [libraryPath stringByReplacingPathExtensionWith: @"dll"];
 
-	  
-	  command = [NSString stringWithFormat: commandTemplate,
-			      compiler,
-                              libraryPath,
-                              dllLibname,
-			      outputFiles,
-			      userLibDir,
-			      localLibDir,
-			      systemLibDir];
-	  
-	}
+          commandTemplate
+              = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ `gnustep-config --base-libs` "
+                @"-L%@ -L%@ -L%@";
+          libraryPath = [outputDir stringByAppendingPathComponent: msvcLibname];
+
+          command = [NSString stringWithFormat: commandTemplate, compiler,
+                                               libraryPath, dllLibname,
+                                               outputFiles, userLibDir,
+                                               localLibDir, systemLibDir];
+        }
       else
-	{
-	  commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so " 
-	    @"-shared-libgcc -o %@ %@ "
-	    @"-L%@ -L%@ -L%@";
-	  
-	  
-	  command = [NSString stringWithFormat: commandTemplate,
-			      compiler,
-			      executableName,
-			      libraryPath,
-			      outputFiles,
-			      userLibDir,
-			      localLibDir,
-			      systemLibDir];
-	}
+        {
+          commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so "
+                            @"-shared-libgcc -o %@ %@ "
+                            @"-L%@ -L%@ -L%@";
+
+          command = [NSString stringWithFormat: commandTemplate, compiler,
+                                               executableName, libraryPath,
+                                               outputFiles, userLibDir,
+                                               localLibDir, systemLibDir];
+        }
     }
   else
     {
-      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so  -rdynamic " 
-        @"-shared-libgcc -o %@ %@ "
-        @"-L%@ -L%@ -L%@";
+      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so  -rdynamic "
+                        @"-shared-libgcc -o %@ %@ "
+                        @"-L%@ -L%@ -L%@";
 
-      command = [NSString stringWithFormat: commandTemplate,
-			  compiler,
-			  executableName,
-			  libraryPath,
-			  outputFiles,
-			  userLibDir,
-			  localLibDir,
-			  systemLibDir];
+      command =
+          [NSString stringWithFormat: commandTemplate, compiler, executableName,
+                                     libraryPath, outputFiles, userLibDir,
+                                     localLibDir, systemLibDir];
     }
 
-  if([modified isEqualToString: @"YES"])
-    {      
-      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
-      result = xcsystem(command);
+  if ([modified isEqualToString: @"YES"])
+    {
+      xcputs (
+          [[NSString stringWithFormat: @"\t* Linking %@", outputPath] cString]);
+      result = xcsystem (command);
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for %@, no modifications.", outputPath]
+          cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
@@ -633,170 +686,173 @@
   NSString *ctarget = [config objectForKey: @"target"];
   NSInteger result = 0;
 
-  xcputs("=== Executing Frameworks / Linking Build Phase (Framework)");
+  xcputs ("=== Executing Frameworks / Linking Build Phase (Framework)");
   [self generateDummyClass];
-  
+
   NSString *outputFiles = [self processOutputFilesString];
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   NSString *outputDir = [context objectForKey: @"PRODUCT_OUTPUT_DIR"];
   NSString *executableName = [context objectForKey: @"EXECUTABLE_NAME"];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
-  NSString *frameworkVersion = [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
+  NSString *outputPath =
+      [outputDir stringByAppendingPathComponent: executableName];
+  NSString *frameworkVersion =
+      [NSString stringForEnvironmentVariable: "FRAMEWORK_VERSION"];
   if (frameworkVersion == nil)
     {
       frameworkVersion = @"0";
     }
-  NSString *libNameWithVersion =  [NSString stringWithFormat: @"lib%@.so.%@",
-					    executableName,frameworkVersion];
-  NSString *libName = [NSString stringWithFormat: @"lib%@.so",executableName];
+  NSString *libNameWithVersion = [NSString
+      stringWithFormat: @"lib%@.so.%@", executableName, frameworkVersion];
+  NSString *libName = [NSString stringWithFormat: @"lib%@.so", executableName];
 
-  NSString *libraryPath = [outputDir stringByAppendingPathComponent: libNameWithVersion];
-  NSString *libraryPathNoVersion = [outputDir stringByAppendingPathComponent: libName];
+  NSString *libraryPath =
+      [outputDir stringByAppendingPathComponent: libNameWithVersion];
+  NSString *libraryPathNoVersion =
+      [outputDir stringByAppendingPathComponent: libName];
   NSString *cfgString = [self _gsConfigString];
-  NSString *systemLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
-  NSString *localLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
-  NSString *userLibDir = [NSString stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
+  NSString *systemLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_SYSTEM_LIBRARIES`", cfgString];
+  NSString *localLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_LOCAL_LIBRARIES`", cfgString];
+  NSString *userLibDir = [NSString
+      stringWithFormat: @"`%@ --variable=GNUSTEP_USER_LIBRARIES`", cfgString];
   NSString *frameworkRoot = [context objectForKey: @"FRAMEWORK_DIR"];
-  NSString *libraryLink = [frameworkRoot stringByAppendingPathComponent: libName];
-  NSString *execLink = [frameworkRoot stringByAppendingPathComponent: executableName];
+  NSString *libraryLink =
+      [frameworkRoot stringByAppendingPathComponent: libName];
+  NSString *execLink =
+      [frameworkRoot stringByAppendingPathComponent: executableName];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
   NSString *compiler = [self linkerForBuild];
   NSString *command = nil;
   NSString *commandTemplate = nil;
-  
+
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
       if ([ctarget containsString: @"msvc"])
-	{
-	  NSString *msvcLibname = [outputPath stringByAppendingPathExtension: @"lib"];
-          NSString *dllLibname = [libraryPathNoVersion stringByReplacingPathExtensionWith: @"dll"];
-          
-	  commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ "
-	    @"-L%@ -L%@ -L%@ "
-	    @"`gnustep-config --gui-libs` ";
-	  libraryPath = msvcLibname;
+        {
+          NSString *msvcLibname =
+              [outputPath stringByAppendingPathExtension: @"lib"];
+          NSString *dllLibname =
+              [libraryPathNoVersion stringByReplacingPathExtensionWith: @"dll"];
 
-	  
-	  command = [NSString stringWithFormat: commandTemplate,
-			      compiler,
-                              libraryPath,
-                              dllLibname,
-			      outputFiles,
-			      userLibDir,
-			      localLibDir,
-			      systemLibDir];
-	  
-	}
+          commandTemplate = @"%@ -g -Wl,-dll -Wl,implib:%@ -o %@ %@ "
+                            @"-L%@ -L%@ -L%@ "
+                            @"`gnustep-config --gui-libs` ";
+          libraryPath = msvcLibname;
+
+          command = [NSString stringWithFormat: commandTemplate, compiler,
+                                               libraryPath, dllLibname,
+                                               outputFiles, userLibDir,
+                                               localLibDir, systemLibDir];
+        }
       else
-	{
-	  commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so "
-	    @"-shared-libgcc -o %@ %@ "
-	    @"-L%@ -L%@ -L%@ "
-	    @"`gnustep-config --gui-libs` ";
-	  
-	  command = [NSString stringWithFormat: commandTemplate,
-			      compiler,
-			      executableName,
-			      libraryPath,
-			      outputFiles,
-			      userLibDir,
-			      localLibDir,
-			      systemLibDir];
-	}
+        {
+          commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so "
+                            @"-shared-libgcc -o %@ %@ "
+                            @"-L%@ -L%@ -L%@ "
+                            @"`gnustep-config --gui-libs` ";
+
+          command = [NSString stringWithFormat: commandTemplate, compiler,
+                                               executableName, libraryPath,
+                                               outputFiles, userLibDir,
+                                               localLibDir, systemLibDir];
+        }
     }
   else
     {
-      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic " 
-        @"-shared-libgcc -o %@ %@ "
-        @"-L%@ -L%@ -L%@";
+      commandTemplate = @"%@ -shared -Wl,-soname,lib%@.so.%@  -rdynamic "
+                        @"-shared-libgcc -o %@ %@ "
+                        @"-L%@ -L%@ -L%@";
 
-      command = [NSString stringWithFormat: commandTemplate,
-			  compiler,
-			  executableName,
-			  frameworkVersion,
-			  libraryPath,
-			  outputFiles,
-			  userLibDir,
-			  localLibDir,
-			  systemLibDir];
+      command = [NSString
+          stringWithFormat: commandTemplate, compiler, executableName,
+                           frameworkVersion, libraryPath, outputFiles,
+                           userLibDir, localLibDir, systemLibDir];
     }
-  
 
   // Create link to library...
   [[NSFileManager defaultManager] createSymbolicLinkAtPath: outputPath
-					       pathContent: libName];
+                                               pathContent: libName];
 
   [[NSFileManager defaultManager] createSymbolicLinkAtPath: libraryPathNoVersion
-					       pathContent: libNameWithVersion];
+                                               pathContent: libNameWithVersion];
 
-  [[NSFileManager defaultManager] createSymbolicLinkAtPath: libraryLink
-					       pathContent: 
-				[NSString stringWithFormat: @"Versions/Current/%@",libName]];
+  [[NSFileManager defaultManager]
+      createSymbolicLinkAtPath: libraryLink
+                   pathContent: [NSString
+                                   stringWithFormat: @"Versions/Current/%@",
+                                                    libName]];
 
-  [[NSFileManager defaultManager] createSymbolicLinkAtPath: execLink
-					       pathContent: 
-				[NSString stringWithFormat: @"Versions/Current/%@",executableName]];
-
+  [[NSFileManager defaultManager]
+      createSymbolicLinkAtPath: execLink
+                   pathContent: [NSString
+                                   stringWithFormat: @"Versions/Current/%@",
+                                                    executableName]];
 
   // NSLog(@"Link command = %@", command);
-  if([modified isEqualToString: @"YES"])
-    {      
-      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);      
-      result = xcsystem(command);
+  if ([modified isEqualToString: @"YES"])
+    {
+      xcputs (
+          [[NSString stringWithFormat: @"\t* Linking %@", outputPath] cString]);
+      result = xcsystem (command);
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for %@, no modifications.", outputPath]
+          cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
 - (BOOL) buildBundle
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
-  xcputs("=== Executing Frameworks / Linking Build Phase (Bundle)");
+  xcputs ("=== Executing Frameworks / Linking Build Phase (Bundle)");
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *outputDir =
+      [NSString stringWithCString: getenv ("PRODUCT_OUTPUT_DIR")];
+  NSString *executableName =
+      [NSString stringWithCString: getenv ("EXECUTABLE_NAME")];
+  NSString *outputPath =
+      [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
 
-  NSString *command = [NSString stringWithFormat: 
-				  @"%@ -rdynamic -shared -o \"%@\" %@ %@",
-				compiler, 
-				outputPath,
-				outputFiles,
-				linkString];
+  NSString *command = [NSString
+      stringWithFormat: @"%@ -rdynamic -shared -o \"%@\" %@ %@", compiler,
+                       outputPath, outputFiles, linkString];
 
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
-      command = [NSString stringWithFormat: 
-			    @"%@ -shared  -o \"%@\" %@ %@",
-			  compiler, 
-			  outputPath,
-			  outputFiles,
-			  linkString];
+      command =
+          [NSString stringWithFormat: @"%@ -shared  -o \"%@\" %@ %@", compiler,
+                                     outputPath, outputFiles, linkString];
     }
-  
+
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
-  if([modified isEqualToString: @"YES"])
+  if ([modified isEqualToString: @"YES"])
     {
-      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);            
-      result = xcsystem(command);
+      xcputs (
+          [[NSString stringWithFormat: @"\t* Linking %@", outputPath] cString]);
+      result = xcsystem (command);
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for %@, no modifications.", outputPath]
+          cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
@@ -804,47 +860,48 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
-  xcputs("=== Executing Frameworks / Linking Build Phase (XCTest Bundle)");
+  xcputs ("=== Executing Frameworks / Linking Build Phase (XCTest Bundle)");
   NSString *compiler = [self linkerForBuild];
   NSString *outputFiles = [self processOutputFilesString];
-  NSString *outputDir = [NSString stringWithCString: getenv("PRODUCT_OUTPUT_DIR")];
-  NSString *executableName = [NSString stringWithCString: getenv("EXECUTABLE_NAME")];
-  NSString *outputPath = [outputDir stringByAppendingPathComponent: executableName];
+  NSString *outputDir =
+      [NSString stringWithCString: getenv ("PRODUCT_OUTPUT_DIR")];
+  NSString *executableName =
+      [NSString stringWithCString: getenv ("EXECUTABLE_NAME")];
+  NSString *outputPath =
+      [outputDir stringByAppendingPathComponent: executableName];
   NSString *linkString = [self linkString];
 
   NSProcessInfo *pi = [NSProcessInfo processInfo];
   NSUInteger os = [pi operatingSystem];
 
-  NSString *command = [NSString stringWithFormat:
-                                  @"%@ -rdynamic -shared -o \"%@\" %@ %@",
-                                compiler,
-                                outputPath,
-                                outputFiles,
-                                linkString];
+  NSString *command = [NSString
+      stringWithFormat: @"%@ -rdynamic -shared -o \"%@\" %@ %@", compiler,
+                       outputPath, outputFiles, linkString];
 
   if (os == NSWindowsNTOperatingSystem || os == NSWindows95OperatingSystem)
     {
-      command = [NSString stringWithFormat:
-                            @"%@ -shared  -o \"%@\" %@ %@",
-                          compiler,
-                          outputPath,
-                          outputFiles,
-                          linkString];
+      command =
+          [NSString stringWithFormat: @"%@ -shared  -o \"%@\" %@ %@", compiler,
+                                     outputPath, outputFiles, linkString];
     }
 
   NSString *modified = [context objectForKey: @"MODIFIED_FLAG"];
   int result = 0;
-  if([modified isEqualToString: @"YES"])
+  if ([modified isEqualToString: @"YES"])
     {
-      xcputs([[NSString stringWithFormat: @"\t* Linking %@",outputPath] cString]);
-      result = xcsystem(command);
+      xcputs (
+          [[NSString stringWithFormat: @"\t* Linking %@", outputPath] cString]);
+      result = xcsystem (command);
     }
   else
     {
-      xcputs([[NSString stringWithFormat: @"\t** Nothing to be done for %@, no modifications.",outputPath] cString]);
+      xcputs ([[NSString
+          stringWithFormat:
+              @"\t** Nothing to be done for %@, no modifications.", outputPath]
+          cString]);
     }
 
-  xcputs("=== Frameworks / Linking Build Phase Completed");
+  xcputs ("=== Frameworks / Linking Build Phase Completed");
   return (result == 0);
 }
 
@@ -852,37 +909,39 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
-  if([productType isEqualToString: APPLICATION_TYPE])
+  if ([productType isEqualToString: APPLICATION_TYPE])
     {
       return [self buildApp];
     }
-  else if([productType isEqualToString: TOOL_TYPE])
+  else if ([productType isEqualToString: TOOL_TYPE])
     {
       return [self buildTool];
     }
-  else if([productType isEqualToString: LIBRARY_TYPE])
+  else if ([productType isEqualToString: LIBRARY_TYPE])
     {
       return [self buildStaticLib];
     }
-  else if([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
+  else if ([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
     {
       return [self buildDynamicLib];
     }
-  else if([productType isEqualToString: FRAMEWORK_TYPE])
+  else if ([productType isEqualToString: FRAMEWORK_TYPE])
     {
       return [self buildFramework];
     }
-  else if([productType isEqualToString: BUNDLE_TYPE])
+  else if ([productType isEqualToString: BUNDLE_TYPE])
     {
       return [self buildBundle];
     }
-  else if([productType isEqualToString: TEST_TYPE])
+  else if ([productType isEqualToString: TEST_TYPE])
     {
       return [self buildTest];
     }
-  else 
+  else
     {
-      xcputs([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
+      xcputs (
+          [[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",
+                                      productType] cString]);
     }
   return NO;
 }
@@ -891,7 +950,8 @@
 {
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSString *productType = [context objectForKey: @"PRODUCT_TYPE"];
-  NSDictionary *configDict = [context configForTargetName: [[self target] name]];
+  NSDictionary *configDict =
+      [context configForTargetName: [[self target] name]];
   NSArray *configAdditionalFlags = [configDict objectForKey: @"additional"];
   NSMutableArray *additionalFlags = nil;
 
@@ -931,39 +991,34 @@
       [context setObject: additionalFlags forKey: @"ADDITIONAL_OBJC_LIBS"];
     }
 
-  xcprintf("\t* Adding product type entry: %s\n", [productType cStringUsingEncoding: NSUTF8StringEncoding]);
-  
-  if([productType isEqualToString: APPLICATION_TYPE])
+  xcprintf ("\t* Adding product type entry: %s\n",
+            [productType cStringUsingEncoding: NSUTF8StringEncoding]);
+
+  if ([productType isEqualToString: APPLICATION_TYPE])
     {
-      [context setObject: @"application"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"application" forKey: @"PROJECT_TYPE"];
     }
-  else if([productType isEqualToString: TOOL_TYPE])
+  else if ([productType isEqualToString: TOOL_TYPE])
     {
-      [context setObject: @"tool"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"tool" forKey: @"PROJECT_TYPE"];
     }
-  else if([productType isEqualToString: LIBRARY_TYPE])
+  else if ([productType isEqualToString: LIBRARY_TYPE])
     {
-      [context setObject: @"library"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"library" forKey: @"PROJECT_TYPE"];
     }
-  else if([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
+  else if ([productType isEqualToString: DYNAMIC_LIBRARY_TYPE])
     {
-      [context setObject: @"library"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"library" forKey: @"PROJECT_TYPE"];
     }
-  else if([productType isEqualToString: FRAMEWORK_TYPE])
+  else if ([productType isEqualToString: FRAMEWORK_TYPE])
     {
-      [context setObject: @"framework"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"framework" forKey: @"PROJECT_TYPE"];
     }
-  else if([productType isEqualToString: BUNDLE_TYPE])
+  else if ([productType isEqualToString: BUNDLE_TYPE])
     {
-      [context setObject: @"bundle"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"bundle" forKey: @"PROJECT_TYPE"];
     }
-  else if([productType isEqualToString: TEST_TYPE])
+  else if ([productType isEqualToString: TEST_TYPE])
     {
       NSString *wrapperExt = [[[_target productReference] path] pathExtension];
 
@@ -972,8 +1027,7 @@
           wrapperExt = @"xctest";
         }
 
-      [context setObject: @"bundle"
-                  forKey: @"PROJECT_TYPE"];
+      [context setObject: @"bundle" forKey: @"PROJECT_TYPE"];
 
       if (wrapperExt != nil)
         {
@@ -982,11 +1036,13 @@
 
       [context setObject: @"YES" forKey: @"IS_TEST_TARGET"];
     }
-  else 
+  else
     {
-      xcputs([[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",productType] cString]);
+      xcputs (
+          [[NSString stringWithFormat: @"***** ERROR: Unknown product type: %@",
+                                      productType] cString]);
     }
-  
+
   return YES;
 }
 
@@ -995,7 +1051,7 @@
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
 
   [context setObject: @"YES" forKey: @"MODIFIED_FLAG"];
-  
+
   return [self build];
 }
 

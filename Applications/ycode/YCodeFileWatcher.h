@@ -28,17 +28,17 @@
    thread; stopping does not wait for that thread or retain an editor. */
 @interface YCodeFileWatcher : NSObject
 {
-    NSString *_directory;
-    NSArray *_paths;
-    NSLock *_lock;
-    BOOL _pending;
-    BOOL _stopped;
-    int _stopPipe[2];
-    int _eventFD;
-    void *_changeHandle;
-    void *_stopHandle;
+  NSString *_directory;
+  NSArray *_paths;
+  NSLock *_lock;
+  BOOL _pending;
+  BOOL _stopped;
+  int _stopPipe[2];
+  int _eventFD;
+  void *_changeHandle;
+  void *_stopHandle;
 }
-- (id)initWithDirectory:(NSString *)directory paths:(NSArray *)paths;
-- (NSArray *)paths;
-- (void)stop;
+- (id) initWithDirectory: (NSString *)directory paths: (NSArray *)paths;
+- (NSArray *) paths;
+- (void) stop;
 @end

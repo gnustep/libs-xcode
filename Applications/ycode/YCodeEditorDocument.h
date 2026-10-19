@@ -35,91 +35,91 @@
  * Higher priorities win; text is the fallback. API version 1 uses manual ownership.
  */
 @protocol YCodeEditorPlugin
-+ (NSUInteger)editorAPIVersion;
-+ (NSString *)editorIdentifier;
-+ (NSString *)editorKind;
-+ (NSInteger)editorPriority;
-+ (BOOL)canOpenFilePath:(NSString *)path;
++ (NSUInteger) editorAPIVersion;
++ (NSString *) editorIdentifier;
++ (NSString *) editorKind;
++ (NSInteger) editorPriority;
++ (BOOL) canOpenFilePath: (NSString *)path;
 @end
 
 @interface YCodeEditorDocument : NSObject <YCodeEditorPlugin>
 {
-    NSString *_filePath;
-    BOOL _modified;
-    BOOL _externalChange;
-    NSUndoManager *_undoManager;
-    NSDate *_lastModified;
-    
-    // Editor controller reference
-    YCodeEditorController *_editorController;
+  NSString *_filePath;
+  BOOL _modified;
+  BOOL _externalChange;
+  NSUndoManager *_undoManager;
+  NSDate *_lastModified;
+
+  // Editor controller reference
+  YCodeEditorController *_editorController;
 }
 
 /**
  * Initialization
  */
-- (id)initWithFilePath:(NSString *)filePath;
-- (id)initWithFilePath:(NSString *)filePath content:(NSString *)content;
+- (id) initWithFilePath: (NSString *)filePath;
+- (id) initWithFilePath: (NSString *)filePath content: (NSString *)content;
 
 /**
  * File properties
  */
-- (NSString *)filePath;
-- (void)setFilePath:(NSString *)filePath;
-- (NSString *)fileName;
-- (NSString *)fileExtension;
+- (NSString *) filePath;
+- (void) setFilePath: (NSString *)filePath;
+- (NSString *) fileName;
+- (NSString *) fileExtension;
 
 /**
  * Content management
  */
-- (NSString *)content;
-- (void)setContent:(NSString *)content;
-- (BOOL)isModified;
-- (void)setModified:(BOOL)modified;
-- (NSDate *)lastModified;
+- (NSString *) content;
+- (void) setContent: (NSString *)content;
+- (BOOL) isModified;
+- (void) setModified: (BOOL)modified;
+- (NSDate *) lastModified;
 
 /**
  * UI Components
  */
 /** Non-text editors return nil from textView and syntaxHighlighter. */
-- (BOOL)isEditable;
+- (BOOL) isEditable;
 /** Subclasses write their own format; saveToFile handles prompts and notifications. */
-- (BOOL)writeContentsToFile;
-- (BOOL)isImageDocument;
-+ (BOOL)isSoundFilePath:(NSString *)path;
-- (BOOL)isSoundDocument;
-- (NSImage *)image;
-- (NSView *)editorView;
-- (NSTextView *)textView;
-- (NSScrollView *)scrollView;
+- (BOOL) writeContentsToFile;
+- (BOOL) isImageDocument;
++ (BOOL) isSoundFilePath: (NSString *)path;
+- (BOOL) isSoundDocument;
+- (NSImage *) image;
+- (NSView *) editorView;
+- (NSTextView *) textView;
+- (NSScrollView *) scrollView;
 
 /**
  * File operations
  */
-- (BOOL)loadFromFile;
-- (BOOL)saveToFile;
-- (BOOL)reloadFromFile;
-- (void)checkForExternalChanges;
-- (BOOL)hasExternalChanges;
+- (BOOL) loadFromFile;
+- (BOOL) saveToFile;
+- (BOOL) reloadFromFile;
+- (void) checkForExternalChanges;
+- (BOOL) hasExternalChanges;
 
 /**
  * Text operations
  */
-- (void)insertText:(NSString *)text atLocation:(NSUInteger)location;
-- (NSString *)selectedText;
-- (NSRange)selectedRange;
-- (void)setSelectedRange:(NSRange)range;
+- (void) insertText: (NSString *)text atLocation: (NSUInteger)location;
+- (NSString *) selectedText;
+- (NSRange) selectedRange;
+- (void) setSelectedRange: (NSRange)range;
 
 /**
  * Syntax highlighting
  */
-- (YCodeSyntaxHighlighter *)syntaxHighlighter;
-- (void)applySyntaxHighlighting;
+- (YCodeSyntaxHighlighter *) syntaxHighlighter;
+- (void) applySyntaxHighlighting;
 
 /**
  * Editor controller
  */
-- (YCodeEditorController *)editorController;
-- (void)setEditorController:(YCodeEditorController *)controller;
+- (YCodeEditorController *) editorController;
+- (void) setEditorController: (YCodeEditorController *)controller;
 
 @end
 

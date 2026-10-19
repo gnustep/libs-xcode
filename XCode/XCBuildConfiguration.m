@@ -33,10 +33,13 @@
 #endif
 
 /* Build settings may encode argument lists as arrays or quoted strings. */
-static NSArray *GSXCSettingWords(id value)
+static NSArray *
+GSXCSettingWords (id value)
 {
-  if ([value isKindOfClass: [NSArray class]]) return value;
-  if (![value isKindOfClass: [NSString class]]) return [NSArray array];
+  if ([value isKindOfClass: [NSArray class]])
+    return value;
+  if (![value isKindOfClass: [NSString class]])
+    return [NSArray array];
   NSMutableArray *words = [NSMutableArray array];
   NSMutableString *word = [NSMutableString string];
   unichar quote = 0;
@@ -45,22 +48,54 @@ static NSArray *GSXCSettingWords(id value)
   for (i = 0; i < [value length]; i++)
     {
       unichar c = [value characterAtIndex: i];
-      if (escaped) { [word appendFormat: @"%C", c]; escaped = NO; started = YES; }
-      else if (c == '\\' && quote != '\'') { escaped = YES; started = YES; }
-      else if (quote) { if (c == quote) quote = 0; else [word appendFormat: @"%C", c]; }
-      else if (c == '\'' || c == '"') { quote = c; started = YES; }
-      else if ([[NSCharacterSet whitespaceAndNewlineCharacterSet] characterIsMember: c])
+      if (escaped)
         {
-          if (started) { [words addObject: [[word copy] autorelease]]; [word setString: @""]; started = NO; }
+          [word appendFormat: @"%C", c];
+          escaped = NO;
+          started = YES;
         }
-      else { [word appendFormat: @"%C", c]; started = YES; }
+      else if (c == '\\' && quote != '\'')
+        {
+          escaped = YES;
+          started = YES;
+        }
+      else if (quote)
+        {
+          if (c == quote)
+            quote = 0;
+          else
+            [word appendFormat: @"%C", c];
+        }
+      else if (c == '\'' || c == '"')
+        {
+          quote = c;
+          started = YES;
+        }
+      else if ([[NSCharacterSet whitespaceAndNewlineCharacterSet]
+                   characterIsMember: c])
+        {
+          if (started)
+            {
+              [words addObject: [[word copy] autorelease]];
+              [word setString: @""];
+              started = NO;
+            }
+        }
+      else
+        {
+          [word appendFormat: @"%C", c];
+          started = YES;
+        }
     }
-  if (escaped) [word appendString: @"\\"];
-  if (started) [words addObject: word];
+  if (escaped)
+    [word appendString: @"\\"];
+  if (started)
+    [words addObject: word];
   return words;
 }
 
-static id GSXCInheritedSetting(id value, id inherited)
+static id
+GSXCInheritedSetting (id value, id inherited)
 {
   if ([value isKindOfClass: [NSArray class]])
     {
@@ -70,20 +105,26 @@ static id GSXCInheritedSetting(id value, id inherited)
         id argument;
         while ((argument = [argumentEnumerator nextObject]) != nil)
           {
-            if ([argument isEqual: @"$(inherited)"] || [argument isEqual: @"${inherited}"])
-              [result addObjectsFromArray: GSXCSettingWords(inherited)];
-            else [result addObject: argument];
+            if ([argument isEqual: @"$(inherited)"] ||
+                [argument isEqual: @"${inherited}"])
+              [result addObjectsFromArray: GSXCSettingWords (inherited)];
+            else
+              [result addObject: argument];
           }
       }
       return result;
     }
   if ([value isKindOfClass: [NSString class]])
     {
-      NSString *parent = [inherited isKindOfClass: [NSArray class]] ?
-        [inherited componentsJoinedByString: @" "] : inherited;
-      if (![parent isKindOfClass: [NSString class]]) parent = @"";
-      value = [value stringByReplacingOccurrencesOfString: @"$(inherited)" withString: parent];
-      return [value stringByReplacingOccurrencesOfString: @"${inherited}" withString: parent];
+      NSString *parent = [inherited isKindOfClass: [NSArray class]]
+                             ? [inherited componentsJoinedByString: @" "]
+                             : inherited;
+      if (![parent isKindOfClass: [NSString class]])
+        parent = @"";
+      value = [value stringByReplacingOccurrencesOfString: @"$(inherited)"
+                                               withString: parent];
+      return [value stringByReplacingOccurrencesOfString: @"${inherited}"
+                                              withString: parent];
     }
   return value;
 }
@@ -91,7 +132,7 @@ static id GSXCInheritedSetting(id value, id inherited)
 @implementation XCBuildConfiguration
 
 - (id) initWithName: (NSString *)theName
-		buildSettings: (NSMutableDictionary *)settings
+     buildSettings: (NSMutableDictionary *)settings
 {
   self = [super init];
   if (self != nil)
@@ -104,10 +145,9 @@ static id GSXCInheritedSetting(id value, id inherited)
 
 - (id) initWithName: (NSString *)theName
 {
-  NSMutableDictionary *settings = [NSMutableDictionary dictionaryWithObject: @"macosx"
-								     forKey: @"SDKROOT"];
-  return [self initWithName: theName
-	      buildSettings: settings];
+  NSMutableDictionary *settings =
+      [NSMutableDictionary dictionaryWithObject: @"macosx" forKey: @"SDKROOT"];
+  return [self initWithName: theName buildSettings: settings];
 }
 
 - (id) init
@@ -122,7 +162,8 @@ static id GSXCInheritedSetting(id value, id inherited)
 
 - (NSString *) description
 {
-  return [NSString stringWithFormat: @"%@ -- buildSettings = %@, name = %@", [super description], buildSettings, name];
+  return [NSString stringWithFormat: @"%@ -- buildSettings = %@, name = %@",
+                                    [super description], buildSettings, name];
 }
 
 // Methods....
@@ -133,7 +174,7 @@ static id GSXCInheritedSetting(id value, id inherited)
 
 - (void) setBuildSettings: (NSMutableDictionary *)object; // setter
 {
-  ASSIGN(buildSettings,object);
+  ASSIGN (buildSettings, object);
 }
 
 - (NSString *) name // getter
@@ -143,12 +184,14 @@ static id GSXCInheritedSetting(id value, id inherited)
 
 - (void) setName: (NSString *)object; // setter
 {
-  ASSIGN(name,object);
+  ASSIGN (name, object);
 }
 
 - (void) apply
 {
-  xcputs([[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",GREEN, name, RESET] cString]);
+  xcputs (
+      [[NSString stringWithFormat: @"=== Applying Build Configuration %s%@%s",
+                                  GREEN, name, RESET] cString]);
   GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
   NSEnumerator *en = [buildSettings keyEnumerator];
   NSString *key = nil;
@@ -160,39 +203,42 @@ static id GSXCInheritedSetting(id value, id inherited)
          inherited array elements retain their boundaries. */
       if ([key isEqual: @"OTHER_LDFLAGS"] ||
           [key isEqual: @"HEADER_SEARCH_PATHS"])
-        value = GSXCSettingWords(value);
-      value = GSXCInheritedSetting(value, [context objectForKey: key]);
+        value = GSXCSettingWords (value);
+      value = GSXCInheritedSetting (value, [context objectForKey: key]);
       if ([value isKindOfClass: [NSString class]])
-	{
-	  setenv([key cString],[value cString],1);
+        {
+          setenv ([key cString], [value cString], 1);
           [context setObject: value forKey: key];
-	}
-      else if([value isKindOfClass: [NSArray class]])
-	{
-	  [context setObject: value
-		      forKey: key];
-	  NSDebugLog(@"\tContext: %@ = %@",key,value);
-	}
+        }
+      else if ([value isKindOfClass: [NSArray class]])
+        {
+          [context setObject: value forKey: key];
+          NSDebugLog (@"\tContext: %@ = %@", key, value);
+        }
       else
-	{
-	  NSDebugLog(@"\tWARNING: Can't interpret value %@, for environment variable %@", value, key);
-	}
+        {
+          NSDebugLog (
+              @"\tWARNING: Can't interpret value %@, for environment variable %@",
+              value, key);
+        }
     }
 
   if ([buildSettings objectForKey: @"TARGET_BUILD_DIR"] == nil)
     {
-      NSDebugLog(@"\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
-      setenv("TARGET_BUILD_DIR","build",1);
+      NSDebugLog (@"\tEnvironment: TARGET_BUILD_DIR = build (built-in)");
+      setenv ("TARGET_BUILD_DIR", "build", 1);
       [context setObject: @"build" forKey: @"TARGET_BUILD_DIR"];
     }
 
   if ([buildSettings objectForKey: @"BUILT_PRODUCTS_DIR"] == nil)
     {
-      NSDebugLog(@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
-      setenv("BUILT_PRODUCTS_DIR","build",1);
+      NSDebugLog (@"\tEnvironment: BUILT_PRODUCTS_DIR = build (built-in)");
+      setenv ("BUILT_PRODUCTS_DIR", "build", 1);
       [context setObject: @"build" forKey: @"BUILD_PRODUCTS_DIR"];
     }
 
-  xcputs([[NSString stringWithFormat: @"=== Done Applying Build Configuration for %@",name] cString]);
+  xcputs ([[NSString
+      stringWithFormat: @"=== Done Applying Build Configuration for %@", name]
+      cString]);
 }
 @end

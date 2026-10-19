@@ -40,6 +40,6 @@
   NSUInteger _generation;
   NSTimeInterval _duration;
 }
-- (void)togglePlayback:(id)sender;
-- (void)stopPlayback:(id)sender;
+- (void) togglePlayback: (id)sender;
+- (void) stopPlayback: (id)sender;
 @end

@@ -78,7 +78,8 @@
  * Takes the name of the output plist file and the name of the icon file as parameters.
  * Returns the generated Info.plist content as a string.
  */
-- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist withIconFile: (NSString *)iconFile;
+- (NSString *) generateInfoPlistOutput: (NSString *)outputPlist
+                         withIconFile: (NSString *)iconFile;
 
 /**
  * Converts build configuration to Info.plist dictionary with icon information.
@@ -86,7 +87,8 @@
  * Takes the build configuration to process and the name of the icon file as parameters.
  * Returns a mutable dictionary containing plist key-value pairs including icon info.
  */
-- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config withIconFile: (NSString *)iconFile;
+- (NSMutableDictionary *) configToInfoPlist: (XCBuildConfiguration *)config
+                              withIconFile: (NSString *)iconFile;
 
 /**
  * Processes an input Info.plist file and generates output with variable substitution.
@@ -95,7 +97,7 @@
  * Returns YES if processing succeeded, NO otherwise.
  */
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
-			output: (NSString *)outputFileName;
+                       output: (NSString *)outputFileName;
 
 /**
  * Processes an input Info.plist file with icon information and generates output.
@@ -105,8 +107,8 @@
  * Returns YES if processing succeeded, NO otherwise.
  */
 - (BOOL) processInfoPlistInput: (NSString *)inputFileName
-			output: (NSString *)outputFileName
-		  withIconFile: (NSString *)iconFileName;
+                       output: (NSString *)outputFileName
+                 withIconFile: (NSString *)iconFileName;
 
 /**
  * Legacy method for backward compatibility.

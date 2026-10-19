@@ -42,15 +42,15 @@
 
 - (void) dealloc
 {
-  RELEASE(_argument);
-  RELEASE(_value);
+  RELEASE (_argument);
+  RELEASE (_value);
 
   [super dealloc];
 }
 
 - (void) setArgument: (NSString *)arg
 {
-  ASSIGN(_argument, arg);
+  ASSIGN (_argument, arg);
 }
 
 - (NSString *) argument
@@ -60,7 +60,7 @@
 
 - (void) setValue: (NSString *)val
 {
-  ASSIGN(_value, val);
+  ASSIGN (_value, val);
 }
 
 - (NSString *) value

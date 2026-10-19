@@ -28,7 +28,7 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 
-extern NSString * const YCodeCurrentDocumentDidChangeNotification;
+extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 
 @class YCodeProject;
 @class YCodeEditorDocument;
@@ -39,95 +39,95 @@ extern NSString * const YCodeCurrentDocumentDidChangeNotification;
 
 @interface YCodeEditorController : NSObject <NSTabViewDelegate>
 {
-    YCodeProject *_project;
-    
-    NSTabView *_tabView;
-    NSMutableArray *_openDocuments;
-    NSMutableDictionary *_documentTabs;
-    NSMutableDictionary *_fileWatchers;
-    NSMutableSet *_changedDirectories;
-    
-    YCodeEditorDocument *_currentDocument;
-    
-    // Editor settings
-    NSFont *_editorFont;
-    NSColor *_backgroundColor;
-    NSColor *_textColor;
-    BOOL _showLineNumbers;
-    BOOL _syntaxHighlighting;
-    NSPanel *_findPanel;
-    NSTextField *_findField;
-    NSTextField *_replaceField;
-    NSTextField *_findStatus;
-    NSButton *_findCaseSensitive;
-    NSButton *_findWrap;
-    NSMutableArray *_findButtons;
+  YCodeProject *_project;
+
+  NSTabView *_tabView;
+  NSMutableArray *_openDocuments;
+  NSMutableDictionary *_documentTabs;
+  NSMutableDictionary *_fileWatchers;
+  NSMutableSet *_changedDirectories;
+
+  YCodeEditorDocument *_currentDocument;
+
+  // Editor settings
+  NSFont *_editorFont;
+  NSColor *_backgroundColor;
+  NSColor *_textColor;
+  BOOL _showLineNumbers;
+  BOOL _syntaxHighlighting;
+  NSPanel *_findPanel;
+  NSTextField *_findField;
+  NSTextField *_replaceField;
+  NSTextField *_findStatus;
+  NSButton *_findCaseSensitive;
+  NSButton *_findWrap;
+  NSMutableArray *_findButtons;
 }
 
 /**
  * Project association
  */
-- (YCodeProject *)project;
-- (void)setProject:(YCodeProject *)project;
+- (YCodeProject *) project;
+- (void) setProject: (YCodeProject *)project;
 
 /**
  * Tab view association
  */
-- (NSTabView *)tabView;
-- (void)startWatchingFiles;
-- (void)stopWatchingFiles;
-- (void)setTabView:(NSTabView *)tabView;
+- (NSTabView *) tabView;
+- (void) startWatchingFiles;
+- (void) stopWatchingFiles;
+- (void) setTabView: (NSTabView *)tabView;
 
 /**
  * Document management
  */
-- (NSArray *)openDocuments;
-- (YCodeEditorDocument *)currentDocument;
-- (void)setCurrentDocument:(YCodeEditorDocument *)document;
+- (NSArray *) openDocuments;
+- (YCodeEditorDocument *) currentDocument;
+- (void) setCurrentDocument: (YCodeEditorDocument *)document;
 
 /**
  * File operations
  */
-- (BOOL)openFile:(NSString *)filePath;
-- (BOOL)closeFile:(NSString *)filePath;
-- (BOOL)canCloseFiles;
-- (BOOL)saveCurrentFile;
-- (BOOL)saveAllFiles;
+- (BOOL) openFile: (NSString *)filePath;
+- (BOOL) closeFile: (NSString *)filePath;
+- (BOOL) canCloseFiles;
+- (BOOL) saveCurrentFile;
+- (BOOL) saveAllFiles;
 
 /**
  * Document operations
  */
-- (YCodeEditorDocument *)documentForFilePath:(NSString *)filePath;
-- (NSTabViewItem *)tabForDocument:(YCodeEditorDocument *)document;
+- (YCodeEditorDocument *) documentForFilePath: (NSString *)filePath;
+- (NSTabViewItem *) tabForDocument: (YCodeEditorDocument *)document;
 
 /**
  * Editor settings
  */
-- (NSFont *)editorFont;
-- (void)setEditorFont:(NSFont *)font;
-- (NSColor *)backgroundColor;
-- (void)setBackgroundColor:(NSColor *)color;
-- (NSColor *)textColor;
-- (void)setTextColor:(NSColor *)color;
-- (BOOL)showLineNumbers;
-- (void)setShowLineNumbers:(BOOL)show;
-- (BOOL)syntaxHighlighting;
-- (void)setSyntaxHighlighting:(BOOL)highlighting;
+- (NSFont *) editorFont;
+- (void) setEditorFont: (NSFont *)font;
+- (NSColor *) backgroundColor;
+- (void) setBackgroundColor: (NSColor *)color;
+- (NSColor *) textColor;
+- (void) setTextColor: (NSColor *)color;
+- (BOOL) showLineNumbers;
+- (void) setShowLineNumbers: (BOOL)show;
+- (BOOL) syntaxHighlighting;
+- (void) setSyntaxHighlighting: (BOOL)highlighting;
 
 /**
  * Editor actions
  */
-- (IBAction)newFile:(id)sender;
-- (IBAction)saveFile:(id)sender;
-- (IBAction)closeCurrentFile:(id)sender;
-- (IBAction)findInFile:(id)sender;
-- (IBAction)replaceInFile:(id)sender;
-- (IBAction)findNext:(id)sender;
-- (IBAction)findPrevious:(id)sender;
-- (IBAction)replaceMatch:(id)sender;
-- (IBAction)replaceAndFind:(id)sender;
-- (IBAction)replaceAll:(id)sender;
-- (void)closeFindPanel;
+- (IBAction) newFile: (id)sender;
+- (IBAction) saveFile: (id)sender;
+- (IBAction) closeCurrentFile: (id)sender;
+- (IBAction) findInFile: (id)sender;
+- (IBAction) replaceInFile: (id)sender;
+- (IBAction) findNext: (id)sender;
+- (IBAction) findPrevious: (id)sender;
+- (IBAction) replaceMatch: (id)sender;
+- (IBAction) replaceAndFind: (id)sender;
+- (IBAction) replaceAll: (id)sender;
+- (void) closeFindPanel;
 
 @end
 

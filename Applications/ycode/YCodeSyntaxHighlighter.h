@@ -30,85 +30,85 @@
 
 @interface YCodeSyntaxHighlighter : NSObject
 {
-    NSString *_fileExtension;
-    NSTextView *_textView;
-    
-    // Color schemes
-    NSColor *_keywordColor;
-    NSColor *_stringColor;
-    NSColor *_commentColor;
-    NSColor *_numberColor;
-    NSColor *_preprocessorColor;
-    NSColor *_typeColor;
-    NSColor *_symbolColor;
-    NSColor *_constantColor;
-    
-    BOOL _highlightStringKeys;
-    NSRegularExpression *_annotationPattern;
-    // Language patterns
-    NSRegularExpression *_numberPattern;
-    NSRegularExpression *_preprocessorPattern;
-    NSRegularExpression *_keywordPattern;
-    NSRegularExpression *_typePattern;
-    NSRegularExpression *_symbolPattern;
-    NSRegularExpression *_constantPattern;
-    NSRegularExpression *_literalPattern;
+  NSString *_fileExtension;
+  NSTextView *_textView;
+
+  // Color schemes
+  NSColor *_keywordColor;
+  NSColor *_stringColor;
+  NSColor *_commentColor;
+  NSColor *_numberColor;
+  NSColor *_preprocessorColor;
+  NSColor *_typeColor;
+  NSColor *_symbolColor;
+  NSColor *_constantColor;
+
+  BOOL _highlightStringKeys;
+  NSRegularExpression *_annotationPattern;
+  // Language patterns
+  NSRegularExpression *_numberPattern;
+  NSRegularExpression *_preprocessorPattern;
+  NSRegularExpression *_keywordPattern;
+  NSRegularExpression *_typePattern;
+  NSRegularExpression *_symbolPattern;
+  NSRegularExpression *_constantPattern;
+  NSRegularExpression *_literalPattern;
 }
 
 /**
  * Initialization
  */
-- (id)initWithFileExtension:(NSString *)extension;
+- (id) initWithFileExtension: (NSString *)extension;
 
 /**
  * File extension and language
  */
-- (NSString *)fileExtension;
-- (void)setFileExtension:(NSString *)extension;
-- (NSString *)language;
+- (NSString *) fileExtension;
+- (void) setFileExtension: (NSString *)extension;
+- (NSString *) language;
 
 /**
  * Text view association
  */
-- (NSTextView *)textView;
-- (void)setTextView:(NSTextView *)textView;
+- (NSTextView *) textView;
+- (void) setTextView: (NSTextView *)textView;
 
 /**
  * Color scheme
  */
 /** Saved editor colors, shared by all project windows. */
-+ (NSArray *)colorPreferenceKeys;
-+ (NSColor *)preferredColorForKey:(NSString *)key;
-+ (void)setPreferredColor:(NSColor *)color forKey:(NSString *)key;
-+ (void)resetColorPreferences;
-- (void)loadPreferredColors;
-+ (NSColor *)plainTextColorForBackground:(NSColor *)background;
-- (NSColor *)keywordColor;
-- (void)setKeywordColor:(NSColor *)color;
-- (NSColor *)stringColor;
-- (void)setStringColor:(NSColor *)color;
-- (NSColor *)commentColor;
-- (void)setCommentColor:(NSColor *)color;
-- (NSColor *)numberColor;
-- (void)setNumberColor:(NSColor *)color;
-- (NSColor *)preprocessorColor;
-- (void)setPreprocessorColor:(NSColor *)color;
-- (NSColor *)typeColor;
-- (void)setTypeColor:(NSColor *)color;
-- (NSColor *)symbolColor;
-- (NSColor *)constantColor;
++ (NSArray *) colorPreferenceKeys;
++ (NSColor *) preferredColorForKey: (NSString *)key;
++ (void) setPreferredColor: (NSColor *)color forKey: (NSString *)key;
++ (void) resetColorPreferences;
+- (void) loadPreferredColors;
++ (NSColor *) plainTextColorForBackground: (NSColor *)background;
+- (NSColor *) keywordColor;
+- (void) setKeywordColor: (NSColor *)color;
+- (NSColor *) stringColor;
+- (void) setStringColor: (NSColor *)color;
+- (NSColor *) commentColor;
+- (void) setCommentColor: (NSColor *)color;
+- (NSColor *) numberColor;
+- (void) setNumberColor: (NSColor *)color;
+- (NSColor *) preprocessorColor;
+- (void) setPreprocessorColor: (NSColor *)color;
+- (NSColor *) typeColor;
+- (void) setTypeColor: (NSColor *)color;
+- (NSColor *) symbolColor;
+- (NSColor *) constantColor;
 
 /**
  * Highlighting operations
  */
-- (void)highlightText;
-- (void)highlightRange:(NSRange)range;
-- (void)removeHighlighting;
+- (void) highlightText;
+- (void) highlightRange: (NSRange)range;
+- (void) removeHighlighting;
 
 /**
  * Language-specific setup
  */
-- (void)setupLanguagePatterns;
+- (void) setupLanguagePatterns;
 
 @end
 

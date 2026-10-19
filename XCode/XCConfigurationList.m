@@ -53,7 +53,7 @@
 
 - (void) setDefaultConfigurationIsVisible: (NSString *)object; // setter
 {
-  ASSIGN(defaultConfigurationIsVisible,object);
+  ASSIGN (defaultConfigurationIsVisible, object);
 }
 
 - (NSMutableArray *) buildConfigurations // getter
@@ -63,7 +63,7 @@
 
 - (void) setBuildConfigurations: (NSMutableArray *)object; // setter
 {
-  ASSIGN(buildConfigurations,object);
+  ASSIGN (buildConfigurations, object);
 }
 
 - (NSString *) defaultConfigurationName // getter
@@ -73,7 +73,7 @@
 
 - (void) setDefaultConfigurationName: (NSString *)object; // setter
 {
-  ASSIGN(defaultConfigurationName,object);
+  ASSIGN (defaultConfigurationName, object);
 }
 
 - (XCBuildConfiguration *) configurationWithName: (NSString *)name
@@ -81,25 +81,25 @@
   NSEnumerator *en = [buildConfigurations objectEnumerator];
   XCBuildConfiguration *config = nil;
 
-  NSDebugLog(@"Number of build configurations = %ld\n%@",
-             [buildConfigurations count], buildConfigurations);
+  NSDebugLog (@"Number of build configurations = %ld\n%@",
+              [buildConfigurations count], buildConfigurations);
 
-  while((config = [en nextObject]) != nil)
+  while ((config = [en nextObject]) != nil)
     {
-      if([[config name] isEqualToString: name])
-	{
-	  break;
-	}
+      if ([[config name] isEqualToString: name])
+        {
+          break;
+        }
     }
 
   return config;
-
 }
 
 - (XCBuildConfiguration *) defaultConfiguration
 {
-  NSString *defaultConfig = (defaultConfigurationName == nil)?
-    @"Release":defaultConfigurationName;
+  NSString *defaultConfig = (defaultConfigurationName == nil)
+                                ? @"Release"
+                                : defaultConfigurationName;
   return [self configurationWithName: defaultConfig];
 }
 
@@ -110,7 +110,7 @@
 
 - (NSString *) description
 {
-  return [NSString stringWithFormat: @"%@ -- %@", [super description],
-		   buildConfigurations];
+  return [NSString
+      stringWithFormat: @"%@ -- %@", [super description], buildConfigurations];
 }
 @end

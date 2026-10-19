@@ -34,10 +34,10 @@
 
 - (void) dealloc
 {
-  RELEASE(proxyType);
-  RELEASE(remoteGlobalIDString);
-  RELEASE(containerPortal);
-  RELEASE(remoteInfo);
+  RELEASE (proxyType);
+  RELEASE (remoteGlobalIDString);
+  RELEASE (containerPortal);
+  RELEASE (remoteInfo);
 
   [super dealloc];
 }
@@ -50,7 +50,7 @@
 
 - (void) setProxyType: (NSString *)object; // setter
 {
-  ASSIGN(proxyType,object);
+  ASSIGN (proxyType, object);
 }
 
 - (NSString *) remoteGlobalIDString // getter
@@ -60,7 +60,7 @@
 
 - (void) setRemoteGlobalIDString: (NSString *)object; // setter
 {
-  ASSIGN(remoteGlobalIDString,object);
+  ASSIGN (remoteGlobalIDString, object);
 }
 
 - (id) containerPortal // getter
@@ -70,7 +70,7 @@
 
 - (void) setContainerPortal: (id)object; // setter
 {
-  ASSIGN(containerPortal,object);
+  ASSIGN (containerPortal, object);
 }
 
 - (NSString *) remoteInfo // getter
@@ -80,20 +80,24 @@
 
 - (void) setRemoteInfo: (NSString *)object; // setter
 {
-  ASSIGN(remoteInfo,object);
+  ASSIGN (remoteInfo, object);
 }
 
 - (BOOL) build
 {
-  PBXContainer *currentContainer = [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
+  PBXContainer *currentContainer =
+      [[GSXCBuildContext sharedBuildContext] objectForKey: @"CONTAINER"];
   NSFileManager *mgr = [NSFileManager defaultManager];
-  
+
   containerPortal = [[currentContainer objects] objectForKey: containerPortal];
-  if([containerPortal isKindOfClass: [PBXFileReference class]])
+  if ([containerPortal isKindOfClass: [PBXFileReference class]])
     {
-      xcputs([[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", GREEN, [containerPortal path], RESET] cString]);
+      xcputs (
+          [[NSString stringWithFormat: @"=== Proxy Reading %s%@%s", GREEN,
+                                      [containerPortal path], RESET] cString]);
       NSString *dir = [mgr currentDirectoryPath];
-      PBXCoder *coder = [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
+      PBXCoder *coder =
+          [[PBXCoder alloc] initWithProjectFile: [containerPortal path]];
       [mgr changeCurrentDirectoryPath: [coder projectRoot]];
       PBXContainer *container = [coder unarchive];
       [container setFilename: [containerPortal path]];
@@ -112,7 +116,7 @@
 
 - (BOOL) save
 {
-  return YES;  
+  return YES;
 }
 
 - (BOOL) generate

@@ -28,24 +28,24 @@
 #import <Foundation/NSObject.h>
 #import "PBXProject.h"
 
-#if	defined(__cplusplus)
-extern "C" {
+#if defined(__cplusplus)
+extern "C"
+{
 #endif
 
-@protocol GSXCBuildDelegate
-@end
+  @protocol GSXCBuildDelegate
+  @end
 
-@interface NSObject (GSXCBuildDelegate)
-/**
+  @interface NSObject (GSXCBuildDelegate)
+  /**
  * Called when the project publishes a message.
  */
-- (void) project: (PBXProject *)project publishMessage: (NSString *)message;
+  - (void) project: (PBXProject *)project publishMessage: (NSString *)message;
 
-@end
+  @end
 
-#if	defined(__cplusplus)
+#if defined(__cplusplus)
 }
 #endif
 
-#endif	/* _GSXCBuildDelegate_h_INCLUDE */
-
+#endif /* _GSXCBuildDelegate_h_INCLUDE */

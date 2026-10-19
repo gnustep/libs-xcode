@@ -36,7 +36,7 @@
 
 + (id) fileRef
 {
-  return AUTORELEASE([[self alloc] init]);
+  return AUTORELEASE ([[self alloc] init]);
 }
 
 - (id) init
@@ -54,8 +54,8 @@
 
 - (void) dealloc
 {
-  RELEASE(_location);
-  RELEASE(_workspaceLink);
+  RELEASE (_location);
+  RELEASE (_workspaceLink);
 
   [super dealloc];
 }
@@ -67,7 +67,7 @@
 
 - (void) setLocation: (NSString *)loc
 {
-  ASSIGN(_location, loc);
+  ASSIGN (_location, loc);
 }
 
 - (NSString *) workspaceLink
@@ -77,7 +77,7 @@
 
 - (void) setWorkspaceLink: (NSString *)link
 {
-  ASSIGN(_workspaceLink, link);
+  ASSIGN (_workspaceLink, link);
 }
 
 - (NSString *) workspaceLibs
@@ -87,7 +87,7 @@
 
 - (void) setWorkspaceLibs: (NSString *)libs
 {
-  ASSIGN(_workspaceLibs, libs);
+  ASSIGN (_workspaceLibs, libs);
 }
 
 - (NSString *) workspaceIncludes
@@ -97,12 +97,14 @@
 
 - (void) setWorkspaceIncludes: (NSString *)inc
 {
-  ASSIGN(_workspaceIncludes, inc);
+  ASSIGN (_workspaceIncludes, inc);
 }
 
 - (NSArray *) targets
 {
-  NSString *loc = [[self location] stringByReplacingOccurrencesOfString: @"group:" withString: @""];
+  NSString *loc =
+      [[self location] stringByReplacingOccurrencesOfString: @"group:"
+                                                 withString: @""];
   NSString *p = [loc stringByDeletingLastPathComponent];
   NSArray *result = nil;
 
@@ -122,17 +124,17 @@
       coder = [[PBXCoder alloc] initWithProjectFile: [loc lastPathComponent]];
       if (coder != nil)
         {
-	  PBXContainer *pc = [coder unarchive];
-	  PBXProject *prj = [pc rootObject];
+          PBXContainer *pc = [coder unarchive];
+          PBXProject *prj = [pc rootObject];
 
-	  result = [[prj targets] copy];
-	}
+          result = [[prj targets] copy];
+        }
 
       // Go back to the original working dir...
       if ([[p pathExtension] isEqualToString: @"xcodeproj"] == NO)
         {
           [mgr changeCurrentDirectoryPath: cwd];
-        }      
+        }
     }
 
   return result;
@@ -140,11 +142,13 @@
 
 - (BOOL) performLegacyOperation: (SEL)sel
 {
-  NSString *loc = [[self location] stringByReplacingOccurrencesOfString: @"group:" withString: @""];
+  NSString *loc =
+      [[self location] stringByReplacingOccurrencesOfString: @"group:"
+                                                 withString: @""];
   NSString *p = [loc stringByDeletingLastPathComponent];
-  NSString *function = NSStringFromSelector(sel);
+  NSString *function = NSStringFromSelector (sel);
   NSString *display = [function stringByCapitalizingFirstCharacter];
-  
+
   if (p != nil)
     {
       PBXCoder *coder = nil;
@@ -156,7 +160,8 @@
         {
           NSString *nwd = [cwd stringByAppendingPathComponent: p];
 
-          printf("++ %s project in dir... %s\n", [display cString], [nwd cString]);
+          printf ("++ %s project in dir... %s\n", [display cString],
+                  [nwd cString]);
           [mgr changeCurrentDirectoryPath: nwd];
         }
 
@@ -165,21 +170,20 @@
         {
           PBXContainer *pc = [coder unarchive];
 
-	  [pc setWorkspaceLink: _workspaceLink];
-	  [pc setWorkspaceIncludes: _workspaceIncludes];
-	  [pc setWorkspaceLibs: _workspaceLibs];
+          [pc setWorkspaceLink: _workspaceLink];
+          [pc setWorkspaceIncludes: _workspaceIncludes];
+          [pc setWorkspaceLibs: _workspaceLibs];
           [pc performSelector: sel];
         }
-      
+
       // If the project is in a subdir, return to the previous dir...
       if ([[p pathExtension] isEqualToString: @"xcodeproj"] == NO)
         {
-          printf("++ %s completed\n", [display cString]);                   
+          printf ("++ %s completed\n", [display cString]);
           [mgr changeCurrentDirectoryPath: cwd];
         }
 
-      AUTORELEASE(coder);
-        
+      AUTORELEASE (coder);
     }
   return YES;
 }

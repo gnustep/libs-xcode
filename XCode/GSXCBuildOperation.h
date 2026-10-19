@@ -30,40 +30,40 @@
 
 @class PBXBuildFile;
 
-#if	defined(__cplusplus)
-extern "C" {
+#if defined(__cplusplus)
+extern "C"
+{
 #endif
 
-@interface GSXCBuildOperation : NSOperation
-{
-  PBXBuildFile *_file;
-}
+  @interface GSXCBuildOperation : NSOperation
+  {
+    PBXBuildFile *_file;
+  }
 
-/**
+  /**
  * Creates an operation with the given file.
  */
-+ (id) operationWithFile: (PBXBuildFile *)file;
+  + (id) operationWithFile: (PBXBuildFile *)file;
 
-/**
+  /**
  * Initializes the operation with the given file.
  */
-- (id) initWithFile: (PBXBuildFile *)file;
+  - (id) initWithFile: (PBXBuildFile *)file;
 
-/**
+  /**
  * Returns the file for this operation.
  */
-- (PBXBuildFile *) file;
+  - (PBXBuildFile *) file;
 
-/**
+  /**
  * Sets the file for this operation.
  */
-- (void) setFile: (PBXBuildFile *)file;
-  
-@end
+  - (void) setFile: (PBXBuildFile *)file;
 
-#if	defined(__cplusplus)
+  @end
+
+#if defined(__cplusplus)
 }
 #endif
 
-#endif	/* _GSXCBuildTask_h_INCLUDE */
-
+#endif /* _GSXCBuildTask_h_INCLUDE */

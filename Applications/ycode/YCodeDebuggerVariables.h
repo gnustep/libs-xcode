@@ -28,8 +28,8 @@
 /* Nodes are dictionaries with name, value, type, numchild and children keys.
  * Backends may keep additional private keys for lazy child loading. */
 @protocol YCodeDebuggerVariableSource <NSObject>
-- (NSArray *)groups;
-- (void)setEnabled:(BOOL)enabled;
-- (void)loadChildren:(NSMutableDictionary *)node;
+- (NSArray *) groups;
+- (void) setEnabled: (BOOL)enabled;
+- (void) loadChildren: (NSMutableDictionary *)node;
 @end
 #endif

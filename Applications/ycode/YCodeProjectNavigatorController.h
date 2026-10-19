@@ -31,59 +31,61 @@
 @class YCodeProject;
 @class YCodeProjectNavigatorItem;
 
-@interface YCodeProjectNavigatorController : NSObject <NSOutlineViewDataSource, NSOutlineViewDelegate>
+@interface YCodeProjectNavigatorController
+    : NSObject <NSOutlineViewDataSource, NSOutlineViewDelegate>
 {
-    YCodeProject *_project;
-    NSOutlineView *_outlineView;
-    
-    NSMutableArray *_rootItems;
-    NSMutableDictionary *_itemCache;
-    
-    // Context menu
-    NSMenu *_contextMenu;
+  YCodeProject *_project;
+  NSOutlineView *_outlineView;
+
+  NSMutableArray *_rootItems;
+  NSMutableDictionary *_itemCache;
+
+  // Context menu
+  NSMenu *_contextMenu;
 }
 
 /**
  * Project association
  */
-- (YCodeProject *)project;
-- (void)setProject:(YCodeProject *)project;
+- (YCodeProject *) project;
+- (void) setProject: (YCodeProject *)project;
 
 /**
  * Outline view association
  */
-- (NSOutlineView *)outlineView;
-- (void)setOutlineView:(NSOutlineView *)outlineView;
+- (NSOutlineView *) outlineView;
+- (void) setOutlineView: (NSOutlineView *)outlineView;
 
 /**
  * Project tree management
  */
-- (void)projectDidChange;
-- (void)refreshApplicationIcons;
-- (void)reloadProjectTree;
-- (NSArray *)rootItems;
-- (NSString *)resolvedFilePathForNavigatorItem:(YCodeProjectNavigatorItem *)item;
+- (void) projectDidChange;
+- (void) refreshApplicationIcons;
+- (void) reloadProjectTree;
+- (NSArray *) rootItems;
+- (NSString *) resolvedFilePathForNavigatorItem:
+    (YCodeProjectNavigatorItem *)item;
 
 /**
  * Item management
  */
-- (YCodeProjectNavigatorItem *)itemForObject:(id)object;
-- (void)expandItem:(YCodeProjectNavigatorItem *)item;
-- (void)selectItem:(YCodeProjectNavigatorItem *)item;
+- (YCodeProjectNavigatorItem *) itemForObject: (id)object;
+- (void) expandItem: (YCodeProjectNavigatorItem *)item;
+- (void) selectItem: (YCodeProjectNavigatorItem *)item;
 
 /**
  * File operations
  */
-- (IBAction)addFile:(id)sender;
-- (IBAction)addGroup:(id)sender;
-- (IBAction)deleteItem:(id)sender;
-- (IBAction)renameItem:(id)sender;
+- (IBAction) addFile: (id)sender;
+- (IBAction) addGroup: (id)sender;
+- (IBAction) deleteItem: (id)sender;
+- (IBAction) renameItem: (id)sender;
 
 /**
  * Context menu
  */
-- (NSMenu *)contextMenu;
-- (void)setupContextMenu;
+- (NSMenu *) contextMenu;
+- (void) setupContextMenu;
 
 @end
 

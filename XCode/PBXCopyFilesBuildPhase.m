@@ -35,7 +35,7 @@
 
 - (void) setDstPath: (NSString *)object; // setter
 {
-  ASSIGN(dstPath,object);
+  ASSIGN (dstPath, object);
 }
 
 - (NSString *) dstSubfolderSpec // getter
@@ -45,7 +45,7 @@
 
 - (void) setDstSubfolderSpec: (NSString *)object; // setter
 {
-  ASSIGN(dstSubfolderSpec,object);
+  ASSIGN (dstSubfolderSpec, object);
 }
 
 - (BOOL) generate

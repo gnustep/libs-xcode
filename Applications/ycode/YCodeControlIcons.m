@@ -24,164 +24,216 @@
 
 #import "YCodeControlIcons.h"
 
-static void YCLine(CGFloat x1, CGFloat y1, CGFloat x2, CGFloat y2)
+static void
+YCLine (CGFloat x1, CGFloat y1, CGFloat x2, CGFloat y2)
 {
   NSBezierPath *path = [NSBezierPath bezierPath];
-  [path setLineWidth:2];
-  [path setLineCapStyle:NSRoundLineCapStyle];
-  [path moveToPoint:NSMakePoint(x1, y1)];
-  [path lineToPoint:NSMakePoint(x2, y2)];
+  [path setLineWidth: 2];
+  [path setLineCapStyle: NSRoundLineCapStyle];
+  [path moveToPoint: NSMakePoint (x1, y1)];
+  [path lineToPoint: NSMakePoint (x2, y2)];
   [path stroke];
 }
-static void YCPlay(CGFloat x)
+static void
+YCPlay (CGFloat x)
 {
   NSBezierPath *path = [NSBezierPath bezierPath];
-  [path moveToPoint:NSMakePoint(x, 4)];
-  [path lineToPoint:NSMakePoint(x + 13, 12)];
-  [path lineToPoint:NSMakePoint(x, 20)];
+  [path moveToPoint: NSMakePoint (x, 4)];
+  [path lineToPoint: NSMakePoint (x + 13, 12)];
+  [path lineToPoint: NSMakePoint (x, 20)];
   [path closePath];
   [path fill];
 }
 
-NSImage *YCodeControlIcon(NSString *name, CGFloat size)
+NSImage *
+YCodeControlIcon (NSString *name, CGFloat size)
 {
-  NSString *key = [NSString stringWithFormat:@"YCodeControl-%@-%g", name, (double)size];
-  NSImage *image = [NSImage imageNamed:key];
-  if (image) return image;
-  image = AUTORELEASE([[NSImage alloc] initWithSize:NSMakeSize(size, size)]);
+  NSString *key =
+      [NSString stringWithFormat: @"YCodeControl-%@-%g", name, (double)size];
+  NSImage *image = [NSImage imageNamed: key];
+  if (image)
+    return image;
+  image = AUTORELEASE ([[NSImage alloc] initWithSize: NSMakeSize (size, size)]);
   [image lockFocus];
   NSAffineTransform *scale = [NSAffineTransform transform];
-  [scale scaleBy:size / 24.0];
+  [scale scaleBy: size / 24.0];
   [scale concat];
-  [[NSColor colorWithCalibratedRed:0.18 green:0.43 blue:0.68 alpha:1] set];
-  if ([name isEqual:@"run"] || [name isEqual:@"go"] || [name isEqual:@"continue"])
+  [[NSColor colorWithCalibratedRed: 0.18 green: 0.43 blue: 0.68 alpha: 1] set];
+  if ([name isEqual: @"run"] || [name isEqual: @"go"] ||
+      [name isEqual: @"continue"])
     {
-      [[NSColor colorWithCalibratedRed:0.16 green:0.57 blue:0.29 alpha:1] set];
-      YCPlay([name isEqual:@"continue"] ? 9 : 6);
-      if ([name isEqual:@"continue"]) NSRectFill(NSMakeRect(3, 4, 3, 16));
+      [[NSColor colorWithCalibratedRed: 0.16 green: 0.57 blue: 0.29 alpha: 1] set];
+      YCPlay ([name isEqual: @"continue"] ? 9 : 6);
+      if ([name isEqual: @"continue"])
+        NSRectFill (NSMakeRect (3, 4, 3, 16));
     }
-  else if ([name isEqual:@"sound"])
+  else if ([name isEqual: @"sound"])
     {
-      [[NSColor colorWithCalibratedRed:0.04 green:0.12 blue:0.14 alpha:1] set];
-      [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(1, 2, 22, 20)
-          xRadius:2 yRadius:2] fill];
-      [[NSColor colorWithCalibratedRed:0.16 green:0.29 blue:0.30 alpha:1] set];
+      [[NSColor colorWithCalibratedRed: 0.04 green: 0.12 blue: 0.14 alpha: 1] set];
+      [[NSBezierPath bezierPathWithRoundedRect: NSMakeRect (1, 2, 22, 20)
+                                       xRadius: 2
+                                       yRadius: 2] fill];
+      [[NSColor colorWithCalibratedRed: 0.16 green: 0.29 blue: 0.30 alpha: 1] set];
       NSBezierPath *grid = [NSBezierPath bezierPath];
-      [grid setLineWidth:0.6];
+      [grid setLineWidth: 0.6];
       NSInteger position;
-      for (position = 6; position <= 18; position += 6) {
-        [grid moveToPoint:NSMakePoint(position, 3)];
-        [grid lineToPoint:NSMakePoint(position, 21)];
-        [grid moveToPoint:NSMakePoint(2, position)];
-        [grid lineToPoint:NSMakePoint(22, position)];
-      }
+      for (position = 6; position <= 18; position += 6)
+        {
+          [grid moveToPoint: NSMakePoint (position, 3)];
+          [grid lineToPoint: NSMakePoint (position, 21)];
+          [grid moveToPoint: NSMakePoint (2, position)];
+          [grid lineToPoint: NSMakePoint (22, position)];
+        }
       [grid stroke];
-      [[NSColor colorWithCalibratedRed:0.25 green:1.0 blue:0.50 alpha:1] set];
+      [[NSColor colorWithCalibratedRed: 0.25 green: 1.0 blue: 0.50 alpha: 1] set];
       NSBezierPath *wave = [NSBezierPath bezierPath];
-      [wave setLineWidth:1.8];
-      [wave setLineCapStyle:NSRoundLineCapStyle];
-      [wave moveToPoint:NSMakePoint(3, 12)];
-      [wave curveToPoint:NSMakePoint(7.5, 12)
-          controlPoint1:NSMakePoint(4, 21) controlPoint2:NSMakePoint(6.5, 21)];
-      [wave curveToPoint:NSMakePoint(12, 12)
-          controlPoint1:NSMakePoint(8.5, 3) controlPoint2:NSMakePoint(11, 3)];
-      [wave curveToPoint:NSMakePoint(16.5, 12)
-          controlPoint1:NSMakePoint(13, 21) controlPoint2:NSMakePoint(15.5, 21)];
-      [wave curveToPoint:NSMakePoint(21, 12)
-          controlPoint1:NSMakePoint(17.5, 3) controlPoint2:NSMakePoint(20, 3)];
+      [wave setLineWidth: 1.8];
+      [wave setLineCapStyle: NSRoundLineCapStyle];
+      [wave moveToPoint: NSMakePoint (3, 12)];
+      [wave curveToPoint: NSMakePoint (7.5, 12)
+           controlPoint1: NSMakePoint (4, 21)
+           controlPoint2: NSMakePoint (6.5, 21)];
+      [wave curveToPoint: NSMakePoint (12, 12)
+           controlPoint1: NSMakePoint (8.5, 3)
+           controlPoint2: NSMakePoint (11, 3)];
+      [wave curveToPoint: NSMakePoint (16.5, 12)
+           controlPoint1: NSMakePoint (13, 21)
+           controlPoint2: NSMakePoint (15.5, 21)];
+      [wave curveToPoint: NSMakePoint (21, 12)
+           controlPoint1: NSMakePoint (17.5, 3)
+           controlPoint2: NSMakePoint (20, 3)];
       [wave stroke];
     }
-  else if ([name isEqual:@"variablesShow"] || [name isEqual:@"variablesHide"])
+  else if ([name isEqual: @"variablesShow"] || [name isEqual: @"variablesHide"])
     {
-      [[NSBezierPath bezierPathWithRect:NSMakeRect(3, 3, 18, 18)] stroke];
-      YCLine(11, 3, 11, 21);
-      BOOL show = [name isEqual:@"variablesShow"];
-      YCLine(show ? 5 : 8, 8, show ? 8 : 5, 12);
-      YCLine(show ? 8 : 5, 12, show ? 5 : 8, 16);
+      [[NSBezierPath bezierPathWithRect: NSMakeRect (3, 3, 18, 18)] stroke];
+      YCLine (11, 3, 11, 21);
+      BOOL show = [name isEqual: @"variablesShow"];
+      YCLine (show ? 5 : 8, 8, show ? 8 : 5, 12);
+      YCLine (show ? 8 : 5, 12, show ? 5 : 8, 16);
     }
-  else if ([name isEqual:@"stop"])
+  else if ([name isEqual: @"stop"])
     {
-      [[NSColor colorWithCalibratedRed:0.77 green:0.23 blue:0.22 alpha:1] set];
-      [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(4, 4, 16, 16) xRadius:2 yRadius:2] fill];
+      [[NSColor colorWithCalibratedRed: 0.77 green: 0.23 blue: 0.22 alpha: 1] set];
+      [[NSBezierPath bezierPathWithRoundedRect: NSMakeRect (4, 4, 16, 16)
+                                       xRadius: 2
+                                       yRadius: 2] fill];
     }
-  else if ([name isEqual:@"pause"])
-    { NSRectFill(NSMakeRect(5, 4, 5, 16)); NSRectFill(NSMakeRect(14, 4, 5, 16)); }
-  else if ([name isEqual:@"debug"])
+  else if ([name isEqual: @"pause"])
     {
-      [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(7, 4, 10, 14)] fill];
-      [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(9, 17, 6, 5)] fill];
+      NSRectFill (NSMakeRect (5, 4, 5, 16));
+      NSRectFill (NSMakeRect (14, 4, 5, 16));
+    }
+  else if ([name isEqual: @"debug"])
+    {
+      [[NSBezierPath bezierPathWithOvalInRect: NSMakeRect (7, 4, 10, 14)] fill];
+      [[NSBezierPath bezierPathWithOvalInRect: NSMakeRect (9, 17, 6, 5)] fill];
       NSInteger y;
       for (y = 7; y <= 17; y += 5)
-        { YCLine(3, y - 2, 8, y); YCLine(16, y, 21, y - 2); }
-      [[NSColor whiteColor] set]; YCLine(12, 6, 12, 15);
+        {
+          YCLine (3, y - 2, 8, y);
+          YCLine (16, y, 21, y - 2);
+        }
+      [[NSColor whiteColor] set];
+      YCLine (12, 6, 12, 15);
     }
-  else if ([name isEqual:@"restart"])
+  else if ([name isEqual: @"restart"])
     {
       NSBezierPath *arc = [NSBezierPath bezierPath];
-      [arc setLineWidth:2.5];
-      [arc appendBezierPathWithArcWithCenter:NSMakePoint(12, 12) radius:8 startAngle:40 endAngle:320];
+      [arc setLineWidth: 2.5];
+      [arc appendBezierPathWithArcWithCenter: NSMakePoint (12, 12)
+                                      radius: 8
+                                  startAngle: 40
+                                    endAngle: 320];
       [arc stroke];
       NSBezierPath *arrow = [NSBezierPath bezierPath];
-      [arrow moveToPoint:NSMakePoint(20, 21)]; [arrow lineToPoint:NSMakePoint(20, 13)];
-      [arrow lineToPoint:NSMakePoint(12, 17)]; [arrow closePath]; [arrow fill];
+      [arrow moveToPoint: NSMakePoint (20, 21)];
+      [arrow lineToPoint: NSMakePoint (20, 13)];
+      [arrow lineToPoint: NSMakePoint (12, 17)];
+      [arrow closePath];
+      [arrow fill];
     }
-  else if ([name isEqual:@"next"])
+  else if ([name isEqual: @"next"])
     {
       NSBezierPath *arc = [NSBezierPath bezierPath];
-      [arc setLineWidth:2];
-      [arc moveToPoint:NSMakePoint(4, 10)];
-      [arc curveToPoint:NSMakePoint(20, 10) controlPoint1:NSMakePoint(4, 23) controlPoint2:NSMakePoint(20, 23)];
-      [arc stroke]; YCLine(16, 14, 20, 10); YCLine(20, 10, 23, 15);
-      [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(9, 4, 6, 6)] fill];
+      [arc setLineWidth: 2];
+      [arc moveToPoint: NSMakePoint (4, 10)];
+      [arc curveToPoint: NSMakePoint (20, 10)
+          controlPoint1: NSMakePoint (4, 23)
+          controlPoint2: NSMakePoint (20, 23)];
+      [arc stroke];
+      YCLine (16, 14, 20, 10);
+      YCLine (20, 10, 23, 15);
+      [[NSBezierPath bezierPathWithOvalInRect: NSMakeRect (9, 4, 6, 6)] fill];
     }
-  else if ([name isEqual:@"stepInto"] || [name isEqual:@"stepOut"] ||
-           [name isEqual:@"up"] || [name isEqual:@"down"])
+  else if ([name isEqual: @"stepInto"] || [name isEqual: @"stepOut"] ||
+           [name isEqual: @"up"] || [name isEqual: @"down"])
     {
-      BOOL up = [name isEqual:@"stepOut"] || [name isEqual:@"up"];
+      BOOL up = [name isEqual: @"stepOut"] || [name isEqual: @"up"];
       CGFloat tip = up ? 20 : 4, back = up ? 15 : 9;
-      YCLine(12, up ? 5 : 19, 12, tip);
-      YCLine(7, back, 12, tip); YCLine(12, tip, 17, back);
-      if ([name hasPrefix:@"step"])
-        { YCLine(5, up ? 3 : 1, 19, up ? 3 : 1); }
+      YCLine (12, up ? 5 : 19, 12, tip);
+      YCLine (7, back, 12, tip);
+      YCLine (12, tip, 17, back);
+      if ([name hasPrefix: @"step"])
+        {
+          YCLine (5, up ? 3 : 1, 19, up ? 3 : 1);
+        }
     }
-  else if ([name isEqual:@"breakpoint"])
+  else if ([name isEqual: @"breakpoint"])
     {
       NSBezierPath *path = [NSBezierPath bezierPath];
-      [path moveToPoint:NSMakePoint(3, 6)]; [path lineToPoint:NSMakePoint(16, 6)];
-      [path lineToPoint:NSMakePoint(22, 12)]; [path lineToPoint:NSMakePoint(16, 18)];
-      [path lineToPoint:NSMakePoint(3, 18)]; [path closePath]; [path fill];
+      [path moveToPoint: NSMakePoint (3, 6)];
+      [path lineToPoint: NSMakePoint (16, 6)];
+      [path lineToPoint: NSMakePoint (22, 12)];
+      [path lineToPoint: NSMakePoint (16, 18)];
+      [path lineToPoint: NSMakePoint (3, 18)];
+      [path closePath];
+      [path fill];
     }
-  else if ([name isEqual:@"build"])
+  else if ([name isEqual: @"build"])
     {
       NSAffineTransform *rotation = [NSAffineTransform transform];
-      [rotation translateXBy:12 yBy:12]; [rotation rotateByDegrees:-40];
-      [rotation translateXBy:-12 yBy:-12]; [rotation concat];
-      NSRectFill(NSMakeRect(10, 3, 4, 14)); NSRectFill(NSMakeRect(5, 16, 14, 5));
+      [rotation translateXBy: 12 yBy: 12];
+      [rotation rotateByDegrees: -40];
+      [rotation translateXBy: -12 yBy: -12];
+      [rotation concat];
+      NSRectFill (NSMakeRect (10, 3, 4, 14));
+      NSRectFill (NSMakeRect (5, 16, 14, 5));
     }
-  else if ([name isEqual:@"clean"])
+  else if ([name isEqual: @"clean"])
     {
-      YCLine(7, 8, 17, 21);
+      YCLine (7, 8, 17, 21);
       NSBezierPath *path = [NSBezierPath bezierPath];
-      [path moveToPoint:NSMakePoint(3, 4)]; [path lineToPoint:NSMakePoint(7, 12)];
-      [path lineToPoint:NSMakePoint(14, 7)]; [path lineToPoint:NSMakePoint(9, 2)];
-      [path closePath]; [path fill];
+      [path moveToPoint: NSMakePoint (3, 4)];
+      [path lineToPoint: NSMakePoint (7, 12)];
+      [path lineToPoint: NSMakePoint (14, 7)];
+      [path lineToPoint: NSMakePoint (9, 2)];
+      [path closePath];
+      [path fill];
     }
-  else if ([name isEqual:@"navigator"] || [name isEqual:@"inspector"] || [name isEqual:@"bottom"])
+  else if ([name isEqual: @"navigator"] || [name isEqual: @"inspector"] ||
+           [name isEqual: @"bottom"])
     {
-      NSBezierPath *frame = [NSBezierPath bezierPathWithRect:NSMakeRect(3, 4, 18, 16)];
-      [frame setLineWidth:2]; [frame stroke];
-      if ([name isEqual:@"bottom"])
-        NSRectFill(NSMakeRect(4, 5, 16, 5));
+      NSBezierPath *frame =
+          [NSBezierPath bezierPathWithRect: NSMakeRect (3, 4, 18, 16)];
+      [frame setLineWidth: 2];
+      [frame stroke];
+      if ([name isEqual: @"bottom"])
+        NSRectFill (NSMakeRect (4, 5, 16, 5));
       else
-        NSRectFill(NSMakeRect([name isEqual:@"navigator"] ? 4 : 15, 5, 5, 14));
+        NSRectFill (
+            NSMakeRect ([name isEqual: @"navigator"] ? 4 : 15, 5, 5, 14));
     }
   [image unlockFocus];
-  if ([name isEqual:@"sound"]) {
-    // GNUstep NSImage copies omit cached drawing representations. Materialize
-    // pixels so the navigator's private, resized copy retains the waveform.
-    NSImage *bitmap = AUTORELEASE([[NSImage alloc] initWithData:[image TIFFRepresentation]]);
-    if (bitmap) image = bitmap;
-  }
-  [image setName:key];
+  if ([name isEqual: @"sound"])
+    {
+      // GNUstep NSImage copies omit cached drawing representations. Materialize
+      // pixels so the navigator's private, resized copy retains the waveform.
+      NSImage *bitmap = AUTORELEASE (
+          [[NSImage alloc] initWithData: [image TIFFRepresentation]]);
+      if (bitmap)
+        image = bitmap;
+    }
+  [image setName: key];
   return image;
 }

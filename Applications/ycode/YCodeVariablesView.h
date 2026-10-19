@@ -37,9 +37,9 @@
   BOOL _layingOut;
   CGFloat _fraction;
 }
-- (id)initWithFrame:(NSRect)frame transcript:(NSScrollView *)transcript;
-- (void)setDebugger:(YCodeDebugger *)debugger;
-- (BOOL)variablesVisible;
-- (IBAction)toggleVariables:(id)sender;
+- (id) initWithFrame: (NSRect)frame transcript: (NSScrollView *)transcript;
+- (void) setDebugger: (YCodeDebugger *)debugger;
+- (BOOL) variablesVisible;
+- (IBAction) toggleVariables: (id)sender;
 @end
 #endif

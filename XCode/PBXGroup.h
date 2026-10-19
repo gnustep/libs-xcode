@@ -27,7 +27,6 @@
 // Local includes
 #import "PBXCoder.h"
 
-
 @interface PBXGroup : NSObject
 {
   NSString *_sourceTree;

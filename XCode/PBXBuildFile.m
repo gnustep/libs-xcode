@@ -31,7 +31,7 @@
 // Methods....
 - (void) setPlatformFilter: (NSString *)f
 {
-  ASSIGN(_platformFilter, f);
+  ASSIGN (_platformFilter, f);
 }
 
 - (PBXFileReference *) fileRef // getter
@@ -41,7 +41,7 @@
 
 - (void) setFileRef: (PBXFileReference *)object; // setter
 {
-  ASSIGN(_fileRef,object);
+  ASSIGN (_fileRef, object);
 }
 
 - (NSMutableDictionary *) settings // getter
@@ -51,7 +51,7 @@
 
 - (void) setSettings: (NSMutableDictionary *)object; // setter
 {
-  ASSIGN(_settings,object);
+  ASSIGN (_settings, object);
 }
 
 - (void) applySettings
@@ -96,7 +96,8 @@
 - (BOOL) generate
 {
   [self applySettings];
-  xcputs([[NSString stringWithFormat: @"\t* Creating entry for %@",[_fileRef buildPath]] cString]);
+  xcputs ([[NSString stringWithFormat: @"\t* Creating entry for %@",
+                                      [_fileRef buildPath]] cString]);
   [_fileRef setTarget: _target];
   return [_fileRef generate];
 }
@@ -104,7 +105,7 @@
 - (NSString *) description
 {
   NSString *s = [super description];
-  return [s stringByAppendingFormat: @" <%@>", _fileRef]; 
+  return [s stringByAppendingFormat: @" <%@>", _fileRef];
 }
 
 @end

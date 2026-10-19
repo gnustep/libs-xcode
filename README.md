@@ -152,6 +152,28 @@ The [documentation guide](Documentation/README.md) covers `buildtool.plist`
 configuration and the manual. The [Ycode guide](Applications/ycode/README.md)
 covers the graphical IDE and its separate `.ycode.plist` settings.
 
+#### 1.3.4 Source conventions and checks
+
+C and Objective-C sources use [GNU formatting](https://www.gnu.org/prep/standards/html_node/Formatting.html)
+and GNUstep selector spacing. Objective-C implementation code uses Objective-C
+1.0 syntax and manual reference counting. This applies to the library, Ycode,
+tools, generators, tests, templates, and bundled C sources. Source-code strings
+in syntax-highlighting tests are test data and may contain newer syntax.
+
+With Python 3 and clang-format 19 installed, run:
+
+```sh
+python3 Tools/format-source.py  # apply GNU/GNUstep formatting
+make check-style              # check formatting and lexical syntax rules
+make check-objc1              # also audit compiler ASTs and GNU99 C syntax
+```
+
+The compiler audit requires GNUstep development headers, Clang, and GCC. It
+checks all tracked translation units, including templates and sources outside
+the default build. It does not replace legacy-runtime linkage tests or native
+macOS/Windows builds. Formatting preserves source tokens and literal contents;
+long literals and existing comment text are retained intact.
+
 ## 1.4 How can you help?
 
 * Give us feedback!  Tell us what you like; tell us what you think

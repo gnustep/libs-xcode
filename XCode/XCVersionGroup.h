@@ -28,7 +28,6 @@
 #import "PBXCoder.h"
 #import "PBXFileReference.h"
 
-
 @interface XCVersionGroup : NSObject
 {
   NSString *sourceTree;

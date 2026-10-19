@@ -51,30 +51,29 @@
 // Methods for unarchiving a pbxproj file...
 + (id) unarchiveWithProjectFile: (NSString *)name
 {
-  return AUTORELEASE([[self alloc] initWithProjectFile: name]);
+  return AUTORELEASE ([[self alloc] initWithProjectFile: name]);
 }
 
 - (id) initWithContentsOfFile: (NSString *)name
 {
-  if((self = [super init]) != nil)
+  if ((self = [super init]) != nil)
     {
       _objectCache = [[NSMutableDictionary alloc] initWithCapacity: 10];
 
-      ASSIGN(_fileName, name);
-      ASSIGN(_projectRoot,
-	     [[_fileName stringByDeletingLastPathComponent]
-	       stringByDeletingLastPathComponent]);
-      ASSIGN(_dictionary,
-	     [NSMutableDictionary dictionaryWithContentsOfFile: _fileName]);
-      ASSIGN(_objects, [_dictionary objectForKey: @"objects"]);
+      ASSIGN (_fileName, name);
+      ASSIGN (_projectRoot, [[_fileName stringByDeletingLastPathComponent]
+                                stringByDeletingLastPathComponent]);
+      ASSIGN (_dictionary,
+              [NSMutableDictionary dictionaryWithContentsOfFile: _fileName]);
+      ASSIGN (_objects, [_dictionary objectForKey: @"objects"]);
 
       _parents = [[NSMutableDictionary alloc] initWithCapacity: 10];
-      [[GSXCBuildContext sharedBuildContext]
-	setObject: _objects forKey: @"objects"];
+      [[GSXCBuildContext sharedBuildContext] setObject: _objects
+                                                forKey: @"objects"];
 
-      setenv("PROJECT_DIR","./",1);
-      setenv("PROJECT_ROOT","./",1);
-      setenv("SRCROOT","./",1);
+      setenv ("PROJECT_DIR", "./", 1);
+      setenv ("PROJECT_ROOT", "./", 1);
+      setenv ("SRCROOT", "./", 1);
     }
   return self;
 }
@@ -87,12 +86,12 @@
 
 - (void) dealloc
 {
-  RELEASE(_objectCache);
-  RELEASE(_fileName);
-  RELEASE(_dictionary);
-  RELEASE(_objects);
-  RELEASE(_parents);
-  DESTROY(_rootObject);
+  RELEASE (_objectCache);
+  RELEASE (_fileName);
+  RELEASE (_dictionary);
+  RELEASE (_objects);
+  RELEASE (_parents);
+  DESTROY (_rootObject);
 
   [super dealloc];
 }
@@ -107,23 +106,23 @@
   id object = nil;
   NSString *isaValue = [dict objectForKey: @"isa"];
   NSString *className = (isaValue == nil) ? @"PBXContainer" : isaValue;
-  Class classInstance = NSClassFromString(className);
+  Class classInstance = NSClassFromString (className);
 
-  if(classInstance == nil)
+  if (classInstance == nil)
     {
-      xcputs([[NSString stringWithFormat: @"Unknown class: %@",className] cString]);
+      xcputs ([[NSString stringWithFormat: @"Unknown class: %@", className]
+          cString]);
       return nil;
     }
 
-  object = AUTORELEASE([[classInstance alloc] init]);
-  object = [self applyKeysAndValuesFromDictionary: dict
-					 toObject: object];
+  object = AUTORELEASE ([[classInstance alloc] init]);
+  object = [self applyKeysAndValuesFromDictionary: dict toObject: object];
 
-  if([object isKindOfClass: [PBXContainer class]])
+  if ([object isKindOfClass: [PBXContainer class]])
     {
       [object setObjects: _objectCache];
       [object setFilename: _fileName];
-      ASSIGN(_rootObject, object);
+      ASSIGN (_rootObject, object);
     }
 
   return object;
@@ -132,14 +131,14 @@
 - (id) unarchiveObjectForKey: (NSString *)key
 {
   id obj = [_objectCache objectForKey: key];
-  if(obj != nil)
+  if (obj != nil)
     {
       return obj;
     }
 
   // cache the object, if it exists in objects... if not return nil
   NSDictionary *dict = [_objects objectForKey: key];
-  if(dict != nil)
+  if (dict != nil)
     {
       obj = [self unarchiveFromDictionary: dict];
       [_objectCache setObject: obj forKey: key];
@@ -154,78 +153,75 @@
   NSEnumerator *en = [array objectEnumerator];
   id key = nil;
 
-  while((key = [en nextObject]) != nil)
+  while ((key = [en nextObject]) != nil)
     {
       id obj = [self unarchiveObjectForKey: key];
-      if(obj != nil)
-	{
-	  [result addObject: obj];
-	}
+      if (obj != nil)
+        {
+          [result addObject: obj];
+        }
     }
 
   return result;
 }
 
-- (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dict
-			       toObject: (id)object
+- (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dict toObject: (id)object
 {
   NSEnumerator *en = [dict keyEnumerator];
   NSString *key = nil;
 
-  while((key = [en nextObject]) != nil)
+  while ((key = [en nextObject]) != nil)
     {
       // continue if it's the isa pointer...
-      if([key isEqualToString: @"isa"])
-	{
-	  continue;
-	}
+      if ([key isEqualToString: @"isa"])
+        {
+          continue;
+        }
 
       id value = [dict objectForKey: key];
-      if(value != nil)
-	{
-	  NS_DURING
-	    {
-	      // if it's an array, resolve the indexes of the array....
-      if([value isKindOfClass: [NSArray class]])
-		{
-		  value = [self resolveArrayMembers: value];
-		}
+      if (value != nil)
+        {
+          NS_DURING
+          {
+            // if it's an array, resolve the indexes of the array....
+            if ([value isKindOfClass: [NSArray class]])
+              {
+                value = [self resolveArrayMembers: value];
+              }
 
-	      // search the global dictionary...
-	      if([key isEqualToString: @"containerPortal"] == NO &&
-		 [key isEqualToString: @"remoteGlobalIDString"] == NO)
-		{
-		  id newValue = [self unarchiveObjectForKey: value];
-		  if(newValue != nil)
-		    {
-		      value = newValue;
-		    }
-		}
-	      else
-		{
-		  value = [_objectCache objectForKey: key];
-		}
+            // search the global dictionary...
+            if ([key isEqualToString: @"containerPortal"] == NO &&
+                [key isEqualToString: @"remoteGlobalIDString"] == NO)
+              {
+                id newValue = [self unarchiveObjectForKey: value];
+                if (newValue != nil)
+                  {
+                    value = newValue;
+                  }
+              }
+            else
+              {
+                value = [_objectCache objectForKey: key];
+              }
 
-	      if(value != nil)
-		{
-		  id currentValue = [object valueForKey: key];
-		  if(currentValue == nil)
-		    {
-		      [object setValue: value
-				forKey: key];
-		    }
-		}
-	    }
-	  NS_HANDLER
-	    {
-	      xcputs([[NSString stringWithFormat: @"%@, key = %@, value = %@, object = %@",
-			      [localException reason],
-			      key,
-			      value,
-			      object] cString]);
-	    }
-	  NS_ENDHANDLER;
-	}
+            if (value != nil)
+              {
+                id currentValue = [object valueForKey: key];
+                if (currentValue == nil)
+                  {
+                    [object setValue: value forKey: key];
+                  }
+              }
+          }
+          NS_HANDLER
+          {
+            xcputs ([[NSString
+                stringWithFormat: @"%@, key = %@, value = %@, object = %@",
+                                 [localException reason], key, value, object]
+                cString]);
+          }
+          NS_ENDHANDLER;
+        }
     }
 
   return object;
@@ -263,7 +259,7 @@
   self = [super init];
   if (self != nil)
     {
-      ASSIGN(_rootObject, root);
+      ASSIGN (_rootObject, root);
     }
   return self;
 }

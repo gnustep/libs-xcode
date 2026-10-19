@@ -37,7 +37,7 @@
   NSMutableDictionary *_parents;
 
   XCAbstractDelegate *_delegate;
-  
+
   // Archiving...
   id _rootObject;
 }
@@ -87,7 +87,7 @@
  * Applies keys and values from the dictionary to the object.
  */
 - (id) applyKeysAndValuesFromDictionary: (NSDictionary *)dictionary
-                               toObject: (id)object;
+                              toObject: (id)object;
 
 /**
  * Returns the project root.

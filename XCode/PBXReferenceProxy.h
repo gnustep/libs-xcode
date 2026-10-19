@@ -28,7 +28,6 @@
 #import "PBXCoder.h"
 #import "PBXContainerItemProxy.h"
 
-
 @interface PBXReferenceProxy : NSObject
 {
   NSString *sourceTree;
