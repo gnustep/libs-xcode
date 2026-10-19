@@ -69,7 +69,9 @@ and XIB identifiers distinguish objects; File’s Owner and First Responder are
 labeled explicitly. Resize columns or scroll horizontally to inspect long values;
 hover over a cell to see its full text. Selecting a row draws a rectilinear
 connection between the visible endpoints, using borderless windows that ignore
-mouse input. The line follows preview dragging, scrolling, and resizing; it
+mouse input. The source is marked with Gorm’s S icon and the target with its
+T icon. Both images are bundled in Ycode’s Model editor resources; no installed
+Gorm resources are used at runtime. The markers and line follow preview dragging, scrolling, and resizing; it
 hides when an endpoint is offscreen, the selection is cleared, or the viewer
 is hidden or closed. Object icons and menu items can also be endpoints. Set
 its color and width (1–10 points) in Preferences → Connection Line; changes

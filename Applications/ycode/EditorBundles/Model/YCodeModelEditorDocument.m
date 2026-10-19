@@ -607,6 +607,39 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
 
 @end
 
+/* Composite the tag over the editor's pixels so transparent icon corners
+ * also work on X11 desktops without a compositing window manager. */
+@interface YCModelConnectionTagView : NSImageView
+{
+  NSImage *_backdrop;
+}
+
+- (void) setBackdrop: (NSImage *)image;
+@end
+@implementation YCModelConnectionTagView
+- (void) setBackdrop: (NSImage *)image
+{
+  ASSIGN (_backdrop, image);
+  [self setNeedsDisplay: YES];
+}
+
+- (void) drawRect: (NSRect)rect
+{
+  [_backdrop drawInRect: [self bounds]
+               fromRect: NSZeroRect
+              operation: NSCompositeCopy
+               fraction: 1];
+  [super drawRect: rect];
+}
+
+- (void) dealloc
+{
+  [_backdrop release];
+  [super dealloc];
+}
+
+@end
+
 static id
 YCConnectionKey (id object)
 {
@@ -710,6 +743,7 @@ YCConnectionRow (id connection, NSDictionary *names)
   NSTextField *_connectionHeading;
   NSMutableDictionary *_endpointViews;
   NSMutableArray *_connectionLineWindows;
+  NSMutableArray *_connectionTagWindows;
   BOOL _updatingConnectionLine;
   BOOL _applicationInactive;
 }
@@ -753,6 +787,7 @@ YCConnectionRow (id connection, NSDictionary *names)
     {
       _endpointViews = [[NSMutableDictionary alloc] init];
       _connectionLineWindows = [[NSMutableArray alloc] init];
+      _connectionTagWindows = [[NSMutableArray alloc] init];
       _editorView = [[YCModelEditorView alloc]
           initWithFrame: NSMakeRect (0, 0, 600, 400)];
       [(YCModelEditorView *)_editorView setOverlayOwner: self];
@@ -846,6 +881,8 @@ YCConnectionRow (id connection, NSDictionary *names)
   [self hideConnectionLine];
   [_connectionLineWindows makeObjectsPerformSelector: @selector (close)];
   [_connectionLineWindows release];
+  [_connectionTagWindows makeObjectsPerformSelector: @selector (close)];
+  [_connectionTagWindows release];
   [_endpointViews release];
   [_connectionTable setDataSource: nil];
   [_connectionTable setDelegate: nil];
@@ -919,7 +956,8 @@ YCConnectionRow (id connection, NSDictionary *names)
 
 - (void) hideConnectionLine
 {
-  NSEnumerator *windows = [_connectionLineWindows objectEnumerator];
+  NSEnumerator *windows = [[_connectionLineWindows
+      arrayByAddingObjectsFromArray: _connectionTagWindows] objectEnumerator];
   NSWindow *window;
   while ((window = [windows nextObject]))
     {
@@ -968,6 +1006,70 @@ YCConnectionRow (id connection, NSDictionary *names)
         }
     }
   [self updateConnectionLine];
+}
+
+- (void) updateConnectionTagAtPoint: (NSPoint)point
+                             index: (NSUInteger)index
+                              host: (NSWindow *)host
+{
+  NSWindow *tag;
+  if (index >= [_connectionTagWindows count])
+    {
+      NSString *name = index == 0 ? @"GormSourceTag" : @"GormTargetTag";
+      NSString *path =
+          [[NSBundle bundleForClass: [self class]] pathForResource: name
+                                                           ofType: @"tiff"];
+      NSImage *image = [[NSImage alloc] initWithContentsOfFile: path];
+      tag = [[YCModelConnectionWindow alloc]
+          initWithContentRect: NSMakeRect (0, 0, 16, 16)
+                    styleMask: NSBorderlessWindowMask
+                      backing: NSBackingStoreBuffered
+                        defer: YES];
+      [tag setReleasedWhenClosed: NO];
+      [tag setHasShadow: NO];
+      [tag setOpaque: YES];
+      [tag setBackgroundColor: [NSColor clearColor]];
+      YCModelConnectionTagView *view = [[YCModelConnectionTagView alloc]
+          initWithFrame: NSMakeRect (0, 0, 16, 16)];
+      [view setImage: image];
+      [view setImageScaling: NSImageScaleNone];
+      [tag setContentView: view];
+      [view release];
+      [image release];
+      [_connectionTagWindows addObject: tag];
+      [tag release];
+    }
+  tag = [_connectionTagWindows objectAtIndex: index];
+  NSRect frame = NSMakeRect (floor (point.x - 8), floor (point.y - 8), 16, 16);
+  BOOL changed = !NSEqualRects ([tag frame], frame) || ![tag isVisible];
+  if (!NSEqualRects ([tag frame], frame))
+    [tag setFrame: frame display: NO];
+  if ([tag parentWindow] != host)
+    {
+      [[tag parentWindow] removeChildWindow: tag];
+      [host addChildWindow: tag ordered: NSWindowAbove];
+    }
+  if (![tag isVisible])
+    [tag orderFront: nil];
+  [tag setIgnoresMouseEvents: YES];
+  if (changed)
+    {
+      NSView *content = [host contentView];
+      NSRect sample = frame;
+      sample.origin = [host convertScreenToBase: frame.origin];
+      sample = [content convertRect: sample fromView: nil];
+      NSBitmapImageRep *bitmap =
+          [content bitmapImageRepForCachingDisplayInRect: sample];
+      [content cacheDisplayInRect: sample toBitmapImageRep: bitmap];
+      NSImage *backdrop = [[NSImage alloc] initWithSize: frame.size];
+      if (bitmap)
+        [backdrop addRepresentation: bitmap];
+      [(YCModelConnectionTagView *)[tag contentView] setBackdrop: backdrop];
+      [backdrop release];
+      [[tag contentView] setNeedsDisplay: YES];
+      [tag displayIfNeeded];
+      [tag flushWindow];
+    }
 }
 
 - (void) updateConnectionLine
@@ -1049,6 +1151,15 @@ YCConnectionRow (id connection, NSDictionary *names)
           [segment flushWindow];
         }
     }
+  /* Keep both tags readable for self-connections or coincident endpoints. */
+  if (fabs (source.x - destination.x) < 16
+      && fabs (source.y - destination.y) < 16)
+    {
+      source.x -= 8;
+      destination.x += 8;
+    }
+  [self updateConnectionTagAtPoint: source index: 0 host: host];
+  [self updateConnectionTagAtPoint: destination index: 1 host: host];
   _updatingConnectionLine = NO;
 }
 

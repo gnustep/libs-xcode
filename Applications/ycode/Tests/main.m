@@ -3338,6 +3338,14 @@ captureModelScreen (NSString *path)
     }
 }
 
+static BOOL
+modelConnectionTagsVisible (YCodeEditorDocument *document, BOOL visible)
+{
+  NSArray *tags = [document valueForKey: @"_connectionTagWindows"];
+  return [tags count] == 2 && [[tags objectAtIndex: 0] isVisible] == visible &&
+         [[tags objectAtIndex: 1] isVisible] == visible;
+}
+
 static void
 testModelConnectionEndpoints (YCodeEditorDocument *document, NSUInteger row)
 {
@@ -3359,11 +3367,18 @@ testModelConnectionEndpoints (YCodeEditorDocument *document, NSUInteger row)
       [segments count] == 2 && [[segments objectAtIndex: 0] isVisible] &&
           [[segments objectAtIndex: 1] isVisible],
       @"Decoded connection endpoints map to visible NIB and XIB preview objects");
+  testAssert (
+      modelConnectionTagsVisible (document, YES),
+      @"NIB and XIB connection endpoints show source and target markers");
+
   [document reloadFromFile];
   testAssert ([table selectedRow] == -1
                   && ([segments count] == 0
                       || ![[segments objectAtIndex: 0] isVisible]),
               @"Reloading a selected model clears its connection overlay");
+  testAssert (modelConnectionTagsVisible (document, NO),
+              @"Reloading a model hides both connection markers");
+
   [host close];
   [host release];
 }
@@ -3569,6 +3584,32 @@ testModelViewer (NSString *directory)
           && ![vertical canBecomeMainWindow],
       @"Connection windows follow their host without intercepting input or focus");
   NSRect oldLineFrame = [horizontal frame];
+  NSArray *tags = [document valueForKey: @"_connectionTagWindows"];
+  testAssert (modelConnectionTagsVisible (document, YES),
+              @"Selecting a Gorm connection shows S and T markers");
+  NSUInteger tagIndex;
+  for (tagIndex = 0; tagIndex < [tags count]; tagIndex++)
+    {
+      NSWindow *tag = [tags objectAtIndex: tagIndex];
+      NSString *name = tagIndex == 0 ? @"GormSourceTag" : @"GormTargetTag";
+      NSString *path =
+          [[NSBundle bundleForClass: [document class]] pathForResource: name
+                                                               ofType: @"tiff"];
+      NSImage *expected = [[NSImage alloc] initWithContentsOfFile: path];
+      NSImage *actual = [(NSImageView *)[tag contentView] image];
+      testAssert (
+          expected != nil &&
+              [[actual TIFFRepresentation]
+                  isEqual: [expected TIFFRepresentation]],
+          @"Connection markers use the original images bundled with the Model editor");
+      testAssert (
+          [tag parentWindow] == dragHost && [tag ignoresMouseEvents]
+              && ![tag canBecomeKeyWindow] && ![tag canBecomeMainWindow],
+          @"Connection markers do not intercept mouse input or window focus");
+      [expected release];
+    }
+  NSWindow *sourceTag = [tags count] ? [tags objectAtIndex: 0] : nil;
+  NSRect oldTagFrame = [sourceTag frame];
 
   NSView *previewFrame = [[previewButton superview] superview];
   NSPoint titlePoint =
@@ -3587,6 +3628,11 @@ testModelViewer (NSString *directory)
       @"Dragging a simulated title bar moves its window on the canvas");
   testAssert (!NSEqualRects (oldLineFrame, [horizontal frame]),
               @"Connection overlay follows simulated window dragging");
+  testAssert (
+      NSMinX ([sourceTag frame]) == NSMinX (oldTagFrame) + 15
+          && NSMinY ([sourceTag frame]) == NSMinY (oldTagFrame) - 40,
+      @"The source marker tracks the dragged control in screen coordinates");
+
   NSUserDefaults *lineDefaults = [NSUserDefaults standardUserDefaults];
   id savedLineColor =
       [[lineDefaults objectForKey: @"YCodeConnectionLineColor"] retain];
@@ -3636,9 +3682,13 @@ testModelViewer (NSString *directory)
   [[document editorView] setHidden: YES];
   testAssert (![horizontal isVisible] && ![vertical isVisible],
               @"Hiding the model viewer removes its connection windows");
+  testAssert (modelConnectionTagsVisible (document, NO),
+              @"Connection markers share the line visibility lifecycle");
   [[document editorView] setHidden: NO];
   testAssert ([horizontal isVisible] && [vertical isVisible],
               @"Showing the model viewer restores the selected connection");
+  testAssert (modelConnectionTagsVisible (document, YES),
+              @"Connection markers share the line visibility lifecycle");
   NSClipView *objectClip = [objectsPane contentView];
   NSSize objectCanvasSize = [objectsCanvas frame].size;
   [objectsCanvas setFrameSize: NSMakeSize (objectCanvasSize.width, 1400)];
@@ -3646,14 +3696,20 @@ testModelViewer (NSString *directory)
   testAssert (
       ![horizontal isVisible] && ![vertical isVisible],
       @"Connection lines hide when a scrolled endpoint leaves the visible canvas");
+  testAssert (modelConnectionTagsVisible (document, NO),
+              @"Connection markers share the line visibility lifecycle");
   [objectClip scrollToPoint: NSZeroPoint];
   [objectsCanvas setFrameSize: objectCanvasSize];
   testAssert (
       [horizontal isVisible] && [vertical isVisible],
       @"Connection lines reappear when their endpoints scroll back into view");
+  testAssert (modelConnectionTagsVisible (document, YES),
+              @"Connection markers share the line visibility lifecycle");
   [lineTable deselectAll: nil];
   testAssert (![horizontal isVisible] && ![vertical isVisible],
               @"Clearing connection selection hides the overlay");
+  testAssert (modelConnectionTagsVisible (document, NO),
+              @"Connection markers share the line visibility lifecycle");
   [lineTable selectRowIndexes: [NSIndexSet indexSetWithIndex: 0]
          byExtendingSelection: NO];
   testAssert (
@@ -3678,6 +3734,8 @@ testModelViewer (NSString *directory)
   [dragHost close];
   testAssert (![horizontal isVisible] && ![vertical isVisible],
               @"Closing the viewer window hides all connection segments");
+  testAssert (modelConnectionTagsVisible (document, NO),
+              @"Connection markers share the line visibility lifecycle");
 
   [dragHost release];
   [document setModified: YES];
