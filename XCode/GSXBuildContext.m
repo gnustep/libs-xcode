@@ -20,7 +20,9 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110 USA.
-*/ #import "GSXCBuildContext.h"
+*/
+
+#import "GSXCBuildContext.h"
 
 id _sharedBuildContext = nil;
 
@@ -28,9 +30,9 @@ id _sharedBuildContext = nil;
 
 + (id) sharedBuildContext
 {
-  if(_sharedBuildContext == nil)
+  if (_sharedBuildContext == nil)
     {
-      _sharedBuildContext = [[GSXBuildContext alloc] init];
+      _sharedBuildContext = [[GSXCBuildContext alloc] init];
     }
   return _sharedBuildContext;
 }

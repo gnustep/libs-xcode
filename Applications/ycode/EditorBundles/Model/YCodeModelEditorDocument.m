@@ -102,11 +102,51 @@ static NSString *YCDecodeNibItem(NSCoder *coder, NSString *className, NSRect *fr
 @end
 #endif
 
+/* Share the locally drawn paper with the scroll view's exposed background. */
+static NSColor *YCModelBackground(BOOL objectsPane)
+{
+  static NSColor *graphPaper = nil;
+
+  if (objectsPane)
+    return [NSColor blackColor];
+  if (graphPaper == nil)
+    {
+      NSImage *tile = [[NSImage alloc] initWithSize:NSMakeSize(100, 100)];
+      NSInteger position;
+
+      [tile lockFocus];
+      [[NSColor colorWithCalibratedRed:0.10 green:0.12 blue:0.15 alpha:1] set];
+      NSRectFill(NSMakeRect(0, 0, 100, 100));
+      [[NSColor colorWithCalibratedRed:0.16 green:0.19 blue:0.23 alpha:1] set];
+      for (position = 20; position < 100; position += 20)
+        {
+          NSRectFill(NSMakeRect(position, 0, 1, 100));
+          NSRectFill(NSMakeRect(0, position, 100, 1));
+        }
+      [[NSColor colorWithCalibratedRed:0.23 green:0.27 blue:0.32 alpha:1] set];
+      NSRectFill(NSMakeRect(0, 0, 1, 100));
+      NSRectFill(NSMakeRect(0, 0, 100, 1));
+      [tile unlockFocus];
+      graphPaper = [[NSColor colorWithPatternImage:tile] retain];
+      [tile release];
+    }
+  return graphPaper;
+}
+
 /* Intercept input before it reaches any archived control. The surrounding
  * scroll view remains interactive, but the model cannot receive actions. */
 @interface YCModelCanvas : NSView
+{
+  BOOL _objectsPane;
+}
+- (void)setObjectsPane:(BOOL)flag;
 @end
 @implementation YCModelCanvas
+- (void)setObjectsPane:(BOOL)flag
+{
+  _objectsPane = flag;
+  [self setNeedsDisplay:YES];
+}
 - (BOOL)isFlipped { return YES; }
 - (NSView *)nextKeyView { return nil; }
 - (NSView *)hitTest:(NSPoint)point
@@ -115,7 +155,7 @@ static NSString *YCDecodeNibItem(NSCoder *coder, NSString *className, NSRect *fr
 }
 - (void)drawRect:(NSRect)rect
 {
-  [[NSColor windowBackgroundColor] set];
+  [YCModelBackground(_objectsPane) set];
   NSRectFill(rect);
 }
 @end
@@ -253,6 +293,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
       [_objectScrollView setHasVerticalScroller:YES];
       [_objectScrollView setAutohidesScrollers:YES];
       [_objectScrollView setBorderType:NSBezelBorder];
+      [_objectScrollView setBackgroundColor:YCModelBackground(YES)];
       [_objectScrollView setAutoresizingMask:NSViewHeightSizable];
       [_editorView addSubview:_objectScrollView];
       _scrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(181, 0, 419, 400)];
@@ -260,6 +301,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
       [_scrollView setHasVerticalScroller:YES];
       [_scrollView setHasHorizontalScroller:YES];
       [_scrollView setAutohidesScrollers:YES];
+      [_scrollView setBackgroundColor:YCModelBackground(NO)];
       [_scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     }
   return self;
@@ -284,6 +326,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   [field setSelectable:NO];
   [field setBezeled:NO];
   [field setDrawsBackground:NO];
+  [field setTextColor:[NSColor colorWithCalibratedWhite:0.94 alpha:1]];
   [canvas addSubview:field];
   [field release];
   *y += 28;
@@ -412,6 +455,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
     }
 
   objectCanvas = [[YCModelCanvas alloc] initWithFrame:NSMakeRect(0, 0, 160, 400)];
+  [objectCanvas setObjectsPane:YES];
   [self addLabel:@"Objects" toCanvas:objectCanvas y:&objectY];
   canvas = [[YCModelCanvas alloc] initWithFrame:NSMakeRect(0, 0, width, 400)];
   [self addLabel:@"Interface preview — read only" toCanvas:canvas y:&y];
@@ -517,6 +561,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
               [caption setEditable:NO];
               [caption setBezeled:NO];
               [caption setDrawsBackground:NO];
+              [caption setTextColor:[NSColor colorWithCalibratedWhite:0.94 alpha:1]];
               [caption setAlignment:NSCenterTextAlignment];
               [tile addSubview:caption];
               [caption release];

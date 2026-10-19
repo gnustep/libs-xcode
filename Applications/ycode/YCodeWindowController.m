@@ -1222,7 +1222,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_navigatorView setHidden:!visible];
         
         // Adjust split view
-        if (_mainSplitView && [_mainSplitView subviews].count > 0) {
+        if (_mainSplitView && [[_mainSplitView subviews] count] > 0) {
             NSView *firstSubview = [[_mainSplitView subviews] objectAtIndex:0];
             if (visible) {
                 [firstSubview setFrame:NSMakeRect(0, 0, _navigatorWidth, NSHeight([firstSubview frame]))];
@@ -1254,7 +1254,7 @@ YCodeScrollViewWithDocumentView(NSView *documentView)
         [_inspectorView setHidden:!visible];
         
         // Adjust split view
-        if (_contentSplitView && [_contentSplitView subviews].count > 1) {
+        if (_contentSplitView && [[_contentSplitView subviews] count] > 1) {
             NSView *lastSubview = [[_contentSplitView subviews] lastObject];
             if (visible) {
                 [lastSubview setFrame:NSMakeRect(0, 0, _inspectorWidth, NSHeight([lastSubview frame]))];

@@ -3940,7 +3940,7 @@ static void testBuildIssuesPane(NSString *temporaryDirectory)
   [table selectRowIndexes:[NSIndexSet indexSetWithIndex:1] byExtendingSelection:NO];
   testAssert([[document selectedText] isEqual:@"last line"],
     @"Diagnostics without columns select their source line");
-  testAssert([[controller editorController] openDocuments].count == 1,
+  testAssert([[[controller editorController] openDocuments] count] == 1,
     @"Navigating another issue reuses the open source tab");
 
   [controller buildSystemDidStartBuild:build];
