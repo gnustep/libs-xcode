@@ -61,6 +61,15 @@ resources are bundled locally; no Gorm installation is needed. Attribution and
 the image license are included in the Model bundle. Menu items, table columns, and cells are
 part of the graphical previews and are excluded from the nonvisual object pane. The viewer does not save or modify model files.
 
+The Connections inspector beneath the preview lists the model’s archived
+connections, including outlets, actions, bindings, and other connector types.
+Each row shows its type, source, outlet/action name, and destination. Actions
+are shown from sender to receiver consistently across formats. Archived names
+and XIB identifiers distinguish objects; File’s Owner and First Responder are
+labeled explicitly. Resize columns or scroll horizontally to inspect long values;
+hover over a cell to see its full text. The inspector is read only and does not
+establish connections. Empty and unsupported models display an explicit status.
+
 The decoder does not awaken the interface or establish outlet/action connections.
 Custom-class templates use available base classes; application code and Gorm
 palettes are not loaded. Appearance follows the installed GNUstep theme. This is

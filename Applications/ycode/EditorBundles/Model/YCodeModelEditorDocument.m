@@ -27,6 +27,7 @@
 #ifdef GNUSTEP
 #import <GNUstepGUI/GSGormLoading.h>
 #import <GNUstepGUI/GSNibLoading.h>
+#import <GNUstepGUI/GSXibLoading.h>
 #import <GNUstepGUI/GSXibKeyedUnarchiver.h>
 
 /* Substitute only on this decoder, never on the process-wide class table. */
@@ -551,12 +552,91 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
     YCMakeModelViewReadOnly (child, canvas);
 }
 
+/* Capture only display strings; never instantiate or establish a connection. */
+static NSString *
+YCConnectionObjectName (id object, NSDictionary *names)
+{
+  if (object == nil)
+    return @"Unspecified";
+  if ([object isKindOfClass: [NSString class]])
+    {
+      if ([object isEqual: @"NSOwner"])
+        return @"File's Owner";
+      if ([object isEqual: @"NSFirst"])
+        return @"First Responder";
+      return object;
+    }
+  NSString *name =
+      [names objectForKey: [NSValue valueWithNonretainedObject: object]];
+  if (name)
+    return name;
+  NSString *className = NSStringFromClass ([object class]);
+  if ([object respondsToSelector: @selector (className)])
+    className = [object className];
+  if ([className isEqual: @"FirstResponder"])
+    return @"First Responder";
+  if ([object respondsToSelector: @selector (title)])
+    {
+      NSString *title = [object title];
+      if ([title length])
+        return [NSString stringWithFormat: @"%@ — %@", title, className];
+    }
+  return className ? className : @"Unknown object";
+}
+
+static NSDictionary *
+YCConnectionRow (id connection, NSDictionary *names)
+{
+  NSString *kind = NSStringFromClass ([connection class]);
+  id source = nil, destination = nil;
+  NSString *label = @"";
+  if ([connection respondsToSelector: @selector (source)])
+    source = [connection source];
+  if ([connection respondsToSelector: @selector (destination)])
+    destination = [connection destination];
+  if ([connection respondsToSelector: @selector (label)])
+    label = [connection label];
+#ifdef GNUSTEP
+  /* XIB action records store the receiver as source, unlike NIB connectors. */
+  if ([connection isKindOfClass: [IBActionConnection class]])
+    {
+      id sender = destination;
+      destination = source;
+      source = sender;
+      kind = @"Action";
+    }
+  else if ([connection isKindOfClass: [IBOutletConnection class]])
+    kind = @"Outlet";
+  else if ([connection isKindOfClass: [IBBindingConnection class]])
+    kind = @"Binding";
+#endif
+  if ([connection isKindOfClass: [NSNibControlConnector class]])
+    kind = @"Action";
+  else if ([connection isKindOfClass: [NSNibOutletConnector class]])
+    kind = @"Outlet";
+  else if ([kind rangeOfString: @"Binding"].location != NSNotFound)
+    kind = @"Binding";
+  return [NSDictionary
+      dictionaryWithObjectsAndKeys: kind, @"type",
+                                   YCConnectionObjectName (source, names),
+                                   @"source", label ? label : @"", @"label",
+                                   destination == nil &&
+                                           [kind isEqual: @"Action"]
+                                       ? @"First Responder"
+                                       : YCConnectionObjectName (destination,
+                                                                 names),
+                                   @"destination", nil];
+}
+
 @interface YCodeModelEditorDocument : YCodeEditorDocument
 {
   NSView *_editorView;
   NSScrollView *_objectScrollView;
   NSScrollView *_scrollView;
   NSArray *_objects;
+  NSArray *_connections;
+  NSTableView *_connectionTable;
+  NSTextField *_connectionHeading;
 }
 
 - (void) addLabel: (NSString *)label toCanvas: (NSView *)canvas y: (CGFloat *)y;
@@ -604,7 +684,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
       [_objectScrollView setAutoresizingMask: NSViewHeightSizable];
       [_editorView addSubview: _objectScrollView];
       _scrollView =
-          [[NSScrollView alloc] initWithFrame: NSMakeRect (141, 0, 459, 400)];
+          [[NSScrollView alloc] initWithFrame: NSMakeRect (141, 170, 459, 230)];
       [_editorView addSubview: _scrollView];
       [_scrollView setHasVerticalScroller: YES];
       [_scrollView setHasHorizontalScroller: NO];
@@ -612,17 +692,85 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
       [_scrollView setBackgroundColor: YCModelBackground (NO)];
       [_scrollView
           setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+      _connectionHeading =
+          [[NSTextField alloc] initWithFrame: NSMakeRect (149, 144, 443, 22)];
+      [_connectionHeading setEditable: NO];
+      [_connectionHeading setBezeled: NO];
+      [_connectionHeading setDrawsBackground: NO];
+      [_connectionHeading setStringValue: @"Connections"];
+      [_connectionHeading setAutoresizingMask: NSViewWidthSizable];
+      [_editorView addSubview: _connectionHeading];
+      NSScrollView *inspector =
+          [[NSScrollView alloc] initWithFrame: NSMakeRect (141, 0, 459, 142)];
+      [inspector setHasVerticalScroller: YES];
+      [inspector setHasHorizontalScroller: YES];
+      [inspector setAutohidesScrollers: YES];
+      [inspector setBorderType: NSBezelBorder];
+      [inspector setAutoresizingMask: NSViewWidthSizable];
+      _connectionTable =
+          [[NSTableView alloc] initWithFrame: [inspector bounds]];
+      NSArray *keys = [NSArray
+          arrayWithObjects: @"type", @"source", @"label", @"destination", nil];
+      NSArray *titles =
+          [NSArray arrayWithObjects: @"Type", @"Source", @"Outlet / Action",
+                                    @"Destination", nil];
+      NSUInteger index;
+      for (index = 0; index < [keys count]; index++)
+        {
+          NSTableColumn *column = [[NSTableColumn alloc]
+              initWithIdentifier: [keys objectAtIndex: index]];
+          [[column headerCell] setStringValue: [titles objectAtIndex: index]];
+          [column setEditable: NO];
+          [column setWidth: index == 0 ? 90 : 190];
+          [_connectionTable addTableColumn: column];
+          [column release];
+        }
+      [_connectionTable setDataSource: self];
+      [_connectionTable setDelegate: self];
+      [_connectionTable setAllowsMultipleSelection: YES];
+      [inspector setDocumentView: _connectionTable];
+      [_editorView addSubview: inspector];
+      [inspector release];
     }
   return self;
 }
 
 - (void) dealloc
 {
+  [_connectionTable setDataSource: nil];
+  [_connectionTable setDelegate: nil];
+  [_connectionTable release];
+  [_connectionHeading release];
+  [_connections release];
   [_editorView release];
   [_objectScrollView release];
   [_scrollView release];
   [_objects release];
   [super dealloc];
+}
+
+- (NSInteger) numberOfRowsInTableView: (NSTableView *)table
+{
+  return [_connections count];
+}
+
+- (id) tableView: (NSTableView *)table
+    objectValueForTableColumn: (NSTableColumn *)column
+                          row: (NSInteger)row
+{
+  return [[_connections objectAtIndex: row] objectForKey: [column identifier]];
+}
+
+- (NSString *) tableView: (NSTableView *)table
+         toolTipForCell: (NSCell *)cell
+                   rect: (NSRectPointer)rect
+            tableColumn: (NSTableColumn *)column
+                    row: (NSInteger)row
+          mouseLocation: (NSPoint)point
+{
+  if (row < 0 || (NSUInteger)row >= [_connections count])
+    return nil;
+  return [[_connections objectAtIndex: row] objectForKey: [column identifier]];
 }
 
 - (NSView *) editorView
@@ -686,6 +834,9 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
   NSMutableArray *objects = [NSMutableArray array];
   NSMutableDictionary *roles = [NSMutableDictionary dictionary];
   NSMutableArray *specialObjects = [NSMutableArray array];
+  NSMutableDictionary *connectionNames = [NSMutableDictionary dictionary];
+  NSMutableArray *connections = [NSMutableArray array];
+  NSMutableArray *rows = [NSMutableArray array];
   NSString *problem = nil;
   YCModelCanvas *canvas;
   YCModelCanvas *objectCanvas;
@@ -733,6 +884,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
           if (![container isKindOfClass: [GSNibContainer class]])
             [NSException raise: NSInvalidArgumentException
                         format: @"Not a Gorm model archive."];
+          [connections addObjectsFromArray: [container connections]];
           NSDictionary *names = [container nameTable];
           NSEnumerator *keys = [[[names allKeys]
               sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
@@ -740,6 +892,9 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
           while ((key = [keys nextObject]))
             {
               id object = [names objectForKey: key];
+              [connectionNames
+                  setObject: YCConnectionObjectName (key, nil)
+                     forKey: [NSValue valueWithNonretainedObject: object]];
               if ([key isEqual: @"NSOwner"] || [key isEqual: @"NSFirst"])
                 [specialObjects addObject: object];
               else
@@ -762,7 +917,27 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
                  raise: NSInvalidArgumentException
                 format: @"This XIB format is not supported by GNUstep GUI."];
           [objects addObjectsFromArray: roots];
+          container =
+              [[decoder decodeObjectForKey: @"IBDocument.Objects"] retain];
+          NSEnumerator *records = [container connectionRecordEnumerator];
+          IBConnectionRecord *record;
+          while ((record = [records nextObject]))
+            if ([record connection])
+              [connections addObject: [record connection]];
           NSDictionary *decoded = [(GSXibKeyedUnarchiver *)decoder decoded];
+          NSEnumerator *identifiers = [[[decoded allKeys]
+              sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
+          NSString *identifier;
+          while ((identifier = [identifiers nextObject]))
+            {
+              id object = [decoded objectForKey: identifier];
+              [connectionNames
+                  setObject: [NSString stringWithFormat: @"%@ [%@]",
+                                                       YCConnectionObjectName (
+                                                           object, nil),
+                                                       identifier]
+                     forKey: [NSValue valueWithNonretainedObject: object]];
+            }
           id owner = [decoded objectForKey: @"-2"];
           id responder = [decoded objectForKey: @"-1"];
           if (!owner && [roots count])
@@ -785,11 +960,31 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
           [objects
               addObjectsFromArray: NSAllMapTableKeys (
                                       [(NSIBObjectData *)container objects])];
+          [connections addObjectsFromArray: [container connections]];
+          NSEnumerator *namedObjects =
+              [NSAllMapTableKeys ([(NSIBObjectData *)container names])
+                  objectEnumerator];
+          id namedObject;
+          while ((namedObject = [namedObjects nextObject]))
+            {
+              NSString *name = NSMapGet ([(NSIBObjectData *)container names],
+                                         namedObject);
+              if ([name length])
+                [connectionNames
+                    setObject: name
+                       forKey: [NSValue
+                                  valueWithNonretainedObject: namedObject]];
+            }
           id owner = [(NSIBObjectData *)container root];
           if (owner)
             [roles setObject: @"File's Owner"
                       forKey: [NSValue valueWithNonretainedObject: owner]];
         }
+      [connectionNames addEntriesFromDictionary: roles];
+      NSEnumerator *connectionEnumerator = [connections objectEnumerator];
+      id connection;
+      while ((connection = [connectionEnumerator nextObject]))
+        [rows addObject: YCConnectionRow (connection, connectionNames)];
 #else
       problem = @"Model previews require GNUstep GUI's archive decoders.";
 #endif
@@ -799,6 +994,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
       problem = [NSString
           stringWithFormat: @"Unable to preview model: %@", [exception reason]];
       [objects removeAllObjects];
+      [rows removeAllObjects];
     }
   @finally
     {
@@ -809,6 +1005,15 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
 #endif
     }
 
+  ASSIGN (_connections, rows);
+  [_connectionTable reloadData];
+  [_connectionHeading
+      setStringValue:
+          problem ? @"Connections unavailable"
+          : [rows count]
+              ? [NSString stringWithFormat: @"Connections (%lu) — read only",
+                                           (unsigned long)[rows count]]
+              : @"Connections — none in this model"];
   objectCanvas =
       [[YCModelCanvas alloc] initWithFrame: NSMakeRect (0, 0, 120, 400)];
   [objectCanvas setObjectsPane: YES];

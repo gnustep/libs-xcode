@@ -3284,6 +3284,41 @@ renderModelPreview (YCodeEditorDocument *document, NSString *path)
   [preview release];
 }
 
+static BOOL
+modelHasConnection (YCodeEditorDocument *document, NSString *type,
+                    NSString *source, NSString *label, NSString *destination)
+{
+  NSTableView *table = (NSTableView *)modelWidget ([document editorView],
+                                                   [NSTableView class]);
+  NSInteger row;
+  for (row = 0; row < [table numberOfRows]; row++)
+    {
+      id dataSource = [table dataSource];
+      NSString *actualType = [dataSource
+                          tableView: table
+          objectValueForTableColumn: [table tableColumnWithIdentifier: @"type"]
+                                row: row];
+      NSString *actualSource = [dataSource
+                          tableView: table
+          objectValueForTableColumn: [table tableColumnWithIdentifier: @"source"]
+                                row: row];
+      NSString *actualLabel = [dataSource
+                          tableView: table
+          objectValueForTableColumn: [table tableColumnWithIdentifier: @"label"]
+                                row: row];
+      NSString *actualDestination =
+          [dataSource tableView: table
+              objectValueForTableColumn:
+                  [table tableColumnWithIdentifier: @"destination"]
+                                    row: row];
+      if ([actualType isEqual: type] && [actualLabel isEqual: label] &&
+          [actualSource rangeOfString: source].location != NSNotFound &&
+          [actualDestination rangeOfString: destination].location != NSNotFound)
+        return YES;
+    }
+  return NO;
+}
+
 static NSEvent *
 modelMouseEvent (NSView *canvas, NSEventType type, NSPoint point)
 {
@@ -3381,6 +3416,19 @@ testModelViewer (NSString *directory)
   [[container nameTable] setObject: [previewColumn dataCell]
                             forKey: @"Table data cell"];
   [previewColumn release];
+  NSNibOutletConnector *outlet = [NSNibOutletConnector new];
+  [outlet setSource: @"NSOwner"];
+  [outlet setDestination: @"Window"];
+  [outlet setLabel: @"mainWindow"];
+  [[container connections] addObject: outlet];
+  [outlet release];
+  NSNibControlConnector *action = [NSNibControlConnector new];
+  [action setSource: @"Button"];
+  [action setDestination: @"NSFirst"];
+  [action setLabel: @"performPreviewAction:"];
+  [[container connections] addObject: action];
+  [[container nameTable] setObject: button forKey: @"Button"];
+  [action release];
   NSData *data = [NSArchiver archivedDataWithRootObject: container];
   [data writeToFile: archive atomically: YES];
   NSMenu *menu = [NSApp mainMenu];
@@ -3396,6 +3444,12 @@ testModelViewer (NSString *directory)
           && modelViewContains ([document editorView], @"Archived label")
           && modelViewContains ([document editorView], @"Custom class window"),
       @"The embedded preview includes archived windows and their contents");
+  testAssert (
+      modelHasConnection (document, @"Outlet", @"File's Owner", @"mainWindow",
+                          @"Window")
+          && modelHasConnection (document, @"Action", @"Button",
+                                 @"performPreviewAction:", @"First Responder"),
+      @"Gorm inspector lists named outlets and responder actions");
   testAssert (![document isEditable] && ![document textView],
               @"Models have no text editing surface");
   NSButton *previewButton
@@ -3488,6 +3542,17 @@ testModelViewer (NSString *directory)
       [document reloadFromFile]
           && modelViewContains ([document editorView], @"Archived label"),
       @"Repeated model loads retain the preview contents");
+  [[container connections] removeAllObjects];
+  [[NSArchiver archivedDataWithRootObject: container] writeToFile: archive
+                                                      atomically: YES];
+  testAssert ([document reloadFromFile] &&
+                  [(NSTableView *)modelWidget (
+                      [document editorView], [NSTableView class]) numberOfRows]
+                      == 0
+                  && modelViewContains ([document editorView],
+                                        @"Connections — none in this model"),
+              @"Reloading an unconnected model clears old inspector rows");
+
   NSEnumerator *e = [[NSApp windows] objectEnumerator];
   NSWindow *other;
   BOOL visible = NO;
@@ -3517,6 +3582,12 @@ testModelViewer (NSString *directory)
   [keyedSlider release];
   [nibWindow setView: nibContent];
   [nibWindow setTitle: @"Keyed NIB window"];
+  outlet = [NSNibOutletConnector new];
+  [outlet setSource: nibWindow];
+  [outlet setDestination: keyedSlider];
+  [outlet setLabel: @"valueSlider"];
+  [[nib connections] addObject: outlet];
+  [outlet release];
   NSMapInsert ([nib objects], nibWindow, nibWindow);
   NSMutableData *nibData = [NSMutableData data];
   NSKeyedArchiver *archiver =
@@ -3537,6 +3608,9 @@ testModelViewer (NSString *directory)
       [document loadFromFile]
           && modelViewContains ([document editorView], @"Keyed NIB window"),
       @"Keyed NIB packages preview window templates without awakening the model");
+  testAssert (modelHasConnection (document, @"Outlet", @"Keyed NIB window",
+                                  @"valueSlider", @"NSSlider"),
+              @"Keyed NIB inspector lists decoded object connections");
   previewSlider
       = (NSSlider *)modelWidget ([document editorView], [NSSlider class]);
   testAssert (previewSlider != nil
@@ -3570,6 +3644,19 @@ testModelViewer (NSString *directory)
       [NSApp mainMenu] == menu && [NSApp delegate] == delegate
           && ![NSClassSwapper isInInterfaceBuilder],
       @"XIB loading restores decoder state without connecting outlets");
+  testAssert (
+      modelHasConnection (document, @"Outlet", @"File's Owner", @"delegate",
+                          @"controller")
+          && modelHasConnection (document, @"Action", @"Quit",
+                                 @"terminate:", @"File's Owner"),
+      @"XIB inspector displays outlets and actions in sender-to-receiver order");
+  NSTableView *connectionTable = (NSTableView *)modelWidget (
+      [document editorView], [NSTableView class]);
+  testAssert ([connectionTable numberOfRows] == 5,
+              @"XIB inspector shows every connection once");
+  [document reloadFromFile];
+  testAssert ([connectionTable numberOfRows] == 5,
+              @"Reload replaces connection rows without duplicates");
   NSView *modelCanvas = [[document scrollView] documentView];
   objectsPane = [[[document editorView] subviews] objectAtIndex: 0];
   objectsCanvas = [objectsPane documentView];
@@ -3670,6 +3757,13 @@ testModelViewer (NSString *directory)
       [document loadFromFile]
           && modelViewContains ([document editorView], @"Unable to preview"),
       @"Unsupported models show an explanation inside the editor pane");
+  testAssert (
+      modelViewContains ([document editorView], @"Connections unavailable") &&
+          [(NSTableView *)modelWidget ([document editorView],
+                                       [NSTableView class]) numberOfRows]
+              == 0,
+      @"Unsupported models do not imply an empty but readable connection list");
+
   testAssert (![NSClassSwapper isInInterfaceBuilder],
               @"Failed model loading restores decoder state");
   [document release];
