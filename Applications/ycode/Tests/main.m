@@ -3511,7 +3511,7 @@ testModelViewer (NSString *directory)
   [[document editorView]
       setFrameSize: NSMakeSize (oldSize.width + 120, oldSize.height + 80)];
   testAssert (
-      [objectsPane frame].size.width == 180
+      [objectsPane frame].size.width == 140
           && fabs ([[document scrollView] frame].size.width - oldWidth - 120)
                  < 1
           && [objectsPane frame].size.height == oldSize.height + 80,

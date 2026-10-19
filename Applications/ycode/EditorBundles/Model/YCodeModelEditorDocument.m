@@ -492,7 +492,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
       [_editorView
           setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
       _objectScrollView =
-          [[NSScrollView alloc] initWithFrame: NSMakeRect (0, 0, 180, 400)];
+          [[NSScrollView alloc] initWithFrame: NSMakeRect (0, 0, 140, 400)];
       [_objectScrollView setHasVerticalScroller: YES];
       [_objectScrollView setAutohidesScrollers: YES];
       [_objectScrollView setBorderType: NSBezelBorder];
@@ -500,7 +500,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
       [_objectScrollView setAutoresizingMask: NSViewHeightSizable];
       [_editorView addSubview: _objectScrollView];
       _scrollView =
-          [[NSScrollView alloc] initWithFrame: NSMakeRect (181, 0, 419, 400)];
+          [[NSScrollView alloc] initWithFrame: NSMakeRect (141, 0, 459, 400)];
       [_editorView addSubview: _scrollView];
       [_scrollView setHasVerticalScroller: YES];
       [_scrollView setHasHorizontalScroller: NO];
@@ -702,7 +702,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
     }
 
   objectCanvas =
-      [[YCModelCanvas alloc] initWithFrame: NSMakeRect (0, 0, 160, 400)];
+      [[YCModelCanvas alloc] initWithFrame: NSMakeRect (0, 0, 120, 400)];
   [objectCanvas setObjectsPane: YES];
   [self addLabel: @"Objects" toCanvas: objectCanvas y: &objectY];
   canvas = [[YCModelCanvas alloc] initWithFrame: NSMakeRect (0, 0, width, 400)];
@@ -812,14 +812,14 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
               else if ([label isEqual: @"First Responder"])
                 icon = @"GormFirstResponder";
               NSView *tile = [[NSView alloc]
-                  initWithFrame: NSMakeRect (8, objectY, 144, 100)];
+                  initWithFrame: NSMakeRect (8, objectY, 104, 100)];
               NSString *imagePath = [[NSBundle bundleForClass: [self class]]
                   pathForResource: icon
                            ofType: @"tiff"];
               NSImage *image =
                   [[NSImage alloc] initWithContentsOfFile: imagePath];
               NSImageView *iconView = [[NSImageView alloc]
-                  initWithFrame: NSMakeRect (48, 42, 48, 48)];
+                  initWithFrame: NSMakeRect (28, 42, 48, 48)];
               [iconView setImage: image];
               [iconView setImageScaling: NSImageScaleProportionallyDown];
               [iconView setToolTip: label];
@@ -827,7 +827,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
               [iconView release];
               [image release];
               NSTextField *caption = [[NSTextField alloc]
-                  initWithFrame: NSMakeRect (0, 2, 144, 36)];
+                  initWithFrame: NSMakeRect (0, 2, 104, 36)];
               [caption setStringValue: label];
               [caption setToolTip: label];
               [caption setEditable: NO];
@@ -850,7 +850,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
                      y: &y];
     }
   [canvas setPreviewTop: y];
-  [objectCanvas setFrameSize: NSMakeSize (160, MAX (objectY + 20, 400))];
+  [objectCanvas setFrameSize: NSMakeSize (120, MAX (objectY + 20, 400))];
   [_objectScrollView setDocumentView: objectCanvas];
   [objectCanvas release];
   [[_objectScrollView contentView] scrollToPoint: NSZeroPoint];
