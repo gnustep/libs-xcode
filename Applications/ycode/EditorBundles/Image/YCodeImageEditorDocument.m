@@ -40,6 +40,7 @@
     point.y = NSMidY (document) - viewport.height / 2;
   return point;
 }
+
 @end
 
 @interface YCodeImageEditorDocument : YCodeEditorDocument
@@ -47,6 +48,7 @@
   NSScrollView *_scrollView;
   NSImage *_image;
 }
+
 @end
 
 @implementation YCodeImageEditorDocument
@@ -54,14 +56,17 @@
 {
   return @"image";
 }
+
 + (NSString *) editorKind
 {
   return @"image";
 }
+
 + (NSInteger) editorPriority
 {
   return 100;
 }
+
 + (BOOL) canOpenFilePath: (NSString *)path
 {
   NSString *extension = [[path pathExtension] lowercaseString];
@@ -74,10 +79,12 @@
                                     @"tiff", @"bmp", @"ico", @"icns", @"webp",
                                     nil] containsObject: extension];
 }
+
 - (NSImage *) image
 {
   return _image;
 }
+
 - (id) initWithFilePath: (NSString *)path
 {
   self = [super initWithFilePath: path];
@@ -94,20 +101,24 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   RELEASE (_scrollView);
   RELEASE (_image);
   [super dealloc];
 }
+
 - (NSView *) editorView
 {
   return _scrollView;
 }
+
 - (NSScrollView *) scrollView
 {
   return _scrollView;
 }
+
 - (BOOL) loadFromFile
 {
   NSImage *image = [[NSImage alloc] initWithContentsOfFile: _filePath];
@@ -141,4 +152,5 @@
                     object: _editorController];
   return YES;
 }
+
 @end

@@ -35,6 +35,7 @@
   NSMutableDictionary *_classes;
   NSMutableArray *_bundles;
 }
+
 + (YCodeEditorRegistry *) sharedRegistry;
 - (id) initWithSearchPaths: (NSArray *)paths;
 - (BOOL) loadBundleAtPath: (NSString *)path;

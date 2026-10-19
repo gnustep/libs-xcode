@@ -10,6 +10,21 @@ TOOLS = runpy.run_path(str(pathlib.Path(__file__).resolve().parents[1] / 'Tools/
 
 
 class SourceFormatTests(unittest.TestCase):
+    def test_objc_blocks_have_blank_lines(self):
+        source = ('@interface Example : NSObject\n{\n  int value;\n}\n@end\n'
+                  '@implementation Example\n- (void) run\n{\n'
+                  '  if (value)\n    {\n      value++;\n    }\n'
+                  '  value++;\n}\n@end\n')
+        expected = source.replace('\n}\n@end', '\n}\n\n@end')
+        self.assertEqual(TOOLS['objc_block_spacing'](source), expected)
+        self.assertEqual(TOOLS['objc_block_spacing'](expected), expected)
+
+    def test_objc_block_spacing_preserves_macro_continuations(self):
+        source = '\n'.join(line + ' \\' for line in (
+            '#define EXAMPLE', '@implementation Example',
+            '- (void) run', '{', '}')) + '\n@end\n'
+        self.assertEqual(TOOLS['objc_block_spacing'](source), source)
+
     def test_method_and_selector_spacing(self):
         source = '- (id)initWithName:(NSString *)name\n{\n  return [self setName:name];\n}\n'
         expected = '- (id) initWithName: (NSString *)name\n{\n  return [self setName: name];\n}\n'

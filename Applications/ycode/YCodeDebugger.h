@@ -45,6 +45,7 @@ extern NSString *const YCodeDebuggerDidChangeNotification;
   id<YCodeDebuggerDelegate> _delegate;
   id<YCodeDebuggerBackend> _backend;
 }
+
 - (id) initWithBackendIdentifier: (NSString *)identifier;
 - (id) initWithBackend: (id<YCodeDebuggerBackend>)backend;
 - (NSString *) backendIdentifier;

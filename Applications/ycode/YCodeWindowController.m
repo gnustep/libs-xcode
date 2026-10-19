@@ -71,11 +71,13 @@
     }
   return self;
 }
+
 - (void) rightMouseDown: (NSEvent *)event
 {
   [[self window] makeFirstResponder: self];
   [NSMenu popUpContextMenu: [self menu] withEvent: event forView: self];
 }
+
 - (void) keyDown: (NSEvent *)event
 {
   NSUInteger flags = [event modifierFlags];
@@ -96,6 +98,7 @@
     }
   [super keyDown: event];
 }
+
 @end
 
 /* Stateful ANSI transcript decoder. Cursor controls are consumed: these panes
@@ -108,6 +111,7 @@
   NSFont *_font;
   BOOL _bold;
 }
+
 - (NSAttributedString *) decode: (NSString *)text;
 - (void) setFont: (NSFont *)font;
 @end
@@ -126,6 +130,7 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_font release];
@@ -133,6 +138,7 @@
   [_sequence release];
   [super dealloc];
 }
+
 - (void) setFont: (NSFont *)font
 {
   ASSIGN (_font, font);
@@ -168,6 +174,7 @@
                                     blue: (b ? 55 + b * 40 : 0) / 255.0
                                    alpha: 1];
 }
+
 - (void) applyStyle
 {
   NSArray *codes = [_sequence componentsSeparatedByString: @";"];
@@ -235,6 +242,7 @@
         [_attributes setObject: color forKey: key];
     }
 }
+
 - (NSAttributedString *) decode: (NSString *)text
 {
   NSMutableAttributedString *result
@@ -297,6 +305,7 @@
                                        attributes: _attributes])];
   return result;
 }
+
 @end
 
 /* Custom toolbar views need their enabled state refreshed during validation,
@@ -310,6 +319,7 @@
   [(NSPopUpButton *)[self view]
       setEnabled: [[self target] validateToolbarItem: self]];
 }
+
 @end
 
 static NSScrollView *

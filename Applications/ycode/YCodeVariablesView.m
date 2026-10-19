@@ -84,6 +84,7 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver: self];
@@ -96,6 +97,7 @@
   RELEASE (_transcriptScroll);
   [super dealloc];
 }
+
 - (void) setDebugger: (YCodeDebugger *)debugger
 {
   if (_debugger == debugger)
@@ -105,25 +107,30 @@
   [[_debugger variables] setEnabled: _variablesVisible];
   [self variablesChanged: nil];
 }
+
 - (BOOL) variablesVisible
 {
   return _variablesVisible;
 }
+
 - (void) drawDividerInRect: (NSRect)rect
 {
   if (_variablesVisible)
     [super drawDividerInRect: rect];
 }
+
 - (void) mouseDown: (NSEvent *)event
 {
   if (_variablesVisible)
     [super mouseDown: event];
 }
+
 - (void) resetCursorRects
 {
   if (_variablesVisible)
     [super resetCursorRects];
 }
+
 - (void) layoutPanes
 {
   _layingOut = YES;
@@ -140,10 +147,12 @@
                            height)];
   _layingOut = NO;
 }
+
 - (void) splitView: (NSSplitView *)split resizeSubviewsWithOldSize: (NSSize)size
 {
   [self layoutPanes];
 }
+
 - (void) splitViewDidResizeSubviews: (NSNotification *)notification
 {
   if (_layingOut || !_variablesVisible)
@@ -160,29 +169,34 @@
          forKey: @"YCodeDebuggerVariablesFraction"];
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
+
 - (void) setPosition: (CGFloat)position ofDividerAtIndex: (NSInteger)index
 {
   [super setPosition: position ofDividerAtIndex: index];
   // GNUstep's programmatic setter does not post the resize notification.
   [self splitViewDidResizeSubviews: nil];
 }
+
 - (CGFloat) splitView: (NSSplitView *)split
     constrainMinCoordinate: (CGFloat)proposed
                ofSubviewAt: (NSInteger)index
 {
   return NSWidth ([self bounds]) * 0.1;
 }
+
 - (CGFloat) splitView: (NSSplitView *)split
     constrainMaxCoordinate: (CGFloat)proposed
                ofSubviewAt: (NSInteger)index
 {
   return NSWidth ([self bounds]) * 0.9;
 }
+
 - (BOOL) splitView: (NSSplitView *)split
     shouldHideDividerAtIndex: (NSInteger)index
 {
   return !_variablesVisible;
 }
+
 - (IBAction) toggleVariables: (id)sender
 {
   _variablesVisible = !_variablesVisible;
@@ -200,6 +214,7 @@
   [self setNeedsDisplay: YES];
   [[self window] invalidateCursorRectsForView: self];
 }
+
 - (void) variablesChanged: (NSNotification *)notification
 {
   if (notification && [notification object] != _debugger)
@@ -210,12 +225,14 @@
   while ((group = [groups nextObject]) != nil)
     [_outline expandItem: group];
 }
+
 - (NSInteger) outlineView: (NSOutlineView *)outline
     numberOfChildrenOfItem: (id)item
 {
   return item ? [[item objectForKey: @"children"] count]
               : [[[_debugger variables] groups] count];
 }
+
 - (id) outlineView: (NSOutlineView *)outline
             child: (NSInteger)index
            ofItem: (id)item
@@ -223,20 +240,24 @@
   return [(item ? [item objectForKey: @"children"]
                 : [[_debugger variables] groups]) objectAtIndex: index];
 }
+
 - (BOOL) outlineView: (NSOutlineView *)outline isItemExpandable: (id)item
 {
   return [[item objectForKey: @"children"] count] > 0 ||
          [[item objectForKey: @"numchild"] integerValue] > 0;
 }
+
 - (id) outlineView: (NSOutlineView *)outline
     objectValueForTableColumn: (NSTableColumn *)column
                        byItem: (id)item
 {
   return [item objectForKey: [column identifier]] ?: @"";
 }
+
 - (BOOL) outlineView: (NSOutlineView *)outline shouldExpandItem: (id)item
 {
   [[_debugger variables] loadChildren: item];
   return YES;
 }
+
 @end

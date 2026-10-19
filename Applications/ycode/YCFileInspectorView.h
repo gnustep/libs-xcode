@@ -28,4 +28,5 @@
 {
   NSTextView *_details;
 }
+
 @end

@@ -40,6 +40,7 @@
   NSDictionary *_definition;
   NSDictionary *_patterns;
 }
+
 - (id) initWithDefinition: (NSDictionary *)definition;
 - (NSString *) identifier;
 - (BOOL) highlightStringKeys;
@@ -61,6 +62,7 @@
   NSMutableArray *_providers;
   NSMutableArray *_namedLanguages;
 }
+
 + (YCodeLanguageRegistry *) sharedRegistry;
 /* An explicit path list also permits isolated registries for tools/tests.
  * Later directories override earlier directories. */

@@ -169,6 +169,7 @@
   NSString *_debugFile;
   BOOL _debugGutterVisible;
 }
+
 /** Associate this source ruler with its project's debugger. */
 - (void) setDebugger: (YCodeDebugger *)debugger
                file: (NSString *)file

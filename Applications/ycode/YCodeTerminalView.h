@@ -41,6 +41,7 @@
   int _cursorShape;
   NSTimeInterval _lastBlink;
 }
+
 /** Starts an interactive shell in directory. Repeated calls preserve a running shell. */
 - (BOOL) startInDirectory: (NSString *)directory error: (NSError **)error;
 /** Hangs up the terminal and reaps its shell, without blocking the UI. */

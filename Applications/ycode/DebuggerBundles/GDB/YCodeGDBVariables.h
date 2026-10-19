@@ -39,6 +39,7 @@
   BOOL _stopped;
   NSString *_file;
 }
+
 - (id) initWithDebugger: (YCodeGDBDebugger *)debugger;
 - (NSArray *) groups;
 - (void) setEnabled: (BOOL)enabled;

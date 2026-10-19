@@ -51,6 +51,7 @@
     }
   return registry;
 }
+
 - (id) initWithSearchPaths: (NSArray *)paths
 {
   if ((self = [super init]))
@@ -75,12 +76,14 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_classes release];
   [_bundles release];
   [super dealloc];
 }
+
 - (BOOL) loadBundleAtPath: (NSString *)path
 {
   @try
@@ -103,10 +106,12 @@
       return NO;
     }
 }
+
 - (NSArray *) editorIdentifiers
 {
   return [[_classes allKeys] sortedArrayUsingSelector: @selector (compare:)];
 }
+
 - (Class) editorClassForFilePath: (NSString *)path
 {
   Class selected = Nil;
@@ -130,4 +135,5 @@
     }
   return selected;
 }
+
 @end

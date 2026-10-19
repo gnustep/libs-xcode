@@ -34,6 +34,7 @@
   NSButton *_closeButton;
   BOOL _labelDrawn;
 }
+
 - (NSButton *) closeButton;
 - (void) closeTab: (id)sender;
 - (void) prepareToDrawLabel;
@@ -57,24 +58,29 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_closeButton removeFromSuperview];
   RELEASE (_closeButton);
   [super dealloc];
 }
+
 - (NSButton *) closeButton
 {
   return _closeButton;
 }
+
 - (void) prepareToDrawLabel
 {
   _labelDrawn = NO;
 }
+
 - (void) updateCloseButtonVisibility
 {
   [_closeButton setHidden: !_labelDrawn];
 }
+
 - (NSSize) sizeOfLabel: (BOOL)truncate
 {
   NSSize size = [super sizeOfLabel: truncate];
@@ -82,6 +88,7 @@
   size.height = MAX (size.height, 16);
   return size;
 }
+
 - (void) drawLabel: (BOOL)truncate inRect: (NSRect)rect
 {
   NSRect labelRect = rect;
@@ -96,6 +103,7 @@
       _labelDrawn = YES;
     }
 }
+
 - (void) closeTab: (id)sender
 {
   // Closing may release this item and its button during the action.
@@ -104,6 +112,7 @@
   if ([controller respondsToSelector: @selector (closeFile:)])
     [controller closeFile: [self identifier]];
 }
+
 @end
 
 @implementation YCodeEditorTabView
@@ -126,12 +135,14 @@
         [(YCodeEditorTabItem *)item updateCloseButtonVisibility];
   }
 }
+
 - (void) removeTabViewItem: (NSTabViewItem *)item
 {
   if ([item isKindOfClass: [YCodeEditorTabItem class]])
     [[(YCodeEditorTabItem *)item closeButton] removeFromSuperview];
   [super removeTabViewItem: item];
 }
+
 @end
 
 @interface YCodeEditorController (Session)
@@ -1022,6 +1033,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 {
   [self findBackwards: NO];
 }
+
 - (IBAction) findPrevious: (id)sender
 {
   [self findBackwards: YES];

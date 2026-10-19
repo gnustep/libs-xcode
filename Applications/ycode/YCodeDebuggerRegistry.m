@@ -51,6 +51,7 @@
     }
   return registry;
 }
+
 - (id) initWithSearchPaths: (NSArray *)paths
 {
   if ((self = [super init]))
@@ -75,12 +76,14 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_classes release];
   [_bundles release];
   [super dealloc];
 }
+
 - (BOOL) loadBundleAtPath: (NSString *)path
 {
   @try
@@ -142,10 +145,12 @@
       return NO;
     }
 }
+
 - (NSArray *) backendIdentifiers
 {
   return [[_classes allKeys] sortedArrayUsingSelector: @selector (compare:)];
 }
+
 - (id<YCodeDebuggerBackend>) newBackendWithIdentifier: (NSString *)identifier
 {
   if (![identifier length])
@@ -163,4 +168,5 @@
       return nil;
     }
 }
+
 @end

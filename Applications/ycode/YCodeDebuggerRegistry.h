@@ -30,6 +30,7 @@
   NSMutableDictionary *_classes;
   NSMutableArray *_bundles;
 }
+
 + (YCodeDebuggerRegistry *) sharedRegistry;
 - (id) initWithSearchPaths: (NSArray *)paths;
 - (BOOL) loadBundleAtPath: (NSString *)path;

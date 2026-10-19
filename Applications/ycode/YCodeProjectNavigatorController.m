@@ -37,6 +37,7 @@
 {
   NSImage *_navigatorImage;
 }
+
 @end
 
 @implementation YCodeNavigatorCell
@@ -45,20 +46,24 @@
   RELEASE (_navigatorImage);
   [super dealloc];
 }
+
 - (id) copyWithZone: (NSZone *)zone
 {
   YCodeNavigatorCell *cell = [super copyWithZone: zone];
   cell->_navigatorImage = RETAIN (_navigatorImage);
   return cell;
 }
+
 - (void) setImage: (NSImage *)image
 {
   ASSIGN (_navigatorImage, image);
 }
+
 - (NSImage *) image
 {
   return _navigatorImage;
 }
+
 - (NSRect) imageRectForBounds: (NSRect)bounds
 {
   NSSize size = [_navigatorImage size];
@@ -66,6 +71,7 @@
                      NSMidY (bounds) - size.height / 2, size.width,
                      size.height);
 }
+
 - (void) drawInteriorWithFrame: (NSRect)frame inView: (NSView *)view
 {
   if (_navigatorImage)
@@ -84,6 +90,7 @@
     }
   [super drawInteriorWithFrame: frame inView: view];
 }
+
 - (NSSize) cellSize
 {
   NSSize size = [super cellSize];
@@ -92,6 +99,7 @@
   size.height = MAX (20, size.height);
   return size;
 }
+
 @end
 
 @implementation YCodeProjectNavigatorController
@@ -890,21 +898,27 @@
 - (void) outlineViewColumnDidMove: (NSNotification *)notification
 {
 }
+
 - (void) outlineViewColumnDidResize: (NSNotification *)notification
 {
 }
+
 - (void) outlineViewItemDidCollapse: (NSNotification *)notification
 {
 }
+
 - (void) outlineViewItemDidExpand: (NSNotification *)notification
 {
 }
+
 - (void) outlineViewItemWillCollapse: (NSNotification *)notification
 {
 }
+
 - (void) outlineViewItemWillExpand: (NSNotification *)notification
 {
 }
+
 - (void) outlineViewSelectionIsChanging: (NSNotification *)notification
 {
 }
@@ -913,16 +927,19 @@
 {
   return YES;
 }
+
 - (BOOL) outlineView: (NSOutlineView *)outlineView
     shouldEditTableColumn: (NSTableColumn *)tableColumn
                      item: (id)item
 {
   return NO;
 }
+
 - (BOOL) outlineView: (NSOutlineView *)outlineView shouldExpandItem: (id)item
 {
   return YES;
 }
+
 - (BOOL) outlineView: (NSOutlineView *)outlineView
     shouldSelectTableColumn: (NSTableColumn *)tableColumn
 {
@@ -935,45 +952,54 @@
 {
   return nil;
 }
+
 - (CGFloat) outlineView: (NSOutlineView *)outlineView heightOfRowByItem: (id)item
 {
   return [outlineView rowHeight];
 }
+
 - (CGFloat) outlineView: (NSOutlineView *)outlineView
     sizeToFitWidthOfColumn: (NSInteger)column
 {
   return 0;
 }
+
 - (void) outlineView: (NSOutlineView *)outlineView
     willDisplayOutlineCell: (id)cell
             forTableColumn: (NSTableColumn *)tableColumn
                       item: (id)item
 {
 }
+
 - (BOOL) selectionShouldChangeInOutlineView: (NSOutlineView *)outlineView
 {
   return YES;
 }
+
 - (void) outlineView: (NSOutlineView *)outlineView
     didClickTableColumn: (NSTableColumn *)tableColumn
 {
 }
+
 - (NSView *) outlineView: (NSOutlineView *)outlineView
      viewForTableColumn: (NSTableColumn *)tableColumn
                    item: (id)item
 {
   return nil;
 }
+
 - (NSTableRowView *) outlineView: (NSOutlineView *)outlineView
                  rowViewForItem: (id)item
 {
   return nil;
 }
+
 - (void) outlineView: (NSOutlineView *)outlineView
       didAddRowView: (NSTableRowView *)rowView
              forRow: (NSInteger)row
 {
 }
+
 - (void) outlineView: (NSOutlineView *)outlineView
     didRemoveRowView: (NSTableRowView *)rowView
               forRow: (NSInteger)row

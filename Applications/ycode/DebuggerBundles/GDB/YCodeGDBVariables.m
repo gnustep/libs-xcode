@@ -42,6 +42,7 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_groups release];
@@ -50,14 +51,17 @@
   [_file release];
   [super dealloc];
 }
+
 - (NSArray *) groups
 {
   return _groups;
 }
+
 - (void) changed
 {
   [_debugger notifyChange];
 }
+
 - (void) request: (NSString *)command
            kind: (NSString *)kind
            node: (NSMutableDictionary *)node
@@ -74,6 +78,7 @@
   [_requests setObject: request forKey: token];
   [_debugger command: [token stringByAppendingString: command]];
 }
+
 - (void) clear
 {
   _generation++;
@@ -86,6 +91,7 @@
   [_objects removeAllObjects];
   [_groups removeAllObjects];
 }
+
 - (void) reset
 {
   _generation++;
@@ -96,6 +102,7 @@
   [_file release];
   _file = nil;
 }
+
 - (void) refresh
 {
   if (!_enabled || !_stopped || ![_debugger isReady] || [_debugger isRunning])
@@ -104,6 +111,7 @@
   [self request: @"-stack-info-frame" kind: @"frame" node: nil];
   [self changed];
 }
+
 - (void) setEnabled: (BOOL)enabled
 {
   if (_enabled == enabled)
@@ -117,6 +125,7 @@
       [self changed];
     }
 }
+
 - (NSMutableDictionary *) group: (NSString *)name
 {
   NSMutableDictionary *group = [NSMutableDictionary
@@ -125,6 +134,7 @@
   [_groups addObject: group];
   return group;
 }
+
 - (void) addVariable: (NSDictionary *)variable
          expression: (NSString *)expression
               group: (NSMutableDictionary *)group
@@ -148,6 +158,7 @@
            kind: @"value"
            node: node];
 }
+
 - (void) loadChildren: (NSMutableDictionary *)node
 {
   if (!_enabled || !_stopped || [_debugger isRunning] ||
@@ -161,6 +172,7 @@
          kind: @"children"
          node: node];
 }
+
 - (BOOL) handleRecord: (NSDictionary *)record
 {
   NSString *token = [record objectForKey: @"token"];
@@ -318,4 +330,5 @@
   [request release];
   return YES;
 }
+
 @end

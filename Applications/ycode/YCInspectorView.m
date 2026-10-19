@@ -30,10 +30,12 @@
 {
   return NSStringFromClass ([self class]);
 }
+
 - (NSString *) inspectorTitle
 {
   return [self inspectorIdentifier];
 }
+
 - (void) inspectDocument: (YCodeEditorDocument *)document
 {
 }

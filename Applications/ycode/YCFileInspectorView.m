@@ -56,6 +56,7 @@
 {
   return @"file";
 }
+
 - (NSString *) inspectorTitle
 {
   return @"File";
@@ -100,4 +101,5 @@
                   [document fileName], type, path, size,
                   date ? date : @"Unavailable"]];
 }
+
 @end

@@ -92,6 +92,40 @@ def objc_spacing(source):
     return source
 
 
+def objc_block_spacing(source):
+    """Keep a blank line after ivar blocks and method bodies in Ycode."""
+    lexical = tokens(source)
+    scope = None
+    depth = 0
+    insertions = []
+    for index, token in enumerate(lexical):
+        word = token.group()
+        if word == '@' and index + 1 < len(lexical):
+            directive = lexical[index + 1].group()
+            if directive in ('interface', 'implementation'):
+                scope = directive
+            elif directive == 'end':
+                scope = None
+        if word == '{':
+            depth += 1
+        elif word == '}':
+            depth -= 1
+            if scope is not None and depth == 0:
+                end = source.find('\n', token.end())
+                if end != -1 and end + 1 < len(source):
+                    # Do not split a continued preprocessor macro.
+                    if source[token.end():end].rstrip().endswith('\\'):
+                        continue
+                    next_end = source.find('\n', end + 1)
+                    if next_end == -1:
+                        next_end = len(source)
+                    if source[end + 1:next_end].strip():
+                        insertions.append(end + 1)
+    for position in reversed(insertions):
+        source = source[:position] + '\n' + source[position:]
+    return source
+
+
 def modern_objc(source):
     """Reject modern syntax tokens, ignoring comments and literal contents.
 
@@ -144,6 +178,8 @@ def main():
         ).stdout
         if path.suffix in ('.h', '.m'):
             result = objc_spacing(result)
+            if name.startswith('Applications/ycode/'):
+                result = objc_block_spacing(result)
         # Formatting must not change tokens, comments, or literal contents.
         if source_tokens(source) != source_tokens(result):
             print(name + ': refused: formatter changed source tokens')

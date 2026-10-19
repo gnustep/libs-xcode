@@ -29,6 +29,7 @@
 {
   NSScrollView *_scrollView;
 }
+
 @end
 
 @implementation YCodeSoundEditorDocument
@@ -36,14 +37,17 @@
 {
   return @"sound";
 }
+
 + (NSString *) editorKind
 {
   return @"sound";
 }
+
 + (NSInteger) editorPriority
 {
   return 200;
 }
+
 + (BOOL) canOpenFilePath: (NSString *)path
 {
   NSString *extension = [[path pathExtension] lowercaseString];
@@ -53,6 +57,7 @@
                                     @"oga", @"m4a", @"aac", @"caf", @"opus",
                                     nil] containsObject: extension];
 }
+
 - (id) initWithFilePath: (NSString *)path
 {
   self = [super initWithFilePath: path];
@@ -69,19 +74,23 @@
     }
   return self;
 }
+
 - (void) dealloc
 {
   RELEASE (_scrollView);
   [super dealloc];
 }
+
 - (NSView *) editorView
 {
   return _scrollView;
 }
+
 - (NSScrollView *) scrollView
 {
   return _scrollView;
 }
+
 - (BOOL) loadFromFile
 {
   BOOL directory = NO;
@@ -114,4 +123,5 @@
                     object: _editorController];
   return YES;
 }
+
 @end

@@ -43,6 +43,7 @@
   NSString *_storageKey;
   YCodeGDBVariables *_variables;
 }
+
 - (void) setDelegate: (id<YCodeDebuggerBackendDelegate>)delegate;
 - (id<YCodeDebuggerVariableSource>) variables;
 - (void) notifyChange;

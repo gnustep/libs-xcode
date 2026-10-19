@@ -106,10 +106,12 @@
                          withObject: nil];
   return self;
 }
+
 - (NSArray *) paths
 {
   return _paths;
 }
+
 - (void) stop
 {
   if (_stopped)
@@ -126,6 +128,7 @@
     }
 #endif
 }
+
 - (void) dealloc
 {
 #if defined(_WIN32)
@@ -146,6 +149,7 @@
   [_lock release];
   [super dealloc];
 }
+
 - (void) deliver
 {
   [_lock lock];
@@ -156,6 +160,7 @@
         postNotificationName: @"YCodeDirectoryDidChange"
                       object: self];
 }
+
 - (void) changed
 {
   [_lock lock];
@@ -167,6 +172,7 @@
                            withObject: nil
                         waitUntilDone: NO];
 }
+
 - (void) watch
 {
   NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -277,4 +283,5 @@
 #endif
   [pool drain];
 }
+
 @end

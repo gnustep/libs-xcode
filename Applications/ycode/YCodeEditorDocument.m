@@ -32,18 +32,22 @@
 {
   return 1;
 }
+
 + (NSString *) editorIdentifier
 {
   return nil;
 }
+
 + (NSString *) editorKind
 {
   return @"generic";
 }
+
 + (NSInteger) editorPriority
 {
   return 0;
 }
+
 + (BOOL) canOpenFilePath: (NSString *)path
 {
   return NO;
@@ -82,76 +86,95 @@
 {
   ASSIGN (_filePath, path);
 }
+
 - (BOOL) isEditable
 {
   return NO;
 }
+
 - (BOOL) isImageDocument
 {
   return [[[self class] editorKind] isEqual: @"image"];
 }
+
 - (BOOL) isSoundDocument
 {
   return [[[self class] editorKind] isEqual: @"sound"];
 }
+
 + (BOOL) isSoundFilePath: (NSString *)path
 {
   Class editor =
       [[YCodeEditorRegistry sharedRegistry] editorClassForFilePath: path];
   return [[editor editorKind] isEqual: @"sound"];
 }
+
 - (NSImage *) image
 {
   return nil;
 }
+
 - (NSView *) editorView
 {
   return nil;
 }
+
 - (NSScrollView *) scrollView
 {
   return nil;
 }
+
 - (NSTextView *) textView
 {
   return nil;
 }
+
 - (NSString *) content
 {
   return @"";
 }
+
 - (void) setContent: (NSString *)content
 {
 }
+
 - (BOOL) loadFromFile
 {
   return NO;
 }
+
 - (BOOL) writeContentsToFile
 {
   return NO;
 }
+
 - (void) checkForExternalChanges
 {
 }
+
 - (void) insertText: (NSString *)text atLocation: (NSUInteger)location
 {
 }
+
 - (NSString *) selectedText
 {
   return @"";
 }
+
 - (NSRange) selectedRange
 {
   return NSMakeRange (NSNotFound, 0);
 }
+
 - (void) setSelectedRange: (NSRange)range
 {
 }
+
 - (YCodeSyntaxHighlighter *) syntaxHighlighter
 {
   return nil;
 }
+
 - (void) applySyntaxHighlighting
 {
 }

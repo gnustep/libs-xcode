@@ -4,6 +4,7 @@
 {
   IBOutlet NSWindow *window;
 }
+
 - (void) applicationDidFinishLaunching: (NSNotification *)notification;
 - (BOOL) applicationShouldTerminateAfterLastWindowClosed:
     (NSApplication *)application;

@@ -30,6 +30,7 @@
 {
   return @"image";
 }
+
 - (NSString *) inspectorTitle
 {
   return @"Image";
@@ -64,4 +65,5 @@
           [representation hasAlpha] ? @"Yes" : @"No"];
   [_details setString: details];
 }
+
 @end

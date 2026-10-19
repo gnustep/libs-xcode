@@ -40,6 +40,7 @@
   NSDictionary *_delimiterMatches;
   NSRange _matchingDelimiterRange;
 }
+
 - (void) setFilePath: (NSString *)path;
 - (NSUInteger) editorTabWidth;
 - (NSUInteger) editorIndentWidth;

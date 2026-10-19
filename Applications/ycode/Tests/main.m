@@ -83,18 +83,21 @@
 @public
   YCodeWindowController *terminalWindow;
 }
+
 @end
 @implementation YCodeTerminalMenuTestController
 - (YCodeWindowController *) currentProjectWindowController
 {
   return terminalWindow;
 }
+
 @end
 
 @interface YCodeTerminalTestView : YCodeTerminalView
 {
   NSMutableData *_captured;
 }
+
 - (NSData *) takeOutput;
 @end
 @implementation YCodeTerminalTestView
@@ -102,6 +105,7 @@
 {
   return [NSPasteboard pasteboardWithName: @"YcodeTerminalRegression"];
 }
+
 - (void) queueBytes: (const char *)bytes length: (size_t)length
 {
   if (!_captured)
@@ -109,17 +113,20 @@
   [_captured appendBytes: bytes length: length];
   [super queueBytes: bytes length: length];
 }
+
 - (NSData *) takeOutput
 {
   NSData *result = [NSData dataWithData: _captured ? _captured : [NSData data]];
   [_captured setLength: 0];
   return result;
 }
+
 - (void) dealloc
 {
   [_captured release];
   [super dealloc];
 }
+
 @end
 
 @interface YCodeProjectNavigatorController (Testing)
@@ -143,6 +150,7 @@
 + (void) wakeModal: (NSTimer *)timer
 {
 }
+
 + (void) answerAlert: (NSTimer *)timer
 {
   if (![NSApp modalWindow])
@@ -184,6 +192,7 @@
       [views addObjectsFromArray: [view subviews]];
     }
 }
+
 @end
 
 static void
@@ -285,6 +294,7 @@ terminalWait (YCodeTerminalView *view, NSString *text)
 @public
   NSUInteger fullInvalidations, partialInvalidations;
 }
+
 @end
 @implementation YCodeCursorTestView
 - (BOOL) isRunning
@@ -304,6 +314,7 @@ terminalWait (YCodeTerminalView *view, NSString *text)
   partialInvalidations++;
   [super setNeedsDisplayInRect: rect];
 }
+
 @end
 
 static BOOL
@@ -1678,6 +1689,7 @@ testEditorColorPreferences (void)
 {
   BOOL _playing;
 }
+
 @end
 @implementation YCodeTestSound
 - (BOOL) play
@@ -1685,25 +1697,30 @@ testEditorColorPreferences (void)
   _playing = YES;
   return YES;
 }
+
 - (BOOL) pause
 {
   _playing = NO;
   return YES;
 }
+
 - (BOOL) resume
 {
   _playing = YES;
   return YES;
 }
+
 - (BOOL) stop
 {
   _playing = NO;
   return YES;
 }
+
 - (BOOL) isPlaying
 {
   return _playing;
 }
+
 @end
 
 static void
@@ -4072,6 +4089,7 @@ writeExecutable (NSString *path, NSString *contents)
   NSString *file;
   NSUInteger line;
 }
+
 @end
 @implementation YCodeDebuggerProbe
 - (id) init
@@ -4083,6 +4101,7 @@ writeExecutable (NSString *path, NSString *contents)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [commands release];
@@ -4090,14 +4109,17 @@ writeExecutable (NSString *path, NSString *contents)
   [file release];
   [super dealloc];
 }
+
 - (void) debugger: (YCodeDebugger *)debugger sendCommand: (NSString *)command
 {
   [commands appendString: command];
 }
+
 - (void) debugger: (YCodeDebugger *)debugger output: (NSString *)text
 {
   [output appendString: text];
 }
+
 - (void) debugger: (YCodeDebugger *)debugger
     stoppedAtFile: (NSString *)path
              line: (NSUInteger)number
@@ -4105,6 +4127,7 @@ writeExecutable (NSString *path, NSString *contents)
   ASSIGN (file, path);
   line = number;
 }
+
 @end
 
 @interface YCodeDebuggerChangeProbe : NSObject
@@ -4113,6 +4136,7 @@ writeExecutable (NSString *path, NSString *contents)
   id sender;
   NSUInteger count;
 }
+
 - (void) changed: (NSNotification *)notification;
 @end
 @implementation YCodeDebuggerChangeProbe
@@ -4121,6 +4145,7 @@ writeExecutable (NSString *path, NSString *contents)
   sender = [notification object];
   count++;
 }
+
 @end
 
 static void
@@ -6569,6 +6594,7 @@ testProjectCenterExport (NSString *directory)
                                          data2: 0]
            atStart: NO];
 }
+
 @end
 
 static void

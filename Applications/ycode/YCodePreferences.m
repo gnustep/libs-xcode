@@ -33,6 +33,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
              dictionaryForKey: @"YCodeTerminalPreferences"]
              ?: [NSDictionary dictionary];
 }
+
 + (void) saveTerminalSettings: (NSDictionary *)settings
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -42,6 +43,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
       postNotificationName: YCodeTerminalPreferencesDidChangeNotification
                     object: nil];
 }
+
 + (void) setTerminalValue: (id)value forKey: (NSString *)key
 {
   NSMutableDictionary *settings =
@@ -49,6 +51,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
   [settings setObject: value forKey: key];
   [self saveTerminalSettings: settings];
 }
+
 + (BOOL) isTerminalFont: (NSFont *)font
 {
   if (!font)
@@ -67,6 +70,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
          && fabs ([@"W" sizeWithAttributes: attributes].width - width) < 0.01
          && fabs ([@" " sizeWithAttributes: attributes].width - width) < 0.01;
 }
+
 + (NSFont *) terminalFont
 {
   NSDictionary *settings = [self terminalSettings];
@@ -82,6 +86,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
     }
   return [NSFont userFixedPitchFontOfSize: 13];
 }
+
 + (void) setTerminalFont: (NSFont *)font
 {
   if (![self isTerminalFont: font] || !isfinite ([font pointSize]) ||
@@ -94,6 +99,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
                forKey: @"fontSize"];
   [self saveTerminalSettings: settings];
 }
+
 + (NSColor *) terminalColorForKey: (NSString *)key
                     defaultColor: (NSColor *)fallback
 {
@@ -118,6 +124,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
     }
   return fallback;
 }
+
 + (NSColor *) terminalForegroundColor
 {
   return
@@ -125,6 +132,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
                    defaultColor: [NSColor colorWithCalibratedWhite: 230.0 / 255.0
                                                             alpha: 1]];
 }
+
 + (NSColor *) terminalBackgroundColor
 {
   return
@@ -132,6 +140,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
                    defaultColor: [NSColor colorWithCalibratedWhite: 24.0 / 255.0
                                                             alpha: 1]];
 }
+
 + (void) setTerminalForegroundColor: (NSColor *)foreground
                    backgroundColor: (NSColor *)background
 {
@@ -159,11 +168,13 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
     }
   [self saveTerminalSettings: settings];
 }
+
 + (NSColor *) terminalCursorColor
 {
   return [self terminalColorForKey: @"cursorColor"
                       defaultColor: [NSColor redColor]];
 }
+
 + (void) setTerminalCursorColor: (NSColor *)color
 {
   color = [color colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
@@ -180,6 +191,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
                                  nil]
                   forKey: @"cursorColor"];
 }
+
 + (NSInteger) terminalCursorShape
 {
   id value = [[self terminalSettings] objectForKey: @"cursorShape"];
@@ -188,12 +200,14 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
              ? [value integerValue]
              : 0;
 }
+
 + (void) setTerminalCursorShape: (NSInteger)shape
 {
   if (shape >= 0 && shape <= 4)
     [self setTerminalValue: [NSNumber numberWithInteger: shape]
                     forKey: @"cursorShape"];
 }
+
 + (NSUInteger) terminalScrollbackLines
 {
   id lines = [[self terminalSettings] objectForKey: @"scrollbackLines"];
@@ -202,35 +216,42 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
              ? [lines unsignedIntegerValue]
              : 5000;
 }
+
 + (void) setTerminalScrollbackLines: (NSUInteger)lines
 {
   [self
       setTerminalValue: [NSNumber numberWithUnsignedInteger: MIN (50000, lines)]
                 forKey: @"scrollbackLines"];
 }
+
 + (BOOL) terminalBooleanForKey: (NSString *)key
 {
   id value = [[self terminalSettings] objectForKey: key];
   return [value isKindOfClass: [NSNumber class]] ? [value boolValue] : YES;
 }
+
 + (BOOL) terminalAudibleBell
 {
   return [self terminalBooleanForKey: @"audibleBell"];
 }
+
 + (BOOL) terminalCursorBlink
 {
   return [self terminalBooleanForKey: @"cursorBlink"];
 }
+
 + (void) setTerminalAudibleBell: (BOOL)enabled
 {
   [self setTerminalValue: [NSNumber numberWithBool: enabled]
                   forKey: @"audibleBell"];
 }
+
 + (void) setTerminalCursorBlink: (BOOL)enabled
 {
   [self setTerminalValue: [NSNumber numberWithBool: enabled]
                   forKey: @"cursorBlink"];
 }
+
 + (void) resetTerminalPreferences
 {
   [[NSUserDefaults standardUserDefaults]
@@ -240,11 +261,13 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
       postNotificationName: YCodeTerminalPreferencesDidChangeNotification
                     object: nil];
 }
+
 + (BOOL) highlightMatchingDelimiters
 {
   return ![[NSUserDefaults standardUserDefaults]
       boolForKey: @"YCodeDisableMatchingDelimiters"];
 }
+
 + (void) setHighlightMatchingDelimiters: (BOOL)enabled
 {
   [[NSUserDefaults standardUserDefaults]
@@ -311,6 +334,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
   return [NSArray
       arrayWithObjects: @"Editor", @"Console", @"Issues", @"Debugger", nil];
 }
+
 + (NSFont *) fontForPane: (NSString *)pane
 {
   id entry = [[[NSUserDefaults standardUserDefaults]
@@ -331,6 +355,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
     }
   return [NSFont userFixedPitchFontOfSize: 12];
 }
+
 + (void) setFont: (NSFont *)font forPane: (NSString *)pane
 {
   if (!font || ![[self fontPanes] containsObject: pane])
@@ -351,6 +376,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
       postNotificationName: @"YCodeFontsDidChange"
                     object: nil];
 }
+
 + (void) resetFonts
 {
   [[NSUserDefaults standardUserDefaults] removeObjectForKey: @"YCodeFonts"];
@@ -359,6 +385,7 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
       postNotificationName: @"YCodeFontsDidChange"
                     object: nil];
 }
+
 + (void) applyFont: (NSFont *)font toText: (NSMutableAttributedString *)text
 {
   NSUInteger index = 0;
@@ -382,4 +409,5 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
     }
   [text endEditing];
 }
+
 @end

@@ -69,6 +69,7 @@ YCDecodeNibItem (NSCoder *coder, NSString *className, NSRect *frame)
 {
   NSString *_modelClassName;
 }
+
 - (NSString *) className;
 @end
 @implementation YCPreviewNibItem
@@ -81,18 +82,22 @@ YCDecodeNibItem (NSCoder *coder, NSString *className, NSRect *frame)
     }
   return self;
 }
+
 - (void) encodeWithCoder: (NSCoder *)coder
 {
 }
+
 - (NSString *) className
 {
   return _modelClassName;
 }
+
 - (void) dealloc
 {
   [_modelClassName release];
   [super dealloc];
 }
+
 @end
 
 @interface YCPreviewCustomView : NSView
@@ -116,6 +121,7 @@ YCDecodeNibItem (NSCoder *coder, NSString *className, NSRect *frame)
     }
   return self;
 }
+
 @end
 #endif
 
@@ -161,6 +167,7 @@ YCModelBackground (BOOL objectsPane)
   NSMutableArray *_previewViews;
   NSMutableArray *_previewSizes;
 }
+
 - (void) setObjectsPane: (BOOL)flag;
 - (void) addPreviewView: (NSView *)view;
 - (void) setPreviewTop: (CGFloat)top;
@@ -174,6 +181,7 @@ YCModelBackground (BOOL objectsPane)
   [_previewSizes release];
   [super dealloc];
 }
+
 - (void) addPreviewView: (NSView *)view
 {
   if (_previewViews == nil)
@@ -186,10 +194,12 @@ YCModelBackground (BOOL objectsPane)
   [view setAutoresizesSubviews: NO];
   [self addSubview: view];
 }
+
 - (void) setPreviewTop: (CGFloat)top
 {
   _previewTop = top;
 }
+
 - (void) viewDidMoveToSuperview
 {
   [super viewDidMoveToSuperview];
@@ -208,10 +218,12 @@ YCModelBackground (BOOL objectsPane)
       [self layoutPreviews];
     }
 }
+
 - (void) previewViewportChanged: (NSNotification *)notification
 {
   [self layoutPreviews];
 }
+
 - (void) layoutPreviews
 {
   NSView *clip = [self superview];
@@ -268,28 +280,34 @@ YCModelBackground (BOOL objectsPane)
   _layingOut = NO;
   [self setNeedsDisplay: YES];
 }
+
 - (void) setObjectsPane: (BOOL)flag
 {
   _objectsPane = flag;
   [self setNeedsDisplay: YES];
 }
+
 - (BOOL) isFlipped
 {
   return YES;
 }
+
 - (NSView *) nextKeyView
 {
   return nil;
 }
+
 - (NSView *) hitTest: (NSPoint)point
 {
   return [super hitTest: point] ? self : nil;
 }
+
 - (void) drawRect: (NSRect)rect
 {
   [YCModelBackground (_objectsPane) set];
   NSRectFill (rect);
 }
+
 @end
 
 /* These frames are views, not application windows: the archived interface
@@ -317,6 +335,7 @@ YCModelTitleSegment (NSRect rect)
 {
   NSUInteger _previewStyle;
 }
+
 - (id) initWithContentView: (NSView *)view
                     title: (NSString *)title
                 styleMask: (NSUInteger)style;
@@ -359,6 +378,7 @@ YCModelTitleSegment (NSRect rect)
     }
   return self;
 }
+
 - (void) drawRect: (NSRect)rect
 {
   [[NSColor windowBackgroundColor] set];
@@ -402,6 +422,7 @@ YCModelTitleSegment (NSRect rect)
         }
     }
 }
+
 @end
 
 #ifdef GNUSTEP
@@ -411,6 +432,7 @@ YCModelTitleSegment (NSRect rect)
 {
   NSMenu *_previewMenu;
 }
+
 - (id) initWithPreviewMenu: (NSMenu *)menu;
 @end
 @implementation YCModelMenuView
@@ -425,12 +447,14 @@ YCModelTitleSegment (NSRect rect)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [self setMenu: nil];
   [_previewMenu release];
   [super dealloc];
 }
+
 @end
 #endif
 
@@ -459,6 +483,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
   NSScrollView *_scrollView;
   NSArray *_objects;
 }
+
 - (void) addLabel: (NSString *)label toCanvas: (NSView *)canvas y: (CGFloat *)y;
 - (void) addMenu: (NSMenu *)menu
        toCanvas: (YCModelCanvas *)canvas
@@ -471,19 +496,23 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
 {
   return @"model";
 }
+
 + (NSString *) editorKind
 {
   return @"model";
 }
+
 + (NSInteger) editorPriority
 {
   return 300;
 }
+
 + (BOOL) canOpenFilePath: (NSString *)path
 {
   return [[NSArray arrayWithObjects: @"gorm", @"xib", @"nib", nil]
       containsObject: [[path pathExtension] lowercaseString]];
 }
+
 - (id) initWithFilePath: (NSString *)path
 {
   if ((self = [super initWithFilePath: path]))
@@ -511,6 +540,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_editorView release];
@@ -519,10 +549,12 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
   [_objects release];
   [super dealloc];
 }
+
 - (NSView *) editorView
 {
   return _editorView;
 }
+
 - (NSScrollView *) scrollView
 {
   return _scrollView;
@@ -545,6 +577,7 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
   [field release];
   *y += 28;
 }
+
 - (void) addMenu: (NSMenu *)menu
        toCanvas: (YCModelCanvas *)canvas
           depth: (NSUInteger)depth
@@ -869,4 +902,5 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
                     object: _editorController];
   return YES;
 }
+
 @end

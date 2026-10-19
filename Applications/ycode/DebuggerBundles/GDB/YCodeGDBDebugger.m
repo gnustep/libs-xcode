@@ -129,29 +129,35 @@ YCReadValue (NSScanner *scanner)
 {
   return YCodeDebuggerBackendAPIVersion;
 }
+
 + (NSString *) debuggerIdentifier
 {
   return @"gdb";
 }
+
 + (NSString *) debuggerDisplayName
 {
   return @"GDB";
 }
+
 - (NSString *) launchCommandForExecutable: (NSString *)executable
 {
   NSString *path =
       [[NSUserDefaults standardUserDefaults] stringForKey: @"DebuggerPath"];
   return [path length] ? path : @"gdb";
 }
+
 - (NSArray *) launchArgumentsForExecutable: (NSString *)executable
 {
   return [NSArray arrayWithObjects: @"--interpreter=mi2", @"--quiet", @"--nx",
                                    @"-f", executable, nil];
 }
+
 - (BOOL) canSetBreakpointAtFile: (NSString *)file
 {
   return [[self class] canSetBreakpointAtFile: file];
 }
+
 - (BOOL) canPerformAction: (YCodeDebuggerAction)action
 {
   if (!_ready || action < YCodeDebuggerRun || action > YCodeDebuggerStop)
@@ -162,6 +168,7 @@ YCReadValue (NSScanner *scanner)
     return YES;
   return !_running;
 }
+
 - (void) performAction: (YCodeDebuggerAction)action
 {
   if (![self canPerformAction: action])
@@ -184,6 +191,7 @@ YCReadValue (NSScanner *scanner)
                                 @"-interpreter-exec console \"down\"", nil];
   [self command: [commands objectAtIndex: action]];
 }
+
 - (id) init
 {
   if ((self = [super init]))
@@ -196,6 +204,7 @@ YCReadValue (NSScanner *scanner)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_variables release];
@@ -208,26 +217,32 @@ YCReadValue (NSScanner *scanner)
   [_executionFile release];
   [super dealloc];
 }
+
 - (void) setDelegate: (id<YCodeDebuggerBackendDelegate>)delegate
 {
   _delegate = delegate;
 }
+
 - (id<YCodeDebuggerVariableSource>) variables
 {
   return _variables;
 }
+
 - (BOOL) isReady
 {
   return _ready;
 }
+
 - (BOOL) isRunning
 {
   return _running;
 }
+
 - (void) notifyChange
 {
   [_delegate debuggerBackendDidChange: self];
 }
+
 - (void) setSourceDirectory: (NSString *)directory
 {
   do
@@ -239,14 +254,17 @@ YCReadValue (NSScanner *scanner)
     }
   while (0);
 }
+
 - (NSString *) executionFile
 {
   return _executionFile;
 }
+
 - (NSUInteger) executionLine
 {
   return _executionLine;
 }
+
 - (void) updateSelectedFrame: (NSDictionary *)frame
 {
   NSString *file =
@@ -267,6 +285,7 @@ YCReadValue (NSScanner *scanner)
                             line: _executionLine];
     }
 }
+
 - (NSString *) sourcePath: (NSString *)file
 {
   if (![file isAbsolutePath])
@@ -275,11 +294,13 @@ YCReadValue (NSScanner *scanner)
         stringByAppendingPathComponent: file];
   return [file stringByStandardizingPath];
 }
+
 - (NSString *) locationAtFile: (NSString *)file line: (NSUInteger)line
 {
   return [NSString
       stringWithFormat: @"%@:%lu", [self sourcePath: file], (unsigned long)line];
 }
+
 - (NSString *) storedLocationAtFile: (NSString *)file line: (NSUInteger)line
 {
   NSString *location = [self locationAtFile: file line: line];
@@ -294,6 +315,7 @@ YCReadValue (NSScanner *scanner)
   }
   return location;
 }
+
 - (YCodeBreakpointState) stateForLocation: (NSString *)location
 {
   if (![_breakpoints objectForKey: location])
@@ -302,6 +324,7 @@ YCReadValue (NSScanner *scanner)
              ? YCodeBreakpointInactive
              : YCodeBreakpointEnabled;
 }
+
 - (YCodeBreakpointState) breakpointStateAtFile: (NSString *)file
                                          line: (NSUInteger)line
 {
@@ -309,6 +332,7 @@ YCReadValue (NSScanner *scanner)
     return YCodeBreakpointNone;
   return [self stateForLocation: [self storedLocationAtFile: file line: line]];
 }
+
 - (NSDictionary *) breakpointLinesForFile: (NSString *)file
 {
   NSMutableDictionary *lines = [NSMutableDictionary dictionary];
@@ -334,6 +358,7 @@ YCReadValue (NSScanner *scanner)
   }
   return lines;
 }
+
 - (void) setBreakpointStorageKey: (NSString *)key
 {
   do
@@ -376,6 +401,7 @@ YCReadValue (NSScanner *scanner)
     }
   [self notifyChange];
 }
+
 - (void) saveBreakpoints
 {
   if (_storageKey)
@@ -395,6 +421,7 @@ YCReadValue (NSScanner *scanner)
     }
   [self notifyChange];
 }
+
 - (void) insertBreakpointAtLocation: (NSString *)location
 {
   NSString *options = [_disabledBreakpoints containsObject: location]
@@ -403,6 +430,7 @@ YCReadValue (NSScanner *scanner)
   [self
       command: [options stringByAppendingString: [[self class] quote: location]]];
 }
+
 + (BOOL) canSetBreakpointAtFile: (NSString *)file
 {
   NSString *extension = [[file pathExtension] lowercaseString];
@@ -412,6 +440,7 @@ YCReadValue (NSScanner *scanner)
                                     @"l", @"lm", @"y", @"ym", nil]
              containsObject: extension];
 }
+
 - (void) toggleBreakpointEnabledAtFile: (NSString *)file line: (NSUInteger)line
 {
   if (![[self class] canSetBreakpointAtFile: file] || line == 0)
@@ -430,6 +459,7 @@ YCReadValue (NSScanner *scanner)
                       stringByAppendingString: number]];
   [self saveBreakpoints];
 }
+
 - (void) restart
 {
   if (_running)
@@ -440,6 +470,7 @@ YCReadValue (NSScanner *scanner)
   else
     [self command: @"-exec-run"];
 }
+
 - (void) reset
 {
   [_variables reset];
@@ -458,6 +489,7 @@ YCReadValue (NSScanner *scanner)
   }
   [self notifyChange];
 }
+
 + (NSString *) quote: (NSString *)string
 {
   string = [string stringByReplacingOccurrencesOfString: @"\\"
@@ -470,6 +502,7 @@ YCReadValue (NSScanner *scanner)
                                              withString: @"\\r"];
   return [NSString stringWithFormat: @"\"%@\"", string];
 }
+
 + (NSDictionary *) parseRecord: (NSString *)record
 {
   NSScanner *scanner = [NSScanner scannerWithString: record];
@@ -502,17 +535,20 @@ YCReadValue (NSScanner *scanner)
   [result setObject: event ?: @"" forKey: @"event"];
   return result;
 }
+
 - (void) command: (NSString *)command
 {
   if (_ready)
     [_delegate debuggerBackend: self
                    sendCommand: [command stringByAppendingString: @"\n"]];
 }
+
 - (void) consoleCommand: (NSString *)command
 {
   [self command: [@"-interpreter-exec console "
                     stringByAppendingString: [[self class] quote: command]]];
 }
+
 - (void) toggleBreakpointAtFile: (NSString *)file line: (NSUInteger)line
 {
   if (![[self class] canSetBreakpointAtFile: file] || line == 0)
@@ -544,6 +580,7 @@ YCReadValue (NSScanner *scanner)
                                                         location]];
   [self saveBreakpoints];
 }
+
 - (void) handleLine: (NSString *)line
 {
   if ([line hasPrefix: @"(gdb)"])
@@ -713,6 +750,7 @@ YCReadValue (NSScanner *scanner)
            [event isEqual: @"thread-group-exited"])
     [self notifyChange];
 }
+
 - (void) receiveData: (NSData *)data
 {
   [_pending appendData: data];
@@ -739,4 +777,5 @@ YCReadValue (NSScanner *scanner)
                              length: 0];
     }
 }
+
 @end

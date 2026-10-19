@@ -267,6 +267,7 @@
 {
   return _symbolColor;
 }
+
 - (NSColor *) constantColor
 {
   return _constantColor;

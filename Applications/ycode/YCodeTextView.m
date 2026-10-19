@@ -269,6 +269,7 @@ OpeningDelimiterForClosingDelimiter (unichar c)
         NSRectFillUsingOperation (highlight, NSCompositeSourceOver);
     }
 }
+
 #endif
 
 - (NSUInteger) editorTabWidth

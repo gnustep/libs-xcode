@@ -38,6 +38,7 @@
   NSRulerView *_lineNumberRuler;
   YCodeSyntaxHighlighter *_syntaxHighlighter;
 }
+
 @end
 
 @implementation YCodeTextEditorDocument
@@ -45,22 +46,27 @@
 {
   return @"text";
 }
+
 + (NSString *) editorKind
 {
   return @"text";
 }
+
 + (NSInteger) editorPriority
 {
   return -1000;
 }
+
 + (BOOL) canOpenFilePath: (NSString *)path
 {
   return [path length] > 0;
 }
+
 - (BOOL) isEditable
 {
   return YES;
 }
+
 - (id) initWithFilePath: (NSString *)filePath
 {
   self = [super initWithFilePath: filePath];
@@ -104,6 +110,7 @@
   RELEASE (_lineNumberRuler);
   [super dealloc];
 }
+
 - (void) setupEditorView
 {
   // Create scroll view
@@ -440,4 +447,5 @@
            [error localizedDescription]);
   return success;
 }
+
 @end

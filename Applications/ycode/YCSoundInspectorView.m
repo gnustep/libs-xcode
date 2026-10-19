@@ -33,6 +33,7 @@
 {
   NSData *_samples;
 }
+
 - (void) setSamples: (NSData *)samples;
 @end
 
@@ -72,6 +73,7 @@
     }
   [wave stroke];
 }
+
 @end
 
 @implementation YCSoundInspectorView
@@ -133,6 +135,7 @@
 {
   return @"sound";
 }
+
 - (NSString *) inspectorTitle
 {
   return @"Sound";
@@ -340,4 +343,5 @@
     [_status setStringValue: [NSString stringWithFormat: @"Stopped · %.2f s",
                                                        _duration]];
 }
+
 @end

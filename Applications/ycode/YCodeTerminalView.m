@@ -186,6 +186,7 @@ terminalModifiers (NSEvent *event)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver: self];
@@ -202,15 +203,18 @@ terminalModifiers (NSEvent *event)
   RELEASE (_directory);
   [super dealloc];
 }
+
 - (BOOL) isFlipped
 {
   return YES;
 }
+
 - (void) ringBell
 {
   if (_audibleBell)
     NSBeep ();
 }
+
 - (void) preferencesChanged: (NSNotification *)notification
 {
   ASSIGN (_font, [YCodePreferences terminalFont]);
@@ -254,14 +258,17 @@ terminalModifiers (NSEvent *event)
   [self updateScroller];
   [self setNeedsDisplay: YES];
 }
+
 - (BOOL) isOpaque
 {
   return YES;
 }
+
 - (BOOL) acceptsFirstResponder
 {
   return YES;
 }
+
 - (BOOL) becomeFirstResponder
 {
   _blinkOn = YES;
@@ -271,12 +278,14 @@ terminalModifiers (NSEvent *event)
   [self setNeedsDisplay: YES];
   return YES;
 }
+
 - (BOOL) resignFirstResponder
 {
   vterm_state_focus_out (vterm_obtain_state (_terminal));
   [self setNeedsDisplay: YES];
   return YES;
 }
+
 - (void) viewWillMoveToWindow: (NSWindow *)window
 {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
@@ -313,6 +322,7 @@ terminalModifiers (NSEvent *event)
 {
   [self stop];
 }
+
 - (BOOL) isRunning
 {
   return _master >= 0;
@@ -410,6 +420,7 @@ terminalModifiers (NSEvent *event)
     }
   return 1;
 }
+
 - (void) clearHistory
 {
   [_history removeAllObjects];
@@ -417,6 +428,7 @@ terminalModifiers (NSEvent *event)
   _selectionStart = _selectionEnd = -1;
   [self setNeedsDisplay: YES];
 }
+
 - (int) pushLine: (int)columns cells: (const VTermScreenCell *)cells
 {
   [_history addObject: [NSData dataWithBytes: cells
@@ -430,6 +442,7 @@ terminalModifiers (NSEvent *event)
     _scrollOffset = MIN ((NSInteger)[_history count], _scrollOffset + 1);
   return 1;
 }
+
 - (int) popLine: (int)columns cells: (VTermScreenCell *)cells
 {
   NSData *line = [_history lastObject];
@@ -441,17 +454,20 @@ terminalModifiers (NSEvent *event)
   _scrollOffset = MIN (_scrollOffset, (NSInteger)[_history count]);
   return 1;
 }
+
 - (void) consumeData: (NSData *)data
 {
   vterm_input_write (_terminal, [data bytes], [data length]);
   vterm_screen_flush_damage (_screen);
   [self updateScroller];
 }
+
 - (void) queueBytes: (const char *)bytes length: (size_t)length
 {
   if (_master >= 0)
     [_pendingInput appendBytes: bytes length: length];
 }
+
 - (void) sendData: (NSData *)data
 {
   [self queueBytes: [data bytes] length: [data length]];
@@ -465,12 +481,14 @@ terminalModifiers (NSEvent *event)
   if (_terminal)
     [self resizeTerminal];
 }
+
 - (void) setFrameSize: (NSSize)size
 {
   [super setFrameSize: size];
   if (_terminal)
     [self resizeTerminal];
 }
+
 - (void) resizeTerminal
 {
   int rows
@@ -699,6 +717,7 @@ terminalModifiers (NSEvent *event)
     }
   [pool drain];
 }
+
 #endif
 - (void) stop
 {
@@ -740,6 +759,7 @@ terminalModifiers (NSEvent *event)
   _child = _master = -1;
   [_pendingInput setLength: 0];
 }
+
 - (void) poll: (NSTimer *)timer
 {
   NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
@@ -803,6 +823,7 @@ terminalModifiers (NSEvent *event)
     }
 #endif
 }
+
 - (void) restart: (id)sender
 {
   if (!_directory)
@@ -833,6 +854,7 @@ terminalModifiers (NSEvent *event)
   return position.row < _rows
          && vterm_screen_get_cell (_screen, position, cell);
 }
+
 - (NSString *) screenText
 {
   NSMutableString *text = [NSMutableString string];
@@ -851,6 +873,7 @@ terminalModifiers (NSEvent *event)
     }
   return text;
 }
+
 - (NSColor *) color: (VTermColor)color
 {
   if (VTERM_COLOR_IS_DEFAULT_FG (&color))
@@ -863,6 +886,7 @@ terminalModifiers (NSEvent *event)
                                     blue: color.rgb.blue / 255.0
                                    alpha: 1];
 }
+
 - (void) drawRect: (NSRect)dirty
 {
   [_backgroundColor set];
@@ -1143,6 +1167,7 @@ terminalModifiers (NSEvent *event)
   _blinkOn = YES;
   _lastBlink = [NSDate timeIntervalSinceReferenceDate];
 }
+
 - (BOOL) performKeyEquivalent: (NSEvent *)event
 {
   if ([[self window] firstResponder] == self
@@ -1154,6 +1179,7 @@ terminalModifiers (NSEvent *event)
     }
   return [super performKeyEquivalent: event];
 }
+
 - (NSInteger) positionForEvent: (NSEvent *)event
 {
   NSPoint p = [self convertPoint: [event locationInWindow] fromView: nil];
@@ -1162,6 +1188,7 @@ terminalModifiers (NSEvent *event)
   int col = MIN (_columns - 1, MAX (0, (int)(p.x / _cellWidth)));
   return (history - _scrollOffset + row) * _columns + col;
 }
+
 - (BOOL) reportMouse: (NSEvent *)event button: (int)button pressed: (BOOL)pressed
 {
   if (!_mouseReporting || ([event modifierFlags] & NSShiftKeyMask))
@@ -1175,6 +1202,7 @@ terminalModifiers (NSEvent *event)
     vterm_mouse_button (_terminal, button, pressed, terminalModifiers (event));
   return YES;
 }
+
 - (void) mouseDown: (NSEvent *)event
 {
   [[self window] makeFirstResponder: self];
@@ -1183,6 +1211,7 @@ terminalModifiers (NSEvent *event)
   _selectionStart = _selectionEnd = [self positionForEvent: event];
   [self setNeedsDisplay: YES];
 }
+
 - (void) mouseDragged: (NSEvent *)event
 {
   if ([self reportMouse: event button: 0 pressed: NO])
@@ -1190,39 +1219,48 @@ terminalModifiers (NSEvent *event)
   _selectionEnd = [self positionForEvent: event];
   [self setNeedsDisplay: YES];
 }
+
 - (void) mouseUp: (NSEvent *)event
 {
   [self reportMouse: event button: 1 pressed: NO];
 }
+
 - (void) rightMouseDown: (NSEvent *)event
 {
   if (![self reportMouse: event button: 3 pressed: YES])
     [super rightMouseDown: event];
 }
+
 - (void) rightMouseUp: (NSEvent *)event
 {
   [self reportMouse: event button: 3 pressed: NO];
 }
+
 - (void) rightMouseDragged: (NSEvent *)event
 {
   [self reportMouse: event button: 0 pressed: NO];
 }
+
 - (void) otherMouseDown: (NSEvent *)event
 {
   [self reportMouse: event button: 2 pressed: YES];
 }
+
 - (void) otherMouseUp: (NSEvent *)event
 {
   [self reportMouse: event button: 2 pressed: NO];
 }
+
 - (void) otherMouseDragged: (NSEvent *)event
 {
   [self reportMouse: event button: 0 pressed: NO];
 }
+
 - (void) mouseMoved: (NSEvent *)event
 {
   [self reportMouse: event button: 0 pressed: NO];
 }
+
 - (void) updateScroller
 {
   NSInteger history = _alternateScreen ? 0 : [_history count];
@@ -1232,6 +1270,7 @@ terminalModifiers (NSEvent *event)
       knobProportion: (double)_rows / MAX (1, history + _rows)];
   [_historyScroller setEnabled: history > 0];
 }
+
 - (void) scrollHistory: (NSScroller *)sender
 {
   NSInteger history = _alternateScreen ? 0 : [_history count];
@@ -1257,6 +1296,7 @@ terminalModifiers (NSEvent *event)
   [self updateScroller];
   [self setNeedsDisplay: YES];
 }
+
 - (void) scrollWheel: (NSEvent *)event
 {
   if ([event deltaY] == 0)
@@ -1273,6 +1313,7 @@ terminalModifiers (NSEvent *event)
   [self updateScroller];
   [self setNeedsDisplay: YES];
 }
+
 - (void) selectAll: (id)sender
 {
   _selectionStart = 0;
@@ -1280,10 +1321,12 @@ terminalModifiers (NSEvent *event)
       = ((_alternateScreen ? 0 : [_history count]) + _rows) * _columns - 1;
   [self setNeedsDisplay: YES];
 }
+
 - (NSPasteboard *) pasteboard
 {
   return [NSPasteboard generalPasteboard];
 }
+
 - (void) copy: (id)sender
 {
   if (_selectionStart < 0)
@@ -1314,6 +1357,7 @@ terminalModifiers (NSEvent *event)
                      owner: nil];
   [pasteboard setString: result forType: NSStringPboardType];
 }
+
 - (void) paste: (id)sender
 {
   NSString *text = [[self pasteboard] stringForType: NSStringPboardType];
@@ -1331,6 +1375,7 @@ terminalModifiers (NSEvent *event)
   [self updateScroller];
   [self setNeedsDisplay: YES];
 }
+
 - (NSMenu *) menuForEvent: (NSEvent *)event
 {
   NSMenu *menu = AUTORELEASE ([[NSMenu alloc] initWithTitle: @"Terminal"]);
@@ -1351,4 +1396,5 @@ terminalModifiers (NSEvent *event)
     }
   return menu;
 }
+
 @end

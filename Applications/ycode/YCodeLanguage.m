@@ -113,48 +113,59 @@ YCodeStringArray (id value)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_definition release];
   [_patterns release];
   [super dealloc];
 }
+
 - (BOOL) highlightStringKeys
 {
   return [[_definition objectForKey: @"HighlightStringKeys"] boolValue];
 }
+
 - (NSString *) identifier
 {
   return [_definition objectForKey: @"Identifier"];
 }
+
 - (NSArray *) extensions
 {
   return [_definition objectForKey: @"Extensions"];
 }
+
 - (NSArray *) fileNames
 {
   return [_definition objectForKey: @"FileNames"];
 }
+
 - (NSRegularExpression *) patternForToken: (NSString *)token
 {
   return [_patterns objectForKey: token];
 }
+
 - (NSString *) indentationStyle
 {
   return [_definition objectForKey: @"Indentation"];
 }
+
 - (NSArray *) controlKeywords
 {
   return [_definition objectForKey: @"ControlKeywords"];
 }
+
 - (NSArray *) standaloneControls
 {
   return [_definition objectForKey: @"StandaloneControls"];
 }
+
 - (NSString *) lineComment
 {
   return [_definition objectForKey: @"LineComment"];
 }
+
 - (NSDictionary *) languageServerConfiguration
 {
   return [_definition objectForKey: @"LanguageServer"];
@@ -189,6 +200,7 @@ YCodeStringArray (id value)
     }
   return code;
 }
+
 @end
 
 @implementation YCodeLanguageRegistry
@@ -219,6 +231,7 @@ YCodeStringArray (id value)
     }
   return registry;
 }
+
 - (id) initWithSearchPaths: (NSArray *)paths
 {
   self = [super init];
@@ -246,6 +259,7 @@ YCodeStringArray (id value)
     }
   return self;
 }
+
 - (void) dealloc
 {
   [_extensions release];
@@ -254,6 +268,7 @@ YCodeStringArray (id value)
   [_namedLanguages release];
   [super dealloc];
 }
+
 - (BOOL) loadBundleAtPath: (NSString *)path
 {
   @try
@@ -322,6 +337,7 @@ YCodeStringArray (id value)
       return NO;
     }
 }
+
 - (YCodeLanguage *) languageForFile: (NSString *)path
 {
   if (![path length])
@@ -344,4 +360,5 @@ YCodeStringArray (id value)
   return language ? language
                   : [_extensions objectForKey: [extension lowercaseString]];
 }
+
 @end

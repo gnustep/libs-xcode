@@ -38,6 +38,7 @@
   void *_changeHandle;
   void *_stopHandle;
 }
+
 - (id) initWithDirectory: (NSString *)directory paths: (NSArray *)paths;
 - (NSArray *) paths;
 - (void) stop;

@@ -45,6 +45,7 @@
 {
   return YES;
 }
+
 @end
 
 /* Keep font-panel actions in the responder chain of the selected preference. */
@@ -56,6 +57,7 @@
 {
   return YES;
 }
+
 - (void) changeFont: (id)sender
 {
   NSString *pane = [[YCodePreferences fontPanes] objectAtIndex: [self tag]];
@@ -67,6 +69,7 @@
       [[self target] performSelector: @selector (refreshFontPreferences)];
     }
 }
+
 @end
 
 @interface YCodeTerminalFontButton : NSButton
@@ -76,6 +79,7 @@
 {
   return YES;
 }
+
 - (void) changeFont: (id)sender
 {
   [YCodePreferences
@@ -85,6 +89,7 @@
            isMultiple: NO];
   [[self target] performSelector: @selector (refreshTerminalPreferences)];
 }
+
 @end
 
 static NSMenuItem *
@@ -1050,6 +1055,7 @@ YCodeFileURLFromPath (NSString *path)
 {
   [[self currentProjectWindowController] debugProject: sender];
 }
+
 - (IBAction) openTerminal: (id)sender
 {
   YCodeWindowController *controller = [self currentProjectWindowController];
@@ -1058,10 +1064,12 @@ YCodeFileURLFromPath (NSString *path)
     [sender setTitle: [controller isTerminalVisible] ? @"Close Terminal"
                                                     : @"Open Terminal"];
 }
+
 - (IBAction) debugAction: (id)sender
 {
   [[self currentProjectWindowController] debugAction: sender];
 }
+
 - (IBAction) toggleBreakpoint: (id)sender
 {
   [[self currentProjectWindowController] toggleBreakpoint: sender];
