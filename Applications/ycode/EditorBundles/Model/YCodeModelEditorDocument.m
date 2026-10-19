@@ -24,6 +24,7 @@
 
 #import "YCodeEditorDocument.h"
 #import "YCodeEditorController.h"
+#import "YCodePreferences.h"
 #ifdef GNUSTEP
 #import <GNUstepGUI/GSGormLoading.h>
 #import <GNUstepGUI/GSNibLoading.h>
@@ -552,7 +553,71 @@ YCMakeModelViewReadOnly (NSView *view, NSView *canvas)
     YCMakeModelViewReadOnly (child, canvas);
 }
 
-/* Capture only display strings; never instantiate or establish a connection. */
+/* The editor owns this view; its callback must not retain the document. */
+@interface YCModelEditorView : NSView
+{
+  id _overlayOwner;
+}
+
+- (void) setOverlayOwner: (id)owner;
+@end
+@implementation YCModelEditorView
+- (void) setOverlayOwner: (id)owner
+{
+  _overlayOwner = owner;
+}
+
+- (void) viewDidMoveToWindow
+{
+  [super viewDidMoveToWindow];
+  [_overlayOwner performSelector: @selector (updateConnectionLine)];
+}
+
+- (void) setHidden: (BOOL)hidden
+{
+  [super setHidden: hidden];
+  [_overlayOwner performSelector: @selector (updateConnectionLine)];
+}
+
+@end
+
+@interface YCModelConnectionWindow : NSWindow
+@end
+@implementation YCModelConnectionWindow
+- (BOOL) canBecomeKeyWindow
+{
+  return NO;
+}
+
+- (BOOL) canBecomeMainWindow
+{
+  return NO;
+}
+
+@end
+
+@interface YCModelConnectionLineView : NSView
+@end
+@implementation YCModelConnectionLineView
+- (void) drawRect: (NSRect)rect
+{
+  [[[self window] backgroundColor] set];
+  NSRectFill (rect);
+}
+
+@end
+
+static id
+YCConnectionKey (id object)
+{
+  if (!object)
+    return [NSNull null];
+  return [object isKindOfClass: [NSString class]]
+             ? object
+             : [NSValue valueWithNonretainedObject: object];
+}
+
+/* Never instantiate or establish a connection while inspecting it. */
 static NSString *
 YCConnectionObjectName (id object, NSDictionary *names)
 {
@@ -625,7 +690,13 @@ YCConnectionRow (id connection, NSDictionary *names)
                                        ? @"First Responder"
                                        : YCConnectionObjectName (destination,
                                                                  names),
-                                   @"destination", nil];
+                                   @"destination", YCConnectionKey (source),
+                                   @"sourceKey",
+                                   destination == nil &&
+                                           [kind isEqual: @"Action"]
+                                       ? @"NSFirst"
+                                       : YCConnectionKey (destination),
+                                   @"destinationKey", nil];
 }
 
 @interface YCodeModelEditorDocument : YCodeEditorDocument
@@ -637,9 +708,17 @@ YCConnectionRow (id connection, NSDictionary *names)
   NSArray *_connections;
   NSTableView *_connectionTable;
   NSTextField *_connectionHeading;
+  NSMutableDictionary *_endpointViews;
+  NSMutableArray *_connectionLineWindows;
+  BOOL _updatingConnectionLine;
+  BOOL _applicationInactive;
 }
 
 - (void) addLabel: (NSString *)label toCanvas: (NSView *)canvas y: (CGFloat *)y;
+- (void) updateConnectionLine;
+- (void) hideConnectionLine;
+- (void) registerEndpointView: (NSView *)view forObject: (id)object;
+- (void) registerEndpointHierarchy: (NSView *)view;
 - (void) addMenu: (NSMenu *)menu
        toCanvas: (YCModelCanvas *)canvas
           depth: (NSUInteger)depth
@@ -672,7 +751,11 @@ YCConnectionRow (id connection, NSDictionary *names)
 {
   if ((self = [super initWithFilePath: path]))
     {
-      _editorView = [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 600, 400)];
+      _endpointViews = [[NSMutableDictionary alloc] init];
+      _connectionLineWindows = [[NSMutableArray alloc] init];
+      _editorView = [[YCModelEditorView alloc]
+          initWithFrame: NSMakeRect (0, 0, 600, 400)];
+      [(YCModelEditorView *)_editorView setOverlayOwner: self];
       [_editorView
           setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
       _objectScrollView =
@@ -727,16 +810,43 @@ YCConnectionRow (id connection, NSDictionary *names)
         }
       [_connectionTable setDataSource: self];
       [_connectionTable setDelegate: self];
-      [_connectionTable setAllowsMultipleSelection: YES];
+      [_connectionTable setAllowsMultipleSelection: NO];
       [inspector setDocumentView: _connectionTable];
       [_editorView addSubview: inspector];
       [inspector release];
+      NSArray *notifications = [NSArray
+          arrayWithObjects: NSViewFrameDidChangeNotification,
+                           NSViewBoundsDidChangeNotification,
+                           NSWindowDidMoveNotification,
+                           NSWindowDidResizeNotification,
+                           NSWindowDidUpdateNotification,
+                           NSWindowWillCloseNotification,
+                           NSWindowDidMiniaturizeNotification,
+                           NSWindowDidDeminiaturizeNotification,
+                           NSApplicationDidResignActiveNotification,
+                           NSApplicationDidBecomeActiveNotification,
+                           YCodeConnectionPreferencesDidChangeNotification,
+                           nil];
+      NSEnumerator *names = [notifications objectEnumerator];
+      NSString *name;
+      while ((name = [names nextObject]))
+        [[NSNotificationCenter defaultCenter]
+            addObserver: self
+               selector: @selector (connectionGeometryChanged:)
+                   name: name
+                 object: nil];
     }
   return self;
 }
 
 - (void) dealloc
 {
+  [[NSNotificationCenter defaultCenter] removeObserver: self];
+  [(YCModelEditorView *)_editorView setOverlayOwner: nil];
+  [self hideConnectionLine];
+  [_connectionLineWindows makeObjectsPerformSelector: @selector (close)];
+  [_connectionLineWindows release];
+  [_endpointViews release];
   [_connectionTable setDataSource: nil];
   [_connectionTable setDelegate: nil];
   [_connectionTable release];
@@ -747,6 +857,204 @@ YCConnectionRow (id connection, NSDictionary *names)
   [_scrollView release];
   [_objects release];
   [super dealloc];
+}
+
+- (void) registerEndpointView: (NSView *)view forObject: (id)object
+{
+  if (object && view)
+    {
+      [_endpointViews setObject: [NSDictionary dictionaryWithObject: view
+                                                            forKey: @"view"]
+                         forKey: YCConnectionKey (object)];
+      [view setPostsFrameChangedNotifications: YES];
+      [view setPostsBoundsChangedNotifications: YES];
+    }
+}
+
+- (void) registerEndpointHierarchy: (NSView *)view
+{
+  [self registerEndpointView: view forObject: view];
+  if ([view isKindOfClass: [NSControl class]])
+    [self registerEndpointView: view forObject: [(NSControl *)view cell]];
+  if ([view isKindOfClass: [NSMatrix class]])
+    {
+      NSMatrix *matrix = (NSMatrix *)view;
+      NSInteger row, column;
+      for (row = 0; row < [matrix numberOfRows]; row++)
+        for (column = 0; column < [matrix numberOfColumns]; column++)
+          [_endpointViews
+              setObject: [NSDictionary
+                            dictionaryWithObjectsAndKeys:
+                                view, @"view",
+                                [NSValue
+                                    valueWithRect: [matrix
+                                                      cellFrameAtRow: row
+                                                              column: column]],
+                                @"rect", nil]
+                 forKey: YCConnectionKey ([matrix cellAtRow: row
+                                                    column: column])];
+    }
+  if ([view isKindOfClass: [NSTableView class]])
+    {
+      NSEnumerator *columns =
+          [[(NSTableView *)view tableColumns] objectEnumerator];
+      NSTableColumn *column;
+      NSInteger index = 0;
+      while ((column = [columns nextObject]))
+        [_endpointViews
+            setObject: [NSDictionary
+                          dictionaryWithObjectsAndKeys:
+                              view, @"view",
+                              [NSValue
+                                  valueWithRect: [(NSTableView *)view
+                                                    rectOfColumn: index++]],
+                              @"rect", nil]
+               forKey: YCConnectionKey (column)];
+    }
+  NSEnumerator *children = [[view subviews] objectEnumerator];
+  NSView *child;
+  while ((child = [children nextObject]))
+    [self registerEndpointHierarchy: child];
+}
+
+- (void) hideConnectionLine
+{
+  NSEnumerator *windows = [_connectionLineWindows objectEnumerator];
+  NSWindow *window;
+  while ((window = [windows nextObject]))
+    {
+      [[window parentWindow] removeChildWindow: window];
+      [window orderOut: nil];
+    }
+}
+
+- (BOOL) connectionPointForKey: (id)key point: (NSPoint *)point
+{
+  NSDictionary *endpoint = [_endpointViews objectForKey: key];
+  NSView *view = [endpoint objectForKey: @"view"];
+  if (!view || [view window] != [_editorView window] ||
+      [view isHiddenOrHasHiddenAncestor])
+    return NO;
+  NSValue *storedRect = [endpoint objectForKey: @"rect"];
+  NSRect rect = storedRect ? [storedRect rectValue] : [view bounds];
+  rect = NSIntersectionRect (rect, [view visibleRect]);
+  if (NSIsEmptyRect (rect))
+    return NO;
+  *point = [view convertPoint: NSMakePoint (NSMidX (rect), NSMidY (rect))
+                       toView: nil];
+  *point = [[view window] convertBaseToScreen: *point];
+  return YES;
+}
+
+- (void) connectionGeometryChanged: (NSNotification *)notification
+{
+  NSString *name = [notification name];
+  id object = [notification object];
+  if ([name isEqual: NSApplicationDidResignActiveNotification])
+    _applicationInactive = YES;
+  else if ([name isEqual: NSApplicationDidBecomeActiveNotification])
+    _applicationInactive = NO;
+  if ([object isKindOfClass: [NSView class]] && object != _editorView
+      && ![object isDescendantOf: _editorView])
+    return;
+  if ([object isKindOfClass: [NSWindow class]])
+    {
+      if (object != [_editorView window])
+        return;
+      if ([name isEqual: NSWindowWillCloseNotification])
+        {
+          [self hideConnectionLine];
+          return;
+        }
+    }
+  [self updateConnectionLine];
+}
+
+- (void) updateConnectionLine
+{
+  if (_updatingConnectionLine)
+    return;
+  _updatingConnectionLine = YES;
+  NSWindow *host = [_editorView window];
+  NSInteger row = [_connectionTable selectedRow];
+  NSPoint source, destination;
+  NSDictionary *connection = row >= 0 && (NSUInteger)row < [_connections count]
+                                 ? [_connections objectAtIndex: row]
+                                 : nil;
+  if (!connection || !host || ![host isVisible] || [host isMiniaturized] ||
+      [_editorView isHiddenOrHasHiddenAncestor] || _applicationInactive
+      || ![self connectionPointForKey: [connection objectForKey: @"sourceKey"]
+                                point: &source]
+      || ![self
+          connectionPointForKey: [connection objectForKey: @"destinationKey"]
+                          point: &destination])
+    {
+      [self hideConnectionLine];
+      _updatingConnectionLine = NO;
+      return;
+    }
+  CGFloat width = [YCodePreferences connectionLineWidth];
+  NSColor *color = [YCodePreferences connectionLineColor];
+  NSPoint corner = NSMakePoint (destination.x, source.y);
+  NSRect frames[2];
+  frames[0]
+      = NSMakeRect (MIN (source.x, corner.x) - width / 2, source.y - width / 2,
+                    fabs (source.x - corner.x) + width, width);
+  frames[1] = NSMakeRect (destination.x - width / 2,
+                          MIN (corner.y, destination.y) - width / 2, width,
+                          fabs (corner.y - destination.y) + width);
+  NSUInteger index;
+  for (index = 0; index < 2; index++)
+    {
+      NSWindow *segment;
+      if (index >= [_connectionLineWindows count])
+        {
+          segment = [[YCModelConnectionWindow alloc]
+              initWithContentRect: frames[index]
+                        styleMask: NSBorderlessWindowMask
+                          backing: NSBackingStoreBuffered
+                            defer: YES];
+          [segment setReleasedWhenClosed: NO];
+          [segment setHasShadow: NO];
+          [segment setOpaque: YES];
+          YCModelConnectionLineView *view = [[YCModelConnectionLineView alloc]
+              initWithFrame: NSMakeRect (0, 0, frames[index].size.width,
+                                        frames[index].size.height)];
+          [segment setContentView: view];
+          [view release];
+          [_connectionLineWindows addObject: segment];
+          [segment release];
+        }
+      segment = [_connectionLineWindows objectAtIndex: index];
+      BOOL changed = !NSEqualRects ([segment frame], frames[index])
+                     || ![[segment backgroundColor] isEqual: color]
+                     || ![segment isVisible];
+      if (!NSEqualRects ([segment frame], frames[index]))
+        [segment setFrame: frames[index] display: NO];
+      if (![[segment backgroundColor] isEqual: color])
+        [segment setBackgroundColor: color];
+      if ([segment parentWindow] != host)
+        {
+          [[segment parentWindow] removeChildWindow: segment];
+          [host addChildWindow: segment ordered: NSWindowAbove];
+        }
+      if (![segment isVisible])
+        [segment orderFront: nil];
+      /* GNUstep needs a native window before it can disable pointer input. */
+      [segment setIgnoresMouseEvents: YES];
+      if (changed)
+        {
+          [[segment contentView] setNeedsDisplay: YES];
+          [segment displayIfNeeded];
+          [segment flushWindow];
+        }
+    }
+  _updatingConnectionLine = NO;
+}
+
+- (void) tableViewSelectionDidChange: (NSNotification *)notification
+{
+  [self updateConnectionLine];
 }
 
 - (NSInteger) numberOfRowsInTableView: (NSTableView *)table
@@ -814,6 +1122,17 @@ YCConnectionRow (id connection, NSDictionary *names)
 #ifdef GNUSTEP
   YCModelMenuView *view = [[YCModelMenuView alloc] initWithPreviewMenu: menu];
   [canvas addPreviewView: view];
+  [self registerEndpointView: view forObject: menu];
+  NSUInteger index;
+  for (index = 0; index < (NSUInteger)[menu numberOfItems]; index++)
+    [_endpointViews
+        setObject: [NSDictionary
+                      dictionaryWithObjectsAndKeys:
+                          view, @"view",
+                          [NSValue
+                              valueWithRect: [view rectOfItemAtIndex: index]],
+                          @"rect", nil]
+           forKey: YCConnectionKey ([menu itemAtIndex: index])];
   YCMakeModelViewReadOnly (view, canvas);
   [view release];
 #endif
@@ -835,6 +1154,7 @@ YCConnectionRow (id connection, NSDictionary *names)
   NSMutableDictionary *roles = [NSMutableDictionary dictionary];
   NSMutableArray *specialObjects = [NSMutableArray array];
   NSMutableDictionary *connectionNames = [NSMutableDictionary dictionary];
+  NSMutableDictionary *endpointAliases = [NSMutableDictionary dictionary];
   NSMutableArray *connections = [NSMutableArray array];
   NSMutableArray *rows = [NSMutableArray array];
   NSString *problem = nil;
@@ -850,6 +1170,9 @@ YCConnectionRow (id connection, NSDictionary *names)
   if (![[NSFileManager defaultManager] fileExistsAtPath: path
                                             isDirectory: &directory])
     return NO;
+  [_connectionTable deselectAll: nil];
+  [self hideConnectionLine];
+  [_endpointViews removeAllObjects];
   if (directory)
     path = [path stringByAppendingPathComponent: [extension isEqual: @"gorm"]
                                                     ? @"objects.gorm"
@@ -892,6 +1215,7 @@ YCConnectionRow (id connection, NSDictionary *names)
           while ((key = [keys nextObject]))
             {
               id object = [names objectForKey: key];
+              [endpointAliases setObject: YCConnectionKey (object) forKey: key];
               [connectionNames
                   setObject: YCConnectionObjectName (key, nil)
                      forKey: [NSValue valueWithNonretainedObject: object]];
@@ -1031,11 +1355,17 @@ YCConnectionRow (id connection, NSDictionary *names)
     {
       NSMutableSet *seen = [NSMutableSet set];
       NSMutableArray *objectLabels = [NSMutableArray array];
+      NSMutableArray *objectKeys = [NSMutableArray array];
       if ([specialObjects count])
-        [objectLabels
-            addObjectsFromArray: [NSArray arrayWithObjects: @"File's Owner",
-                                                          @"First Responder",
-                                                          nil]];
+        {
+          [objectLabels
+              addObjectsFromArray: [NSArray arrayWithObjects: @"File's Owner",
+                                                            @"First Responder",
+                                                            nil]];
+          [objectKeys
+              addObjectsFromArray: [NSArray arrayWithObjects: @"NSOwner",
+                                                            @"NSFirst", nil]];
+        }
       NSEnumerator *enumerator = [objects objectEnumerator];
       id object;
       while ((object = [enumerator nextObject]))
@@ -1099,6 +1429,8 @@ YCConnectionRow (id connection, NSDictionary *names)
                             styleMask: window ? style : 0];
               YCMakeModelViewReadOnly (frame, canvas);
               [canvas addPreviewView: frame];
+              [self registerEndpointHierarchy: frame];
+              [self registerEndpointView: frame forObject: object];
               [frame release];
             }
           else
@@ -1108,6 +1440,7 @@ YCConnectionRow (id connection, NSDictionary *names)
               if ([title isEqual: @"FirstResponder"])
                 role = @"First Responder";
               [objectLabels addObject: role ? role : title];
+              [objectKeys addObject: YCConnectionKey (object)];
             }
         }
       if ([objectLabels count])
@@ -1115,6 +1448,7 @@ YCConnectionRow (id connection, NSDictionary *names)
 
           NSEnumerator *labels = [objectLabels objectEnumerator];
           NSString *label;
+          NSUInteger objectIndex = 0;
           while ((label = [labels nextObject]))
             {
               NSString *icon = @"GormUnknown";
@@ -1152,6 +1486,15 @@ YCConnectionRow (id connection, NSDictionary *names)
               [tile addSubview: caption];
               [caption release];
               [objectCanvas addSubview: tile];
+              NSDictionary *endpoint =
+                  [NSDictionary dictionaryWithObject: iconView forKey: @"view"];
+              [_endpointViews
+                  setObject: endpoint
+                     forKey: [objectKeys objectAtIndex: objectIndex++]];
+              if ([label isEqual: @"File's Owner"])
+                [_endpointViews setObject: endpoint forKey: @"NSOwner"];
+              else if ([label isEqual: @"First Responder"])
+                [_endpointViews setObject: endpoint forKey: @"NSFirst"];
               YCMakeModelViewReadOnly (tile, objectCanvas);
               [tile release];
               objectY += 108;
@@ -1162,6 +1505,19 @@ YCConnectionRow (id connection, NSDictionary *names)
               toCanvas: canvas
                      y: &y];
     }
+  NSEnumerator *aliases = [endpointAliases keyEnumerator];
+  NSString *alias;
+  while ((alias = [aliases nextObject]))
+    {
+      NSDictionary *endpoint =
+          [_endpointViews objectForKey: [endpointAliases objectForKey: alias]];
+      if (endpoint)
+        [_endpointViews setObject: endpoint forKey: alias];
+    }
+  [canvas setPostsFrameChangedNotifications: YES];
+  [canvas setPostsBoundsChangedNotifications: YES];
+  [[_scrollView contentView] setPostsBoundsChangedNotifications: YES];
+  [[_objectScrollView contentView] setPostsBoundsChangedNotifications: YES];
   [canvas setPreviewTop: y];
   [objectCanvas setFrameSize: NSMakeSize (120, MAX (objectY + 20, 400))];
   [_objectScrollView setDocumentView: objectCanvas];

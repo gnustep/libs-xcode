@@ -30,6 +30,9 @@
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;
   NSView *_terminalPreferencesView;
+  NSView *_connectionPreferencesView;
+  NSColorWell *_connectionColorWell;
+  NSPopUpButton *_connectionWidthChoice;
   NSButton *_terminalFontChoice;
   NSPopUpButton *_terminalCursorShapeChoice;
   NSColorWell *_terminalCursorWell;

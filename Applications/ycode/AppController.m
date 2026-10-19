@@ -1373,6 +1373,57 @@ YCodeFileURLFromPath (NSString *path)
   [_terminalPreferencesView addSubview: reset];
 }
 
+- (void) changeConnectionPreferences: (id)sender
+{
+  if (sender == _connectionColorWell)
+    [YCodePreferences setConnectionLineColor: [_connectionColorWell color]];
+  else
+    [YCodePreferences
+        setConnectionLineWidth: [_connectionWidthChoice indexOfSelectedItem]
+                               + 1];
+}
+
+- (void) setupConnectionPreferences
+{
+  _connectionPreferencesView = AUTORELEASE (
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+  [[_preferencesPanel contentView] addSubview: _connectionPreferencesView];
+  NSArray *labels = [NSArray
+      arrayWithObjects: @"Connection line color", @"Line width (points)",
+                       @"Select a connection in the model viewer to",
+                       @"show its path. Changes apply immediately.", nil];
+  NSUInteger index;
+  for (index = 0; index < [labels count]; index++)
+    {
+      NSTextField *label = AUTORELEASE ([[NSTextField alloc]
+          initWithFrame: NSMakeRect (20,
+                                    index < 2 ? 405 - index * 40
+                                              : 310 - (index - 2) * 22,
+                                    350, 24)]);
+      [label setStringValue: [labels objectAtIndex: index]];
+      [label setEditable: NO];
+      [label setBezeled: NO];
+      [label setDrawsBackground: NO];
+      [_connectionPreferencesView addSubview: label];
+    }
+  _connectionColorWell = AUTORELEASE (
+      [[NSColorWell alloc] initWithFrame: NSMakeRect (290, 405, 80, 26)]);
+  [_connectionColorWell setContinuous: YES];
+  [_connectionColorWell setTarget: self];
+  [_connectionColorWell setAction: @selector (changeConnectionPreferences:)];
+  [_connectionPreferencesView addSubview: _connectionColorWell];
+  _connectionWidthChoice = AUTORELEASE ([[NSPopUpButton alloc]
+      initWithFrame: NSMakeRect (290, 365, 80, 26)
+          pullsDown: NO]);
+  for (index = 1; index <= 10; index++)
+    [_connectionWidthChoice
+        addItemWithTitle: [NSString
+                             stringWithFormat: @"%lu", (unsigned long)index]];
+  [_connectionWidthChoice setTarget: self];
+  [_connectionWidthChoice setAction: @selector (changeConnectionPreferences:)];
+  [_connectionPreferencesView addSubview: _connectionWidthChoice];
+}
+
 - (void) selectPreferenceGroup: (id)sender
 {
   if ([_fontChoices containsObject: [_preferencesPanel firstResponder]] ||
@@ -1387,6 +1438,10 @@ YCodeFileURLFromPath (NSString *path)
   [_tabPreferencesView setHidden: [_preferencesGroup indexOfSelectedItem] != 3];
   [_terminalPreferencesView
       setHidden: [_preferencesGroup indexOfSelectedItem] != 4];
+  [_connectionPreferencesView
+      setHidden: [_preferencesGroup indexOfSelectedItem] != 5];
+  if ([_connectionPreferencesView isHidden])
+    [_connectionColorWell deactivate];
   if ([_terminalPreferencesView isHidden])
     {
       [_terminalForegroundWell deactivate];
@@ -1533,10 +1588,11 @@ YCodeFileURLFromPath (NSString *path)
           initWithFrame: NSMakeRect (20, 458, 350, 28)
               pullsDown: NO]);
       [_preferencesGroup
-          addItemsWithTitles: [NSArray arrayWithObjects: @"Editor Colors",
-                                                       @"Editor", @"Fonts",
-                                                       @"Indentation",
-                                                       @"Terminal", nil]];
+          addItemsWithTitles: [NSArray
+                                 arrayWithObjects: @"Editor Colors", @"Editor",
+                                                  @"Fonts", @"Indentation",
+                                                  @"Terminal",
+                                                  @"Connection Line", nil]];
       [_preferencesGroup setTarget: self];
       [_preferencesGroup setAction: @selector (selectPreferenceGroup:)];
       [content addSubview: _preferencesGroup];
@@ -1564,6 +1620,7 @@ YCodeFileURLFromPath (NSString *path)
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];
+      [self setupConnectionPreferences];
       _editorColorWells = [NSMutableArray new];
       NSArray *labels = [NSArray
           arrayWithObjects: @"Editor background", @"Plain text", @"Keywords",
@@ -1613,6 +1670,9 @@ YCodeFileURLFromPath (NSString *path)
                                                               : NSOffState];
   [self refreshFontPreferences];
   [self refreshTerminalPreferences];
+  [_connectionColorWell setColor: [YCodePreferences connectionLineColor]];
+  [_connectionWidthChoice
+      selectItemAtIndex: [YCodePreferences connectionLineWidth] - 1];
   [_tabWidthChoice selectItemAtIndex: [YCodePreferences tabWidth] - 1];
   [_controlIndentChoice
       selectItemAtIndex: [YCodePreferences controlIndentWidth] - 1];

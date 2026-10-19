@@ -67,7 +67,13 @@ Each row shows its type, source, outlet/action name, and destination. Actions
 are shown from sender to receiver consistently across formats. Archived names
 and XIB identifiers distinguish objects; File’s Owner and First Responder are
 labeled explicitly. Resize columns or scroll horizontally to inspect long values;
-hover over a cell to see its full text. The inspector is read only and does not
+hover over a cell to see its full text. Selecting a row draws a rectilinear
+connection between the visible endpoints, using borderless windows that ignore
+mouse input. The line follows preview dragging, scrolling, and resizing; it
+hides when an endpoint is offscreen, the selection is cleared, or the viewer
+is hidden or closed. Object icons and menu items can also be endpoints. Set
+its color and width (1–10 points) in Preferences → Connection Line; changes
+are saved and applied immediately. The inspector is read only and does not
 establish connections. Empty and unsupported models display an explicit status.
 
 The decoder does not awaken the interface or establish outlet/action connections.

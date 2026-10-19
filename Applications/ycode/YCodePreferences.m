@@ -26,7 +26,69 @@
 #include <math.h>
 NSString *YCodeTerminalPreferencesDidChangeNotification
     = @"YCodeTerminalPreferencesDidChange";
+NSString *YCodeConnectionPreferencesDidChangeNotification
+    = @"YCodeConnectionPreferencesDidChange";
 @implementation YCodePreferences
++ (NSColor *) connectionLineColor
+{
+  NSArray *rgb = [[NSUserDefaults standardUserDefaults]
+      arrayForKey: @"YCodeConnectionLineColor"];
+  if ([rgb count] == 3)
+    {
+      NSUInteger index;
+      for (index = 0; index < 3; index++)
+        {
+          id value = [rgb objectAtIndex: index];
+          if (![value respondsToSelector: @selector (doubleValue)]
+              || !isfinite ([value doubleValue]) || [value doubleValue] < 0 ||
+              [value doubleValue] > 1)
+            return [NSColor redColor];
+        }
+      return
+          [NSColor colorWithCalibratedRed: [[rgb objectAtIndex: 0] doubleValue]
+                                    green: [[rgb objectAtIndex: 1] doubleValue]
+                                     blue: [[rgb objectAtIndex: 2] doubleValue]
+                                    alpha: 1];
+    }
+  return [NSColor redColor];
+}
+
++ (NSUInteger) connectionLineWidth
+{
+  NSInteger width = [[NSUserDefaults standardUserDefaults]
+      integerForKey: @"YCodeConnectionLineWidth"];
+  return width > 0 ? MIN (10, width) : 2;
+}
+
++ (void) setConnectionLineColor: (NSColor *)color
+{
+  color = [color colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
+  if (!color)
+    return;
+  [[NSUserDefaults standardUserDefaults]
+      setObject: [NSArray
+                    arrayWithObjects:
+                        [NSNumber numberWithDouble: [color redComponent]],
+                        [NSNumber numberWithDouble: [color greenComponent]],
+                        [NSNumber numberWithDouble: [color blueComponent]], nil]
+         forKey: @"YCodeConnectionLineColor"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeConnectionPreferencesDidChangeNotification
+                    object: nil];
+}
+
++ (void) setConnectionLineWidth: (NSUInteger)width
+{
+  [[NSUserDefaults standardUserDefaults]
+      setInteger: MAX (1, MIN (10, width))
+          forKey: @"YCodeConnectionLineWidth"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeConnectionPreferencesDidChangeNotification
+                    object: nil];
+}
+
 + (NSDictionary *) terminalSettings
 {
   return [[NSUserDefaults standardUserDefaults]

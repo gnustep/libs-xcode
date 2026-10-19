@@ -3319,6 +3319,55 @@ modelHasConnection (YCodeEditorDocument *document, NSString *type,
   return NO;
 }
 
+static void
+captureModelScreen (NSString *path)
+{
+  if ([[[NSProcessInfo processInfo] arguments]
+          containsObject: @"--model-preview-screenshot"]
+      && [[NSFileManager defaultManager]
+          isExecutableFileAtPath: @"/usr/bin/import"])
+    {
+      [[NSRunLoop currentRunLoop]
+          runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
+      NSTask *capture = [NSTask
+          launchedTaskWithLaunchPath: @"/usr/bin/import"
+                           arguments: [NSArray arrayWithObjects: @"-window",
+                                                               @"root", path,
+                                                               nil]];
+      [capture waitUntilExit];
+    }
+}
+
+static void
+testModelConnectionEndpoints (YCodeEditorDocument *document, NSUInteger row)
+{
+  NSWindow *host =
+      [[NSWindow alloc] initWithContentRect: NSMakeRect (20, 20, 1000, 900)
+                                  styleMask: NSTitledWindowMask
+                                    backing: NSBackingStoreBuffered
+                                      defer: NO];
+  [host setReleasedWhenClosed: NO];
+  [host setContentView: [document editorView]];
+  [host orderFront: nil];
+  [host display];
+  NSTableView *table = (NSTableView *)modelWidget ([document editorView],
+                                                   [NSTableView class]);
+  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: row]
+      byExtendingSelection: NO];
+  NSArray *segments = [document valueForKey: @"_connectionLineWindows"];
+  testAssert (
+      [segments count] == 2 && [[segments objectAtIndex: 0] isVisible] &&
+          [[segments objectAtIndex: 1] isVisible],
+      @"Decoded connection endpoints map to visible NIB and XIB preview objects");
+  [document reloadFromFile];
+  testAssert ([table selectedRow] == -1
+                  && ([segments count] == 0
+                      || ![[segments objectAtIndex: 0] isVisible]),
+              @"Reloading a selected model clears its connection overlay");
+  [host close];
+  [host release];
+}
+
 static NSEvent *
 modelMouseEvent (NSView *canvas, NSEventType type, NSPoint point)
 {
@@ -3502,6 +3551,25 @@ testModelViewer (NSString *directory)
   [dragHost setReleasedWhenClosed: NO];
   [dragHost setContentView: [document editorView]];
   [dragHost display];
+  [dragHost orderFront: nil];
+  NSTableView *lineTable = (NSTableView *)modelWidget ([document editorView],
+                                                       [NSTableView class]);
+  [lineTable selectRowIndexes: [NSIndexSet indexSetWithIndex: 1]
+         byExtendingSelection: NO];
+  NSArray *segments = [document valueForKey: @"_connectionLineWindows"];
+  testAssert (
+      [segments count] == 2 && [[segments objectAtIndex: 0] isVisible] &&
+          [[segments objectAtIndex: 1] isVisible],
+      @"Selecting a Gorm action draws two rectilinear window segments");
+  NSWindow *horizontal = [segments count] ? [segments objectAtIndex: 0] : nil;
+  NSWindow *vertical = [segments count] > 1 ? [segments objectAtIndex: 1] : nil;
+  testAssert (
+      [horizontal parentWindow] == dragHost && [horizontal ignoresMouseEvents]
+          && ![horizontal canBecomeKeyWindow]
+          && ![vertical canBecomeMainWindow],
+      @"Connection windows follow their host without intercepting input or focus");
+  NSRect oldLineFrame = [horizontal frame];
+
   NSView *previewFrame = [[previewButton superview] superview];
   NSPoint titlePoint =
       [canvas convertPoint: NSMakePoint (NSMidX ([previewFrame bounds]),
@@ -3517,6 +3585,81 @@ testModelViewer (NSString *directory)
       NSMinX ([previewFrame frame]) == NSMinX (initialFrame) + 15
           && NSMinY ([previewFrame frame]) == NSMinY (initialFrame) + 40,
       @"Dragging a simulated title bar moves its window on the canvas");
+  testAssert (!NSEqualRects (oldLineFrame, [horizontal frame]),
+              @"Connection overlay follows simulated window dragging");
+  NSUserDefaults *lineDefaults = [NSUserDefaults standardUserDefaults];
+  id savedLineColor =
+      [[lineDefaults objectForKey: @"YCodeConnectionLineColor"] retain];
+  id savedLineWidth =
+      [[lineDefaults objectForKey: @"YCodeConnectionLineWidth"] retain];
+  AppController *preferences = [AppController new];
+  [preferences showPrefPanel: nil];
+  NSPopUpButton *groups = [preferences valueForKey: @"_preferencesGroup"];
+  [groups selectItemWithTitle: @"Connection Line"];
+  [groups sendAction: [groups action] to: [groups target]];
+  testAssert (
+      ![[preferences valueForKey: @"_connectionPreferencesView"] isHidden] &&
+          [[preferences valueForKey: @"_terminalPreferencesView"] isHidden],
+      @"Preferences includes a separate Connection Line section");
+  NSColorWell *lineWell = [preferences valueForKey: @"_connectionColorWell"];
+  NSPopUpButton *lineWidth =
+      [preferences valueForKey: @"_connectionWidthChoice"];
+  [lineWell setColor: [NSColor greenColor]];
+  [lineWell sendAction: [lineWell action] to: [lineWell target]];
+  [lineWidth selectItemAtIndex: 4];
+  [lineWidth sendAction: [lineWidth action] to: [lineWidth target]];
+  testAssert (
+      [horizontal frame].size.height == 5 && [vertical frame].size.width == 5
+          && colorMatches ([horizontal backgroundColor], 0, 1, 0) &&
+          [YCodePreferences connectionLineWidth] == 5
+          && colorMatches ([YCodePreferences connectionLineColor], 0, 1, 0),
+      @"Connection color and width preferences persist and update visible segments immediately");
+  [[preferences valueForKey: @"_preferencesPanel"] display];
+  [dragHost display];
+  captureModelScreen (@"/tmp/ycode-connection-preferences.png");
+  if (savedLineColor)
+    [lineDefaults setObject: savedLineColor forKey: @"YCodeConnectionLineColor"];
+  else
+    [lineDefaults removeObjectForKey: @"YCodeConnectionLineColor"];
+  if (savedLineWidth)
+    [lineDefaults setObject: savedLineWidth forKey: @"YCodeConnectionLineWidth"];
+  else
+    [lineDefaults removeObjectForKey: @"YCodeConnectionLineWidth"];
+  [savedLineColor release];
+  [savedLineWidth release];
+  [lineDefaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeConnectionPreferencesDidChangeNotification
+                    object: nil];
+  [[preferences valueForKey: @"_preferencesPanel"] close];
+  [preferences release];
+  [[document editorView] setHidden: YES];
+  testAssert (![horizontal isVisible] && ![vertical isVisible],
+              @"Hiding the model viewer removes its connection windows");
+  [[document editorView] setHidden: NO];
+  testAssert ([horizontal isVisible] && [vertical isVisible],
+              @"Showing the model viewer restores the selected connection");
+  NSClipView *objectClip = [objectsPane contentView];
+  NSSize objectCanvasSize = [objectsCanvas frame].size;
+  [objectsCanvas setFrameSize: NSMakeSize (objectCanvasSize.width, 1400)];
+  [objectClip scrollToPoint: NSMakePoint (0, 350)];
+  testAssert (
+      ![horizontal isVisible] && ![vertical isVisible],
+      @"Connection lines hide when a scrolled endpoint leaves the visible canvas");
+  [objectClip scrollToPoint: NSZeroPoint];
+  [objectsCanvas setFrameSize: objectCanvasSize];
+  testAssert (
+      [horizontal isVisible] && [vertical isVisible],
+      @"Connection lines reappear when their endpoints scroll back into view");
+  [lineTable deselectAll: nil];
+  testAssert (![horizontal isVisible] && ![vertical isVisible],
+              @"Clearing connection selection hides the overlay");
+  [lineTable selectRowIndexes: [NSIndexSet indexSetWithIndex: 0]
+         byExtendingSelection: NO];
+  testAssert (
+      [horizontal isVisible] && [vertical isVisible],
+      @"Selecting an outlet connects the owner icon to the window preview");
+  captureModelScreen (@"/tmp/ycode-model-connection.png");
   NSRect movedFrame = [previewFrame frame];
   [canvas performSelector: @selector (layoutPreviews)];
   testAssert (NSEqualRects (movedFrame, [previewFrame frame]),
@@ -3533,6 +3676,9 @@ testModelViewer (NSString *directory)
                            NSMakeRect (20, 160, 120, 32)),
       @"Dragging preview contents leaves windows and archived widgets unchanged");
   [dragHost close];
+  testAssert (![horizontal isVisible] && ![vertical isVisible],
+              @"Closing the viewer window hides all connection segments");
+
   [dragHost release];
   [document setModified: YES];
   testAssert (![document isModified] && [document saveToFile] &&
@@ -3616,6 +3762,7 @@ testModelViewer (NSString *directory)
   testAssert (previewSlider != nil
                   && fabs ([previewSlider doubleValue] - 0.65) < 0.001,
               @"Keyed NIB widget previews preserve archived values");
+  testModelConnectionEndpoints (document, 0);
   [document release];
   [nib release];
   [nibWindow release];
@@ -3654,6 +3801,7 @@ testModelViewer (NSString *directory)
       [document editorView], [NSTableView class]);
   testAssert ([connectionTable numberOfRows] == 5,
               @"XIB inspector shows every connection once");
+  testModelConnectionEndpoints (document, 4);
   [document reloadFromFile];
   testAssert ([connectionTable numberOfRows] == 5,
               @"Reload replaces connection rows without duplicates");

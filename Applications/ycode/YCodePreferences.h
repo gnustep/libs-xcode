@@ -26,7 +26,13 @@
 #define _YCODEPREFERENCES_H_
 #import <AppKit/AppKit.h>
 extern NSString *YCodeTerminalPreferencesDidChangeNotification;
+extern NSString *YCodeConnectionPreferencesDidChangeNotification;
 @interface YCodePreferences : NSObject
+/** Appearance of the model viewer's rectilinear connection overlay. */
++ (NSColor *) connectionLineColor;
++ (NSUInteger) connectionLineWidth;
++ (void) setConnectionLineColor: (NSColor *)color;
++ (void) setConnectionLineWidth: (NSUInteger)width;
 /** Font names and point sizes are saved separately for each text pane. */
 + (NSArray *) fontPanes;
 + (NSFont *) fontForPane: (NSString *)pane;
