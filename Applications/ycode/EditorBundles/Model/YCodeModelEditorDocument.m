@@ -138,10 +138,109 @@ static NSColor *YCModelBackground(BOOL objectsPane)
 @interface YCModelCanvas : NSView
 {
   BOOL _objectsPane;
+  BOOL _layingOut;
+  CGFloat _previewTop;
+  NSMutableArray *_previewViews;
+  NSMutableArray *_previewSizes;
 }
 - (void)setObjectsPane:(BOOL)flag;
+- (void)addPreviewView:(NSView *)view;
+- (void)setPreviewTop:(CGFloat)top;
+- (void)layoutPreviews;
 @end
 @implementation YCModelCanvas
+- (void)dealloc
+{
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  [_previewViews release];
+  [_previewSizes release];
+  [super dealloc];
+}
+- (void)addPreviewView:(NSView *)view
+{
+  if (_previewViews == nil)
+    {
+      _previewViews = [[NSMutableArray alloc] init];
+      _previewSizes = [[NSMutableArray alloc] init];
+    }
+  [_previewViews addObject:view];
+  [_previewSizes addObject:[NSValue valueWithSize:[view bounds].size]];
+  [view setAutoresizesSubviews:NO];
+  [self addSubview:view];
+}
+- (void)setPreviewTop:(CGFloat)top
+{
+  _previewTop = top;
+}
+- (void)viewDidMoveToSuperview
+{
+  [super viewDidMoveToSuperview];
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+    name:NSViewFrameDidChangeNotification object:nil];
+  if (!_objectsPane && [[self superview] isKindOfClass:[NSClipView class]])
+    {
+      [[self superview] setPostsFrameChangedNotifications:YES];
+      [[NSNotificationCenter defaultCenter] addObserver:self
+        selector:@selector(previewViewportChanged:) name:NSViewFrameDidChangeNotification
+        object:[self superview]];
+      [self layoutPreviews];
+    }
+}
+- (void)previewViewportChanged:(NSNotification *)notification
+{
+  [self layoutPreviews];
+}
+- (void)layoutPreviews
+{
+  NSView *clip = [self superview];
+  NSUInteger pass;
+
+  if (_objectsPane || _layingOut || clip == nil) return;
+  _layingOut = YES;
+  /* A newly visible vertical scroller can reduce the available width. */
+  for (pass = 0; pass < 3; pass++)
+    {
+      CGFloat width = MAX(1, [clip bounds].size.width);
+      CGFloat inset = MIN(20, width / 4);
+      CGFloat available = width - 2 * inset;
+      CGFloat x = inset, y = _previewTop, rowHeight = 0;
+      NSUInteger index;
+      NSEnumerator *labels = [[self subviews] objectEnumerator];
+      NSView *label;
+
+      while ((label = [labels nextObject]))
+        if ([label isKindOfClass:[NSTextField class]])
+          {
+            NSRect frame = [label frame];
+            frame.origin.x = inset;
+            frame.size.width = available;
+            [label setFrame:frame];
+          }
+      for (index = 0; index < [_previewViews count]; index++)
+        {
+          NSView *view = [_previewViews objectAtIndex:index];
+          NSSize natural = [[_previewSizes objectAtIndex:index] sizeValue];
+          CGFloat scale = natural.width > 0 ? MIN(1, available / natural.width) : 1;
+          NSSize size = NSMakeSize(natural.width * scale, natural.height * scale);
+
+          if (x > inset && x + size.width > width - inset)
+            {
+              x = inset;
+              y += rowHeight + 24;
+              rowHeight = 0;
+            }
+          /* Scale only oversized previews; retain the archived widget geometry. */
+          [view setFrame:NSMakeRect(x, y, size.width, size.height)];
+          [view setBoundsSize:natural];
+          x += size.width + 24;
+          rowHeight = MAX(rowHeight, size.height);
+        }
+      [self setFrameSize:NSMakeSize(width, MAX(y + rowHeight + 20, [clip bounds].size.height))];
+      if ([clip bounds].size.width == width) break;
+    }
+  _layingOut = NO;
+  [self setNeedsDisplay:YES];
+}
 - (void)setObjectsPane:(BOOL)flag
 {
   _objectsPane = flag;
@@ -162,39 +261,54 @@ static NSColor *YCModelBackground(BOOL objectsPane)
 
 /* These frames are views, not application windows: the archived interface
  * stays inside the editor and never enters NSApplication's window lifecycle. */
+static const CGFloat YCModelTitleHeight = 22;
+
+/* Approximate Window Maker's raised, square title-bar segments locally,
+ * independently of the AppKit theme and without live window buttons. */
+static void YCModelTitleSegment(NSRect rect)
+{
+  [[NSColor blackColor] set];
+  NSRectFill(rect);
+  [[NSColor colorWithCalibratedWhite:0.38 alpha:1] set];
+  NSRectFill(NSMakeRect(NSMinX(rect), NSMaxY(rect) - 1, rect.size.width, 1));
+  NSRectFill(NSMakeRect(NSMinX(rect), NSMinY(rect), 1, rect.size.height));
+  [[NSColor colorWithCalibratedWhite:0.16 alpha:1] set];
+  NSRectFill(NSMakeRect(NSMinX(rect), NSMinY(rect), rect.size.width, 1));
+  NSRectFill(NSMakeRect(NSMaxX(rect) - 1, NSMinY(rect), 1, rect.size.height));
+}
+
 @interface YCModelWindowFrame : NSView
+{
+  NSUInteger _previewStyle;
+}
 - (id)initWithContentView:(NSView *)view title:(NSString *)title styleMask:(NSUInteger)style;
 @end
 @implementation YCModelWindowFrame
 - (id)initWithContentView:(NSView *)view title:(NSString *)title styleMask:(NSUInteger)style
 {
   NSSize size = [view frame].size;
-  CGFloat barHeight = (style & NSTitledWindowMask) ? 28 : 0;
+  CGFloat barHeight = (style & NSTitledWindowMask) ? YCModelTitleHeight : 0;
   if ((self = [super initWithFrame:NSMakeRect(0, 0, size.width + 2, size.height + barHeight + 2)]))
     {
+      _previewStyle = style;
       [view removeFromSuperview];
       [view setFrameOrigin:NSMakePoint(1, 1)];
       [self addSubview:view];
       if (barHeight)
         {
+          CGFloat titleInset = (style & (NSClosableWindowMask | NSMiniaturizableWindowMask)) ? 24 : 4;
           NSTextField *label = [[NSTextField alloc] initWithFrame:
-            NSMakeRect(28, size.height + 5, MAX(0, size.width - 56), 22)];
+            NSMakeRect(1 + titleInset, size.height + 3, MAX(0, size.width - 2 * titleInset), 18)];
           [label setStringValue:title ? title : @""];
           [label setAlignment:NSCenterTextAlignment];
-          [label setFont:[NSFont boldSystemFontOfSize:[NSFont systemFontSize]]];
+          [label setFont:[NSFont boldSystemFontOfSize:12]];
+          [label setTextColor:[NSColor whiteColor]];
+          [[label cell] setLineBreakMode:NSLineBreakByTruncatingTail];
           [label setEditable:NO];
           [label setBezeled:NO];
           [label setDrawsBackground:NO];
           [self addSubview:label];
           [label release];
-          if (style & NSClosableWindowMask)
-            {
-              NSButton *button = [NSWindow standardWindowButton:NSWindowCloseButton forStyleMask:style];
-              [button setFrameOrigin:NSMakePoint(size.width - [button frame].size.width - 4, size.height + 5)];
-              [button setTarget:nil];
-              [button setAction:NULL];
-              [self addSubview:button];
-            }
         }
     }
   return self;
@@ -203,15 +317,34 @@ static NSColor *YCModelBackground(BOOL objectsPane)
 {
   [[NSColor windowBackgroundColor] set];
   NSRectFill([self bounds]);
-  [[NSColor shadowColor] set];
+  [[NSColor blackColor] set];
   NSFrameRect([self bounds]);
-  if ([[self subviews] count] > 1)
+  if (_previewStyle & NSTitledWindowMask)
     {
-      NSRect bar = NSMakeRect(1, [self bounds].size.height - 29, [self bounds].size.width - 2, 28);
-      [[NSColor controlColor] set];
-      NSRectFill(bar);
-      [[NSColor shadowColor] set];
-      NSRectFill(NSMakeRect(1, bar.origin.y, bar.size.width, 1));
+      NSRect bar = NSMakeRect(1, NSMaxY([self bounds]) - YCModelTitleHeight - 1,
+        [self bounds].size.width - 2, YCModelTitleHeight);
+      YCModelTitleSegment(bar);
+      if ((_previewStyle & NSMiniaturizableWindowMask) && bar.size.width >= 44)
+        {
+          NSRect button = NSMakeRect(NSMinX(bar), NSMinY(bar), YCModelTitleHeight, YCModelTitleHeight);
+          YCModelTitleSegment(button);
+          [[NSColor whiteColor] set];
+          NSRectFill(NSMakeRect(NSMinX(button) + 7, NSMinY(button) + 6, 8, 2));
+        }
+      if ((_previewStyle & NSClosableWindowMask) && bar.size.width >= YCModelTitleHeight)
+        {
+          NSRect button = NSMakeRect(NSMaxX(bar) - YCModelTitleHeight, NSMinY(bar),
+            YCModelTitleHeight, YCModelTitleHeight);
+          NSBezierPath *cross = [NSBezierPath bezierPath];
+          YCModelTitleSegment(button);
+          [[NSColor whiteColor] set];
+          [cross setLineWidth:2];
+          [cross moveToPoint:NSMakePoint(NSMinX(button) + 7, NSMinY(button) + 7)];
+          [cross lineToPoint:NSMakePoint(NSMinX(button) + 15, NSMinY(button) + 15)];
+          [cross moveToPoint:NSMakePoint(NSMinX(button) + 7, NSMinY(button) + 15)];
+          [cross lineToPoint:NSMakePoint(NSMinX(button) + 15, NSMinY(button) + 7)];
+          [cross stroke];
+        }
     }
 }
 @end
@@ -270,8 +403,8 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   NSArray *_objects;
 }
 - (void)addLabel:(NSString *)label toCanvas:(NSView *)canvas y:(CGFloat *)y;
-- (void)addMenu:(NSMenu *)menu toCanvas:(NSView *)canvas y:(CGFloat *)y
-         depth:(NSUInteger)depth visited:(NSMutableSet *)visited x:(CGFloat *)x height:(CGFloat *)height;
+- (void)addMenu:(NSMenu *)menu toCanvas:(YCModelCanvas *)canvas
+         depth:(NSUInteger)depth visited:(NSMutableSet *)visited;
 @end
 
 @implementation YCodeModelEditorDocument
@@ -299,7 +432,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
       _scrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(181, 0, 419, 400)];
       [_editorView addSubview:_scrollView];
       [_scrollView setHasVerticalScroller:YES];
-      [_scrollView setHasHorizontalScroller:YES];
+      [_scrollView setHasHorizontalScroller:NO];
       [_scrollView setAutohidesScrollers:YES];
       [_scrollView setBackgroundColor:YCModelBackground(NO)];
       [_scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
@@ -331,8 +464,8 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   [field release];
   *y += 28;
 }
-- (void)addMenu:(NSMenu *)menu toCanvas:(NSView *)canvas y:(CGFloat *)y
-         depth:(NSUInteger)depth visited:(NSMutableSet *)visited x:(CGFloat *)x height:(CGFloat *)height
+- (void)addMenu:(NSMenu *)menu toCanvas:(YCModelCanvas *)canvas
+         depth:(NSUInteger)depth visited:(NSMutableSet *)visited
 {
   NSEnumerator *enumerator;
   NSMenuItem *item;
@@ -340,17 +473,14 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
   [visited addObject:menu];
 #ifdef GNUSTEP
   YCModelMenuView *view = [[YCModelMenuView alloc] initWithPreviewMenu:menu];
-  [view setFrameOrigin:NSMakePoint(*x, *y)];
-  [canvas addSubview:view];
+  [canvas addPreviewView:view];
   YCMakeModelViewReadOnly(view, canvas);
-  *x += [view frame].size.width + 24;
-  *height = MAX(*height, [view frame].size.height);
   [view release];
 #endif
   enumerator = [[menu itemArray] objectEnumerator];
   while ((item = [enumerator nextObject]))
     if ([item submenu])
-      [self addMenu:[item submenu] toCanvas:canvas y:y depth:depth + 1 visited:visited x:x height:height];
+      [self addMenu:[item submenu] toCanvas:canvas depth:depth + 1 visited:visited];
 }
 
 - (BOOL)loadFromFile
@@ -466,7 +596,6 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
     {
       NSMutableSet *seen = [NSMutableSet set];
       NSMutableArray *objectLabels = [NSMutableArray array];
-      CGFloat x = 20, rowHeight = 0;
       if ([specialObjects count])
         [objectLabels addObjectsFromArray:[NSArray arrayWithObjects:@"File's Owner", @"First Responder", nil]];
       NSEnumerator *enumerator = [objects objectEnumerator];
@@ -479,9 +608,11 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           NSString *title = NSStringFromClass([object class]);
           if ([seen containsObject:object] || [specialObjects containsObject:object]) continue;
           [seen addObject:object];
-          /* Menu entries and cells belong to their graphical owners, not the
-           * document's nonvisual object palette. Include all subclasses. */
-          if ([object isKindOfClass:[NSMenuItem class]] || [object isKindOfClass:[NSCell class]]) continue;
+          /* Menu entries, table columns, and cells belong to their graphical
+           * owners, not the nonvisual object palette. Include all subclasses. */
+          if ([object isKindOfClass:[NSMenuItem class]] ||
+              [object isKindOfClass:[NSTableColumn class]] ||
+              [object isKindOfClass:[NSCell class]]) continue;
           if ([object isKindOfClass:[NSWindow class]])
             {
               view = [object contentView];
@@ -510,7 +641,7 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
           else if ([object isKindOfClass:[NSMenu class]])
             {
               if ([object supermenu]) continue;
-              [self addMenu:object toCanvas:canvas y:&y depth:1 visited:[NSMutableSet set] x:&x height:&rowHeight];
+              [self addMenu:object toCanvas:canvas depth:1 visited:[NSMutableSet set]];
               continue;
             }
           if (view)
@@ -518,11 +649,8 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
               [view setAutoresizingMask:NSViewNotSizable];
               YCModelWindowFrame *frame = [[YCModelWindowFrame alloc] initWithContentView:view
                 title:title styleMask:window ? style : 0];
-              [frame setFrameOrigin:NSMakePoint(x, y)];
               YCMakeModelViewReadOnly(frame, canvas);
-              [canvas addSubview:frame];
-              x += [frame frame].size.width + 24;
-              rowHeight = MAX(rowHeight, [frame frame].size.height);
+              [canvas addPreviewView:frame];
               [frame release];
             }
           else
@@ -532,8 +660,6 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
               [objectLabels addObject:role ? role : title];
             }
         }
-      width = MAX(width, x + 20);
-      y += rowHeight ? rowHeight + 24 : 0;
       if ([objectLabels count])
         {
 
@@ -574,12 +700,13 @@ static void YCMakeModelViewReadOnly(NSView *view, NSView *canvas)
         }
       if (![objects count]) [self addLabel:@"No previewable objects in this model." toCanvas:canvas y:&y];
     }
-  [canvas setFrameSize:NSMakeSize(width, MAX(y + 20, 400))];
+  [canvas setPreviewTop:y];
   [objectCanvas setFrameSize:NSMakeSize(160, MAX(objectY + 20, 400))];
   [_objectScrollView setDocumentView:objectCanvas];
   [objectCanvas release];
   [[_objectScrollView contentView] scrollToPoint:NSZeroPoint];
   [_scrollView setDocumentView:canvas];
+  [canvas layoutPreviews];
   [canvas release];
   ASSIGN(_objects, objects);
   [[_scrollView contentView] scrollToPoint:NSZeroPoint];

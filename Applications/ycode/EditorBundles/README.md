@@ -50,11 +50,13 @@ model in the navigator to preview it; double-click still opens its associated
 application. Windows (including initially hidden windows) and standalone views
 appear as widgets in framed previews on a scrollable canvas. Menus and submenus
 use native menu views, including separators, checkmarks, and key equivalents.
-Visual previews are arranged side by side, with horizontal scrolling. Nonvisual
+Visual previews wrap into rows within the available width and reflow when the
+editor is resized. Oversized previews scale down proportionally without changing
+the archived widget geometry; additional rows are accessible by vertical scrolling. Nonvisual
 objects appear in a separate scrollable pane on the left, using Gorm’s original
 object, File’s Owner, First Responder, and Font Manager icons. These image
 resources are bundled locally; no Gorm installation is needed. Attribution and
-the image license are included in the Model bundle. Menu items and cells are
+the image license are included in the Model bundle. Menu items, table columns, and cells are
 part of the graphical previews and are excluded from the nonvisual object pane. The viewer does not save or modify model files.
 
 The decoder does not awaken the interface or establish outlet/action connections.

@@ -2179,7 +2179,8 @@ static void testModelViewer(NSString *directory)
   [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:NULL];
   GSNibContainer *container = [GSNibContainer new];
   NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 360, 220)
-    styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:YES];
+    styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask
+    backing:NSBackingStoreBuffered defer:YES];
   [window setReleasedWhenClosed:NO];
   [window setTitle:@"Hidden preview window"];
   NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(12, 20, 210, 24)];
@@ -2226,6 +2227,11 @@ static void testModelViewer(NSString *directory)
   [[container nameTable] setObject:[button cell] forKey:@"Button cell"];
   [[container nameTable] setObject:AUTORELEASE([[NSTextFieldCell alloc] initTextCell:@"Cell contents"])
     forKey:@"Text cell"];
+  NSTableColumn *previewColumn = [[NSTableColumn alloc] initWithIdentifier:@"Preview column"];
+  [[container nameTable] setObject:previewColumn forKey:@"Table column"];
+  [[container nameTable] setObject:[previewColumn headerCell] forKey:@"Table header cell"];
+  [[container nameTable] setObject:[previewColumn dataCell] forKey:@"Table data cell"];
+  [previewColumn release];
   NSData *data = [NSArchiver archivedDataWithRootObject:container];
   [data writeToFile:archive atomically:YES];
   NSMenu *menu = [NSApp mainMenu];
@@ -2256,8 +2262,9 @@ static void testModelViewer(NSString *directory)
   NSScrollView *objectsPane = [[[document editorView] subviews] objectAtIndex:0];
   NSView *objectsCanvas = [objectsPane documentView];
   testAssert(!modelViewContains(objectsCanvas, @"NSMenuItem") &&
-    !modelViewContains(objectsCanvas, @"NSButtonCell") && !modelViewContains(objectsCanvas, @"NSTextFieldCell"),
-    @"Menu items and cell subclasses are excluded from nonvisual objects");
+    !modelViewContains(objectsCanvas, @"NSButtonCell") && !modelViewContains(objectsCanvas, @"NSTextFieldCell") &&
+    !modelViewContains(objectsCanvas, @"NSTableColumn") && !modelViewContains(objectsCanvas, @"NSTableHeaderCell"),
+    @"Menu items, table columns, and cell subclasses are excluded from nonvisual objects");
   testAssert(modelViewContains(objectsCanvas, @"File's Owner") &&
     modelWidget(objectsCanvas, [NSMenuView class]) == nil,
     @"The left pane contains nonvisual objects separately from graphical previews");
@@ -2371,8 +2378,27 @@ static void testModelViewer(NSString *directory)
     modelViewContains(objectsCanvas, @"First Responder"), @"XIB proxies and controllers all have labeled icons");
   NSMenuView *firstMenu = (NSMenuView *)modelWidget(modelCanvas, [NSMenuView class]);
   NSView *windowFrame = modelWidget(modelCanvas, NSClassFromString(@"YCModelWindowFrame"));
+  NSSize naturalWindowSize = [windowFrame bounds].size;
+  [[document editorView] setFrameSize:NSMakeSize(1800, 900)];
   testAssert(NSMinY([firstMenu frame]) == NSMinY([windowFrame frame]) &&
-    NSMaxX([firstMenu frame]) < NSMinX([windowFrame frame]), @"Menus and windows share a horizontal preview row");
+    NSMaxX([firstMenu frame]) < NSMinX([windowFrame frame]), @"Menus and windows share a row when the viewport is wide enough");
+  [[document editorView] setFrameSize:NSMakeSize(800, 900)];
+  testAssert(NSMinY([windowFrame frame]) >= NSMaxY([firstMenu frame]) + 24,
+    @"Narrowing the viewport wraps windows below the menu row");
+  testAssert(fabs([modelCanvas frame].size.width - [[document scrollView] contentSize].width) < 1
+    && ![[document scrollView] hasHorizontalScroller], @"Preview canvas fits the viewport without horizontal scrolling");
+  [[document editorView] setFrameSize:NSMakeSize(400, 300)];
+  testAssert(NSMaxX([windowFrame frame]) <= [modelCanvas bounds].size.width
+    && [windowFrame frame].size.width < naturalWindowSize.width
+    && NSEqualSizes([windowFrame bounds].size, naturalWindowSize),
+    @"Oversized windows fit narrow viewports while preserving archived coordinates");
+  testAssert(NSMaxY([windowFrame frame]) <= [modelCanvas bounds].size.height,
+    @"Wrapped previews remain reachable by vertical scrolling");
+  [[document editorView] setFrameSize:NSMakeSize(1800, 900)];
+  testAssert(NSEqualSizes([windowFrame frame].size, naturalWindowSize)
+    && NSMinY([firstMenu frame]) == NSMinY([windowFrame frame]),
+    @"Widening restores natural preview sizes and the shared row");
+  [[document editorView] setFrameSize:NSMakeSize(800, 900)];
   renderModelPreview(document, @"/tmp/ycode-model-preview.png");
   [document release];
   path = [directory stringByAppendingPathComponent:@"Broken.nib"];
