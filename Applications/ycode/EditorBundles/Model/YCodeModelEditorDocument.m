@@ -157,6 +157,19 @@ YCModelBackground (BOOL objectsPane)
   return graphPaper;
 }
 
+static const CGFloat YCModelTitleHeight = 22;
+
+@interface YCModelWindowFrame : NSView
+{
+  NSUInteger _previewStyle;
+}
+
+- (id) initWithContentView: (NSView *)view
+                    title: (NSString *)title
+                styleMask: (NSUInteger)style;
+- (BOOL) isTitlePoint: (NSPoint)point;
+@end
+
 /* Intercept input before it reaches any archived control. The surrounding
  * scroll view remains interactive, but the model cannot receive actions. */
 @interface YCModelCanvas : NSView
@@ -166,6 +179,9 @@ YCModelBackground (BOOL objectsPane)
   CGFloat _previewTop;
   NSMutableArray *_previewViews;
   NSMutableArray *_previewSizes;
+  NSMutableDictionary *_previewOrigins;
+  NSView *_draggedPreview;
+  NSPoint _dragOffset;
 }
 
 - (void) setObjectsPane: (BOOL)flag;
@@ -179,6 +195,7 @@ YCModelBackground (BOOL objectsPane)
   [[NSNotificationCenter defaultCenter] removeObserver: self];
   [_previewViews release];
   [_previewSizes release];
+  [_previewOrigins release];
   [super dealloc];
 }
 
@@ -188,6 +205,7 @@ YCModelBackground (BOOL objectsPane)
     {
       _previewViews = [[NSMutableArray alloc] init];
       _previewSizes = [[NSMutableArray alloc] init];
+      _previewOrigins = [[NSMutableDictionary alloc] init];
     }
   [_previewViews addObject: view];
   [_previewSizes addObject: [NSValue valueWithSize: [view bounds].size]];
@@ -239,6 +257,7 @@ YCModelBackground (BOOL objectsPane)
       CGFloat inset = MIN (20, width / 4);
       CGFloat available = width - 2 * inset;
       CGFloat x = inset, y = _previewTop, rowHeight = 0;
+      CGFloat bottom = _previewTop;
       NSUInteger index;
       NSEnumerator *labels = [[self subviews] objectEnumerator];
       NSView *label;
@@ -269,10 +288,20 @@ YCModelBackground (BOOL objectsPane)
           /* Scale only oversized previews; retain the archived widget geometry. */
           [view setFrame: NSMakeRect (x, y, size.width, size.height)];
           [view setBoundsSize: natural];
+          NSValue *origin = [_previewOrigins
+              objectForKey: [NSValue valueWithNonretainedObject: view]];
+          if (origin)
+            {
+              NSPoint point = [origin pointValue];
+              point.x = MAX (0, MIN (point.x, width - size.width));
+              point.y = MAX (_previewTop, point.y);
+              [view setFrameOrigin: point];
+            }
+          bottom = MAX (bottom, NSMaxY ([view frame]));
           x += size.width + 24;
           rowHeight = MAX (rowHeight, size.height);
         }
-      [self setFrameSize: NSMakeSize (width, MAX (y + rowHeight + 20,
+      [self setFrameSize: NSMakeSize (width, MAX (bottom + 20,
                                                  [clip bounds].size.height))];
       if ([clip bounds].size.width == width)
         break;
@@ -302,6 +331,55 @@ YCModelBackground (BOOL objectsPane)
   return [super hitTest: point] ? self : nil;
 }
 
+- (void) mouseDown: (NSEvent *)event
+{
+  NSPoint point = [self convertPoint: [event locationInWindow] fromView: nil];
+  NSEnumerator *views = [[self subviews] reverseObjectEnumerator];
+  NSView *view;
+
+  _draggedPreview = nil;
+  if (_objectsPane)
+    return;
+  while ((view = [views nextObject]))
+    if ([_previewViews containsObject: view]
+        && NSPointInRect (point, [view frame]))
+      {
+        if ([view isKindOfClass: [YCModelWindowFrame class]] &&
+            [(YCModelWindowFrame *)view isTitlePoint: [view convertPoint: point
+                                                               fromView: self]])
+          {
+            _draggedPreview = view;
+            _dragOffset = NSMakePoint (point.x - NSMinX ([view frame]),
+                                       point.y - NSMinY ([view frame]));
+            [self addSubview: view positioned: NSWindowAbove relativeTo: nil];
+          }
+        break;
+      }
+}
+
+- (void) mouseDragged: (NSEvent *)event
+{
+  if (_draggedPreview)
+    {
+      NSPoint point = [self convertPoint: [event locationInWindow]
+                                fromView: nil];
+      point.x = MAX (0, MIN (point.x - _dragOffset.x,
+                             [self bounds].size.width -
+                                 [_draggedPreview frame].size.width));
+      point.y = MAX (_previewTop, point.y - _dragOffset.y);
+      [_previewOrigins
+          setObject: [NSValue valueWithPoint: point]
+             forKey: [NSValue valueWithNonretainedObject: _draggedPreview]];
+      [self layoutPreviews];
+      [self autoscroll: event];
+    }
+}
+
+- (void) mouseUp: (NSEvent *)event
+{
+  _draggedPreview = nil;
+}
+
 - (void) drawRect: (NSRect)rect
 {
   [YCModelBackground (_objectsPane) set];
@@ -312,7 +390,6 @@ YCModelBackground (BOOL objectsPane)
 
 /* These frames are views, not application windows: the archived interface
  * stays inside the editor and never enters NSApplication's window lifecycle. */
-static const CGFloat YCModelTitleHeight = 22;
 
 /* Approximate Window Maker's raised, square title-bar segments locally,
  * independently of the AppKit theme and without live window buttons. */
@@ -331,15 +408,6 @@ YCModelTitleSegment (NSRect rect)
       NSMakeRect (NSMaxX (rect) - 1, NSMinY (rect), 1, rect.size.height));
 }
 
-@interface YCModelWindowFrame : NSView
-{
-  NSUInteger _previewStyle;
-}
-
-- (id) initWithContentView: (NSView *)view
-                    title: (NSString *)title
-                styleMask: (NSUInteger)style;
-@end
 @implementation YCModelWindowFrame
 - (id) initWithContentView: (NSView *)view
                     title: (NSString *)title
@@ -377,6 +445,13 @@ YCModelTitleSegment (NSRect rect)
         }
     }
   return self;
+}
+
+- (BOOL) isTitlePoint: (NSPoint)point
+{
+  NSRect bar = NSMakeRect (1, NSMaxY ([self bounds]) - YCModelTitleHeight - 1,
+                           [self bounds].size.width - 2, YCModelTitleHeight);
+  return (_previewStyle & NSTitledWindowMask) && NSPointInRect (point, bar);
 }
 
 - (void) drawRect: (NSRect)rect

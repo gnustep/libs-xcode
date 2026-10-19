@@ -3284,6 +3284,20 @@ renderModelPreview (YCodeEditorDocument *document, NSString *path)
   [preview release];
 }
 
+static NSEvent *
+modelMouseEvent (NSView *canvas, NSEventType type, NSPoint point)
+{
+  return [NSEvent mouseEventWithType: type
+                            location: [canvas convertPoint: point toView: nil]
+                       modifierFlags: 0
+                           timestamp: 0
+                        windowNumber: [[canvas window] windowNumber]
+                             context: nil
+                         eventNumber: 0
+                          clickCount: 1
+                            pressure: 1];
+}
+
 static void
 testModelViewer (NSString *directory)
 {
@@ -3426,6 +3440,46 @@ testModelViewer (NSString *directory)
   NSView *canvas = [[document scrollView] documentView];
   testAssert ([canvas hitTest: NSMakePoint (30, 100)] == canvas,
               @"Preview controls cannot receive mouse input");
+  NSWindow *dragHost =
+      [[NSWindow alloc] initWithContentRect: NSMakeRect (0, 0, 1000, 900)
+                                  styleMask: NSTitledWindowMask
+                                    backing: NSBackingStoreBuffered
+                                      defer: NO];
+  [dragHost setReleasedWhenClosed: NO];
+  [dragHost setContentView: [document editorView]];
+  [dragHost display];
+  NSView *previewFrame = [[previewButton superview] superview];
+  NSPoint titlePoint =
+      [canvas convertPoint: NSMakePoint (NSMidX ([previewFrame bounds]),
+                                        NSMaxY ([previewFrame bounds]) - 10)
+                  fromView: previewFrame];
+  NSRect initialFrame = [previewFrame frame];
+  NSPoint destination = NSMakePoint (titlePoint.x + 15, titlePoint.y + 40);
+  [canvas mouseDown: modelMouseEvent (canvas, NSLeftMouseDown, titlePoint)];
+  [canvas
+      mouseDragged: modelMouseEvent (canvas, NSLeftMouseDragged, destination)];
+  [canvas mouseUp: modelMouseEvent (canvas, NSLeftMouseUp, destination)];
+  testAssert (
+      NSMinX ([previewFrame frame]) == NSMinX (initialFrame) + 15
+          && NSMinY ([previewFrame frame]) == NSMinY (initialFrame) + 40,
+      @"Dragging a simulated title bar moves its window on the canvas");
+  NSRect movedFrame = [previewFrame frame];
+  [canvas performSelector: @selector (layoutPreviews)];
+  testAssert (NSEqualRects (movedFrame, [previewFrame frame]),
+              @"Preview layout preserves manually positioned windows");
+  NSPoint contentPoint = [canvas convertPoint: NSMakePoint (40, 40)
+                                     fromView: previewFrame];
+  [canvas mouseDown: modelMouseEvent (canvas, NSLeftMouseDown, contentPoint)];
+  [canvas
+      mouseDragged: modelMouseEvent (canvas, NSLeftMouseDragged, destination)];
+  [canvas mouseUp: modelMouseEvent (canvas, NSLeftMouseUp, destination)];
+  testAssert (
+      NSEqualRects (movedFrame, [previewFrame frame])
+          && NSEqualRects ([previewButton frame],
+                           NSMakeRect (20, 160, 120, 32)),
+      @"Dragging preview contents leaves windows and archived widgets unchanged");
+  [dragHost close];
+  [dragHost release];
   [document setModified: YES];
   testAssert (![document isModified] && [document saveToFile] &&
                   [data isEqual: [NSData dataWithContentsOfFile: archive]],

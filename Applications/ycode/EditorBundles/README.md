@@ -51,7 +51,9 @@ application. Windows (including initially hidden windows) and standalone views
 appear as widgets in framed previews on a scrollable canvas. Menus and submenus
 use native menu views, including separators, checkmarks, and key equivalents.
 Visual previews wrap into rows within the available width and reflow when the
-editor is resized. Oversized previews scale down proportionally without changing
+editor is resized. Drag a simulated window’s title bar to reposition it on the
+canvas; manually positioned windows retain their positions where space permits.
+These positions last only until the preview is reloaded. Oversized previews scale down proportionally without changing
 the archived widget geometry; additional rows are accessible by vertical scrolling. Nonvisual
 objects appear in a separate scrollable pane on the left, using Gorm’s original
 object, File’s Owner, First Responder, and Font Manager icons. These image
