@@ -130,6 +130,7 @@
 @end
 
 @interface YCodeProjectNavigatorController (Testing)
+- (NSString *) resolvedPathForNavigatorItem: (YCodeProjectNavigatorItem *)item;
 - (NSString *) resolvedFilePathForNavigatorItem:
     (YCodeProjectNavigatorItem *)item;
 - (void) updateThumbnailForItem: (YCodeProjectNavigatorItem *)item;
@@ -5657,6 +5658,125 @@ testMakefileOpening (NSString *temporaryDirectory)
       @"Unsupported project selections report an error");
 }
 
+static YCodeProjectNavigatorItem *
+directoryItem (YCodeProjectNavigatorController *navigator,
+               YCodeProjectNavigatorItem *parent, NSString *path)
+{
+  if ([[navigator resolvedPathForNavigatorItem: parent] isEqual: path])
+    return parent;
+  NSEnumerator *children = [[parent children] objectEnumerator];
+  YCodeProjectNavigatorItem *child;
+  while ((child = [children nextObject]) != nil)
+    {
+      YCodeProjectNavigatorItem *found
+          = directoryItem (navigator, child, path);
+      if (found)
+        return found;
+    }
+  return nil;
+}
+
+static YCodeProjectNavigatorItem *
+waitForDirectoryItem (YCodeProject *project, NSString *path, BOOL present)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow: 3];
+  YCodeProjectNavigatorController *navigator = [project navigatorController];
+  YCodeProjectNavigatorItem *item;
+  do
+    {
+      item = directoryItem (navigator, [[navigator rootItems] objectAtIndex: 0],
+                            path);
+      if ((item != nil) == present)
+        return item;
+      [[NSRunLoop currentRunLoop]
+          runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+    }
+  while ([deadline timeIntervalSinceNow] > 0);
+  return item;
+}
+
+static void
+testDirectoryWatching (NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root =
+      [temporaryDirectory stringByAppendingPathComponent: @"Watched Folder"];
+  NSString *nested = [root stringByAppendingPathComponent: @"Nested"];
+  [manager createDirectoryAtPath: nested
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *existing = [nested stringByAppendingPathComponent: @"existing.txt"];
+  [@"existing" writeToFile: existing
+                atomically: YES
+                  encoding: NSUTF8StringEncoding
+                     error: NULL];
+  YCodeProject *project = [[YCodeProject alloc] init];
+  testAssert ([project readFromURL: [NSURL fileURLWithPath: root]
+                            ofType: @"YCodeMakeProjectType"
+                             error: NULL],
+              @"Open a directory without editor tabs for monitoring");
+  YCodeProjectNavigatorController *navigator = [project navigatorController];
+  NSOutlineView *outline =
+      [[NSOutlineView alloc] initWithFrame: NSMakeRect (0, 0, 300, 400)];
+  NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier: @"files"];
+  [outline addTableColumn: column];
+  [outline setOutlineTableColumn: column];
+  [column release];
+  [navigator setOutlineView: outline];
+  [outline expandItem: [navigator itemForObject: [[project project] mainGroup]]];
+  [outline expandItem: waitForDirectoryItem (project, nested, YES)];
+  [navigator selectItem: waitForDirectoryItem (project, existing, YES)];
+  NSString *added = [nested stringByAppendingPathComponent: @"added.txt"];
+  [@"new" writeToFile: added
+           atomically: YES
+             encoding: NSUTF8StringEncoding
+                error: NULL];
+  testAssert (
+      waitForDirectoryItem (project, added, YES) != nil,
+      @"Navigator automatically discovers additions in existing subfolders");
+  testAssert (
+      [outline isItemExpanded: waitForDirectoryItem (project, nested, YES)],
+      @"Directory refresh preserves expanded folders");
+  testAssert ([[navigator resolvedFilePathForNavigatorItem:
+                              [outline itemAtRow: [outline selectedRow]]]
+                  isEqual: existing],
+              @"Directory refresh preserves the selected file");
+  NSString *renamed = [nested stringByAppendingPathComponent: @"renamed.txt"];
+  [manager moveItemAtPath: added toPath: renamed error: NULL];
+  testAssert (waitForDirectoryItem (project, renamed, YES) != nil
+                  && waitForDirectoryItem (project, added, NO) == nil,
+              @"Navigator automatically reflects file renames");
+  [manager removeItemAtPath: renamed error: NULL];
+  testAssert (waitForDirectoryItem (project, renamed, NO) == nil,
+              @"Navigator automatically removes deleted files");
+  NSString *newFolder = [root stringByAppendingPathComponent: @"New Folder"];
+  [manager createDirectoryAtPath: newFolder
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  testAssert (waitForDirectoryItem (project, newFolder, YES) != nil,
+              @"Navigator discovers new folders");
+  NSString *newFile = [newFolder stringByAppendingPathComponent: @"later.txt"];
+  [@"later" writeToFile: newFile
+             atomically: YES
+               encoding: NSUTF8StringEncoding
+                  error: NULL];
+  testAssert (waitForDirectoryItem (project, newFile, YES) != nil,
+              @"New folders are watched for subsequent additions");
+  [manager removeItemAtPath: newFolder error: NULL];
+  testAssert (waitForDirectoryItem (project, newFolder, NO) == nil,
+              @"Navigator removes deleted folders");
+  testAssert (![project isDocumentEdited],
+              @"External directory changes do not dirty the project");
+  [project close];
+  testAssert ([[project valueForKey: @"directoryWatchers"] count] == 0,
+              @"Closing a directory project stops all directory watchers");
+  [navigator setOutlineView: nil];
+  [outline release];
+  [project release];
+}
+
 static void
 testMakeDirectory (NSString *temporaryDirectory)
 {
@@ -8103,6 +8223,7 @@ main (void)
   if ([arguments containsObject: @"--check-external-files"])
     {
       testExternalFileChanges (temporaryDirectory);
+      testDirectoryWatching (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode external file checks: %lu failures",
              (unsigned long)failures);
@@ -8175,6 +8296,7 @@ main (void)
   if ([arguments containsObject: @"--check-file-modification"])
     {
       testFileModificationTracking (temporaryDirectory);
+      testDirectoryWatching (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode file modification checks: %lu failures",
              (unsigned long)failures);
@@ -8381,6 +8503,7 @@ main (void)
   testCloseModifiedFiles (temporaryDirectory);
   testFindReplace (temporaryDirectory);
   testFileModificationTracking (temporaryDirectory);
+  testDirectoryWatching (temporaryDirectory);
   testTranscriptCopy ();
   testDebuggerRecords ();
   testAssert ([manager createDirectoryAtPath: temporaryDirectory

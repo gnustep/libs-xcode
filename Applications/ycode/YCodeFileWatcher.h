@@ -39,6 +39,7 @@
   void *_stopHandle;
 }
 
+/* A nil paths argument watches directory membership instead of selected files. */
 - (id) initWithDirectory: (NSString *)directory paths: (NSArray *)paths;
 - (NSArray *) paths;
 - (void) stop;

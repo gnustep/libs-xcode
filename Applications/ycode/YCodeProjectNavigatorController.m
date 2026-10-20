@@ -337,6 +337,8 @@
   [_outlineView setDelegate: self];
   [_outlineView setTarget: self];
   [_outlineView setDoubleAction: @selector (outlineViewDoubleClick:)];
+  // A newly attached outline has no expansion or selection state to restore.
+  [_rootItems removeAllObjects];
   [self projectDidChange];
 }
 
@@ -344,11 +346,54 @@
 
 - (void) projectDidChange
 {
+  BOOL restore = [_project isDirectoryProject] && [_rootItems count] > 0 &&
+                 [_outlineView numberOfRows] > 0;
+  NSMutableSet *expanded = [NSMutableSet set];
+  NSMutableSet *selected = [NSMutableSet set];
+  NSInteger row;
+  if (restore)
+    for (row = 0; row < [_outlineView numberOfRows]; row++)
+      {
+        YCodeProjectNavigatorItem *item = [_outlineView itemAtRow: row];
+        NSString *resolved = [self resolvedPathForNavigatorItem: item];
+        NSString *path
+            = resolved
+                  ? [NSString stringWithFormat: @"%ld:%@",
+                                               (long)[item itemType], resolved]
+                  : nil;
+        if (!path)
+          continue;
+        if ([_outlineView isItemExpanded: item])
+          [expanded addObject: path];
+        if ([_outlineView isRowSelected: row])
+          [selected addObject: path];
+      }
   [self reloadProjectTree];
   if (_outlineView)
     {
       [_outlineView reloadData];
-      if ([_rootItems count] > 0)
+      if (restore)
+        {
+          NSMutableIndexSet *selection = [NSMutableIndexSet indexSet];
+          // Expanding a row exposes its children for the following iterations.
+          for (row = 0; row < [_outlineView numberOfRows]; row++)
+            {
+              YCodeProjectNavigatorItem *item = [_outlineView itemAtRow: row];
+              NSString *resolved = [self resolvedPathForNavigatorItem: item];
+              NSString *path
+                  = resolved
+                        ? [NSString stringWithFormat: @"%ld:%@",
+                                                     (long)[item itemType],
+                                                     resolved]
+                        : nil;
+              if (path && [expanded containsObject: path])
+                [_outlineView expandItem: item];
+              if (path && [selected containsObject: path])
+                [selection addIndex: row];
+            }
+          [_outlineView selectRowIndexes: selection byExtendingSelection: NO];
+        }
+      else if ([_rootItems count] > 0)
         {
           [_outlineView expandItem: [_rootItems objectAtIndex: 0]];
           YCodeProjectNavigatorItem *mainItem =

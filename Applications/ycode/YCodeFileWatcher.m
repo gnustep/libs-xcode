@@ -57,8 +57,8 @@
   [directory getCharacters: wide];
   _changeHandle = FindFirstChangeNotificationW (
       (LPCWSTR)wide, FALSE,
-      FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE
-          | FILE_NOTIFY_CHANGE_SIZE);
+      FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME
+          | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE);
   free (wide);
   _stopHandle = CreateEvent (NULL, TRUE, FALSE, NULL);
   if (_changeHandle == INVALID_HANDLE_VALUE || !_stopHandle)
@@ -209,7 +209,11 @@
         {
           struct inotify_event *event
               = (struct inotify_event *)(buffer + offset);
-          if (!event->len || (event->mask & IN_Q_OVERFLOW))
+          if (!event->len || (event->mask & IN_Q_OVERFLOW)
+              || (!_paths
+                  && (event->mask
+                      & (IN_CREATE | IN_DELETE | IN_MOVED_FROM
+                         | IN_MOVED_TO))))
             relevant = YES;
           else
             {
@@ -240,7 +244,8 @@
     {
       NSAutoreleasePool *iteration = [NSAutoreleasePool new];
       NSMutableArray *fds = [NSMutableArray array];
-      NSArray *watched = [_paths arrayByAddingObject: _directory];
+      NSArray *watched = _paths ? [_paths arrayByAddingObject: _directory]
+                                : [NSArray arrayWithObject: _directory];
       NSEnumerator *enumerator = [watched objectEnumerator];
       NSString *path;
       while ((path = [enumerator nextObject]) != nil)

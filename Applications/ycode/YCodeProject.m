@@ -23,6 +23,7 @@
 */
 
 #import "YCodeProject.h"
+#import "YCodeFileWatcher.h"
 #import "YCodeWindowController.h"
 #import "YCodeProjectNavigatorController.h"
 #import "YCodeEditorController.h"
@@ -336,8 +337,20 @@ YCodeProjectPackagePathForPath (NSString *path)
 
 /* Use disk paths, without interpreting make syntax or following directory symlinks. */
 static PBXGroup *
-YCodeDirectoryGroup (NSString *path)
+YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
+                     NSMutableSet *directories)
 {
+  [directories addObject: path];
+  if (watchers && ![watchers objectForKey: path])
+    {
+      YCodeFileWatcher *watcher =
+          [[YCodeFileWatcher alloc] initWithDirectory: path paths: nil];
+      if (watcher)
+        {
+          [watchers setObject: watcher forKey: path];
+          RELEASE (watcher);
+        }
+    }
   PBXGroup *group = AUTORELEASE ([PBXGroup new]);
   [group setName: [path lastPathComponent]];
   [group setPath: [path lastPathComponent]];
@@ -358,7 +371,8 @@ YCodeDirectoryGroup (NSString *path)
       if ([[attributes objectForKey: NSFileType] isEqual: NSFileTypeDirectory]
           && ![[NSWorkspace sharedWorkspace] isFilePackageAtPath: file])
         {
-          [children addObject: YCodeDirectoryGroup (file)];
+          [children
+              addObject: YCodeDirectoryGroup (file, watchers, directories)];
         }
       else
         {
@@ -413,7 +427,24 @@ YCodeDirectoryGroup (NSString *path)
 {
   if (!_directoryProject)
     return;
-  PBXGroup *group = YCodeDirectoryGroup (_projectPath);
+  [NSObject
+      cancelPreviousPerformRequestsWithTarget: self
+                                     selector: @selector (refreshDirectoryFiles)
+                                       object: nil];
+  _directoryRefreshPending = NO;
+  NSMutableSet *directories = [NSMutableSet set];
+  PBXGroup *group = YCodeDirectoryGroup (
+      _projectPath, _watchingDirectories ? _directoryWatchers : nil,
+      directories);
+  NSEnumerator *keys = [[_directoryWatchers allKeys] objectEnumerator];
+  NSString *path;
+  while ((path = [keys nextObject]) != nil)
+    if (![directories containsObject: path])
+      {
+        YCodeFileWatcher *watcher = [_directoryWatchers objectForKey: path];
+        [watcher stop];
+        [_directoryWatchers removeObjectForKey: path];
+      }
   [group setPath: @""];
   [_project setMainGroup: group];
   [_navigatorController projectDidChange];
@@ -824,6 +855,12 @@ YCodeDirectoryGroup (NSString *path)
       // Each source/supporting file owns its own undo history.
       [self setHasUndoManager: NO];
       _settings = [[NSMutableDictionary alloc] init];
+      _directoryWatchers = [[NSMutableDictionary alloc] init];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (directoryChanged:)
+                 name: @"YCodeDirectoryDidChange"
+               object: nil];
 
       // Initialize controllers
       _navigatorController = [[YCodeProjectNavigatorController alloc] init];
@@ -840,6 +877,8 @@ YCodeDirectoryGroup (NSString *path)
 - (void) dealloc
 {
   [self stopWatchingFiles];
+  [[NSNotificationCenter defaultCenter] removeObserver: self];
+  RELEASE (_directoryWatchers);
   RELEASE (_project);
   RELEASE (_container);
   RELEASE (_projectPath);
@@ -861,7 +900,7 @@ YCodeDirectoryGroup (NSString *path)
 
 - (void) close
 {
-  [_editorController stopWatchingFiles];
+  [self stopWatchingFiles];
   [_editorController closeFindPanel];
   [_buildSystem stop];
   [_buildSystem setDelegate: nil];
@@ -937,7 +976,7 @@ YCodeDirectoryGroup (NSString *path)
         }
       [project setTargets: targets];
       [self setProject: project];
-      [self refreshDirectoryFiles];
+      [self startWatchingFiles];
       success = YES;
     }
   else if ([[path pathExtension] isEqualToString: @"xcodeproj"])
@@ -2431,13 +2470,36 @@ YCodeDirectoryGroup (NSString *path)
 
 #pragma mark - File Watching
 
+- (void) directoryChanged: (NSNotification *)notification
+{
+  if (!_watchingDirectories || _directoryRefreshPending
+      || ![[_directoryWatchers allValues]
+          containsObject: [notification object]])
+    return;
+  _directoryRefreshPending = YES;
+  [self performSelector: @selector (refreshDirectoryFiles)
+             withObject: nil
+             afterDelay: 0.1];
+}
+
 - (void) startWatchingFiles
 {
+  _watchingDirectories = _directoryProject;
+  if (_watchingDirectories)
+    [self refreshDirectoryFiles];
   [_editorController startWatchingFiles];
 }
 
 - (void) stopWatchingFiles
 {
+  _watchingDirectories = NO;
+  _directoryRefreshPending = NO;
+  [NSObject
+      cancelPreviousPerformRequestsWithTarget: self
+                                     selector: @selector (refreshDirectoryFiles)
+                                       object: nil];
+  [[_directoryWatchers allValues] makeObjectsPerformSelector: @selector (stop)];
+  [_directoryWatchers removeAllObjects];
   [_editorController stopWatchingFiles];
 }
 

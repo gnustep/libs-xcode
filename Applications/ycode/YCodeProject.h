@@ -38,6 +38,9 @@
 @interface YCodeProject : NSDocument
 {
   BOOL _directoryProject;
+  NSMutableDictionary *_directoryWatchers;
+  BOOL _watchingDirectories;
+  BOOL _directoryRefreshPending;
   PBXProject *_project;
   PBXContainer *_container;
   NSString *_projectPath;
