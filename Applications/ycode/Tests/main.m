@@ -4961,6 +4961,23 @@ testDebuggerRecords (void)
                             dataUsingEncoding: NSUTF8StringEncoding]];
   testAssert ([probe->commands hasSuffix: @"-exec-run\n"],
               @"Restart waits for the stopped event before running");
+  [debugger receiveData: [@"*running,thread-id=\"all\"\n"
+                            dataUsingEncoding: NSUTF8StringEncoding]];
+  [debugger performAction: YCodeDebuggerPause];
+  [debugger
+      receiveData:
+          [@"*stopped,reason=\"signal-received\",signal-name=\"SIGINT\"\n"
+              dataUsingEncoding: NSUTF8StringEncoding]];
+  testAssert ([probe->commands hasSuffix: @"-exec-interrupt --all\n"],
+              @"Pause keeps an interrupted debugger session resumable");
+  [debugger receiveData: [@"*running,thread-id=\"all\"\n"
+                            dataUsingEncoding: NSUTF8StringEncoding]];
+  [debugger
+      receiveData:
+          [@"*stopped,reason=\"signal-received\",signal-name=\"SIGINT\"\n"
+              dataUsingEncoding: NSUTF8StringEncoding]];
+  testAssert ([probe->commands hasSuffix: @"-gdb-exit\n"],
+              @"Manual Control-C closes the debugger session");
   [debugger receiveData: [@"9^error,msg=\"No symbol\\n\"\n"
                             dataUsingEncoding: NSUTF8StringEncoding]];
   testAssert (
@@ -6129,6 +6146,8 @@ testBuildAndRun (NSString *temporaryDirectory)
   writeExecutable (
       [root stringByAppendingPathComponent: @"runner"],
       @"#!/bin/sh\necho application-output >&2\necho 'application output'\n"
+      @"if [ \"$MODE\" = interrupt ]; then kill -INT $$; fi\n"
+      @"if [ \"$MODE\" = run-fail ]; then exit 2; fi\n"
       @"if [ \"$MODE\" = exit ]; then exit 0; fi\nexec sleep 30\n");
   // An executable in the source directory must never be mistaken for the product.
   writeExecutable ([root stringByAppendingPathComponent: @"unrelated"],
@@ -6186,12 +6205,26 @@ testBuildAndRun (NSString *temporaryDirectory)
               @"Window console receives live process output");
   [window stopProject: nil];
   waitForBuild (build, NO);
+  testAssert (![build isBusy] && [build status] == YCodeBuildStatusIdle,
+              @"Stop finishes the application session like a normal exit");
   testAssert (
-      ![build isBusy] && [build status] == YCodeBuildStatusCancelled,
-      @"Stop terminates the application and preserves cancelled status");
-  [toolbar validateVisibleItems];
-  testAssert ([selector isEnabled],
-              @"Target selection is enabled after cancellation finishes");
+      [selector isEnabled],
+      @"Completion enables target selection without another UI action");
+  testAssert ([[console string] hasSuffix: @"Project exited.\n"],
+              @"Stop reports normal run completion after draining output");
+  [build setEnvironmentVariable: @"interrupt" forKey: @"MODE"];
+  [window runProject: nil];
+  waitForBuild (build, NO);
+  testAssert (![build isBusy] && [build status] == YCodeBuildStatusIdle &&
+                  [selector isEnabled] &&
+                  [[console string] hasSuffix: @"Project exited.\n"],
+              @"Control-C finishes a run and restores the controls");
+  [build setEnvironmentVariable: @"run-fail" forKey: @"MODE"];
+  [window runProject: nil];
+  waitForBuild (build, NO);
+  testAssert ([build status] == YCodeBuildStatusFailed,
+              @"Other nonzero application exits still report failure");
+  [build setEnvironmentVariable: @"" forKey: @"MODE"];
   [selector selectItemAtIndex: 2];
   [selector sendAction: [selector action] to: [selector target]];
   [window buildProject: nil];
@@ -6411,8 +6444,21 @@ testBuildAndRun (NSString *temporaryDirectory)
   waitForDebugger (build);
   [window stopProject: nil];
   waitForBuild (build, NO);
-  testAssert (![build isBusy] && [build status] == YCodeBuildStatusCancelled,
+  testAssert (![build isBusy] && [build status] == YCodeBuildStatusIdle &&
+                  [selector isEnabled] &&
+                  [[console string] hasSuffix: @"Project exited.\n"],
               @"Stop closes a debugger session");
+  [window debugProject: nil];
+  waitForDebugger (build);
+  [[build debugger]
+      receiveData:
+          [@"*stopped,reason=\"signal-received\",signal-name=\"SIGINT\"\n"
+              dataUsingEncoding: NSUTF8StringEncoding]];
+  waitForBuild (build, NO);
+  testAssert (
+      ![build isBusy] && ![build isDebugging] &&
+          [build status] == YCodeBuildStatusIdle && [selector isEnabled],
+      @"Manual debugger interrupt finishes the session and restores controls");
   [[NSUserDefaults standardUserDefaults] setObject: @"/missing/ycode-gdb"
                                             forKey: @"DebuggerPath"];
   [window debugProject: nil];
@@ -8418,6 +8464,16 @@ main (void)
       testHiddenRulersDebugGutter ();
       testDebuggerRecords ();
       NSLog (@"Ycode debugger gutter checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
+  if ([arguments containsObject: @"--check-build-run"])
+    {
+      testDebuggerRecords ();
+      testBuildAndRun (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode build and run checks: %lu failures",
              (unsigned long)failures);
       [pool drain];
       return failures ? 1 : 0;

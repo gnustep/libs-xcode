@@ -40,6 +40,7 @@
   BOOL _ready;
   BOOL _running;
   BOOL _restartPending;
+  BOOL _pausePending;
   NSString *_storageKey;
   YCodeGDBVariables *_variables;
 }

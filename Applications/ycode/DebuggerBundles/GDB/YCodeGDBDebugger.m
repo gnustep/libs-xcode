@@ -183,6 +183,8 @@ YCReadValue (NSScanner *scanner)
       [self command: @"-gdb-exit"];
       return;
     }
+  if (action == YCodeDebuggerPause)
+    _pausePending = YES;
   NSArray *commands =
       [NSArray arrayWithObjects: @"-exec-run", @"-exec-interrupt --all",
                                 @"-exec-continue", @"-exec-run", @"-exec-next",
@@ -474,7 +476,7 @@ YCReadValue (NSScanner *scanner)
 - (void) reset
 {
   [_variables reset];
-  _ready = _running = _restartPending = NO;
+  _ready = _running = _restartPending = _pausePending = NO;
   [_pending setLength: 0];
   [_executionFile release];
   _executionFile = nil;
@@ -643,6 +645,13 @@ YCReadValue (NSScanner *scanner)
     }
   if ([event isEqual: @"stopped"])
     {
+      // An explicit Pause or Restart must remain resumable. A manual
+      // Control-C ends the session just like Stop.
+      if (!_pausePending && !_restartPending &&
+          [[record objectForKey: @"reason"] isEqual: @"signal-received"] &&
+          [[record objectForKey: @"signal-name"] isEqual: @"SIGINT"])
+        [self command: @"-gdb-exit"];
+      _pausePending = NO;
       _running = NO;
       [_executionFile release];
       _executionFile = nil;
@@ -770,11 +779,13 @@ YCReadValue (NSScanner *scanner)
         line = [[[NSString alloc] initWithData: record
                                       encoding: NSISOLatin1StringEncoding]
             autorelease];
-      [self handleLine: [line stringByTrimmingCharactersInSet:
-                                 [NSCharacterSet newlineCharacterSet]]];
+      // Delegate callbacks may run the event loop or reset the session.
+      // Consume the record before allowing another read or reset.
       [_pending replaceBytesInRange: NSMakeRange (0, i + 1)
                           withBytes: NULL
                              length: 0];
+      [self handleLine: [line stringByTrimmingCharactersInSet:
+                                 [NSCharacterSet newlineCharacterSet]]];
     }
 }
 

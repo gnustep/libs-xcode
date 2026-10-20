@@ -25,6 +25,7 @@
 #import "YCodeBuildSystem.h"
 #import "YCodeProject.h"
 #import <XCode/XCode.h>
+#include <signal.h>
 
 @interface YCodeBuildSystem (Private)
 - (BOOL) runCommand: (NSString *)command withArguments: (NSArray *)arguments;
@@ -762,6 +763,9 @@
 
 - (void) stop
 {
+  if (_runStopped)
+    return;
+  _runStopped = _currentTask && _status == YCodeBuildStatusRunning;
   _testAfterBuild = NO;
   [_testBundles removeAllObjects];
   _debugAfterBuild = NO;
@@ -774,11 +778,10 @@
   _configureBeforeBuild = NO;
   if (_currentTask && _status != YCodeBuildStatusCancelled)
     {
-      _status = YCodeBuildStatusCancelled;
+      if (!_runStopped)
+        _status = YCodeBuildStatusCancelled;
       if ([_currentTask isRunning])
         [_currentTask terminate];
-      if ([_delegate respondsToSelector: @selector (buildSystemDidCancel:)])
-        [(id)_delegate buildSystemDidCancel: self];
     }
 }
 
@@ -1028,6 +1031,7 @@
       arguments = selectedArguments;
     }
   _taskTerminated = _outputClosed = _errorClosed = NO;
+  _runStopped = NO;
 
   _currentTask = [[NSTask alloc] init];
 #ifdef _WIN32
@@ -1239,6 +1243,10 @@
   if ([notification object] != _currentTask)
     return;
   _terminationStatus = [_currentTask terminationStatus];
+  if (_status == YCodeBuildStatusRunning &&
+      [_currentTask terminationReason] == NSTaskTerminationReasonUncaughtSignal
+      && _terminationStatus == SIGINT)
+    _runStopped = YES;
   _taskTerminated = YES;
   [self finishTaskIfReady];
 }
@@ -1247,11 +1255,12 @@
 {
   if (!_taskTerminated || !_outputClosed || !_errorClosed)
     return;
-  BOOL success = (_terminationStatus == 0);
+  BOOL success = (_terminationStatus == 0 || _runStopped);
   YCodeBuildStatus operation = _status;
   BOOL launch
       = _runAfterBuild && success && operation == YCodeBuildStatusBuilding;
   [self releaseTask];
+  _runStopped = NO;
   if (_configureBeforeBuild && success
       && operation == YCodeBuildStatusBuilding)
     {
@@ -1265,7 +1274,11 @@
   if (!launch)
     _debugAfterBuild = NO;
   if (operation == YCodeBuildStatusCancelled)
-    return;
+    {
+      if ([_delegate respondsToSelector: @selector (buildSystemDidCancel:)])
+        [(id)_delegate buildSystemDidCancel: self];
+      return;
+    }
   _status = success ? YCodeBuildStatusSuccess : YCodeBuildStatusFailed;
   if (operation == YCodeBuildStatusTesting)
     {

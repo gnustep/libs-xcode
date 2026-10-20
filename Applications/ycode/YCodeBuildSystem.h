@@ -84,6 +84,7 @@ typedef enum
   YCodeDebugger *_debugger;
   BOOL _configureBeforeBuild;
   BOOL _taskTerminated;
+  BOOL _runStopped;
   BOOL _outputClosed;
   BOOL _errorClosed;
   int _terminationStatus;
