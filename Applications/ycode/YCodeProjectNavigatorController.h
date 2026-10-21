@@ -39,6 +39,8 @@
 
   NSMutableArray *_rootItems;
   NSMutableDictionary *_itemCache;
+  NSDictionary *_previousItems;
+  NSMutableSet *_thumbnailItems;
 
   // Context menu
   NSMenu *_contextMenu;

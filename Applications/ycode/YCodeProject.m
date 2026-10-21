@@ -335,27 +335,58 @@ YCodeProjectPackagePathForPath (NSString *path)
   return [path stringByAppendingPathExtension: @"xcodeproj"];
 }
 
-/* Use disk paths, without interpreting make syntax or following directory symlinks. */
+/* Use disk paths, without interpreting make syntax or following directory symlinks.
+   Unchanged directories reuse their listings and file objects. */
 static PBXGroup *
 YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
-                     NSMutableSet *directories)
+                     YCodeFileWatcher *sharedWatcher, NSDictionary *oldGroups,
+                     NSMutableDictionary *groups, NSSet *changed)
 {
-  [directories addObject: path];
-  if (watchers && ![watchers objectForKey: path])
+  if (watchers)
     {
-      YCodeFileWatcher *watcher =
-          [[YCodeFileWatcher alloc] initWithDirectory: path paths: nil];
+#if defined(__linux__)
+      if ([sharedWatcher addDirectory: path])
+        [watchers setObject: sharedWatcher forKey: path];
+#else
+      YCodeFileWatcher *watcher = [watchers objectForKey: path];
+      if (!watcher)
+        watcher
+            = AUTORELEASE ([[YCodeFileWatcher alloc] initWithDirectory: path
+                                                                 paths: nil]);
       if (watcher)
         {
           [watchers setObject: watcher forKey: path];
-          RELEASE (watcher);
         }
+#endif
     }
-  PBXGroup *group = AUTORELEASE ([PBXGroup new]);
-  [group setName: [path lastPathComponent]];
-  [group setPath: [path lastPathComponent]];
-  [group setSourceTree: @"<group>"];
+  PBXGroup *group = [oldGroups objectForKey: path];
+  BOOL scan = !group || !changed || [changed containsObject: path];
+  if (!group)
+    {
+      group = AUTORELEASE ([PBXGroup new]);
+      [group setName: [path lastPathComponent]];
+      [group setPath: [path lastPathComponent]];
+      [group setSourceTree: @"<group>"];
+    }
+  [groups setObject: group forKey: path];
   NSMutableArray *children = [NSMutableArray array];
+  if (!scan)
+    {
+      NSEnumerator *enumerator = [[group children] objectEnumerator];
+      id child;
+      while ((child = [enumerator nextObject]) != nil)
+        if ([child isKindOfClass: [PBXGroup class]])
+          YCodeDirectoryGroup (
+              [path stringByAppendingPathComponent: [child path]], watchers,
+              sharedWatcher, oldGroups, groups, changed);
+      return group;
+    }
+  NSMutableDictionary *oldChildren = [NSMutableDictionary dictionary];
+  NSEnumerator *enumerator = [[group children] objectEnumerator];
+  id child;
+  while ((child = [enumerator nextObject]) != nil)
+    if ([child path])
+      [oldChildren setObject: child forKey: [child path]];
   NSFileManager *manager = [NSFileManager defaultManager];
   NSEnumerator *names = [[[manager contentsOfDirectoryAtPath: path error: NULL]
       sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
@@ -370,16 +401,18 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
                                                            error: NULL];
       if ([[attributes objectForKey: NSFileType] isEqual: NSFileTypeDirectory]
           && ![[NSWorkspace sharedWorkspace] isFilePackageAtPath: file])
-        {
-          [children
-              addObject: YCodeDirectoryGroup (file, watchers, directories)];
-        }
+        [children addObject: YCodeDirectoryGroup (file, watchers, sharedWatcher,
+                                                 oldGroups, groups, changed)];
       else
         {
-          PBXFileReference *reference = AUTORELEASE ([PBXFileReference new]);
-          [reference setName: name];
-          [reference setPath: name];
-          [reference setSourceTree: @"<group>"];
+          PBXFileReference *reference = [oldChildren objectForKey: name];
+          if (![reference isKindOfClass: [PBXFileReference class]])
+            {
+              reference = AUTORELEASE ([PBXFileReference new]);
+              [reference setName: name];
+              [reference setPath: name];
+              [reference setSourceTree: @"<group>"];
+            }
           [children addObject: reference];
         }
     }
@@ -423,31 +456,59 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
   return _directoryProject;
 }
 
-- (void) refreshDirectoryFiles
+- (void) refreshChangedDirectoryFiles
 {
   if (!_directoryProject)
     return;
-  [NSObject
-      cancelPreviousPerformRequestsWithTarget: self
-                                     selector: @selector (refreshDirectoryFiles)
-                                       object: nil];
+  [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                           selector: @selector
+                                           (refreshChangedDirectoryFiles)
+                                             object: nil];
   _directoryRefreshPending = NO;
-  NSMutableSet *directories = [NSMutableSet set];
+  NSMutableDictionary *groups = [NSMutableDictionary dictionary];
+  YCodeFileWatcher *sharedWatcher = nil;
+#if defined(__linux__)
+  if (_watchingDirectories)
+    {
+      sharedWatcher = [_directoryWatchers objectForKey: _projectPath];
+      if (!sharedWatcher)
+        {
+          sharedWatcher = AUTORELEASE ([[YCodeFileWatcher alloc]
+              initWithDirectory: _projectPath
+                          paths: nil]);
+          if (sharedWatcher)
+            [_directoryWatchers setObject: sharedWatcher forKey: _projectPath];
+        }
+    }
+#endif
   PBXGroup *group = YCodeDirectoryGroup (
       _projectPath, _watchingDirectories ? _directoryWatchers : nil,
-      directories);
+      sharedWatcher, _directoryGroups, groups,
+      [_changedDirectories count] ? _changedDirectories : nil);
+  [_changedDirectories removeAllObjects];
   NSEnumerator *keys = [[_directoryWatchers allKeys] objectEnumerator];
   NSString *path;
   while ((path = [keys nextObject]) != nil)
-    if (![directories containsObject: path])
+    if (![groups objectForKey: path])
       {
         YCodeFileWatcher *watcher = [_directoryWatchers objectForKey: path];
+#if defined(__linux__)
+        [watcher removeDirectory: path];
+#else
         [watcher stop];
+#endif
         [_directoryWatchers removeObjectForKey: path];
       }
+  ASSIGN (_directoryGroups, groups);
   [group setPath: @""];
   [_project setMainGroup: group];
   [_navigatorController projectDidChange];
+}
+
+- (void) refreshDirectoryFiles
+{
+  [_changedDirectories removeAllObjects];
+  [self refreshChangedDirectoryFiles];
 }
 
 + (NSArray *) readableTypes
@@ -856,6 +917,8 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
       [self setHasUndoManager: NO];
       _settings = [[NSMutableDictionary alloc] init];
       _directoryWatchers = [[NSMutableDictionary alloc] init];
+      _directoryGroups = [NSMutableDictionary new];
+      _changedDirectories = [NSMutableSet new];
       [[NSNotificationCenter defaultCenter]
           addObserver: self
              selector: @selector (directoryChanged:)
@@ -879,6 +942,8 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
   [self stopWatchingFiles];
   [[NSNotificationCenter defaultCenter] removeObserver: self];
   RELEASE (_directoryWatchers);
+  RELEASE (_directoryGroups);
+  RELEASE (_changedDirectories);
   RELEASE (_project);
   RELEASE (_container);
   RELEASE (_projectPath);
@@ -2472,12 +2537,19 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
 
 - (void) directoryChanged: (NSNotification *)notification
 {
-  if (!_watchingDirectories || _directoryRefreshPending
-      || ![[_directoryWatchers allValues]
-          containsObject: [notification object]])
+  YCodeFileWatcher *watcher = [notification object];
+  if (!_watchingDirectories ||
+      [_directoryWatchers objectForKey: [watcher directory]] != watcher)
+    return;
+  NSArray *directories = [[notification userInfo] objectForKey: @"directories"];
+  if ([directories count])
+    [_changedDirectories addObjectsFromArray: directories];
+  else
+    [_changedDirectories addObject: [watcher directory]];
+  if (_directoryRefreshPending)
     return;
   _directoryRefreshPending = YES;
-  [self performSelector: @selector (refreshDirectoryFiles)
+  [self performSelector: @selector (refreshChangedDirectoryFiles)
              withObject: nil
              afterDelay: 0.1];
 }
@@ -2494,12 +2566,13 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
 {
   _watchingDirectories = NO;
   _directoryRefreshPending = NO;
-  [NSObject
-      cancelPreviousPerformRequestsWithTarget: self
-                                     selector: @selector (refreshDirectoryFiles)
-                                       object: nil];
+  [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                           selector: @selector
+                                           (refreshChangedDirectoryFiles)
+                                             object: nil];
   [[_directoryWatchers allValues] makeObjectsPerformSelector: @selector (stop)];
   [_directoryWatchers removeAllObjects];
+  [_changedDirectories removeAllObjects];
   [_editorController stopWatchingFiles];
 }
 

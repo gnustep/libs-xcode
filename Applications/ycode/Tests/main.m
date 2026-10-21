@@ -136,6 +136,28 @@
 - (void) updateThumbnailForItem: (YCodeProjectNavigatorItem *)item;
 @end
 
+@interface YCodeThumbnailTestNavigator : YCodeProjectNavigatorController
+{
+  NSUInteger _thumbnailRequests;
+}
+
+- (NSUInteger) thumbnailRequests;
+@end
+
+@implementation YCodeThumbnailTestNavigator
+- (void) updateThumbnailForItem: (YCodeProjectNavigatorItem *)item
+{
+  _thumbnailRequests++;
+  [super updateThumbnailForItem: item];
+}
+
+- (NSUInteger) thumbnailRequests
+{
+  return _thumbnailRequests;
+}
+
+@end
+
 @interface YCodeProjectNavigatorItem (SoundIconTesting)
 - (NSImage *) iconForFileExtension: (NSString *)extension;
 @end
@@ -5795,6 +5817,149 @@ testDirectoryWatching (NSString *temporaryDirectory)
 }
 
 static void
+testLargeDirectoryWatching (NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root = [temporaryDirectory
+      stringByAppendingPathComponent: @"Large Watched Folder"];
+  NSUInteger index;
+  for (index = 0; index < 160; index++)
+    {
+      NSString *folder = [root
+          stringByAppendingPathComponent: [NSString
+                                             stringWithFormat: @"folder-%03lu",
+                                                              (unsigned long)
+                                                                  index]];
+      [manager createDirectoryAtPath: folder
+          withIntermediateDirectories: YES
+                           attributes: nil
+                                error: NULL];
+    }
+  NSString *wide = [root stringByAppendingPathComponent: @"folder-000"];
+  for (index = 0; index < 2000; index++)
+    [manager
+        createFileAtPath: [wide stringByAppendingPathComponent:
+                                   [NSString
+                                       stringWithFormat: @"file-%04lu.txt",
+                                                        (unsigned long)index]]
+                contents: [NSData data]
+              attributes: nil];
+  NSString *imagePath = [root stringByAppendingPathComponent: @"Preview.png"];
+  NSBitmapImageRep *bitmap =
+      [[NSBitmapImageRep alloc] initWithBitmapDataPlanes: NULL
+                                              pixelsWide: 1024
+                                              pixelsHigh: 768
+                                           bitsPerSample: 8
+                                         samplesPerPixel: 4
+                                                hasAlpha: YES
+                                                isPlanar: NO
+                                          colorSpaceName: NSDeviceRGBColorSpace
+                                             bytesPerRow: 0
+                                            bitsPerPixel: 0];
+  memset ([bitmap bitmapData], 128,
+          [bitmap bytesPerRow] * [bitmap pixelsHigh]);
+  [[bitmap representationUsingType: NSPNGFileType
+                        properties: [NSDictionary dictionary]]
+      writeToFile: imagePath
+       atomically: YES];
+  [bitmap release];
+  YCodeProject *project = [[YCodeProject alloc] init];
+  testAssert (
+      [project readFromURL: [NSURL fileURLWithPath: root]
+                    ofType: @"YCodeMakeProjectType"
+                     error: NULL],
+      @"Open more directories than the usual Linux inotify instance limit");
+#if defined(__linux__)
+  NSDictionary *watchers = [project valueForKey: @"directoryWatchers"];
+  testAssert ([watchers count] == 161 &&
+                  [[NSSet setWithArray: [watchers allValues]] count] == 1,
+              @"All project directories share a single Linux watcher");
+#endif
+  YCodeProjectNavigatorController *navigator = [project navigatorController];
+  NSString *untouchedPath =
+      [root stringByAppendingPathComponent: @"folder-000"];
+  PBXGroup *untouched = [[waitForDirectoryItem (project, untouchedPath, YES)
+      representedObject] retain];
+  NSArray *listing = [[untouched children] retain];
+  testAssert ([listing count] == 2000,
+              @"Wide directories retain every file in the navigator");
+  YCodeThumbnailTestNavigator *previews = [YCodeThumbnailTestNavigator new];
+  [previews setProject: project];
+  testAssert (
+      [previews thumbnailRequests] == 0,
+      @"Building a navigator does not load previews for undisplayed files");
+  YCodeProjectNavigatorItem *preview = directoryItem (
+      previews, [[previews rootItems] objectAtIndex: 0], imagePath);
+  NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier: @"name"];
+  NSCell *cell = [[NSCell alloc] initImageCell: nil];
+  [previews outlineView: nil
+        willDisplayCell: cell
+         forTableColumn: column
+                   item: preview];
+  [previews outlineView: nil
+        willDisplayCell: cell
+         forTableColumn: column
+                   item: preview];
+  testAssert ([previews thumbnailRequests] == 1,
+              @"Displaying a row loads its preview once per refresh");
+  NSBitmapImageRep *pixels =
+      [NSBitmapImageRep imageRepWithData: [[preview icon] TIFFRepresentation]];
+  testAssert (
+      [pixels pixelsWide] == 16 && [pixels pixelsHigh] == 12 &&
+          [[pixels colorAtX: 8 y: 8] alphaComponent] > 0,
+      @"Large previews retain only downsampled pixels with their original proportions");
+
+  [cell release];
+  [column release];
+  [previews release];
+
+  NSString *lastFolder = [root stringByAppendingPathComponent: @"folder-159"];
+  NSString *added = [lastFolder stringByAppendingPathComponent: @"added.txt"];
+  [@"new" writeToFile: added
+           atomically: YES
+             encoding: NSUTF8StringEncoding
+                error: NULL];
+  testAssert (waitForDirectoryItem (project, added, YES) != nil,
+              @"Directories beyond the old watcher limit receive updates");
+  testAssert (
+      [waitForDirectoryItem (project, untouchedPath, YES) representedObject]
+              == untouched
+          && [untouched children] == listing,
+      @"A change in another folder preserves the unchanged directory listing");
+  YCodeProjectNavigatorItem *fileItem =
+      [waitForDirectoryItem (project, added, YES) retain];
+  NSString *second = [lastFolder stringByAppendingPathComponent: @"second.txt"];
+  [@"second" writeToFile: second
+              atomically: YES
+                encoding: NSUTF8StringEncoding
+                   error: NULL];
+  testAssert (waitForDirectoryItem (project, second, YES) != nil
+                  && waitForDirectoryItem (project, added, YES) == fileItem,
+              @"Directory updates reuse navigator items for unchanged files");
+  NSString *renamed = [root stringByAppendingPathComponent: @"Renamed Folder"];
+  [manager moveItemAtPath: lastFolder toPath: renamed error: NULL];
+  testAssert (waitForDirectoryItem (
+                  project,
+                  [renamed stringByAppendingPathComponent: @"added.txt"],
+                  YES) != nil
+                  && waitForDirectoryItem (project, lastFolder, NO) == nil,
+              @"Renaming a watched directory updates its subtree");
+  NSString *later = [renamed stringByAppendingPathComponent: @"later.txt"];
+  [@"later" writeToFile: later
+             atomically: YES
+               encoding: NSUTF8StringEncoding
+                  error: NULL];
+  testAssert (waitForDirectoryItem (project, later, YES) != nil,
+              @"A renamed directory continues receiving notifications");
+  [fileItem release];
+  [listing release];
+  [untouched release];
+  [project close];
+  [navigator setOutlineView: nil];
+  [project release];
+}
+
+static void
 testMakeDirectory (NSString *temporaryDirectory)
 {
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -8270,6 +8435,7 @@ main (void)
     {
       testExternalFileChanges (temporaryDirectory);
       testDirectoryWatching (temporaryDirectory);
+      testLargeDirectoryWatching (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode external file checks: %lu failures",
              (unsigned long)failures);
@@ -8343,6 +8509,7 @@ main (void)
     {
       testFileModificationTracking (temporaryDirectory);
       testDirectoryWatching (temporaryDirectory);
+      testLargeDirectoryWatching (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode file modification checks: %lu failures",
              (unsigned long)failures);
@@ -8560,6 +8727,7 @@ main (void)
   testFindReplace (temporaryDirectory);
   testFileModificationTracking (temporaryDirectory);
   testDirectoryWatching (temporaryDirectory);
+  testLargeDirectoryWatching (temporaryDirectory);
   testTranscriptCopy ();
   testDebuggerRecords ();
   testAssert ([manager createDirectoryAtPath: temporaryDirectory
@@ -8807,6 +8975,9 @@ main (void)
       @"Readable image gets a miniature navigator thumbnail");
   NSBitmapImageRep *thumbnailPixels = [NSBitmapImageRep
       imageRepWithData: [[previewItem icon] TIFFRepresentation]];
+  testAssert (
+      [thumbnailPixels pixelsWide] <= 16 && [thumbnailPixels pixelsHigh] <= 16,
+      @"Navigator stores downsampled pixels instead of the original image");
   testAssert ([[thumbnailPixels colorAtX: 8 y: 8] alphaComponent] > 0,
               @"Thumbnail retains decoded image pixels");
   navigatorCell = [[[navigator outlineView] outlineTableColumn] dataCell];

@@ -46,6 +46,7 @@ typedef enum
   YCodeNavigatorItemType _itemType;
 
   NSMutableArray *_children;
+  NSMutableSet *_childIdentities;
   YCodeProjectNavigatorItem *_parent;
 
   NSString *_displayName;

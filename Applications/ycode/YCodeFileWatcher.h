@@ -24,13 +24,16 @@
 
 #import <Foundation/Foundation.h>
 
-/* One blocking OS event source per directory. Notifications arrive on the main
-   thread; stopping does not wait for that thread or retain an editor. */
+/* Notifications arrive on the main thread. Linux directory projects share one
+   event source and thread across their directories. */
 @interface YCodeFileWatcher : NSObject
 {
   NSString *_directory;
   NSArray *_paths;
   NSLock *_lock;
+  NSMutableDictionary *_watchedDirectories;
+  NSMutableDictionary *_directoryDescriptors;
+  NSMutableSet *_changedDirectories;
   BOOL _pending;
   BOOL _stopped;
   int _stopPipe[2];
@@ -42,5 +45,9 @@
 /* A nil paths argument watches directory membership instead of selected files. */
 - (id) initWithDirectory: (NSString *)directory paths: (NSArray *)paths;
 - (NSArray *) paths;
+- (NSString *) directory;
+/* Linux: attach/detach directories to this event source. */
+- (BOOL) addDirectory: (NSString *)directory;
+- (void) removeDirectory: (NSString *)directory;
 - (void) stop;
 @end

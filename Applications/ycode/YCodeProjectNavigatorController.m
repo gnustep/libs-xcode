@@ -220,7 +220,25 @@
   NSSize size = [image size];
   if ([image isValid] && size.width > 0 && size.height > 0)
     {
-      [item setIcon: image];
+      CGFloat scale = MIN (16 / size.width, 16 / size.height);
+      NSSize thumbnailSize = NSMakeSize (MAX (1, size.width * scale),
+                                         MAX (1, size.height * scale));
+      NSImage *thumbnail = [[NSImage alloc] initWithSize: thumbnailSize];
+      [thumbnail lockFocus];
+      [image drawInRect: NSMakeRect (0, 0, thumbnailSize.width,
+                                    thumbnailSize.height)
+               fromRect: NSZeroRect
+              operation: NSCompositeSourceOver
+               fraction: 1];
+      [thumbnail unlockFocus];
+      // GNUstep image copies omit cached drawing representations. Keep a
+      // concrete small bitmap so setIcon: preserves the rendered pixels.
+      NSImage *bitmap =
+          [[NSImage alloc] initWithData: [thumbnail TIFFRepresentation]];
+      if (bitmap)
+        [item setIcon: bitmap];
+      RELEASE (bitmap);
+      RELEASE (thumbnail);
     }
   RELEASE (image);
 }
@@ -255,6 +273,7 @@
     {
       _rootItems = [[NSMutableArray alloc] init];
       _itemCache = [[NSMutableDictionary alloc] init];
+      _thumbnailItems = [NSMutableSet new];
       [self setupContextMenu];
     }
   return self;
@@ -282,6 +301,7 @@
   RELEASE (_outlineView);
   RELEASE (_rootItems);
   RELEASE (_itemCache);
+  RELEASE (_thumbnailItems);
   RELEASE (_contextMenu);
   [super dealloc];
 }
@@ -408,6 +428,8 @@
 
 - (void) reloadProjectTree
 {
+  _previousItems = [_itemCache copy];
+  [_thumbnailItems removeAllObjects];
   [_rootItems removeAllObjects];
   [_itemCache removeAllObjects];
 
@@ -463,6 +485,8 @@
 
       RELEASE (projectItem);
     }
+  RELEASE (_previousItems);
+  _previousItems = nil;
 }
 
 - (void) addGroupItem: (PBXGroup *)group
@@ -496,12 +520,13 @@
     {
       if ([child isKindOfClass: [PBXFileReference class]])
         {
-          YCodeProjectNavigatorItem *fileItem =
-              [[YCodeProjectNavigatorItem alloc]
-                  initWithRepresentedObject: child
-                                       type: YCodeNavigatorItemTypeFile];
+          YCodeProjectNavigatorItem *fileItem = [[_previousItems
+              objectForKey: [NSValue valueWithPointer: child]] retain];
+          if (!fileItem)
+            fileItem = [[YCodeProjectNavigatorItem alloc]
+                initWithRepresentedObject: child
+                                     type: YCodeNavigatorItemTypeFile];
           [groupItem addChild: fileItem];
-          [self updateThumbnailForItem: fileItem];
           [_itemCache setObject: fileItem
                          forKey: [NSValue valueWithPointer: child]];
           RELEASE (fileItem);
@@ -630,6 +655,12 @@
 
       if ([cell respondsToSelector: @selector (setImage:)])
         {
+          NSValue *identity = [NSValue valueWithPointer: navItem];
+          if ([navItem isFile] && ![_thumbnailItems containsObject: identity])
+            {
+              [self updateThumbnailForItem: navItem];
+              [_thumbnailItems addObject: identity];
+            }
           [cell setImage: [navItem icon]];
         }
     }

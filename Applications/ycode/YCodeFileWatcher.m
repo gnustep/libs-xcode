@@ -51,6 +51,9 @@
   _directory = [directory copy];
   _paths = [paths copy];
   _lock = [NSLock new];
+  _watchedDirectories = [NSMutableDictionary new];
+  _directoryDescriptors = [NSMutableDictionary new];
+  _changedDirectories = [NSMutableSet new];
   _stopPipe[0] = _stopPipe[1] = _eventFD = -1;
 #if defined(_WIN32)
   unichar *wide = calloc ([directory length] + 1, sizeof (unichar));
@@ -76,12 +79,7 @@
   fcntl (_stopPipe[1], F_SETFD, FD_CLOEXEC);
 #if defined(__linux__)
   _eventFD = inotify_init1 (IN_CLOEXEC);
-  if (_eventFD < 0
-      || inotify_add_watch (_eventFD, [directory fileSystemRepresentation],
-                            IN_CLOSE_WRITE | IN_MOVED_TO | IN_MOVED_FROM
-                                | IN_CREATE | IN_DELETE | IN_DELETE_SELF
-                                | IN_MOVE_SELF)
-             < 0)
+  if (_eventFD < 0 || ![self addDirectory: directory])
     {
       [self release];
       return nil;
@@ -105,6 +103,57 @@
                            toTarget: self
                          withObject: nil];
   return self;
+}
+
+- (NSString *) directory
+{
+  return _directory;
+}
+
+- (BOOL) addDirectory: (NSString *)directory
+{
+#if defined(__linux__)
+  [_lock lock];
+  if ([_directoryDescriptors objectForKey: directory])
+    {
+      [_lock unlock];
+      return YES;
+    }
+  int descriptor = inotify_add_watch (
+      _eventFD, [directory fileSystemRepresentation],
+      IN_CLOSE_WRITE | IN_MOVED_TO | IN_MOVED_FROM | IN_CREATE | IN_DELETE
+          | IN_DELETE_SELF | IN_MOVE_SELF);
+  if (descriptor >= 0)
+    {
+      NSNumber *key = [NSNumber numberWithInt: descriptor];
+      NSString *previous = [_watchedDirectories objectForKey: key];
+      if (previous)
+        [_directoryDescriptors removeObjectForKey: previous];
+      [_watchedDirectories setObject: directory forKey: key];
+      [_directoryDescriptors setObject: key forKey: directory];
+    }
+  [_lock unlock];
+  if (descriptor < 0)
+    NSLog (@"Unable to watch directory %@: %s", directory, strerror (errno));
+  return descriptor >= 0;
+#else
+  return NO;
+#endif
+}
+
+- (void) removeDirectory: (NSString *)directory
+{
+#if defined(__linux__)
+  [_lock lock];
+  NSNumber *key = [_directoryDescriptors objectForKey: directory];
+  if (key)
+    {
+      inotify_rm_watch (_eventFD, [key intValue]);
+      [_watchedDirectories removeObjectForKey: key];
+      [_directoryDescriptors removeObjectForKey: directory];
+    }
+  [_lock unlock];
+#endif
 }
 
 - (NSArray *) paths
@@ -146,6 +195,9 @@
 #endif
   [_directory release];
   [_paths release];
+  [_watchedDirectories release];
+  [_directoryDescriptors release];
+  [_changedDirectories release];
   [_lock release];
   [super dealloc];
 }
@@ -154,11 +206,16 @@
 {
   [_lock lock];
   _pending = NO;
+  NSArray *directories = [_changedDirectories allObjects];
+  [_changedDirectories removeAllObjects];
   [_lock unlock];
   if (!_stopped)
     [[NSNotificationCenter defaultCenter]
         postNotificationName: @"YCodeDirectoryDidChange"
-                      object: self];
+                      object: self
+                    userInfo: [NSDictionary
+                                 dictionaryWithObject: directories
+                                               forKey: @"directories"]];
 }
 
 - (void) changed
@@ -209,12 +266,25 @@
         {
           struct inotify_event *event
               = (struct inotify_event *)(buffer + offset);
+          BOOL eventRelevant = NO;
+          if (event->mask & IN_IGNORED)
+            {
+              [_lock lock];
+              NSNumber *key = [NSNumber numberWithInt: event->wd];
+              NSString *directory = [_watchedDirectories objectForKey: key];
+              if (directory)
+                [_directoryDescriptors removeObjectForKey: directory];
+              [_watchedDirectories removeObjectForKey: key];
+              [_lock unlock];
+              offset += sizeof (struct inotify_event) + event->len;
+              continue;
+            }
           if (!event->len || (event->mask & IN_Q_OVERFLOW)
               || (!_paths
                   && (event->mask
                       & (IN_CREATE | IN_DELETE | IN_MOVED_FROM
                          | IN_MOVED_TO))))
-            relevant = YES;
+            eventRelevant = YES;
           else
             {
               NSString *name = [[NSFileManager defaultManager]
@@ -225,9 +295,25 @@
               while ((path = [paths nextObject]) != nil)
                 if ([[path lastPathComponent] isEqual: name])
                   {
-                    relevant = YES;
+                    eventRelevant = YES;
                     break;
                   }
+            }
+          if (eventRelevant)
+            {
+              relevant = YES;
+              [_lock lock];
+              NSString *directory = [_watchedDirectories
+                  objectForKey: [NSNumber numberWithInt: event->wd]];
+              /* Moves/deletions can replace a cached subtree at the same
+                 path; rescan all listings in that uncommon case. */
+              if (event->mask
+                  & (IN_Q_OVERFLOW | IN_DELETE_SELF | IN_MOVE_SELF))
+                [_changedDirectories
+                    addObjectsFromArray: [_watchedDirectories allValues]];
+              else if (directory)
+                [_changedDirectories addObject: directory];
+              [_lock unlock];
             }
           offset += sizeof (struct inotify_event) + event->len;
         }

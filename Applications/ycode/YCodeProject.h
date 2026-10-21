@@ -39,6 +39,8 @@
 {
   BOOL _directoryProject;
   NSMutableDictionary *_directoryWatchers;
+  NSMutableDictionary *_directoryGroups;
+  NSMutableSet *_changedDirectories;
   BOOL _watchingDirectories;
   BOOL _directoryRefreshPending;
   PBXProject *_project;

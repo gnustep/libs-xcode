@@ -31,12 +31,23 @@
 static NSImage *
 YCodeProjectCenterIcon (NSString *name)
 {
-  NSString *path =
-      [[NSBundle mainBundle] pathForResource: name
-                                      ofType: @"tiff"
-                                 inDirectory: @"ProjectCenterIcons"];
-  return path ? AUTORELEASE ([[NSImage alloc] initWithContentsOfFile: path])
-              : nil;
+  static NSMutableDictionary *icons = nil;
+  if (!icons)
+    icons = [NSMutableDictionary new];
+  NSImage *image = [icons objectForKey: name];
+  if (!image)
+    {
+      NSString *path =
+          [[NSBundle mainBundle] pathForResource: name
+                                          ofType: @"tiff"
+                                     inDirectory: @"ProjectCenterIcons"];
+      image = path
+                  ? AUTORELEASE ([[NSImage alloc] initWithContentsOfFile: path])
+                  : nil;
+      if (image)
+        [icons setObject: image forKey: name];
+    }
+  return image;
 }
 
 @implementation YCodeProjectNavigatorItem
@@ -49,6 +60,7 @@ YCodeProjectCenterIcon (NSString *name)
       _representedObject = [object retain];
       _itemType = type;
       _children = [[NSMutableArray alloc] init];
+      _childIdentities = [NSMutableSet new];
       _isExpanded = NO;
       _isLeaf = (type == YCodeNavigatorItemTypeFile);
 
@@ -61,6 +73,7 @@ YCodeProjectCenterIcon (NSString *name)
 {
   RELEASE (_representedObject);
   RELEASE (_children);
+  RELEASE (_childIdentities);
   RELEASE (_displayName);
   RELEASE (_icon);
   [super dealloc];
@@ -217,9 +230,11 @@ YCodeProjectCenterIcon (NSString *name)
 
 - (void) addChild: (YCodeProjectNavigatorItem *)child
 {
-  if (child && ![_children containsObject: child])
+  NSValue *identity = [NSValue valueWithPointer: child];
+  if (child && ![_childIdentities containsObject: identity])
     {
       [_children addObject: child];
+      [_childIdentities addObject: identity];
       [child setParent: self];
     }
 }
@@ -229,6 +244,7 @@ YCodeProjectCenterIcon (NSString *name)
   if ([_children containsObject: child])
     {
       [child setParent: nil];
+      [_childIdentities removeObject: [NSValue valueWithPointer: child]];
       [_children removeObject: child];
     }
 }
