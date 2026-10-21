@@ -78,6 +78,8 @@ On GNUstep, Preferences and Help are in Info. On macOS, Preferences is in the ap
 
 Preferences controls pane fonts, editor colors, tab width, spaces versus tabs, indentation, rulers, and matching delimiters. Project indentation can use compiler indentation settings from the active target.
 
+Build issues are grouped by source file, then by Errors, Warnings, and Notes in an expandable outline. Only categories containing diagnostics appear, in that order; category headings use the configured severity colors. File headers show the path and issue count; build-tool messages without a source location appear under Build tools. Select a diagnostic to jump to its source line. New groups expand automatically, while collapsed groups stay collapsed as more build output arrives.
+
 Preferences > Issues configures the text colors for errors, warnings, and notes. Defaults are red, yellow, and white on a black Issues background. Changes apply immediately to existing issues and are saved for future sessions. Restore Defaults resets only issue colors; console ANSI colors are unchanged.
 
 Common commands and their menu keys:

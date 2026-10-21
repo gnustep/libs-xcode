@@ -89,7 +89,10 @@
   NSTextField *_debuggerCommandField;
   NSView *_debuggerControls;
   YCodeVariablesView *_debuggerVariablesView;
-  NSTableView *_issuesTableView;
+  NSOutlineView *_issuesOutlineView;
+  NSMutableArray *_issueGroups;
+  NSMutableDictionary *_issueGroupsByPath;
+  BOOL _updatingIssueOutline;
   NSMutableArray *_buildIssues;
   NSMutableString *_diagnosticOutput;
   NSMutableString *_diagnosticErrors;

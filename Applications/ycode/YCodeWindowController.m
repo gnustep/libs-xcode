@@ -41,6 +41,136 @@
 #import "YCImageInspectorView.h"
 #import "YCSoundInspectorView.h"
 
+/* Outline items have stable identity even when diagnostics have identical text
+   or a group's child count changes as build output arrives. */
+@interface YCodeBuildIssueItem : NSObject
+{
+  NSString *_path;
+  NSString *_severity;
+  NSUInteger _issueCount;
+  BOOL _expanded;
+  NSDictionary *_issue;
+  NSMutableArray *_children;
+}
+
+- (id) initWithPath: (NSString *)path;
+- (id) initWithIssue: (NSDictionary *)issue;
+- (BOOL) isGroup;
+- (NSString *) path;
+- (NSDictionary *) issue;
+- (NSMutableArray *) children;
+- (NSString *) severity;
+- (NSUInteger) issueCount;
+- (BOOL) isExpanded;
+- (void) setExpanded: (BOOL)expanded;
+- (void) addIssue: (NSDictionary *)issue;
+@end
+
+@implementation YCodeBuildIssueItem
+- (id) initWithPath: (NSString *)path
+{
+  if ((self = [super init]))
+    {
+      _path = [path copy];
+      _children = [NSMutableArray new];
+      _expanded = YES;
+    }
+  return self;
+}
+
+- (id) initWithIssue: (NSDictionary *)issue
+{
+  if ((self = [super init]))
+    _issue = [issue retain];
+  return self;
+}
+
+- (void) dealloc
+{
+  RELEASE (_path);
+  RELEASE (_severity);
+  RELEASE (_issue);
+  RELEASE (_children);
+  [super dealloc];
+}
+
+- (BOOL) isGroup
+{
+  return _children != nil;
+}
+
+- (NSString *) path
+{
+  return _path;
+}
+
+- (NSDictionary *) issue
+{
+  return _issue;
+}
+
+- (NSMutableArray *) children
+{
+  return _children;
+}
+
+- (NSString *) severity
+{
+  return _severity;
+}
+
+- (NSUInteger) issueCount
+{
+  return _issueCount;
+}
+
+- (BOOL) isExpanded
+{
+  return _expanded;
+}
+
+- (void) setExpanded: (BOOL)expanded
+{
+  _expanded = expanded;
+}
+
+- (void) addIssue: (NSDictionary *)issue
+{
+  NSString *severity = [[issue objectForKey: @"severity"] lowercaseString];
+  severity = [severity hasSuffix: @"error"]   ? @"error"
+             : [severity isEqual: @"warning"] ? @"warning"
+                                             : @"note";
+  NSArray *order =
+      [NSArray arrayWithObjects: @"error", @"warning", @"note", nil];
+  NSUInteger rank = [order indexOfObject: severity];
+  NSUInteger index;
+  YCodeBuildIssueItem *group = nil;
+  for (index = 0; index < [_children count]; index++)
+    {
+      YCodeBuildIssueItem *child = [_children objectAtIndex: index];
+      NSUInteger childRank = [order indexOfObject: [child severity]];
+      if (childRank == rank)
+        {
+          group = child;
+          break;
+        }
+      if (childRank > rank)
+        break;
+    }
+  if (!group)
+    {
+      group = AUTORELEASE ([[YCodeBuildIssueItem alloc] initWithPath: _path]);
+      group->_severity = [severity copy];
+      [_children insertObject: group atIndex: index];
+    }
+  [[group children] addObject: AUTORELEASE ([[YCodeBuildIssueItem alloc]
+                                  initWithIssue: issue])];
+  group->_issueCount++;
+  _issueCount++;
+}
+
+@end
+
 /* Read-only output still supports selection and familiar copy shortcuts. */
 @interface YCTranscriptTextView : NSTextView
 @end
@@ -340,6 +470,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 - (void) saveWindowFrame: (NSNotification *)notification;
 - (void) restoreSidebarWidths;
 - (void) fontsChanged: (NSNotification *)notification;
+- (void) reloadIssueOutline;
 - (void) refreshTargetSelectors;
 - (void) updateBuildStatus: (id)sender;
 - (void) stopBuildClock: (id)sender;
@@ -468,7 +599,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   NSDictionary *issue;
   while ((issue = [enumerator nextObject]) != nil)
     [self applyColorToIssue: issue];
-  [_issuesTableView reloadData];
+  [self reloadIssueOutline];
 }
 
 - (void) fontsChanged: (NSNotification *)notification
@@ -492,15 +623,15 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   NSDictionary *issue;
   while ((issue = [enumerator nextObject]) != nil)
     [YCodePreferences applyFont: font toText: [issue objectForKey: @"display"]];
-  if ([[_issuesTableView tableColumns] count])
-    [[[[_issuesTableView tableColumns] objectAtIndex: 0] dataCell]
+  if ([[_issuesOutlineView tableColumns] count])
+    [[[[_issuesOutlineView tableColumns] objectAtIndex: 0] dataCell]
         setFont: font];
-  [_issuesTableView
+  [_issuesOutlineView
       setRowHeight: MAX (58, ceil (([font ascender] - [font descender] +
                                    [font leading])
                                       * 2
                                   + 12))];
-  [_issuesTableView reloadData];
+  [self reloadIssueOutline];
 }
 
 - (void) restoreSidebarWidths
@@ -572,9 +703,9 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   RELEASE (_project);
   RELEASE (_navigatorController);
   RELEASE (_editorController);
-  [_issuesTableView setTarget: nil];
-  [_issuesTableView setDelegate: nil];
-  [_issuesTableView setDataSource: nil];
+  [_issuesOutlineView setTarget: nil];
+  [_issuesOutlineView setDelegate: nil];
+  [_issuesOutlineView setDataSource: nil];
   [_searchResultsTable setDataSource: nil];
   [_searchResultsTable setDelegate: nil];
   [_testResultsTable setDataSource: nil];
@@ -585,6 +716,8 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   RELEASE (_testErrors);
   RELEASE (_bottomView);
   RELEASE (_buildIssues);
+  RELEASE (_issueGroups);
+  RELEASE (_issueGroupsByPath);
   RELEASE (_diagnosticOutput);
   RELEASE (_diagnosticErrors);
   RELEASE (_buildDirectories);
@@ -629,9 +762,11 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [_searchStatus setStringValue: @"Enter text and press Return."];
       [_testStatus setStringValue: @"No tests run yet."];
       _collectingBuildIssues = NO;
-      [_issuesTableView deselectAll: nil];
+      [_issuesOutlineView deselectAll: nil];
       [_buildIssues removeAllObjects];
-      [_issuesTableView reloadData];
+      [_issueGroups removeAllObjects];
+      [_issueGroupsByPath removeAllObjects];
+      [self reloadIssueOutline];
     }
   ASSIGN (_project, project);
   [[_project buildSystem] setDelegate: self];
@@ -1410,9 +1545,11 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
     }
 
-  if (_issuesTableView == nil)
+  if (_issuesOutlineView == nil)
     {
       _buildIssues = [[NSMutableArray alloc] init];
+      _issueGroups = [NSMutableArray new];
+      _issueGroupsByPath = [NSMutableDictionary new];
       _diagnosticOutput = [[NSMutableString alloc] init];
       _diagnosticErrors = [[NSMutableString alloc] init];
       _buildDirectories = [[NSMutableArray alloc] init];
@@ -1431,20 +1568,20 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
               @"(?:g?make)(?:\\[[0-9]+\\])?: (Entering|Leaving) directory [\\x60'‘](.*)['’]$"
                   options: 0
                     error: NULL];
-      _issuesTableView =
-          [[NSTableView alloc] initWithFrame: [_bottomView bounds]];
-      [_issuesTableView setBackgroundColor: [NSColor blackColor]];
-      [_issuesTableView setGridStyleMask: NSTableViewGridNone];
-      [_issuesTableView setAllowsMultipleSelection: NO];
-      [_issuesTableView setAllowsEmptySelection: YES];
-      [_issuesTableView setDataSource: self];
-      [_issuesTableView setDelegate: self];
-      [_issuesTableView setTarget: self];
-      [_issuesTableView setAction: @selector (openBuildIssue:)];
-      [_issuesTableView setAutoresizingMask: NSViewNotSizable];
-      [_issuesTableView setColumnAutoresizingStyle:
-                            NSTableViewLastColumnOnlyAutoresizingStyle];
-      [_issuesTableView setRowHeight: 58];
+      _issuesOutlineView =
+          [[NSOutlineView alloc] initWithFrame: [_bottomView bounds]];
+      [_issuesOutlineView setBackgroundColor: [NSColor blackColor]];
+      [_issuesOutlineView setGridStyleMask: NSTableViewGridNone];
+      [_issuesOutlineView setAllowsMultipleSelection: NO];
+      [_issuesOutlineView setAllowsEmptySelection: YES];
+      [_issuesOutlineView setDataSource: (id)self];
+      [_issuesOutlineView setDelegate: (id)self];
+      [_issuesOutlineView setTarget: self];
+      [_issuesOutlineView setAction: @selector (openBuildIssue:)];
+      [_issuesOutlineView setAutoresizingMask: NSViewNotSizable];
+      [_issuesOutlineView setColumnAutoresizingStyle:
+                              NSTableViewLastColumnOnlyAutoresizingStyle];
+      [_issuesOutlineView setRowHeight: 58];
       NSTableColumn *column =
           [[NSTableColumn alloc] initWithIdentifier: @"issue"];
       [[column headerCell] setStringValue: @"Build Issues"];
@@ -1453,7 +1590,8 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [column setWidth: 250];
       [[column dataCell] setWraps: YES];
       [[column dataCell] setLineBreakMode: NSLineBreakByWordWrapping];
-      [_issuesTableView addTableColumn: column];
+      [_issuesOutlineView addTableColumn: column];
+      [_issuesOutlineView setOutlineTableColumn: column];
       RELEASE (column);
     }
 
@@ -1474,7 +1612,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           [[NSTabViewItem alloc] initWithIdentifier: @"issues"];
       [issuesTab setLabel: @"Issues"];
       NSScrollView *issuesScroll
-          = YCodeScrollViewWithDocumentView (_issuesTableView);
+          = YCodeScrollViewWithDocumentView (_issuesOutlineView);
       [issuesScroll setHasHorizontalScroller: NO];
       [[issuesScroll contentView] setPostsFrameChangedNotifications: YES];
       [[NSNotificationCenter defaultCenter]
@@ -1483,7 +1621,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                  name: NSViewFrameDidChangeNotification
                object: [issuesScroll contentView]];
       [issuesTab setView: issuesScroll];
-      RELEASE (_issuesTableView);
+      RELEASE (_issuesOutlineView);
       [_bottomTabView addTabViewItem: issuesTab];
       RELEASE (issuesTab);
 
@@ -1986,9 +2124,11 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                              repeats: YES]);
   [self refreshTargetSelectors];
   [_ansiDecoders removeAllObjects];
-  [_issuesTableView deselectAll: nil];
+  [_issuesOutlineView deselectAll: nil];
   [_buildIssues removeAllObjects];
-  [_issuesTableView reloadData];
+  [_issueGroups removeAllObjects];
+  [_issueGroupsByPath removeAllObjects];
+  [self reloadIssueOutline];
   [_diagnosticOutput setString: @""];
   [_diagnosticErrors setString: @""];
   [_buildDirectories removeAllObjects];
@@ -2638,10 +2778,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 
 - (void) sizeIssuesColumn: (NSNotification *)notification
 {
-  CGFloat width = [[_issuesTableView enclosingScrollView] contentSize].width;
+  CGFloat width = [[_issuesOutlineView enclosingScrollView] contentSize].width;
   if (width <= 0)
     return;
-  NSTableColumn *column = [[_issuesTableView tableColumns] objectAtIndex: 0];
+  NSTableColumn *column = [[_issuesOutlineView tableColumns] objectAtIndex: 0];
   if (fabs ([column width] - MAX (80, width - 3)) > 0.5)
     [column setWidth: MAX (80, width - 3)];
 }
@@ -2752,12 +2892,23 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           [issue setObject: display forKey: @"display"];
           [self applyColorToIssue: issue];
           [_buildIssues replaceObjectAtIndex: count withObject: issue];
+          NSString *path = [issue objectForKey: @"path"];
+          NSString *key = path ?: @"";
+          YCodeBuildIssueItem *group = [_issueGroupsByPath objectForKey: key];
+          if (!group)
+            {
+              group = AUTORELEASE (
+                  [[YCodeBuildIssueItem alloc] initWithPath: path]);
+              [_issueGroupsByPath setObject: group forKey: key];
+              [_issueGroups addObject: group];
+            }
+          [group addIssue: issue];
         }
       [buffer deleteCharactersInRange: NSMakeRange (0, NSMaxRange (newline))];
     }
   if (previousCount == [_buildIssues count])
     return;
-  [_issuesTableView reloadData];
+  [self reloadIssueOutline];
   [[_bottomTabView tabViewItemAtIndex: 1]
       setLabel: [NSString
                    stringWithFormat: @"Issues (%lu)",
@@ -2870,13 +3021,146 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   [_buildIssues addObject: issue];
 }
 
+- (void) reloadIssueOutline
+{
+  NSEnumerator *enumerator;
+  YCodeBuildIssueItem *group;
+  NSInteger row = [_issuesOutlineView selectedRow];
+  id selected = row >= 0 ? [[_issuesOutlineView itemAtRow: row] retain] : nil;
+  _updatingIssueOutline = YES;
+  [_issuesOutlineView reloadData];
+  enumerator = [_issueGroups objectEnumerator];
+  while ((group = [enumerator nextObject]) != nil)
+    if ([group isExpanded])
+      {
+        [_issuesOutlineView expandItem: group];
+        NSEnumerator *children = [[group children] objectEnumerator];
+        YCodeBuildIssueItem *severity;
+        while ((severity = [children nextObject]) != nil)
+          if ([severity isExpanded])
+            [_issuesOutlineView expandItem: severity];
+      }
+  row = selected ? [_issuesOutlineView rowForItem: selected] : -1;
+  if (row >= 0)
+    [_issuesOutlineView selectRowIndexes: [NSIndexSet indexSetWithIndex: row]
+                    byExtendingSelection: NO];
+  else
+    [_issuesOutlineView deselectAll: nil];
+  _updatingIssueOutline = NO;
+  RELEASE (selected);
+}
+
+- (NSInteger) outlineView: (NSOutlineView *)outlineView
+    numberOfChildrenOfItem: (id)item
+{
+  return item ? [[item children] count] : [_issueGroups count];
+}
+
+- (id) outlineView: (NSOutlineView *)outlineView
+            child: (NSInteger)index
+           ofItem: (id)item
+{
+  return [(item ? [item children] : _issueGroups) objectAtIndex: index];
+}
+
+- (BOOL) outlineView: (NSOutlineView *)outlineView isItemExpandable: (id)item
+{
+  return [item isGroup];
+}
+
+- (id) outlineView: (NSOutlineView *)outlineView
+    objectValueForTableColumn: (NSTableColumn *)column
+                       byItem: (id)item
+{
+  if (![item isGroup])
+    return [[item issue] objectForKey: @"display"];
+  NSString *label = [item path];
+  NSString *prefix =
+      [[_project projectDirectoryPath] stringByAppendingString: @"/"];
+  if ([prefix length] && [label hasPrefix: prefix])
+    label = [label substringFromIndex: [prefix length]];
+  NSString *severity = [item severity];
+  if (severity)
+    label = [severity isEqual: @"error"]     ? @"Errors"
+            : [severity isEqual: @"warning"] ? @"Warnings"
+                                            : @"Notes";
+  NSUInteger count = [item issueCount];
+  NSString *title =
+      [NSString stringWithFormat: @"%@ (%lu %@)", label ?: @"Build tools",
+                                 (unsigned long)count,
+                                 count == 1 ? @"issue" : @"issues"];
+  NSDictionary *attributes = [NSDictionary
+      dictionaryWithObjectsAndKeys: severity
+                                       ? [YCodePreferences
+                                             issueColorForSeverity: severity]
+                                       : [NSColor whiteColor],
+                                   NSForegroundColorAttributeName,
+                                   [YCodePreferences fontForPane: @"Issues"],
+                                   NSFontAttributeName, nil];
+  return AUTORELEASE ([[NSAttributedString alloc] initWithString: title
+                                                      attributes: attributes]);
+}
+
+- (CGFloat) outlineView: (NSOutlineView *)outlineView heightOfRowByItem: (id)item
+{
+  if (![item isGroup])
+    return [outlineView rowHeight];
+  NSFont *font = [YCodePreferences fontForPane: @"Issues"];
+  return MAX (24,
+              ceil ([font ascender] - [font descender] + [font leading] + 8));
+}
+
+- (void) outlineViewItemDidExpand: (NSNotification *)notification
+{
+  if (_updatingIssueOutline || [notification object] != _issuesOutlineView)
+    return;
+  YCodeBuildIssueItem *item =
+      [[notification userInfo] objectForKey: @"NSObject"];
+  [item setExpanded: YES];
+  if (![item severity])
+    {
+      NSEnumerator *children = [[item children] objectEnumerator];
+      YCodeBuildIssueItem *child;
+      while ((child = [children nextObject]) != nil)
+        if ([child isExpanded])
+          [_issuesOutlineView expandItem: child];
+    }
+}
+
+- (void) outlineViewItemDidCollapse: (NSNotification *)notification
+{
+  if (!_updatingIssueOutline && [notification object] == _issuesOutlineView)
+    [[[notification userInfo] objectForKey: @"NSObject"] setExpanded: NO];
+}
+
+- (void) outlineViewSelectionDidChange: (NSNotification *)notification
+{
+  if ([notification object] == _issuesOutlineView && !_updatingIssueOutline)
+    [self openBuildIssue: nil];
+}
+
+- (NSString *) outlineView: (NSOutlineView *)outlineView
+           toolTipForCell: (NSCell *)cell
+                     rect: (NSRectPointer)rect
+              tableColumn: (NSTableColumn *)column
+                     item: (id)item
+            mouseLocation: (NSPoint)point
+{
+  return [self tableView: outlineView
+          toolTipForCell: cell
+                    rect: rect
+             tableColumn: column
+                     row: [outlineView rowForItem: item]
+           mouseLocation: point];
+}
+
 - (NSInteger) numberOfRowsInTableView: (NSTableView *)tableView
 {
   if (tableView == _searchResultsTable)
     return [_searchResults count];
   if (tableView == _testResultsTable)
     return [_testResults count];
-  return [_buildIssues count];
+  return 0;
 }
 
 - (id) tableView: (NSTableView *)tableView
@@ -2891,10 +3175,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
         return nil;
       return [[results objectAtIndex: row] objectForKey: @"display"];
     }
-  if (row < 0 || row >= (NSInteger)[_buildIssues count])
-    return nil;
-  NSDictionary *issue = [_buildIssues objectAtIndex: row];
-  return [issue objectForKey: @"display"];
+  return nil;
 }
 
 - (NSString *) tableView: (NSTableView *)tableView
@@ -2912,9 +3193,13 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
         return nil;
       return [[results objectAtIndex: row] objectForKey: @"display"];
     }
-  if (row < 0 || row >= (NSInteger)[_buildIssues count])
+  if (tableView != _issuesOutlineView || row < 0
+      || row >= [_issuesOutlineView numberOfRows])
     return nil;
-  NSDictionary *issue = [_buildIssues objectAtIndex: row];
+  YCodeBuildIssueItem *item = [_issuesOutlineView itemAtRow: row];
+  if ([item isGroup])
+    return [item path] ?: @"Build-tool diagnostics without a source location";
+  NSDictionary *issue = [item issue];
   if (![issue objectForKey: @"path"])
     return [issue objectForKey: @"message"];
   return
@@ -2930,16 +3215,15 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
     [self openSearchResult: nil];
   if ([notification object] == _testResultsTable)
     [self openTestResult: nil];
-  if ([notification object] == _issuesTableView)
-    [self openBuildIssue: nil];
 }
 
 - (void) openBuildIssue: (id)sender
 {
-  NSInteger row = [_issuesTableView selectedRow];
-  if (row < 0 || row >= (NSInteger)[_buildIssues count])
+  NSInteger row = [_issuesOutlineView selectedRow];
+  if (_updatingIssueOutline || row < 0
+      || row >= [_issuesOutlineView numberOfRows])
     return;
-  NSDictionary *issue = [_buildIssues objectAtIndex: row];
+  NSDictionary *issue = [[_issuesOutlineView itemAtRow: row] issue];
   NSString *path = [issue objectForKey: @"path"];
   if (!path)
     return;

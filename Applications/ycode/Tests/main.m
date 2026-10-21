@@ -6786,7 +6786,7 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   NSTabView *editor = [controller valueForKey: @"_editorTabView"];
   NSView *results = [controller valueForKey: @"_bottomView"];
   NSTabView *tabs = [controller valueForKey: @"_bottomTabView"];
-  NSTableView *table = [controller valueForKey: @"_issuesTableView"];
+  NSOutlineView *table = [controller valueForKey: @"_issuesOutlineView"];
   testAssert (![split isVertical] && [editor superview] == split &&
                   [results superview] == split,
               @"Source and build results share a horizontal split view");
@@ -6895,8 +6895,46 @@ testBuildIssuesPane (NSString *temporaryDirectory)
           didReceiveError: @"Issue Source.m:1: note: declared here"];
   [controller buildSystemDidFinishBuild: build success: NO];
   testAssert (
-      [table numberOfRows] == 3,
+      [table numberOfRows] == 7,
       @"Collect chunked, colored, stdout and unterminated diagnostics");
+  id sourceGroup = [table itemAtRow: 0];
+  testAssert (
+      [table isKindOfClass: [NSOutlineView class]] &&
+          [[table dataSource] outlineView: table numberOfChildrenOfItem: nil]
+              == 1
+          && [[table dataSource] outlineView: table
+                      numberOfChildrenOfItem: sourceGroup]
+                 == 3
+          && [table isItemExpanded: sourceGroup],
+      @"Issue severity groups appear beneath an automatically expanded source file");
+  NSArray *severityTitles =
+      [NSArray arrayWithObjects: @"Errors (1 issue)", @"Warnings (1 issue)",
+                                @"Notes (1 issue)", nil];
+  NSUInteger severityIndex;
+  for (severityIndex = 0; severityIndex < 3; severityIndex++)
+    {
+      id category = [[table dataSource] outlineView: table
+                                              child: severityIndex
+                                             ofItem: sourceGroup];
+      NSAttributedString *title =
+          [[table dataSource] outlineView: table
+                objectValueForTableColumn: [table outlineTableColumn]
+                                   byItem: category];
+      testAssert (
+          [[title string] isEqual: [severityTitles objectAtIndex: severityIndex]]
+              && [[table dataSource] outlineView: table
+                          numberOfChildrenOfItem: category]
+                     == 1
+              && [table isItemExpanded: category],
+          @"Each severity has a counted, expanded category beneath the file");
+    }
+  NSAttributedString *groupDisplay =
+      [[table dataSource] outlineView: table
+            objectValueForTableColumn: [table outlineTableColumn]
+                               byItem: sourceGroup];
+  testAssert ([[groupDisplay string] isEqual: @"Issue Source.m (3 issues)"],
+              @"File headers show an identifiable path and diagnostic count");
+
   testAssert ([[[tabs selectedTabViewItem] identifier] isEqual: @"issues"],
               @"Build completion selects issues when diagnostics exist");
   testAssert (fabs ([[[table tableColumns] objectAtIndex: 0] width] -
@@ -6992,6 +7030,11 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   [preferences release];
   [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 0]
       byExtendingSelection: NO];
+  testAssert (
+      [[[controller editorController] openDocuments] count] == 0,
+      @"Selecting a file header does not navigate as if it were a diagnostic");
+  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 2]
+      byExtendingSelection: NO];
   YCodeEditorDocument *document =
       [[controller editorController] currentDocument];
   testAssert (
@@ -7002,7 +7045,7 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   [table sendAction: [table action] to: [table target]];
   testAssert ([document selectedRange].location == 13,
               @"Clicking the already selected issue returns to its location");
-  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 1]
+  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 4]
       byExtendingSelection: NO];
   testAssert ([[document selectedText] isEqual: @"last line"],
               @"Diagnostics without columns select their source line");
@@ -7022,8 +7065,17 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   [controller buildSystem: build
           didReceiveError: @"clang: error: linker command failed\n"];
   [controller buildSystemDidFinishBuild: build success: YES];
-  testAssert ([table numberOfRows] == 2,
+  testAssert ([table numberOfRows] == 6,
               @"Include tool errors without a source location");
+  id toolGroup = [table itemAtRow: 3];
+  testAssert (
+      [[table dataSource] outlineView: table numberOfChildrenOfItem: nil] == 2 &&
+          [[[[table dataSource] outlineView: table
+                  objectValueForTableColumn: [table outlineTableColumn]
+                                     byItem: toolGroup] string]
+              isEqual: @"Build tools (1 issue)"],
+      @"Tool messages without a source file have their own group");
+
   NSAttributedString *toolDisplay = [[[controller valueForKey: @"_buildIssues"]
       objectAtIndex: 1] objectForKey: @"display"];
   testAssert (
@@ -7033,20 +7085,104 @@ testBuildIssuesPane (NSString *temporaryDirectory)
                     0, 1, 0),
       @"New tool errors use the configured severity color");
 
-  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 0]
+  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 2]
       byExtendingSelection: NO];
   testAssert (NSMaxRange ([document selectedRange]) <=
                   [[document content] length],
               @"Outdated diagnostic positions are clamped to the source");
   [controller buildSystem: build
          didReceiveOutput: @"Issue Source.m:2:3: error: runtime text\n"];
-  testAssert ([table numberOfRows] == 2,
+  testAssert ([table numberOfRows] == 6,
               @"Runtime output does not become a build issue");
   [controller buildSystem: build stoppedAtFile: source line: 2];
   testAssert (
       [[document selectedText] isEqual: @"  invalidSymbol();"],
       @"Debugger stop selects the source line in the existing editor tab");
+  [controller buildSystemDidStartBuild: build];
+  [controller
+          buildSystem: build
+      didReceiveError:
+          @"Issue Source.m:2:3: error: repeated\nIssue Source.m:2:3: error: repeated\n"];
+  sourceGroup = [table itemAtRow: 0];
+  testAssert ([table numberOfRows] == 4 &&
+                  [table itemAtRow: 2] != [table itemAtRow: 3],
+              @"Identical diagnostics remain distinct outline items");
+  [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 3]
+      byExtendingSelection: NO];
+  id selectedIssue = [table itemAtRow: 3];
+  [document setSelectedRange: NSMakeRange (0, 0)];
+  [controller buildSystem: build
+          didReceiveError: @"Other/Issue Source.m:1: warning: another file\n"];
+  testAssert (
+      [[table dataSource] outlineView: table numberOfChildrenOfItem: nil] == 2 &&
+          [table itemAtRow: [table selectedRow]] == selectedIssue &&
+          [document selectedRange].location == 0,
+      @"Streaming output separates equal basenames and preserves selection without renavigating");
+  [table collapseItem: sourceGroup];
+  [controller buildSystem: build
+          didReceiveError: @"Issue Source.m:1: note: later note\n"];
+  testAssert (![table isItemExpanded: sourceGroup] &&
+                  [[table dataSource] outlineView: table
+                           numberOfChildrenOfItem: sourceGroup]
+                      == 2,
+              @"New diagnostics preserve the user's collapsed file groups");
+  [YCodePreferences setIssueColor: [NSColor cyanColor] forSeverity: @"note"];
+  testAssert (![table isItemExpanded: sourceGroup],
+              @"Changing issue colors preserves collapsed groups");
+  [table expandItem: sourceGroup];
+  testAssert (
+      [table numberOfRows] == 9,
+      @"Expanding a group reveals diagnostics received while collapsed");
+  [controller buildSystemDidFinishBuild: build success: NO];
+  [controller buildSystemDidStartBuild: build];
+  [controller
+          buildSystem: build
+      didReceiveError:
+          @"Issue Source.m:1: remark: detail\nIssue Source.m:1: warning: caution\nIssue Source.m:1: fatal error: fatal\n"];
+  sourceGroup = [table itemAtRow: 0];
+  id errorsGroup = [[table dataSource] outlineView: table
+                                             child: 0
+                                            ofItem: sourceGroup];
+  id notesGroup = [[table dataSource] outlineView: table
+                                            child: 2
+                                           ofItem: sourceGroup];
+  testAssert (
+      [[[[table dataSource] outlineView: table
+              objectValueForTableColumn: [table outlineTableColumn]
+                                 byItem: errorsGroup] string]
+          isEqual: @"Errors (1 issue)"]
+          && [[[[table dataSource] outlineView: table
+                     objectValueForTableColumn: [table outlineTableColumn]
+                                        byItem: notesGroup] string]
+              isEqual: @"Notes (1 issue)"],
+      @"Severity order is independent of arrival order; fatal errors and remarks use their matching categories");
+  [table collapseItem: errorsGroup];
+  [controller buildSystem: build
+          didReceiveError: @"Issue Source.m:1: error: another error\n"];
+  testAssert (
+      ![table isItemExpanded: errorsGroup] && [table isItemExpanded: sourceGroup]
+          && [[table dataSource] outlineView: table
+                      numberOfChildrenOfItem: errorsGroup]
+                 == 2,
+      @"Collapsed severity groups stay collapsed as matching diagnostics arrive");
+  [table collapseItem: sourceGroup];
+  [YCodePreferences setIssueColor: [NSColor magentaColor] forSeverity: @"error"];
+  [table expandItem: sourceGroup];
+  NSAttributedString *errorTitle =
+      [[table dataSource] outlineView: table
+            objectValueForTableColumn: [table outlineTableColumn]
+                               byItem: errorsGroup];
+  testAssert (
+      ![table isItemExpanded: errorsGroup] && [table isItemExpanded: notesGroup]
+          && colorMatches ([errorTitle attribute: NSForegroundColorAttributeName
+                                         atIndex: 0
+                                  effectiveRange: NULL],
+                           1, 0, 1),
+      @"Severity collapse state survives parent collapse and preference changes, and headings use configured colors");
+  [controller buildSystemDidFinishBuild: build success: NO];
   [controller setProject: nil];
+  testAssert ([table numberOfRows] == 0,
+              @"Switching projects clears all outline groups");
   [controller close];
   [controller release];
   [project close];
