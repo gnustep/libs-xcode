@@ -144,6 +144,7 @@ YCodeFileURLFromPath (NSString *path)
   RELEASE (_fontChoices);
   RELEASE (_editorColorWells);
   RELEASE (_preferencesPanel);
+  RELEASE (_issueColorWells);
   [_helpWindow close];
   RELEASE (_helpWindow);
   [super dealloc];
@@ -1142,6 +1143,12 @@ YCodeFileURLFromPath (NSString *path)
   [self refreshEditorColorWells];
 }
 
+- (void) changeFileWatching: (id)sender
+{
+  [YCodePreferences
+      setFileWatchingEnabled: [_fileWatchingCheckbox state] == NSOnState];
+}
+
 - (void) changeTabPreferences: (id)sender
 {
   [YCodePreferences
@@ -1373,6 +1380,69 @@ YCodeFileURLFromPath (NSString *path)
   [_terminalPreferencesView addSubview: reset];
 }
 
+- (void) refreshIssueColors
+{
+  NSArray *severities =
+      [NSArray arrayWithObjects: @"error", @"warning", @"note", nil];
+  NSUInteger index;
+  for (index = 0; index < [_issueColorWells count]; index++)
+    [[_issueColorWells objectAtIndex: index]
+        setColor: [YCodePreferences
+                     issueColorForSeverity: [severities objectAtIndex: index]]];
+}
+
+- (void) changeIssueColor: (id)sender
+{
+  NSArray *severities =
+      [NSArray arrayWithObjects: @"error", @"warning", @"note", nil];
+  NSUInteger index = [_issueColorWells indexOfObjectIdenticalTo: sender];
+  if (index != NSNotFound)
+    [YCodePreferences setIssueColor: [sender color]
+                        forSeverity: [severities objectAtIndex: index]];
+}
+
+- (void) resetIssueColors: (id)sender
+{
+  [YCodePreferences resetIssueColors];
+  [self refreshIssueColors];
+}
+
+- (void) setupIssuePreferences
+{
+  _issuePreferencesView = AUTORELEASE (
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 390, 450)]);
+  [[_preferencesPanel contentView] addSubview: _issuePreferencesView];
+  _issueColorWells = [NSMutableArray new];
+  NSArray *labels =
+      [NSArray arrayWithObjects: @"Errors", @"Warnings", @"Notes", nil];
+  NSUInteger index;
+  for (index = 0; index < [labels count]; index++)
+    {
+      CGFloat y = 405 - index * 40;
+      NSTextField *label = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, y, 250, 24)]);
+      [label setStringValue: [labels objectAtIndex: index]];
+      [label setEditable: NO];
+      [label setBezeled: NO];
+      [label setDrawsBackground: NO];
+      [_issuePreferencesView addSubview: label];
+      NSColorWell *well = AUTORELEASE (
+          [[NSColorWell alloc] initWithFrame: NSMakeRect (290, y, 80, 26)]);
+      [well setContinuous: YES];
+      [well setTarget: self];
+      [well setAction: @selector (changeIssueColor:)];
+      [_issueColorWells addObject: well];
+      [_issuePreferencesView addSubview: well];
+    }
+  NSButton *reset = AUTORELEASE (
+      [[NSButton alloc] initWithFrame: NSMakeRect (215, 16, 155, 30)]);
+  [reset setTitle: @"Restore Defaults"];
+  [reset setBezelStyle: NSRoundedBezelStyle];
+  [reset setTarget: self];
+  [reset setAction: @selector (resetIssueColors:)];
+  [_issuePreferencesView addSubview: reset];
+}
+
 - (void) changeConnectionPreferences: (id)sender
 {
   if (sender == _connectionColorWell)
@@ -1440,6 +1510,10 @@ YCodeFileURLFromPath (NSString *path)
       setHidden: [_preferencesGroup indexOfSelectedItem] != 4];
   [_connectionPreferencesView
       setHidden: [_preferencesGroup indexOfSelectedItem] != 5];
+  [_issuePreferencesView
+      setHidden: [_preferencesGroup indexOfSelectedItem] != 6];
+  if ([_issuePreferencesView isHidden])
+    [_issueColorWells makeObjectsPerformSelector: @selector (deactivate)];
   if ([_connectionPreferencesView isHidden])
     [_connectionColorWell deactivate];
   if ([_terminalPreferencesView isHidden])
@@ -1588,11 +1662,12 @@ YCodeFileURLFromPath (NSString *path)
           initWithFrame: NSMakeRect (20, 458, 350, 28)
               pullsDown: NO]);
       [_preferencesGroup
-          addItemsWithTitles: [NSArray
-                                 arrayWithObjects: @"Editor Colors", @"Editor",
-                                                  @"Fonts", @"Indentation",
-                                                  @"Terminal",
-                                                  @"Connection Line", nil]];
+          addItemsWithTitles: [NSArray arrayWithObjects: @"Editor Colors",
+                                                       @"Editor", @"Fonts",
+                                                       @"Indentation",
+                                                       @"Terminal",
+                                                       @"Connection Line",
+                                                       @"Issues", nil]];
       [_preferencesGroup setTarget: self];
       [_preferencesGroup setAction: @selector (selectPreferenceGroup:)];
       [content addSubview: _preferencesGroup];
@@ -1617,10 +1692,21 @@ YCodeFileURLFromPath (NSString *path)
       [_matchingDelimitersCheckbox
           setAction: @selector (changeMatchingDelimiters:)];
       [_editorPreferencesView addSubview: _matchingDelimitersCheckbox];
+      _fileWatchingCheckbox = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (20, 321, 350, 28)]);
+      [_fileWatchingCheckbox setButtonType: NSSwitchButton];
+      [_fileWatchingCheckbox setTitle: @"Watch files for external changes"];
+      [_fileWatchingCheckbox setTarget: self];
+      [_fileWatchingCheckbox setAction: @selector (changeFileWatching:)];
+      [_fileWatchingCheckbox
+          setToolTip:
+              @"Automatically update project folders and detect changes to open files."];
+      [_editorPreferencesView addSubview: _fileWatchingCheckbox];
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];
       [self setupConnectionPreferences];
+      [self setupIssuePreferences];
       _editorColorWells = [NSMutableArray new];
       NSArray *labels = [NSArray
           arrayWithObjects: @"Editor background", @"Plain text", @"Keywords",
@@ -1670,6 +1756,10 @@ YCodeFileURLFromPath (NSString *path)
                                                               : NSOffState];
   [self refreshFontPreferences];
   [self refreshTerminalPreferences];
+  [self refreshIssueColors];
+  [_fileWatchingCheckbox setState: [YCodePreferences fileWatchingEnabled]
+                                      ? NSOnState
+                                      : NSOffState];
   [_connectionColorWell setColor: [YCodePreferences connectionLineColor]];
   [_connectionWidthChoice
       selectItemAtIndex: [YCodePreferences connectionLineWidth] - 1];

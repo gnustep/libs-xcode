@@ -1617,7 +1617,7 @@ testEditorColorPreferences (void)
   NSView *colorsGroup = [app valueForKey: @"_colorPreferencesView"];
   NSView *editorGroup = [app valueForKey: @"_editorPreferencesView"];
   NSButton *rulers = [app valueForKey: @"_showEditorRulers"];
-  testAssert ([groups numberOfItems] == 4 && ![colorsGroup isHidden] &&
+  testAssert ([groups numberOfItems] == 7 && ![colorsGroup isHidden] &&
                   [editorGroup isHidden],
               @"Preferences starts with the color group selected");
   [groups selectItemAtIndex: 1];
@@ -5735,6 +5735,107 @@ waitForDirectoryItem (YCodeProject *project, NSString *path, BOOL present)
 }
 
 static void
+testFileWatchingPreference (NSString *temporaryDirectory)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey: @"YCodeFileWatchingEnabled"] retain];
+  [defaults removeObjectForKey: @"YCodeFileWatchingEnabled"];
+  testAssert ([YCodePreferences fileWatchingEnabled],
+              @"File watching defaults to enabled");
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root = [temporaryDirectory
+      stringByAppendingPathComponent: @"Watching Preference"];
+  [manager createDirectoryAtPath: root
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *file = [root stringByAppendingPathComponent: @"existing.txt"];
+  [@"original" writeToFile: file
+                atomically: YES
+                  encoding: NSUTF8StringEncoding
+                     error: NULL];
+  YCodeProject *project = [YCodeProject new];
+  [project readFromURL: [NSURL fileURLWithPath: root]
+                ofType: @"YCodeMakeProjectType"
+                 error: NULL];
+  YCodeEditorController *editor = [project editorController];
+  [editor openFile: file];
+  testAssert ([[project valueForKey: @"directoryWatchers"] count] > 0 &&
+                  [[editor valueForKey: @"fileWatchers"] count] > 0,
+              @"Default preference starts directory and editor watchers");
+  AppController *app = [AppController new];
+  [app showPrefPanel: nil];
+  NSPopUpButton *groups = [app valueForKey: @"_preferencesGroup"];
+  [groups selectItemAtIndex: 1];
+  [groups sendAction: [groups action] to: [groups target]];
+  NSButton *checkbox = [app valueForKey: @"_fileWatchingCheckbox"];
+  testAssert ([checkbox state] == NSOnState
+                  && ![[checkbox superview] isHidden],
+              @"Editor preferences exposes file watching enabled by default");
+  [checkbox performClick: nil];
+  testAssert (
+      ![YCodePreferences fileWatchingEnabled]
+          && ![defaults boolForKey: @"YCodeFileWatchingEnabled"] &&
+          [[project valueForKey: @"directoryWatchers"] count] == 0 &&
+          [[editor valueForKey: @"fileWatchers"] count] == 0,
+      @"Disabling file watching saves the setting and stops both kinds of watcher");
+  NSString *added = [root stringByAppendingPathComponent: @"added.txt"];
+  [@"new" writeToFile: added
+           atomically: YES
+             encoding: NSUTF8StringEncoding
+                error: NULL];
+  [@"external" writeToFile: file
+                atomically: YES
+                  encoding: NSUTF8StringEncoding
+                     error: NULL];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.3]];
+  testAssert (
+      waitForDirectoryItem (project, added, NO) == nil &&
+          [[[editor currentDocument] content] isEqual: @"original"],
+      @"Disabled watchers leave the navigator and open file unchanged");
+  YCodeProject *disabledProject = [YCodeProject new];
+  [disabledProject readFromURL: [NSURL fileURLWithPath: root]
+                        ofType: @"YCodeMakeProjectType"
+                         error: NULL];
+  [[disabledProject editorController] openFile: file];
+  testAssert (
+      waitForDirectoryItem (disabledProject, added, YES) != nil &&
+          [[disabledProject valueForKey: @"directoryWatchers"] count] == 0 &&
+          [[[disabledProject editorController] valueForKey: @"fileWatchers"]
+              count]
+              == 0,
+      @"Projects opened with watching disabled still load files without creating watchers");
+  [disabledProject close];
+  [checkbox performClick: nil];
+  testAssert (
+      waitForDirectoryItem (project, added, YES) != nil &&
+          [[[editor currentDocument] content] isEqual: @"external"] &&
+          [[project valueForKey: @"directoryWatchers"] count] > 0 &&
+          [[editor valueForKey: @"fileWatchers"] count] > 0,
+      @"Reenabling watching catches up folder and editor changes immediately");
+  testAssert ([[disabledProject valueForKey: @"directoryWatchers"] count] == 0
+                  && [[[disabledProject editorController]
+                         valueForKey: @"fileWatchers"] count]
+                         == 0,
+              @"Changing the preference does not restart closed projects");
+  [disabledProject release];
+  [project close];
+  [project release];
+  [[app valueForKey: @"_preferencesPanel"] close];
+  [app release];
+  if (saved)
+    [defaults setObject: saved forKey: @"YCodeFileWatchingEnabled"];
+  else
+    [defaults removeObjectForKey: @"YCodeFileWatchingEnabled"];
+  [saved release];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeFileWatchingPreferencesDidChangeNotification
+                    object: nil];
+}
+
+static void
 testDirectoryWatching (NSString *temporaryDirectory)
 {
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -6656,6 +6757,23 @@ testBuildAndRun (NSString *temporaryDirectory)
 static void
 testBuildIssuesPane (NSString *temporaryDirectory)
 {
+  [[NSFileManager defaultManager] createDirectoryAtPath: temporaryDirectory
+                            withIntermediateDirectories: YES
+                                             attributes: nil
+                                                  error: NULL];
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedIssueColors = [[defaults objectForKey: @"YCodeIssueColors"] retain];
+  [YCodePreferences resetIssueColors];
+  testAssert (
+      colorMatches ([YCodePreferences issueColorForSeverity: @"error"], 1, 0, 0)
+          && colorMatches (
+              [YCodePreferences issueColorForSeverity: @"fatal error"], 1, 0, 0)
+          && colorMatches ([YCodePreferences issueColorForSeverity: @"warning"],
+                           1, 1, 0)
+          && colorMatches ([YCodePreferences issueColorForSeverity: @"note"], 1,
+                           1, 1),
+      @"Issues default to red errors, yellow warnings, and white notes");
+
   YCodeProject *project = [[YCodeProject alloc] init];
   [project
       setProjectPath: [temporaryDirectory
@@ -6766,8 +6884,9 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   [controller buildSystem: build didReceiveError: @"\033[1mIssue Source.m:2:"];
   testAssert ([table numberOfRows] == 0,
               @"Incomplete diagnostic waits for its remaining output");
-  [controller buildSystem: build
-          didReceiveError: @"3: \033[31merror: unknown symbol\033[0m\n"];
+  [controller
+          buildSystem: build
+      didReceiveError: @"3: \033[32m\033[44merror: unknown symbol\033[0m\n"];
   [controller buildSystem: build
          didReceiveOutput:
              [NSString stringWithFormat: @"%@:3: warning: unused expression\n",
@@ -6795,13 +6914,82 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   testAssert (
       [[issueDisplay string]
           isEqual: @"error: Issue Source.m:2:3\nunknown symbol"]
-          && [[issueDisplay attribute: NSForegroundColorAttributeName
-                              atIndex: 0
-                       effectiveRange: NULL] isEqual: red]
-          && [[issueDisplay attribute: NSForegroundColorAttributeName
-                              atIndex: [issueDisplay length] - 1
-                       effectiveRange: NULL] isEqual: red],
-      @"Issues retain ANSI colors in severity and message while keeping navigation metadata clean");
+          && colorMatches ([issueDisplay
+                                    attribute: NSForegroundColorAttributeName
+                                      atIndex: 0
+                               effectiveRange: NULL],
+                           1, 0, 0)
+          && colorMatches ([issueDisplay
+                                    attribute: NSForegroundColorAttributeName
+                                      atIndex: [issueDisplay length] - 1
+                               effectiveRange: NULL],
+                           1, 0, 0),
+      @"Issue severity preferences override compiler ANSI colors without changing navigation metadata");
+  testAssert (
+      [issueDisplay attribute: NSBackgroundColorAttributeName
+                      atIndex: [issueDisplay length] - 1
+               effectiveRange: NULL]
+          == nil,
+      @"Compiler background colors do not obscure configured issue colors");
+  NSAttributedString *warning =
+      [[issues objectAtIndex: 1] objectForKey: @"display"];
+  NSAttributedString *note =
+      [[issues objectAtIndex: 2] objectForKey: @"display"];
+  testAssert (
+      colorMatches ([warning attribute: NSForegroundColorAttributeName
+                               atIndex: 0
+                        effectiveRange: NULL],
+                    1, 1, 0)
+          && colorMatches ([note attribute: NSForegroundColorAttributeName
+                                      atIndex: 0
+                               effectiveRange: NULL],
+                           1, 1, 1)
+          && colorMatches ([table backgroundColor], 0, 0, 0),
+      @"Uncolored compiler warnings and notes use readable severity defaults");
+  AppController *preferences = [AppController new];
+  [preferences showPrefPanel: nil];
+  NSPopUpButton *groups = [preferences valueForKey: @"_preferencesGroup"];
+  [groups selectItemWithTitle: @"Issues"];
+  [groups sendAction: [groups action] to: [groups target]];
+  NSArray *wells = [preferences valueForKey: @"_issueColorWells"];
+  testAssert (
+      [wells count] == 3
+          && ![[preferences valueForKey: @"_issuePreferencesView"] isHidden],
+      @"Preferences exposes three issue severity color controls");
+  NSArray *colors =
+      [NSArray arrayWithObjects: [NSColor greenColor], [NSColor cyanColor],
+                                [NSColor magentaColor], nil];
+  NSUInteger index;
+  for (index = 0; index < 3; index++)
+    {
+      NSColorWell *well = [wells objectAtIndex: index];
+      [well setColor: [colors objectAtIndex: index]];
+      [well sendAction: [well action] to: [well target]];
+      NSAttributedString *display =
+          [[issues objectAtIndex: index] objectForKey: @"display"];
+      testAssert (
+          colorMatches ([display attribute: NSForegroundColorAttributeName
+                                   atIndex: 0
+                            effectiveRange: NULL],
+                        index == 2 ? 1 : 0, index == 2 ? 0 : 1,
+                        index == 0 ? 0 : 1),
+          @"Changing an issue color immediately recolors existing rows");
+    }
+  testAssert ([[defaults dictionaryForKey: @"YCodeIssueColors"] count] == 3,
+              @"All issue colors are saved independently");
+  [controller buildSystem: build
+          didReceiveError: @"clang: error: outside build\n"];
+  [preferences performSelector: @selector (resetIssueColors:) withObject: nil];
+  testAssert (
+      colorMatches ([issueDisplay attribute: NSForegroundColorAttributeName
+                                    atIndex: 0
+                             effectiveRange: NULL],
+                    1, 0, 0)
+          && colorMatches ([[wells objectAtIndex: 1] color], 1, 1, 0)
+          && colorMatches ([[wells objectAtIndex: 2] color], 1, 1, 1),
+      @"Restore Defaults updates existing issues and preference controls");
+  [[preferences valueForKey: @"_preferencesPanel"] close];
+  [preferences release];
   [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 0]
       byExtendingSelection: NO];
   YCodeEditorDocument *document =
@@ -6821,6 +7009,7 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   testAssert ([[[controller editorController] openDocuments] count] == 1,
               @"Navigating another issue reuses the open source tab");
 
+  [YCodePreferences setIssueColor: [NSColor greenColor] forSeverity: @"error"];
   [controller buildSystemDidStartBuild: build];
   testAssert ([table numberOfRows] == 0, @"A new build clears stale issues");
   [controller buildSystem: build
@@ -6835,6 +7024,15 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   [controller buildSystemDidFinishBuild: build success: YES];
   testAssert ([table numberOfRows] == 2,
               @"Include tool errors without a source location");
+  NSAttributedString *toolDisplay = [[[controller valueForKey: @"_buildIssues"]
+      objectAtIndex: 1] objectForKey: @"display"];
+  testAssert (
+      colorMatches ([toolDisplay attribute: NSForegroundColorAttributeName
+                                   atIndex: 0
+                            effectiveRange: NULL],
+                    0, 1, 0),
+      @"New tool errors use the configured severity color");
+
   [table selectRowIndexes: [NSIndexSet indexSetWithIndex: 0]
       byExtendingSelection: NO];
   testAssert (NSMaxRange ([document selectedRange]) <=
@@ -6853,6 +7051,15 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   [controller release];
   [project close];
   [project release];
+  if (savedIssueColors)
+    [defaults setObject: savedIssueColors forKey: @"YCodeIssueColors"];
+  else
+    [defaults removeObjectForKey: @"YCodeIssueColors"];
+  [savedIssueColors release];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeIssueColorsDidChangeNotification
+                    object: nil];
 }
 
 static void
@@ -8507,6 +8714,7 @@ main (void)
     }
   if ([arguments containsObject: @"--check-file-modification"])
     {
+      testFileWatchingPreference (temporaryDirectory);
       testFileModificationTracking (temporaryDirectory);
       testDirectoryWatching (temporaryDirectory);
       testLargeDirectoryWatching (temporaryDirectory);
@@ -8635,6 +8843,14 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-issues"])
+    {
+      testBuildIssuesPane (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode issue checks: %lu failures", (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-build-run"])
     {
       testDebuggerRecords ();
@@ -8725,6 +8941,7 @@ main (void)
   testDebuggerVariables ();
   testCloseModifiedFiles (temporaryDirectory);
   testFindReplace (temporaryDirectory);
+  testFileWatchingPreference (temporaryDirectory);
   testFileModificationTracking (temporaryDirectory);
   testDirectoryWatching (temporaryDirectory);
   testLargeDirectoryWatching (temporaryDirectory);

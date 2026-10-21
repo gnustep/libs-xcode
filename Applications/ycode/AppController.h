@@ -27,10 +27,13 @@
   NSView *_editorPreferencesView;
   NSButton *_showEditorRulers;
   NSButton *_matchingDelimitersCheckbox;
+  NSButton *_fileWatchingCheckbox;
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;
   NSView *_terminalPreferencesView;
   NSView *_connectionPreferencesView;
+  NSView *_issuePreferencesView;
+  NSMutableArray *_issueColorWells;
   NSColorWell *_connectionColorWell;
   NSPopUpButton *_connectionWidthChoice;
   NSButton *_terminalFontChoice;

@@ -27,7 +27,16 @@
 #import <AppKit/AppKit.h>
 extern NSString *YCodeTerminalPreferencesDidChangeNotification;
 extern NSString *YCodeConnectionPreferencesDidChangeNotification;
+extern NSString *YCodeFileWatchingPreferencesDidChangeNotification;
+extern NSString *YCodeIssueColorsDidChangeNotification;
 @interface YCodePreferences : NSObject
+/** Severity colors for the Issues pane, independent of compiler ANSI colors. */
++ (NSColor *) issueColorForSeverity: (NSString *)severity;
++ (void) setIssueColor: (NSColor *)color forSeverity: (NSString *)severity;
++ (void) resetIssueColors;
+/** Watch project folders and open files for external changes; enabled by default. */
++ (BOOL) fileWatchingEnabled;
++ (void) setFileWatchingEnabled: (BOOL)enabled;
 /** Appearance of the model viewer's rectilinear connection overlay. */
 + (NSColor *) connectionLineColor;
 + (NSUInteger) connectionLineWidth;

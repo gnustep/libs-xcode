@@ -28,7 +28,93 @@ NSString *YCodeTerminalPreferencesDidChangeNotification
     = @"YCodeTerminalPreferencesDidChange";
 NSString *YCodeConnectionPreferencesDidChangeNotification
     = @"YCodeConnectionPreferencesDidChange";
+NSString *YCodeFileWatchingPreferencesDidChangeNotification
+    = @"YCodeFileWatchingPreferencesDidChange";
+NSString *YCodeIssueColorsDidChangeNotification = @"YCodeIssueColorsDidChange";
 @implementation YCodePreferences
++ (NSColor *) issueColorForSeverity: (NSString *)severity
+{
+  NSString *key = [[severity lowercaseString] hasSuffix: @"error"] ? @"error"
+                  : [[severity lowercaseString] isEqual: @"warning"]
+                      ? @"warning"
+                      : @"note";
+  NSColor *fallback = [key isEqual: @"error"]     ? [NSColor redColor]
+                      : [key isEqual: @"warning"] ? [NSColor yellowColor]
+                                                 : [NSColor whiteColor];
+  id rgb = [[[NSUserDefaults standardUserDefaults]
+      dictionaryForKey: @"YCodeIssueColors"] objectForKey: key];
+  if (![rgb isKindOfClass: [NSArray class]] || [rgb count] != 3)
+    return fallback;
+  NSUInteger index;
+  for (index = 0; index < 3; index++)
+    {
+      id value = [rgb objectAtIndex: index];
+      if (![value respondsToSelector: @selector (doubleValue)]
+          || !isfinite ([value doubleValue]) || [value doubleValue] < 0 ||
+          [value doubleValue] > 1)
+        return fallback;
+    }
+  return [NSColor colorWithCalibratedRed: [[rgb objectAtIndex: 0] doubleValue]
+                                   green: [[rgb objectAtIndex: 1] doubleValue]
+                                    blue: [[rgb objectAtIndex: 2] doubleValue]
+                                   alpha: 1];
+}
+
++ (void) setIssueColor: (NSColor *)color forSeverity: (NSString *)severity
+{
+  if (![[NSArray arrayWithObjects: @"error", @"warning", @"note", nil]
+          containsObject: severity])
+    return;
+  color = [color colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
+  if (!color)
+    return;
+  NSMutableDictionary *colors = [NSMutableDictionary
+      dictionaryWithDictionary: [[NSUserDefaults standardUserDefaults]
+                                   dictionaryForKey: @"YCodeIssueColors"]
+                                   ?: [NSDictionary dictionary]];
+  [colors
+      setObject: [NSArray
+                    arrayWithObjects:
+                        [NSNumber numberWithDouble: [color redComponent]],
+                        [NSNumber numberWithDouble: [color greenComponent]],
+                        [NSNumber numberWithDouble: [color blueComponent]], nil]
+         forKey: severity];
+  [[NSUserDefaults standardUserDefaults] setObject: colors
+                                            forKey: @"YCodeIssueColors"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeIssueColorsDidChangeNotification
+                    object: nil];
+}
+
++ (void) resetIssueColors
+{
+  [[NSUserDefaults standardUserDefaults]
+      removeObjectForKey: @"YCodeIssueColors"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeIssueColorsDidChangeNotification
+                    object: nil];
+}
+
++ (BOOL) fileWatchingEnabled
+{
+  id value = [[NSUserDefaults standardUserDefaults]
+      objectForKey: @"YCodeFileWatchingEnabled"];
+  return [value respondsToSelector: @selector (boolValue)] ? [value boolValue]
+                                                          : YES;
+}
+
++ (void) setFileWatchingEnabled: (BOOL)enabled
+{
+  [[NSUserDefaults standardUserDefaults] setBool: enabled
+                                          forKey: @"YCodeFileWatchingEnabled"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeFileWatchingPreferencesDidChangeNotification
+                    object: nil];
+}
+
 + (NSColor *) connectionLineColor
 {
   NSArray *rgb = [[NSUserDefaults standardUserDefaults]

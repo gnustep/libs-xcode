@@ -176,6 +176,11 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
                object: nil];
 
       // Default editor settings
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (fileWatchingPreferencesChanged:)
+                 name: YCodeFileWatchingPreferencesDidChangeNotification
+               object: nil];
       _editorFont = [[YCodePreferences fontForPane: @"Editor"] retain];
       _backgroundColor =
           [[YCodeSyntaxHighlighter preferredColorForKey: @"background"] retain];
@@ -260,10 +265,22 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) startWatchingFiles
 {
+  _fileWatchingStopped = NO;
+  [self updateFileWatchers];
+}
+
+- (void) fileWatchingPreferencesChanged: (NSNotification *)notification
+{
   [self updateFileWatchers];
 }
 
 - (void) stopWatchingFiles
+{
+  _fileWatchingStopped = YES;
+  [self clearFileWatchers];
+}
+
+- (void) clearFileWatchers
 {
   [NSObject
       cancelPreviousPerformRequestsWithTarget: self
@@ -276,6 +293,11 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) updateFileWatchers
 {
+  if (_fileWatchingStopped || ![YCodePreferences fileWatchingEnabled])
+    {
+      [self clearFileWatchers];
+      return;
+    }
   NSMutableDictionary *directories = [NSMutableDictionary dictionary];
   NSEnumerator *documents = [_openDocuments objectEnumerator];
   YCodeEditorDocument *document;

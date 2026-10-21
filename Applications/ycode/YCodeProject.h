@@ -42,6 +42,7 @@
   NSMutableDictionary *_directoryGroups;
   NSMutableSet *_changedDirectories;
   BOOL _watchingDirectories;
+  BOOL _fileWatchingRequested;
   BOOL _directoryRefreshPending;
   PBXProject *_project;
   PBXContainer *_container;

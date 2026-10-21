@@ -404,6 +404,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                      name: NSWindowWillCloseNotification
                    object: [self window]];
       [center addObserver: self
+                 selector: @selector (issueColorsChanged:)
+                     name: YCodeIssueColorsDidChangeNotification
+                   object: nil];
+      [center addObserver: self
                  selector: @selector (fontsChanged:)
                      name: @"YCodeFontsDidChange"
                    object: nil];
@@ -444,6 +448,27 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                object: nil];
     }
   return self;
+}
+
+- (void) applyColorToIssue: (NSDictionary *)issue
+{
+  NSMutableAttributedString *display = [issue objectForKey: @"display"];
+  NSRange range = NSMakeRange (0, [display length]);
+  [display removeAttribute: NSBackgroundColorAttributeName range: range];
+  [display
+      addAttribute: NSForegroundColorAttributeName
+             value: [YCodePreferences
+                       issueColorForSeverity: [issue objectForKey: @"severity"]]
+             range: range];
+}
+
+- (void) issueColorsChanged: (NSNotification *)notification
+{
+  NSEnumerator *enumerator = [_buildIssues objectEnumerator];
+  NSDictionary *issue;
+  while ((issue = [enumerator nextObject]) != nil)
+    [self applyColorToIssue: issue];
+  [_issuesTableView reloadData];
 }
 
 - (void) fontsChanged: (NSNotification *)notification
@@ -1408,6 +1433,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                     error: NULL];
       _issuesTableView =
           [[NSTableView alloc] initWithFrame: [_bottomView bounds]];
+      [_issuesTableView setBackgroundColor: [NSColor blackColor]];
       [_issuesTableView setGridStyleMask: NSTableViewGridNone];
       [_issuesTableView setAllowsMultipleSelection: NO];
       [_issuesTableView setAllowsEmptySelection: YES];
@@ -2724,6 +2750,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           [YCodePreferences applyFont: [YCodePreferences fontForPane: @"Issues"]
                                toText: display];
           [issue setObject: display forKey: @"display"];
+          [self applyColorToIssue: issue];
           [_buildIssues replaceObjectAtIndex: count withObject: issue];
         }
       [buffer deleteCharactersInRange: NSMakeRange (0, NSMaxRange (newline))];

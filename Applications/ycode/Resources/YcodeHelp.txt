@@ -74,7 +74,11 @@ The Debugger command field accepts GDB commands such as backtrace and print vari
 
 6. PREFERENCES AND SHORTCUTS
 
-On GNUstep, Preferences and Help are in Info. On macOS, Preferences is in the application menu and Ycode Help is in Help. Preferences controls pane fonts, editor colors, tab width, spaces versus tabs, indentation, rulers, and matching delimiters. Project indentation can use compiler indentation settings from the active target.
+On GNUstep, Preferences and Help are in Info. On macOS, Preferences is in the application menu and Ycode Help is in Help. Preferences > Editor includes “Watch files for external changes”, enabled by default. Turning it off stops automatic folder updates and external-change detection for open files. Turning it back on refreshes open projects and checks their files immediately. The setting is saved for future sessions.
+
+Preferences controls pane fonts, editor colors, tab width, spaces versus tabs, indentation, rulers, and matching delimiters. Project indentation can use compiler indentation settings from the active target.
+
+Preferences > Issues configures the text colors for errors, warnings, and notes. Defaults are red, yellow, and white on a black Issues background. Changes apply immediately to existing issues and are saved for future sessions. Restore Defaults resets only issue colors; console ANSI colors are unchanged.
 
 Common commands and their menu keys:
 New Project: Command-N

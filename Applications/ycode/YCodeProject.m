@@ -23,6 +23,7 @@
 */
 
 #import "YCodeProject.h"
+#import "YCodePreferences.h"
 #import "YCodeFileWatcher.h"
 #import "YCodeWindowController.h"
 #import "YCodeProjectNavigatorController.h"
@@ -923,6 +924,12 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
           addObserver: self
              selector: @selector (directoryChanged:)
                  name: @"YCodeDirectoryDidChange"
+               object: nil];
+
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (fileWatchingPreferencesChanged:)
+                 name: YCodeFileWatchingPreferencesDidChangeNotification
                object: nil];
 
       // Initialize controllers
@@ -2554,16 +2561,32 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
              afterDelay: 0.1];
 }
 
+- (void) fileWatchingPreferencesChanged: (NSNotification *)notification
+{
+  if (!_fileWatchingRequested)
+    return;
+  if ([YCodePreferences fileWatchingEnabled])
+    [self startWatchingFiles];
+  else
+    {
+      [self stopWatchingFiles];
+      _fileWatchingRequested = YES;
+    }
+}
+
 - (void) startWatchingFiles
 {
-  _watchingDirectories = _directoryProject;
-  if (_watchingDirectories)
+  _fileWatchingRequested = YES;
+  _watchingDirectories
+      = _directoryProject && [YCodePreferences fileWatchingEnabled];
+  if (_directoryProject)
     [self refreshDirectoryFiles];
   [_editorController startWatchingFiles];
 }
 
 - (void) stopWatchingFiles
 {
+  _fileWatchingRequested = NO;
   _watchingDirectories = NO;
   _directoryRefreshPending = NO;
   [NSObject cancelPreviousPerformRequestsWithTarget: self

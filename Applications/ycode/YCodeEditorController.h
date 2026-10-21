@@ -39,6 +39,7 @@ extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 
 @interface YCodeEditorController : NSObject <NSTabViewDelegate>
 {
+  BOOL _fileWatchingStopped;
   YCodeProject *_project;
 
   NSTabView *_tabView;
