@@ -1067,4 +1067,35 @@
 {
 }
 
+#ifdef GNUSTEP
+#if OS_API_VERSION(MAC_OS_X_VERSION_10_7, GS_API_LATEST)
+/* GNUstep requires these delegate methods even for cell-based outlines. */
+- (NSView *) outlineView: (NSOutlineView *)outlineView
+     viewForTableColumn: (NSTableColumn *)tableColumn
+                   item: (id)item
+{
+  return nil;
+}
+
+- (NSTableRowView *) outlineView: (NSOutlineView *)outlineView
+                 rowViewForItem: (id)item
+{
+  return nil;
+}
+
+- (void) outlineView: (NSOutlineView *)outlineView
+      didAddRowView: (NSTableRowView *)rowView
+             forRow: (NSInteger)rowIndex
+{
+}
+
+- (void) outlineView: (NSOutlineView *)outlineView
+    didRemoveRowView: (NSTableRowView *)rowView
+              forRow: (NSInteger)rowIndex
+{
+}
+
+#endif
+#endif
+
 @end
