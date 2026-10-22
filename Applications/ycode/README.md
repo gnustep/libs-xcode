@@ -25,6 +25,27 @@ make -C XCode
 make -C Applications/ycode
 ```
 
+On macOS with full Xcode selected, build against Apple's Foundation and AppKit
+without installing GNUstep:
+
+```sh
+sh Tests/run-macos.sh
+```
+
+This builds the library, tools, and `build/macos/Debug/Ycode.app`, and runs the
+library regression tests. Set `CONFIGURATION=Release` for a Release build.
+After building the framework, rebuild only the app with:
+
+```sh
+xcodebuild -project Applications/ycode/Ycode.xcodeproj -target Ycode \
+  -configuration Debug SYMROOT="$PWD/build/macos" CODE_SIGNING_ALLOWED=NO build
+```
+
+The app embeds XCode.framework and its editor/debugger bundles and can be moved
+out of the build directory. Native model previews report that GNUstep archive
+decoders are unavailable; waveform decoding requires the optional GNUstep
+libsndfile integration. GNUstep builds continue to use the makefiles below.
+
 The repository's top-level build and install include Ycode. You can also install it
 separately, choosing the domain containing the application you launch. For an
 existing System-domain installation, run this from the repository root after

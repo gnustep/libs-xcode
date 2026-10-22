@@ -3121,7 +3121,11 @@ testEditorEditing (NSString *directory)
   testAssert (
       [[view string] isEqual: @"{\n  "],
       @"Return after an opening brace uses two spaces independently of project indentation");
-  CGFloat cellWidth = [[view font] widthOfString: @"8"];
+  CGFloat cellWidth =
+      [@"8" sizeWithAttributes: [NSDictionary
+                                   dictionaryWithObject: [view font]
+                                                 forKey: NSFontAttributeName]]
+          .width;
   testAssert (
       fabs ([[view defaultParagraphStyle] defaultTabInterval] - 8 * cellWidth)
           < 0.01,
@@ -8684,6 +8688,161 @@ testLanguageBundles (NSString *directory)
   [document release];
 }
 
+static void
+testProjectDocumentOpening (NSString *directory)
+{
+  NSString *package =
+      [directory stringByAppendingPathComponent: @"Document.xcodeproj"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath: package
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *contents
+      = @"{ objects = { ROOT = { isa = PBXProject; mainGroup = MAIN; }; MAIN = { isa = PBXGroup; children = (); sourceTree = \"<group>\"; }; }; rootObject = ROOT; }";
+  [contents
+      writeToFile: [package stringByAppendingPathComponent: @"project.pbxproj"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  YCodeDocumentController *controller =
+      [YCodeDocumentController sharedDocumentController];
+  NSURL *url = [NSURL fileURLWithPath: package];
+  NSError *error = nil;
+  testAssert (
+      [[controller typeForContentsOfURL: url error: &error]
+          isEqual: @"YCodeXcodeProjectType"],
+      @"Xcode packages resolve to the project's internal document type");
+  testAssert (
+      [[controller
+          typeForContentsOfURL:
+              [NSURL fileURLWithPath: [directory stringByAppendingPathComponent:
+                                                    @"Legacy.pcproj"]]
+                         error: NULL] isEqual: @"YCodeProjectCenterProjectType"],
+      @"ProjectCenter packages resolve to their internal document type");
+  YCodeProject *project = [controller openDocumentWithContentsOfURL: url
+                                                            display: NO
+                                                              error: &error];
+  testAssert ([project isKindOfClass: [YCodeProject class]] &&
+                  [project project] != nil && error == nil,
+              @"Open an Xcode package through NSDocumentController");
+  testAssert ([controller openDocumentWithContentsOfURL: url
+                                                display: NO
+                                                  error: NULL]
+                  == project,
+              @"Opening the same Xcode package reuses its document");
+  [project close];
+}
+
+static void
+testWindowResizing (NSString *directory)
+{
+  [[NSFileManager defaultManager] createDirectoryAtPath: directory
+                            withIntermediateDirectories: YES
+                                             attributes: nil
+                                                  error: NULL];
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedFrame =
+      [[defaults objectForKey: @"NSWindow Frame YCodeMainWindow"] retain];
+  NSArray *sidebarKeys =
+      [NSArray arrayWithObjects: @"YCodeNavigatorWidth", @"YCodeInspectorWidth",
+                                @"YCodeInspectorHidden", nil];
+  NSMutableDictionary *savedSidebars = [NSMutableDictionary dictionary];
+  NSEnumerator *keys = [sidebarKeys objectEnumerator];
+  NSString *key;
+  while ((key = [keys nextObject]) != nil)
+    if ([defaults objectForKey: key])
+      [savedSidebars setObject: [defaults objectForKey: key] forKey: key];
+  NSString *source = [directory stringByAppendingPathComponent: @"Resize.m"];
+  [@"int main(void) { return 0; }\n" writeToFile: source
+                                      atomically: YES
+                                        encoding: NSUTF8StringEncoding
+                                           error: NULL];
+  YCodeProject *project = [YCodeProject new];
+  testAssert ([project readFromURL: [NSURL fileURLWithPath: directory]
+                            ofType: @"YCodeMakeProjectType"
+                             error: NULL],
+              @"Load a directory project for resize checks");
+  YCodeWindowController *controller = [YCodeWindowController new];
+  [controller setProject: project];
+  NSOutlineView *outline = [[project navigatorController] outlineView];
+  NSInteger sourceRow;
+  for (sourceRow = 0; sourceRow < [outline numberOfRows]; sourceRow++)
+    if ([[[project navigatorController]
+            resolvedFilePathForNavigatorItem: [outline itemAtRow: sourceRow]]
+            isEqual: source])
+      break;
+  testAssert (sourceRow < [outline numberOfRows],
+              @"Source is visible in the navigator");
+  if (sourceRow < [outline numberOfRows])
+    [outline selectRowIndexes: [NSIndexSet indexSetWithIndex: sourceRow]
+         byExtendingSelection: NO];
+  testAssert (
+      [[[[project editorController] currentDocument] filePath] isEqual: source],
+      @"Selecting a navigator source opens its editor document");
+  [[project editorController] closeFile: source];
+  testAssert ([[project editorController] currentDocument] == nil,
+              @"Closing the tab leaves the navigator selection intact");
+  testAssert ([outline action] != NULL &&
+                  [outline target] == [project navigatorController],
+              @"Navigator has an explicit single-click action");
+  if ([outline action])
+    [[outline target] performSelector: [outline action] withObject: outline];
+  testAssert (
+      [[[[project editorController] currentDocument] filePath] isEqual: source],
+      @"Clicking the selected navigator source reopens its editor");
+  NSTabView *tabs = [[project editorController] tabView];
+  testAssert (
+      [[tabs selectedTabViewItem] view] ==
+              [[[project editorController] currentDocument] editorView]
+          && [[[[project editorController] currentDocument] textView] string]
+                 != nil,
+      @"Selected source has a visible editor tab and text contents");
+  testAssert (
+      ![[outline delegate] respondsToSelector: @selector (outlineView:
+                                                  viewForTableColumn:item:)],
+      @"Navigator uses its icon/text cells instead of empty row views");
+  testAssert ([outline numberOfRows] > 0,
+              @"Navigator keeps project rows visible");
+  [[controller window] makeKeyAndOrderFront: nil];
+  [controller setInspectorVisible: NO];
+  NSUInteger index;
+  for (index = 0; index < 8; index++)
+    {
+      [[controller window]
+          setContentSize: NSMakeSize (800 + index * 70, 500 + index * 35)];
+      [[controller window] displayIfNeeded];
+      [[NSRunLoop currentRunLoop]
+          runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+    }
+  testAssert ([[[[project editorController] currentDocument] content]
+                  isEqual: @"int main(void) { return 0; }\n"],
+              @"Repeated resizing preserves the open editor");
+#ifndef GNUSTEP
+  NSView *inspector = [controller valueForKey: @"_inspectorView"];
+  testAssert (NSWidth ([inspector frame]) == 0,
+              @"Resizing keeps the hidden inspector collapsed");
+#endif
+  [controller setInspectorVisible: YES];
+  testAssert (NSWidth ([[controller valueForKey: @"_inspectorView"] frame]) > 0,
+              @"Inspector can be restored after enlarging the window");
+  [project close];
+  [controller close];
+  [controller release];
+  [project release];
+  if (savedFrame)
+    [defaults setObject: savedFrame forKey: @"NSWindow Frame YCodeMainWindow"];
+  else
+    [defaults removeObjectForKey: @"NSWindow Frame YCodeMainWindow"];
+  [savedFrame release];
+  keys = [sidebarKeys objectEnumerator];
+  while ((key = [keys nextObject]) != nil)
+    if ([savedSidebars objectForKey: key])
+      [defaults setObject: [savedSidebars objectForKey: key] forKey: key];
+    else
+      [defaults removeObjectForKey: key];
+}
+
 int
 main (void)
 {
@@ -8702,6 +8861,37 @@ main (void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject: @"--check-project-documents"])
+    {
+      testProjectDocumentOpening (temporaryDirectory);
+      if ([arguments count] == 3)
+        {
+          NSError *error = nil;
+          YCodeProject *opened =
+              [[YCodeDocumentController sharedDocumentController]
+                  openDocumentWithContentsOfURL:
+                      [NSURL fileURLWithPath: [arguments objectAtIndex: 2]]
+                                        display: NO
+                                          error: &error];
+          testAssert (
+              opened != nil && [opened project] != nil && error == nil,
+              @"Open the supplied Xcode project through the document controller");
+          [opened close];
+        }
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode project document checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
+  if ([arguments containsObject: @"--check-window-resize"])
+    {
+      testWindowResizing (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode resize checks: %lu failures", (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-editor-bundles"])
     {
       testEditorBundles ();
@@ -9061,6 +9251,7 @@ main (void)
   testMatchingDelimiters ();
   testExternalFileChanges (temporaryDirectory);
   testWorkspaceFileOpening (temporaryDirectory);
+  testProjectDocumentOpening (temporaryDirectory);
   testFontAndSidebarPreferences ();
   testSoundInspector (
       [temporaryDirectory stringByAppendingPathComponent: @"Sound Inspector"]);
@@ -9443,6 +9634,7 @@ main (void)
                   @"Keep loaded document intact after failed read");
     }
   [document close];
+  testWindowResizing (temporaryDirectory);
   testEditorEditing (temporaryDirectory);
   testEditorBundles ();
   testEditorBundleFiles (temporaryDirectory);

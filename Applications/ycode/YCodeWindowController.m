@@ -66,6 +66,13 @@
 - (void) addIssue: (NSDictionary *)issue;
 @end
 
+/* AppKit no longer inserts separator items; use a fixed space instead. */
+#ifdef GNUSTEP
+#define YCodeToolbarSeparatorItemIdentifier NSToolbarSeparatorItemIdentifier
+#else
+#define YCodeToolbarSeparatorItemIdentifier NSToolbarSpaceItemIdentifier
+#endif
+
 @implementation YCodeBuildIssueItem
 - (id) initWithPath: (NSString *)path
 {
@@ -667,6 +674,42 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   _restoringSidebars = restoring;
 }
 
+#ifndef GNUSTEP
+/* Keep collapsed sidebars out of AppKit's proportional resize calculation. */
+- (void) splitView: (NSSplitView *)splitView
+    resizeSubviewsWithOldSize: (NSSize)oldSize
+{
+  if (splitView != _mainSplitView && splitView != _contentSplitView)
+    {
+      [splitView adjustSubviews];
+      return;
+    }
+  if ([[splitView subviews] count] != 2)
+    return;
+  BOOL restoring = _restoringSidebars;
+  _restoringSidebars = YES;
+  NSRect bounds = [splitView bounds];
+  CGFloat width = MAX (0, NSWidth (bounds));
+  CGFloat height = MAX (0, NSHeight (bounds));
+  BOOL visible
+      = splitView == _mainSplitView ? _navigatorVisible : _inspectorVisible;
+  CGFloat sidebar
+      = splitView == _mainSplitView ? _navigatorWidth : _inspectorWidth;
+  CGFloat divider = visible ? [splitView dividerThickness] : 0;
+  sidebar = visible ? MIN (sidebar, MAX (0, width - divider - 250)) : 0;
+  CGFloat leftWidth = splitView == _mainSplitView
+                          ? sidebar
+                          : MAX (0, width - sidebar - divider);
+  NSView *left = [[splitView subviews] objectAtIndex: 0];
+  NSView *right = [[splitView subviews] objectAtIndex: 1];
+  [left setFrame: NSMakeRect (0, 0, leftWidth, height)];
+  [right setFrame: NSMakeRect (leftWidth + divider, 0,
+                              MAX (0, width - leftWidth - divider), height)];
+  _restoringSidebars = restoring;
+}
+
+#endif
+
 - (void) sidebarResized: (NSNotification *)notification
 {
   if (_restoringSidebars)
@@ -976,13 +1019,13 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
             [_toolbar removeItemAtIndex: targetIndex];
           identifiers = [[_toolbar items] valueForKey: @"itemIdentifier"];
           NSUInteger separatorIndex =
-              [identifiers indexOfObject: NSToolbarSeparatorItemIdentifier];
+              [identifiers indexOfObject: YCodeToolbarSeparatorItemIdentifier];
           if (separatorIndex == NSNotFound)
             {
               separatorIndex = [identifiers count];
-              [_toolbar
-                  insertItemWithItemIdentifier: NSToolbarSeparatorItemIdentifier
-                                       atIndex: separatorIndex];
+              [_toolbar insertItemWithItemIdentifier:
+                            YCodeToolbarSeparatorItemIdentifier
+                                             atIndex: separatorIndex];
             }
           [_toolbar insertItemWithItemIdentifier: @"scheme"
                                          atIndex: separatorIndex + 1];
@@ -1043,7 +1086,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                   [identifiers indexOfObject: [anchors objectAtIndex: i]];
               if (index == NSNotFound)
                 index = [identifiers
-                    indexOfObject: NSToolbarSeparatorItemIdentifier];
+                    indexOfObject: YCodeToolbarSeparatorItemIdentifier];
               else if (i > 0)
                 index++;
               if (index == NSNotFound)
@@ -1103,9 +1146,9 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
               index = index == NSNotFound ? [identifiers count] : index + 1;
               [_toolbar insertItemWithItemIdentifier: @"buildStatus"
                                              atIndex: index];
-              [_toolbar
-                  insertItemWithItemIdentifier: NSToolbarSeparatorItemIdentifier
-                                       atIndex: index + 1];
+              [_toolbar insertItemWithItemIdentifier:
+                            YCodeToolbarSeparatorItemIdentifier
+                                             atIndex: index + 1];
             }
 #ifdef GNUSTEP
           NSMutableDictionary *configuration = [NSMutableDictionary
@@ -1766,7 +1809,12 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                   setFrame: NSMakeRect (0, 0, 0,
                                        NSHeight ([firstSubview frame]))];
             }
+#ifdef GNUSTEP
           [_mainSplitView adjustSubviews];
+#else
+          [self splitView: _mainSplitView
+              resizeSubviewsWithOldSize: [_mainSplitView bounds].size];
+#endif
         }
     }
   [self restoreSidebarWidths];
@@ -1808,7 +1856,12 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                   setFrame: NSMakeRect (0, 0, 0,
                                        NSHeight ([lastSubview frame]))];
             }
+#ifdef GNUSTEP
           [_contentSplitView adjustSubviews];
+#else
+          [self splitView: _contentSplitView
+              resizeSubviewsWithOldSize: [_contentSplitView bounds].size];
+#endif
         }
     }
   [self restoreSidebarWidths];
@@ -3286,7 +3339,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [NSArray arrayWithObjects: @"clean", @"build", @"run", @"debug", @"stop",
                                 @"pause", @"continue", @"next", @"stepInto",
                                 @"stepOut", @"restart", @"go", @"up", @"down",
-                                NSToolbarSeparatorItemIdentifier, @"scheme",
+                                YCodeToolbarSeparatorItemIdentifier, @"scheme",
                                 @"architecture", @"buildStatus", @"navigator",
                                 @"bottom", @"inspector",
                                 NSToolbarFlexibleSpaceItemIdentifier, nil];
@@ -3294,14 +3347,14 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 
 - (NSArray *) toolbarDefaultItemIdentifiers: (NSToolbar *)toolbar
 {
-  return
-      [NSArray arrayWithObjects: @"clean", @"build", @"run", @"debug", @"stop",
-                                @"pause", @"continue", @"next", @"stepInto",
-                                @"stepOut", NSToolbarSeparatorItemIdentifier,
-                                @"scheme", @"architecture", @"buildStatus",
-                                NSToolbarSeparatorItemIdentifier,
-                                NSToolbarFlexibleSpaceItemIdentifier,
-                                @"navigator", @"bottom", @"inspector", nil];
+  return [NSArray arrayWithObjects: @"clean", @"build", @"run", @"debug",
+                                   @"stop", @"pause", @"continue", @"next",
+                                   @"stepInto", @"stepOut",
+                                   YCodeToolbarSeparatorItemIdentifier,
+                                   @"scheme", @"architecture", @"buildStatus",
+                                   YCodeToolbarSeparatorItemIdentifier,
+                                   NSToolbarFlexibleSpaceItemIdentifier,
+                                   @"navigator", @"bottom", @"inspector", nil];
 }
 
 - (NSToolbarItem *) toolbar: (NSToolbar *)toolbar

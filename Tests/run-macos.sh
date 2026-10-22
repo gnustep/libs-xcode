@@ -17,6 +17,29 @@ xcodebuild -project libs-xcode.xcodeproj \
   -configuration "$configuration" \
   SYMROOT="$repo_dir/build/macos" CODE_SIGNING_ALLOWED=NO build
 
+# Build and package the AppKit application against the same local framework.
+xcodebuild -project Applications/ycode/Ycode.xcodeproj -target Ycode \
+  -configuration "$configuration" \
+  SYMROOT="$repo_dir/build/macos" CODE_SIGNING_ALLOWED=NO build
+
+app_contents="$products_dir/Ycode.app/Contents"
+test -x "$app_contents/MacOS/Ycode"
+# Editor bundles dynamically link to host classes in the application executable.
+nm -gU "$app_contents/MacOS/Ycode" > "$products_dir/ycode-exported-symbols.log"
+for host_class in YCodeEditorDocument YCodeTextView YCodeSyntaxHighlighter YCEditorRulerView; do
+  grep -Fq "_OBJC_CLASS_\$_$host_class" "$products_dir/ycode-exported-symbols.log"
+done
+test "$(plutil -extract CFBundleIconFile raw "$app_contents/Info.plist")" = Ycode.icns
+test -s "$app_contents/Resources/Ycode.icns"
+test "$(plutil -extract CFBundleDocumentTypes.0.NSDocumentClass raw -o - "$app_contents/Info.plist")" = YCodeProject
+test "$(plutil -extract CFBundleDocumentTypes.0.LSItemContentTypes.0 raw -o - "$app_contents/Info.plist")" = com.apple.xcode.project
+test -f "$app_contents/Frameworks/XCode.framework/XCode"
+for editor in Text Image Sound Model; do
+  test -x "$app_contents/Resources/Editors/$editor.bundle/Contents/MacOS/$editor"
+done
+test -x "$app_contents/Resources/Debuggers/GDB.bundle/Contents/MacOS/GDB"
+test -x "$app_contents/Resources/YCodeTestHost.bundle/Contents/MacOS/YCodeTestHost"
+
 xcrun --sdk macosx clang -fno-objc-arc -fobjc-exceptions \
   -I "$repo_dir/Tools/buildtool" -F "$products_dir" \
   -include "$products_dir/XCode.framework/Headers/GSXCCommon.h" \
@@ -30,5 +53,8 @@ cd "$repo_dir/Tests"
   -configuration Debug -alltargets build
 
 # Exercise startup without building a project or requiring GNUstep tools.
-"$products_dir/buildtool" -project > "$products_dir/buildtool-startup.log" 2>&1
+startup_status=0
+"$products_dir/buildtool" -project > "$products_dir/buildtool-startup.log" 2>&1 \
+  || startup_status=$?
+test "$startup_status" -eq 1
 grep -q 'Parameter is mandatory' "$products_dir/buildtool-startup.log"

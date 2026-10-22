@@ -349,6 +349,7 @@
   YCodeNavigatorCell *cell = [[YCodeNavigatorCell alloc] initTextCell: @""];
   // The outline view supplies disclosure triangles; the cell supplies the icon.
   [cell setEditable: NO];
+  [cell setTextColor: [NSColor controlTextColor]];
   [cell setFont: [NSFont systemFontOfSize: [NSFont smallSystemFontSize]]];
   [column setDataCell: cell];
   RELEASE (cell);
@@ -356,6 +357,7 @@
   [_outlineView setDataSource: self];
   [_outlineView setDelegate: self];
   [_outlineView setTarget: self];
+  [_outlineView setAction: @selector (outlineViewClick:)];
   [_outlineView setDoubleAction: @selector (outlineViewDoubleClick:)];
   // A newly attached outline has no expansion or selection state to restore.
   [_rootItems removeAllObjects];
@@ -713,6 +715,14 @@
     }
 }
 
+- (void) outlineViewClick: (id)sender
+{
+  // A mouse click must also reopen the selected file after its tab was closed.
+  // Keep the notification path for keyboard and programmatic selection changes.
+  if (sender == _outlineView)
+    [self outlineViewSelectionDidChange: nil];
+}
+
 - (void) outlineViewDoubleClick: (id)sender
 {
   NSInteger clickedRow = [_outlineView clickedRow];
@@ -1054,31 +1064,6 @@
 
 - (void) outlineView: (NSOutlineView *)outlineView
     didClickTableColumn: (NSTableColumn *)tableColumn
-{
-}
-
-- (NSView *) outlineView: (NSOutlineView *)outlineView
-     viewForTableColumn: (NSTableColumn *)tableColumn
-                   item: (id)item
-{
-  return nil;
-}
-
-- (NSTableRowView *) outlineView: (NSOutlineView *)outlineView
-                 rowViewForItem: (id)item
-{
-  return nil;
-}
-
-- (void) outlineView: (NSOutlineView *)outlineView
-      didAddRowView: (NSTableRowView *)rowView
-             forRow: (NSInteger)row
-{
-}
-
-- (void) outlineView: (NSOutlineView *)outlineView
-    didRemoveRowView: (NSTableRowView *)rowView
-              forRow: (NSInteger)row
 {
 }
 

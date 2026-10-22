@@ -121,12 +121,17 @@ Products are in `build/macos/Debug`. Keep the command-line tools beside
 targets use manual reference counting and do not require GNUstep or CocoaPods.
 The other targets in this project, including `All`, invoke GNUstep make.
 
-To build and run the regression tests and a buildtool startup check:
+To build the framework, tools, and native Ycode app, run the shared regression
+tests, and check buildtool startup:
 
 ```sh
 sh Tests/run-macos.sh
 CONFIGURATION=Release sh Tests/run-macos.sh
 ```
+
+Ycode is packaged as `build/macos/Debug/Ycode.app` (or `Release`), with its
+framework and editor/debugger bundles embedded. See the
+[Ycode build instructions](Applications/ycode/README.md#build-and-installation).
 
 Link clients against `XCode.framework` and import its public headers:
 

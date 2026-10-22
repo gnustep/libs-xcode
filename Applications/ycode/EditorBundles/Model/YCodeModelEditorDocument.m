@@ -708,9 +708,10 @@ YCConnectionRow (id connection, NSDictionary *names)
   else if ([connection isKindOfClass: [IBBindingConnection class]])
     kind = @"Binding";
 #endif
-  if ([connection isKindOfClass: [NSNibControlConnector class]])
+  if ([connection isKindOfClass: NSClassFromString (@"NSNibControlConnector")])
     kind = @"Action";
-  else if ([connection isKindOfClass: [NSNibOutletConnector class]])
+  else if ([connection
+               isKindOfClass: NSClassFromString (@"NSNibOutletConnector")])
     kind = @"Outlet";
   else if ([kind rangeOfString: @"Binding"].location != NSNotFound)
     kind = @"Binding";

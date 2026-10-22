@@ -4,6 +4,26 @@
     };
     objectVersion = 56;
     objects = {
+        NATIVE_YCODESYNTAXHIGHLIGHTER = { isa = PBXFileReference; path = "YCodeSyntaxHighlighter.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODESYNTAXHIGHLIGHTER_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODESYNTAXHIGHLIGHTER; };
+        NATIVE_YCODEPROJECTNAVIGATORITEM = { isa = PBXFileReference; path = "YCodeProjectNavigatorItem.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEPROJECTNAVIGATORITEM_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEPROJECTNAVIGATORITEM; };
+        NATIVE_YCODEPROJECTNAVIGATORCONTROLLER = { isa = PBXFileReference; path = "YCodeProjectNavigatorController.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEPROJECTNAVIGATORCONTROLLER_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEPROJECTNAVIGATORCONTROLLER; };
+        NATIVE_YCODEPROJECT = { isa = PBXFileReference; path = "YCodeProject.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEPROJECT_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEPROJECT; };
+        NATIVE_YCODEEDITORREGISTRY = { isa = PBXFileReference; path = "YCodeEditorRegistry.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEEDITORREGISTRY_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEEDITORREGISTRY; };
+        NATIVE_YCODEEDITORDOCUMENT = { isa = PBXFileReference; path = "YCodeEditorDocument.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEEDITORDOCUMENT_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEEDITORDOCUMENT; };
+        NATIVE_YCODEEDITORCONTROLLER = { isa = PBXFileReference; path = "YCodeEditorController.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEEDITORCONTROLLER_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEEDITORCONTROLLER; };
+        NATIVE_YCODEBUILDSYSTEM = { isa = PBXFileReference; path = "YCodeBuildSystem.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        NATIVE_YCODEBUILDSYSTEM_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEBUILDSYSTEM; };
+        YCODE_TARGET_CONFIGS = { isa = XCConfigurationList; buildConfigurations = (YCODE_DEBUG, YCODE_RELEASE); defaultConfigurationName = Release; };
+        YCODE_DEBUG = { isa = XCBuildConfiguration; name = Debug; buildSettings = {}; };
+        YCODE_RELEASE = { isa = XCBuildConfiguration; name = Release; buildSettings = {}; };
+
         TERMINAL_YCODETERMINALVIEW_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTerminalView.h"; sourceTree = "<group>"; };
         TERMINAL_YCODETERMINALVIEW = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTerminalView.m"; sourceTree = "<group>"; };
         TERMINAL_YCODETERMINALVIEW_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_YCODETERMINALVIEW; };
@@ -40,10 +60,10 @@
             files = ();
             inputPaths = ();
             outputPaths = ();
-            name = "Build debugger bundles";
+            name = "Build native bundles";
             runOnlyForDeploymentPostprocessing = 0;
             shellPath = /bin/sh;
-            shellScript = "sh \"$SRCROOT/DebuggerBundles/build-macos.sh\"";
+            shellScript = "set -e\nsh \"$SRCROOT/DebuggerBundles/build-macos.sh\"\nsh \"$SRCROOT/build-macos-resources.sh\"";
         };
 
         YCODE_LANGUAGE_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeLanguage.h; sourceTree = "<group>"; };
@@ -101,9 +121,26 @@
 	};
 	"136A431D-9AB1-F606-7715-5BF1E6B7F2A0" = {
 	    buildSettings = {
+                SDKROOT = macosx;
+                MACOSX_DEPLOYMENT_TARGET = 10.13;
+                CLANG_ENABLE_OBJC_ARC = NO;
+                /* Editor bundles resolve their host classes at load time. */
+                GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+                GCC_PRECOMPILE_PREFIX_HEADER = NO;
+                GCC_PREFIX_HEADER = "$(SRCROOT)/YCodePrefix.h";
+                FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(BUILT_PRODUCTS_DIR)");
+                OTHER_LDFLAGS = ("$(inherited)", "-framework", Cocoa, "-framework", XCode);
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = Resources/Info-macos.plist;
+                PRODUCT_BUNDLE_IDENTIFIER = org.gnustep.Ycode;
+                PRODUCT_NAME = Ycode;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+
                 HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Terminal/libvterm/include");
 	    };
 	    isa = XCBuildConfiguration;
+            name = Debug;
 	};
 	"1645F4CB-A38D-AE0E-5EE0-DCB5F492B181" = {
 	    isa = PBXFileReference;
@@ -127,6 +164,8 @@
 		"A5517E5A-3371-9A0A-79AA-5D307EFF3750",
                 DEBUGGER_BUNDLE_PHASE
 	    );
+	    buildConfigurationList = YCODE_TARGET_CONFIGS;
+            productReference = "8BC7C78C-A156-DC0C-637F-417A68C31983";
 	    isa = PBXNativeTarget;
 	    name = Ycode;
 	    productName = Ycode;
@@ -134,7 +173,14 @@
 	};
 	"2994E397-21FD-F606-46C8-BF292D2FC134" = {
 	    children = (
-		YCODE_TEXT_SOURCE,
+		NATIVE_YCODEBUILDSYSTEM,
+                NATIVE_YCODEEDITORCONTROLLER,
+                NATIVE_YCODEEDITORDOCUMENT,
+                NATIVE_YCODEEDITORREGISTRY,
+                NATIVE_YCODEPROJECT,
+                NATIVE_YCODEPROJECTNAVIGATORCONTROLLER,
+                NATIVE_YCODEPROJECTNAVIGATORITEM,
+                NATIVE_YCODESYNTAXHIGHLIGHTER, YCODE_TEXT_SOURCE,
         YCODE_TEXT_HEADER,
         TERMINAL_YCODETERMINALVIEW_H, TERMINAL_YCODETERMINALVIEW, TERMINAL_ENCODING, TERMINAL_KEYBOARD, TERMINAL_MOUSE, TERMINAL_PARSER, TERMINAL_PEN, TERMINAL_SCREEN, TERMINAL_STATE, TERMINAL_UNICODE, TERMINAL_VTERM,
         YCODE_FILE_INSPECTOR_SOURCE,
@@ -178,7 +224,14 @@
 	};
 	"3EFFAD06-3C2F-A000-447C-11BA1E695B29" = {
 	    files = (
-		YCODE_TEXT_BUILD,
+		NATIVE_YCODEBUILDSYSTEM_BUILD,
+                NATIVE_YCODEEDITORCONTROLLER_BUILD,
+                NATIVE_YCODEEDITORDOCUMENT_BUILD,
+                NATIVE_YCODEEDITORREGISTRY_BUILD,
+                NATIVE_YCODEPROJECT_BUILD,
+                NATIVE_YCODEPROJECTNAVIGATORCONTROLLER_BUILD,
+                NATIVE_YCODEPROJECTNAVIGATORITEM_BUILD,
+                NATIVE_YCODESYNTAXHIGHLIGHTER_BUILD, YCODE_TEXT_BUILD,
                 TERMINAL_YCODETERMINALVIEW_BUILD, TERMINAL_ENCODING_BUILD, TERMINAL_KEYBOARD_BUILD, TERMINAL_MOUSE_BUILD, TERMINAL_PARSER_BUILD, TERMINAL_PEN_BUILD, TERMINAL_SCREEN_BUILD, TERMINAL_STATE_BUILD, TERMINAL_UNICODE_BUILD, TERMINAL_VTERM_BUILD,
         YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD, YCODE_WATCHER_BUILD, YCODE_LANGUAGE_BUILD,
         YCODE_FILE_INSPECTOR_BUILD,
@@ -220,9 +273,9 @@
 	"8BC7C78C-A156-DC0C-637F-417A68C31983" = {
 	    includeInIndex = 0;
 	    isa = PBXFileReference;
-	    lastKnownFileType = "compiled.mach-o.executable";
-	    path = Ycode;
-	    sourceTree = "<group>";
+	    explicitFileType = wrapper.application;
+	    path = Ycode.app;
+	    sourceTree = BUILT_PRODUCTS_DIR;
 	};
 	"974AE994-B88F-6909-65A3-18BA47FDDF4D" = {
 	    fileRef = "F3AF5B1B-FC22-6000-4EFA-8EDE27D5BB94";
@@ -237,7 +290,22 @@
 	};
 	"C7C7CF2B-4FFF-0B0B-6ECC-A438DA282C79" = {
 	    buildSettings = {
-		SDKROOT = macosx;
+                SDKROOT = macosx;
+                MACOSX_DEPLOYMENT_TARGET = 10.13;
+                CLANG_ENABLE_OBJC_ARC = NO;
+                /* Editor bundles resolve their host classes at load time. */
+                GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+                GCC_PRECOMPILE_PREFIX_HEADER = NO;
+                GCC_PREFIX_HEADER = "$(SRCROOT)/YCodePrefix.h";
+                FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(BUILT_PRODUCTS_DIR)");
+                OTHER_LDFLAGS = ("$(inherited)", "-framework", Cocoa, "-framework", XCode);
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = Resources/Info-macos.plist;
+                PRODUCT_BUNDLE_IDENTIFIER = org.gnustep.Ycode;
+                PRODUCT_NAME = Ycode;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+
                 HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Terminal/libvterm/include");
 	    };
 	    isa = XCBuildConfiguration;
@@ -250,7 +318,7 @@
 	    hasScannedForEncodings = 0;
 	    isa = PBXProject;
 	    mainGroup = "038B6245-2D80-F505-6DF1-1FB5AEAE0620";
-	    minimizedProjectReferenceProxies = <*I0>;
+	    minimizedProjectReferenceProxies = 0;
 	    productRefGroup = "7476828C-DC5B-8808-65D6-9D0E3CF4653F";
 	    projectDirPath = "";
 	    projectRoot = "";

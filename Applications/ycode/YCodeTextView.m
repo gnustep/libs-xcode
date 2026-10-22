@@ -1128,10 +1128,20 @@ OpeningDelimiterForClosingDelimiter (unichar c)
 {
   CGFloat width;
 
-  width = [[self font] widthOfString: @"8"];
+  width =
+      [@"8" sizeWithAttributes: [NSDictionary
+                                   dictionaryWithObject: [self font]
+                                                 forKey: NSFontAttributeName]]
+          .width;
   if (width <= 0.0)
     {
-      width = [[NSFont userFixedPitchFontOfSize: 0.0] widthOfString: @"8"];
+      width =
+          [@"8"
+              sizeWithAttributes: [NSDictionary
+                                     dictionaryWithObject:
+                                         [NSFont userFixedPitchFontOfSize: 0.0]
+                                                   forKey: NSFontAttributeName]]
+              .width;
     }
   if (width <= 0.0)
     {

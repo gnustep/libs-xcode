@@ -249,9 +249,12 @@
 
 - (NSString *) typeForContentsOfURL: (NSURL *)url error: (NSError **)error
 {
-  if ([YCodeProject isProjectDirectory: [url path]]
-      && ![[NSArray arrayWithObjects: @"xcodeproj", @"pcproj", nil]
-          containsObject: [[url path] pathExtension]])
+  NSString *extension = [[[url path] pathExtension] lowercaseString];
+  if ([url isFileURL] && [extension isEqual: @"xcodeproj"])
+    return @"YCodeXcodeProjectType";
+  if ([url isFileURL] && [extension isEqual: @"pcproj"])
+    return @"YCodeProjectCenterProjectType";
+  if ([YCodeProject isProjectDirectory: [url path]])
     return @"YCodeMakeProjectType";
   return [super typeForContentsOfURL: url error: error];
 }
