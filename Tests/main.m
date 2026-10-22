@@ -17,6 +17,9 @@
 #import <XCode/PBXNativeTarget.h>
 #import <XCode/PBXFrameworksBuildPhase.h>
 #import <XCode/PBXResourcesBuildPhase.h>
+#import <XCode/PBXSourcesBuildPhase.h>
+#import <XCode/PBXBuildFile.h>
+#import <XCode/GSXCBuildDatabase.h>
 #import <XCode/NSString+PBXAdditions.h>
 
 @interface PBXFrameworksBuildPhase (LinkTest)
@@ -380,6 +383,65 @@ testGeneratedBundleExecutable (void)
 }
 
 static void
+testIncrementalSourceObjects (void)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *originalDirectory = [manager currentDirectoryPath];
+  NSString *directory = [NSTemporaryDirectory ()
+      stringByAppendingPathComponent: [[NSProcessInfo processInfo]
+                                         globallyUniqueString]];
+  [manager createDirectoryAtPath: directory
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [manager changeCurrentDirectoryPath: directory];
+  GSXCBuildContext *context = [GSXCBuildContext sharedBuildContext];
+  [context contextDictionaryForName: @"IncrementalObjects"];
+  NSArray *names = [NSArray
+      arrayWithObjects: @"Host App", @"Hosted Tests", @"Host App", nil];
+  NSEnumerator *enumerator = [names objectEnumerator];
+  NSString *name;
+  while ((name = [enumerator nextObject]) != nil)
+    {
+      PBXNativeTarget *target = AUTORELEASE ([PBXNativeTarget new]);
+      PBXSourcesBuildPhase *phase = AUTORELEASE ([PBXSourcesBuildPhase new]);
+      PBXBuildFile *file = AUTORELEASE ([PBXBuildFile new]);
+      PBXFileReference *reference = AUTORELEASE (
+          [[PBXFileReference alloc] initWithPath: @"source file.m"]);
+      [target setName: name];
+      [target setDatabase: AUTORELEASE ([GSXCBuildDatabase new])];
+      [file setFileRef: reference];
+      [phase setFiles: [NSMutableArray arrayWithObject: file]];
+      [phase setTarget: target];
+      NSString *objectDirectory =
+          [@"build" stringByAppendingPathComponent: [target name]];
+      NSString *objectPath =
+          [objectDirectory stringByAppendingPathComponent: @"source file.m.o"];
+      [manager createDirectoryAtPath: objectDirectory
+          withIntermediateDirectories: YES
+                           attributes: nil
+                                error: NULL];
+      [@"object fixture" writeToFile: objectPath
+                          atomically: YES
+                            encoding: NSUTF8StringEncoding
+                               error: NULL];
+      testAssert ([phase build],
+                  @"unchanged sources still collect existing objects");
+      NSString *expected = [NSString stringWithFormat: @"'./%@' ", objectPath];
+      testAssert (
+          [[context objectForKey: @"OUTPUT_FILES"] isEqual: expected],
+          @"incremental linking uses all current target objects without sibling or repeated entries");
+      [manager removeItemAtPath: objectPath error: NULL];
+      testAssert (![phase build],
+                  @"missing objects fail an unchanged-source build");
+      [phase setTarget: nil];
+    }
+  [context popCurrentContext];
+  [manager changeCurrentDirectoryPath: originalDirectory];
+  [manager removeItemAtPath: directory error: NULL];
+}
+
+static void
 testProjectUnarchive (void)
 {
   NSString *path = @"../libs-xcode.xcodeproj/project.pbxproj";
@@ -444,6 +506,7 @@ main (int argc, const char **argv, char **env)
   testHeaderSearchPaths ();
   testFrameworkResourcesAndEnvironment ();
   testGeneratedBundleExecutable ();
+  testIncrementalSourceObjects ();
   testBuildtoolOperationResults ();
 
   if (failures == 0)

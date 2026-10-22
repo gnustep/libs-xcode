@@ -109,7 +109,8 @@
       if ([db isEmpty])
         {
           xcputs ("\t++++ No files modified, nothing to build. ++++\n");
-          return YES;
+          // The linker still needs the complete list of existing objects.
+          return [self link];
         }
 
       files = [db files];
@@ -152,7 +153,7 @@
 
   // if (db != nil)
   {
-    [self link]; // generate the rest of the output file entries
+    result = [self link]; // generate the rest of the output file entries
   }
 
   return result;

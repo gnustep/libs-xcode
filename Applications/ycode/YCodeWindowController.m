@@ -3231,6 +3231,24 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   return nil;
 }
 
+- (void) tableView: (NSTableView *)tableView
+    willDisplayCell: (id)cell
+     forTableColumn: (NSTableColumn *)column
+                row: (NSInteger)row
+{
+  if (tableView != _testResultsTable)
+    return;
+  NSString *status = nil;
+  if (row >= 0 && row < (NSInteger)[_testResults count])
+    status = [[_testResults objectAtIndex: row] objectForKey: @"status"];
+  NSColor *color = [NSColor controlTextColor];
+  if ([status isEqualToString: @"Failed"])
+    color = [NSColor redColor];
+  else if ([status isEqualToString: @"Passed"])
+    color = [NSColor greenColor];
+  [cell setTextColor: color];
+}
+
 - (NSString *) tableView: (NSTableView *)tableView
          toolTipForCell: (NSCell *)cell
                    rect: (NSRectPointer)rect
