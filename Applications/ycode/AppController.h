@@ -92,6 +92,10 @@
  * Creates a new project in the specified directory, using its name.
  */
 - (void) createNewProjectAtURL: (NSURL *)projectURL;
+- (void) createNewProjectAtURL: (NSURL *)projectURL
+                       format: (NSString *)format
+                  productType: (NSString *)productType
+         applicationFramework: (NSString *)applicationFramework;
 
 /**
  * Saves the active source file, or the project when no source file is open.

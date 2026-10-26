@@ -461,14 +461,16 @@ YCodeFileURLFromPath (NSString *path)
 - (NSView *) newProjectAccessoryView
 {
   NSView *view = AUTORELEASE (
-      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 360, 76)]);
+      [[NSView alloc] initWithFrame: NSMakeRect (0, 0, 360, 110)]);
   NSUInteger index;
-  for (index = 0; index < 2; index++)
+  for (index = 0; index < 3; index++)
     {
-      CGFloat y = index == 0 ? 42 : 8;
+      CGFloat y = 76 - 34 * index;
       NSTextField *label = AUTORELEASE (
           [[NSTextField alloc] initWithFrame: NSMakeRect (12, y, 104, 24)]);
-      [label setStringValue: index == 0 ? @"Project type:" : @"Format:"];
+      [label setStringValue: index == 0   ? @"Project type:"
+                            : index == 1 ? @"Format:"
+                                         : @"App framework:"];
       [label setEditable: NO];
       [label setBezeled: NO];
       [label setDrawsBackground: NO];
@@ -479,8 +481,10 @@ YCodeFileURLFromPath (NSString *path)
       [popup setTag: 100 + index];
       NSArray *values
           = index == 0 ? [YCodeProject newProjectTypes]
-                       : [NSArray arrayWithObjects: @"Xcode", @"ProjectCenter",
-                                                   @"GNUmakefile", nil];
+            : index == 1
+                ? [NSArray arrayWithObjects: @"Xcode", @"ProjectCenter",
+                                            @"GNUmakefile", nil]
+                : [NSArray arrayWithObjects: @"AppKit", @"UIKit", nil];
       NSEnumerator *enumerator = [values objectEnumerator];
       NSString *value;
       while ((value = [enumerator nextObject]) != nil)
@@ -492,9 +496,34 @@ YCodeFileURLFromPath (NSString *path)
           [popup addItemWithTitle: title];
           [[popup lastItem] setRepresentedObject: value];
         }
+      if (index == 0)
+        {
+          [popup setTarget: self];
+          [popup setAction: @selector (newProjectTypeChanged:)];
+        }
+      if (index == 2)
+        {
+          [popup setAutoenablesItems: NO];
+          [[popup itemAtIndex: 1]
+              setEnabled: [YCodeProject supportsUIKitApplications]];
+          [popup
+              setToolTip:
+                  @"AppKit is the default. UIKit requires the installed GNUstep UIKit development framework; this template does not target Apple iOS."];
+        }
       [view addSubview: popup];
     }
   return view;
+}
+
+- (void) newProjectTypeChanged: (NSPopUpButton *)sender
+{
+  NSPopUpButton *framework
+      = (NSPopUpButton *)[[sender superview] viewWithTag: 102];
+  BOOL application = [[[[sender selectedItem] representedObject] description]
+      isEqual: @"Application"];
+  [framework setEnabled: application];
+  if (!application)
+    [framework selectItemAtIndex: 0];
 }
 
 - (IBAction) newProject: (id)sender
@@ -523,6 +552,9 @@ YCodeFileURLFromPath (NSString *path)
       selectedItem] representedObject];
   NSString *format = [[(NSPopUpButton *)[accessory viewWithTag: 101]
       selectedItem] representedObject];
+  NSString *applicationFramework =
+      [[(NSPopUpButton *)[accessory viewWithTag: 102] selectedItem]
+          representedObject];
   [panel setAccessoryView: nil];
   if (result == NSModalResponseOK)
     {
@@ -531,7 +563,8 @@ YCodeFileURLFromPath (NSString *path)
         {
           [self createNewProjectAtURL: selectedURL
                                format: format
-                          productType: productType];
+                          productType: productType
+                 applicationFramework: applicationFramework];
         }
     }
 }
@@ -557,14 +590,27 @@ YCodeFileURLFromPath (NSString *path)
                        format: (NSString *)format
                   productType: (NSString *)productType
 {
+  [self createNewProjectAtURL: projectURL
+                       format: format
+                  productType: productType
+         applicationFramework: @"AppKit"];
+}
+
+- (void) createNewProjectAtURL: (NSURL *)projectURL
+                       format: (NSString *)format
+                  productType: (NSString *)productType
+         applicationFramework: (NSString *)applicationFramework
+{
   NSString *projectPath = [[projectURL path] stringByStandardizingPath];
   NSString *projectName = [projectPath lastPathComponent];
 
   // Create the project
-  YCodeProject *newProject = [YCodeProject createNewProjectAtPath: projectPath
-                                                             name: projectName
-                                                             type: format
-                                                      productType: productType];
+  YCodeProject *newProject =
+      [YCodeProject createNewProjectAtPath: projectPath
+                                      name: projectName
+                                      type: format
+                               productType: productType
+                      applicationFramework: applicationFramework];
 
   if (newProject)
     {

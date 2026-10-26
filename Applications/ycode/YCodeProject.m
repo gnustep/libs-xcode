@@ -535,6 +535,22 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
 
 #pragma mark - Class Methods
 
++ (BOOL) supportsUIKitApplications
+{
+#ifdef GNUSTEP
+  NSEnumerator *directories = [NSSearchPathForDirectoriesInDomains (
+      NSLibraryDirectory, NSAllDomainsMask, YES) objectEnumerator];
+  NSString *directory;
+  while ((directory = [directories nextObject]) != nil)
+    if ([[NSFileManager defaultManager]
+            fileExistsAtPath:
+                [directory stringByAppendingPathComponent:
+                               @"Frameworks/UIKit.framework/Headers/UIKit.h"]])
+      return YES;
+#endif
+  return NO;
+}
+
 + (NSArray *) newProjectTypes
 {
   return [NSArray arrayWithObjects: @"Application", @"Tool", @"Bundle",
@@ -557,6 +573,25 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
                                     type: (NSString *)type
                              productType: (NSString *)productType
 {
+  return [self createNewProjectAtPath: path
+                                 name: name
+                                 type: type
+                          productType: productType
+                 applicationFramework: @"AppKit"];
+}
+
++ (YCodeProject *) createNewProjectAtPath: (NSString *)path
+                                    name: (NSString *)name
+                                    type: (NSString *)type
+                             productType: (NSString *)productType
+                    applicationFramework: (NSString *)applicationFramework
+{
+  BOOL uiKit = [applicationFramework isEqual: @"UIKit"];
+  if ((!uiKit && ![applicationFramework isEqual: @"AppKit"])
+      || (uiKit
+          && (![productType isEqual: @"Application"]
+              || ![self supportsUIKitApplications])))
+    return nil;
   NSFileManager *manager = [NSFileManager defaultManager];
   if (![[self newProjectTypes] containsObject: productType] || ![path length]
       || ![name length] || ![[name lastPathComponent] isEqual: name] ||
@@ -605,15 +640,19 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
                                                             ofType: nil];
       if (!templates)
         return nil;
-      NSEnumerator *enumerator = [[NSArray
-          arrayWithObjects: @"main.m", @"AppController.h", @"AppController.m",
-                           @"MainMenu.xib", nil] objectEnumerator];
+      NSMutableArray *templateFiles =
+          [NSMutableArray arrayWithObjects: @"main.m", @"AppController.h",
+                                           @"AppController.m", nil];
+      if (!uiKit)
+        [templateFiles addObject: @"MainMenu.xib"];
+      NSEnumerator *enumerator = [templateFiles objectEnumerator];
       NSString *file;
       while ((file = [enumerator nextObject]) != nil)
         {
-          NSString *source =
-              [[templates stringByAppendingPathComponent: @"Application"]
-                  stringByAppendingPathComponent: file];
+          NSString *source = [[templates
+              stringByAppendingPathComponent: uiKit ? @"UIKitApplication"
+                                                   : @"Application"]
+              stringByAppendingPathComponent: file];
           if (![manager
                   copyItemAtPath: source
                           toPath: [path stringByAppendingPathComponent: file]
@@ -622,7 +661,8 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
         }
       sources = [NSArray arrayWithObjects: @"main.m", @"AppController.m", nil];
       headers = [NSArray arrayWithObject: @"AppController.h"];
-      resources = [NSArray arrayWithObject: @"MainMenu.xib"];
+      if (!uiKit)
+        resources = [NSArray arrayWithObject: @"MainMenu.xib"];
     }
   else if (tool)
     {
@@ -653,8 +693,10 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
                                    nil];
   if (application)
     {
-      [info setObject: @"NSApplication" forKey: @"NSPrincipalClass"];
-      [info setObject: @"MainMenu" forKey: @"NSMainNibFile"];
+      [info setObject: uiKit ? @"UIApplication" : @"NSApplication"
+               forKey: @"NSPrincipalClass"];
+      if (!uiKit)
+        [info setObject: @"MainMenu" forKey: @"NSMainNibFile"];
       [info setObject: @"APPL" forKey: @"CFBundlePackageType"];
     }
   else if (bundle)
@@ -682,13 +724,16 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
                                    @"SUPPORTING_FILES",
                                    [NSArray
                                        arrayWithObject: application
-                                                           ? @"AppKit"
+                                                           ? (uiKit
+                                                                  ? @"UIKit"
+                                                                  : @"AppKit")
                                                            : @"Foundation"],
                                    @"FRAMEWORKS", nil];
   if (framework)
     [metadata setObject: headers forKey: @"PUBLIC_HEADERS"];
   if (application)
-    [metadata setObject: @"NSApplication" forKey: @"PRINCIPAL_CLASS"];
+    [metadata setObject: uiKit ? @"UIApplication" : @"NSApplication"
+                 forKey: @"PRINCIPAL_CLASS"];
   else if (bundle)
     [metadata setObject: @"ProjectObject" forKey: @"PRINCIPAL_CLASS"];
   NSString *package =
@@ -752,9 +797,11 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
               [headers componentsJoinedByString: @" "], productName,
               [resources componentsJoinedByString: @" "]];
 
-      if (application)
+      if (application && !uiKit)
         [makefile
             appendFormat: @"%@_MAIN_MODEL_FILE = MainMenu\n", productName];
+      if (uiKit)
+        [makefile appendFormat: @"%@_GUI_LIBS += -lUIKit\n", productName];
       if (bundle)
         [makefile
             appendFormat: @"%@_PRINCIPAL_CLASS = ProjectObject\n", productName];

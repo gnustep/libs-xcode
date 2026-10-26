@@ -68,6 +68,15 @@
                                     type: (NSString *)type
                              productType: (NSString *)productType;
 
+/** Whether the installed GNUstep UIKit development framework is available. */
++ (BOOL) supportsUIKitApplications;
+/** Create an application using AppKit (default) or GNUstep UIKit. */
++ (YCodeProject *) createNewProjectAtPath: (NSString *)path
+                                    name: (NSString *)name
+                                    type: (NSString *)type
+                             productType: (NSString *)productType
+                    applicationFramework: (NSString *)applicationFramework;
+
 /**
  * Project access
  */

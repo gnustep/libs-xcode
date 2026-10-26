@@ -73,7 +73,13 @@ name field starts with `MyProject`; Create makes a new folder with that name in
 the chosen location and generates the project inside it. There is no separate
 name dialog.
 Templates include Application, Tool, Bundle, Framework, Dynamic Library, and
-Static Library. Applications start with `main.m`, `AppController.h/.m`, and a
+Static Library. For Application projects, **App framework** selects **AppKit**
+(the default) or **UIKit**. UIKit requires an installed GNUstep UIKit development
+framework and is disabled when unavailable, including native macOS builds.
+The UIKit template targets GNUstep desktop UIKit, not Apple iOS. It creates
+`main.m` and an application delegate that opens a programmatic `UIWindow`,
+with UIKit linkage in Xcode, ProjectCenter, and GNUmakefile formats.
+AppKit applications start with `main.m`, `AppController.h/.m`, and a
 `MainMenu.xib` containing a window and About/Quit menu. The controller is wired
 as the application delegate and opens the window on launch. Source files,
 resources, framework linkage, and Info.plist settings are included in the

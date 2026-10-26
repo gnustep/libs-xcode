@@ -140,3 +140,9 @@ Preferences > Editor > Enable word and keyword completion toggles this feature
 for all editors immediately. It is on by default. Suggestions appear after a
 0.35-second typing pause once a word has at least three characters. Moving the
 caret or leaving the editor cancels pending suggestions.
+
+APPLICATION FRAMEWORK
+New Project offers an App framework choice for Application targets. AppKit is
+the default. UIKit creates a programmatic window and links GNUstep UIKit in
+all three project formats. UIKit is disabled without its installed GNUstep
+development framework; this template does not target Apple iOS.

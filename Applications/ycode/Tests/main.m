@@ -8019,6 +8019,135 @@ testProjectCenterExport (NSString *directory)
 @end
 
 static void
+testUIKitProjectTemplates (NSString *directory)
+{
+  AppController *controller = AUTORELEASE ([[AppController alloc] init]);
+  NSView *accessory = [controller newProjectAccessoryView];
+  NSPopUpButton *frameworks = (NSPopUpButton *)[accessory viewWithTag: 102];
+  NSPopUpButton *types = (NSPopUpButton *)[accessory viewWithTag: 100];
+  testAssert (
+      [frameworks numberOfItems] == 2 &&
+          [[[frameworks selectedItem] representedObject] isEqual: @"AppKit"],
+      @"New applications offer AppKit and UIKit and default to AppKit");
+  testAssert ([[frameworks itemAtIndex: 1] isEnabled] ==
+                  [YCodeProject supportsUIKitApplications],
+              @"UIKit choice reflects installed GNUstep development support");
+  [types selectItemAtIndex: 1];
+  [NSApp sendAction: [types action] to: [types target] from: types];
+  testAssert (![frameworks isEnabled],
+              @"Non-application targets disable the app framework choice");
+  [types selectItemAtIndex: 0];
+  [NSApp sendAction: [types action] to: [types target] from: types];
+  testAssert ([frameworks isEnabled],
+              @"Application targets enable the framework choice");
+  if (![YCodeProject supportsUIKitApplications])
+    {
+      testAssert (
+          [YCodeProject
+              createNewProjectAtPath: [directory stringByAppendingPathComponent:
+                                                    @"UnavailableUIKit"]
+                                name: @"UnavailableUIKit"
+                                type: @"Xcode"
+                         productType: @"Application"
+                applicationFramework: @"UIKit"]
+              == nil,
+          @"Unavailable UIKit templates fail before writing a project");
+      return;
+    }
+  NSArray *formats = [NSArray
+      arrayWithObjects: @"Xcode", @"ProjectCenter", @"GNUmakefile", nil];
+  NSUInteger i;
+  for (i = 0; i < [formats count]; i++)
+    {
+      NSString *appKitName =
+          [NSString stringWithFormat: @"AppKitStarter%lu", (unsigned long)i];
+      NSString *appKitRoot =
+          [directory stringByAppendingPathComponent: appKitName];
+      YCodeProject *appKitProject =
+          [YCodeProject createNewProjectAtPath: appKitRoot
+                                          name: appKitName
+                                          type: [formats objectAtIndex: i]
+                                   productType: @"Application"];
+      NSDictionary *appKitInfo = [NSDictionary
+          dictionaryWithContentsOfFile:
+              [appKitRoot
+                  stringByAppendingPathComponent:
+                      [appKitName stringByAppendingString: @"Info.plist"]]];
+      testAssert (
+          appKitProject != nil &&
+              [[appKitInfo objectForKey: @"NSPrincipalClass"]
+                  isEqual: @"NSApplication"]
+              &&
+              [[appKitInfo objectForKey: @"NSMainNibFile"] isEqual: @"MainMenu"],
+          @"Existing creation API keeps AppKit applications as the default in all formats");
+      NSString *name =
+          [NSString stringWithFormat: @"UIKitStarter%lu", (unsigned long)i];
+      NSString *root = [directory stringByAppendingPathComponent: name];
+      YCodeProject *project =
+          [YCodeProject createNewProjectAtPath: root
+                                          name: name
+                                          type: [formats objectAtIndex: i]
+                                   productType: @"Application"
+                          applicationFramework: @"UIKit"];
+      testAssert (project != nil,
+                  @"Create UIKit applications in all three formats");
+      NSDictionary *info = [NSDictionary
+          dictionaryWithContentsOfFile:
+              [root stringByAppendingPathComponent:
+                        [name stringByAppendingString: @"Info.plist"]]];
+      testAssert (
+          [[info objectForKey: @"NSPrincipalClass"] isEqual: @"UIApplication"]
+              && ![info objectForKey: @"NSMainNibFile"]
+              && ![[NSFileManager defaultManager]
+                  fileExistsAtPath:
+                      [root stringByAppendingPathComponent: @"MainMenu.xib"]],
+          @"UIKit metadata has no AppKit main nib");
+      NSString *main =
+          [NSString stringWithContentsOfFile:
+                        [root stringByAppendingPathComponent: @"main.m"]
+                                    encoding: NSUTF8StringEncoding
+                                       error: NULL];
+      testAssert (
+          [main rangeOfString: @"UIApplicationMain"].location != NSNotFound,
+          @"UIKit starters launch the application delegate through UIApplicationMain");
+      if (i != 2)
+        {
+          PBXTarget *target = [[[project project] targets] objectAtIndex: 0];
+          NSEnumerator *phases = [[target buildPhases] objectEnumerator];
+          PBXBuildPhase *phase;
+          BOOL linked = NO;
+          while ((phase = [phases nextObject]) != nil)
+            if ([phase isKindOfClass: [PBXFrameworksBuildPhase class]])
+              {
+                NSEnumerator *files = [[phase files] objectEnumerator];
+                PBXBuildFile *file;
+                while ((file = [files nextObject]) != nil)
+                  if ([[[[file fileRef] path] lastPathComponent]
+                          isEqual: @"UIKit.framework"])
+                    linked = YES;
+              }
+          testAssert (
+              linked,
+              @"UIKit projects link UIKit through the framework phase");
+        }
+      if (i != 0)
+        {
+          NSString *makefile = [NSString
+              stringWithContentsOfFile:
+                  [root stringByAppendingPathComponent: @"GNUmakefile"]
+                              encoding: NSUTF8StringEncoding
+                                 error: NULL];
+          testAssert ([makefile rangeOfString: @"_GUI_LIBS += -lUIKit"].location
+                              != NSNotFound
+                          &&
+                          [makefile rangeOfString: @"MAIN_MODEL_FILE"].location
+                              == NSNotFound,
+                      @"UIKit makefiles link UIKit without an AppKit model");
+        }
+    }
+}
+
+static void
 testNewProjectTemplates (NSString *temporaryDirectory)
 {
   AppController *controller = AUTORELEASE ([AppController new]);
@@ -9502,6 +9631,17 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-uikit-projects"])
+    {
+      NSString *directory = [arguments count] == 3
+                                ? [arguments objectAtIndex: 2]
+                                : temporaryDirectory;
+      testUIKitProjectTemplates (directory);
+      NSLog (@"Ycode UIKit template checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-new-project"])
     {
       testProjectCreationInSelectedDirectory (temporaryDirectory);
@@ -9644,6 +9784,7 @@ main (void)
   testWindowFramePersistence ();
   testProjectCreationInSelectedDirectory (temporaryDirectory);
   testNewProjectTemplates (temporaryDirectory);
+  testUIKitProjectTemplates (temporaryDirectory);
   testApplicationStartup ();
   testHelp ();
   testTerminal (temporaryDirectory);
