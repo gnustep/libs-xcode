@@ -442,6 +442,56 @@ testIncrementalSourceObjects (void)
 }
 
 static void
+testFrameworkFileTypes (void)
+{
+  NSArray *paths = [NSArray
+      arrayWithObjects: @"UIKit.framework",
+                       @"System/Library/Frameworks/AppKit.framework",
+                       @"Frameworks With Spaces/Custom.framework", nil];
+  NSEnumerator *enumerator = [paths objectEnumerator];
+  NSString *path;
+  while ((path = [enumerator nextObject]) != nil)
+    {
+      PBXFileReference *reference
+          = AUTORELEASE ([[PBXFileReference alloc] initWithPath: path]);
+      testAssert (
+          [[reference lastKnownFileType] isEqual: @"wrapper.framework"],
+          @"framework references use Xcode's linkable wrapper type, not executable type");
+    }
+  testAssert ([[PBXFileReference extForFileType: @"wrapper.framework"]
+                  isEqual: @"framework"],
+              @"framework file type maps back to its extension");
+}
+
+static void
+testInterfaceFileTypes (void)
+{
+  NSArray *paths =
+      [NSArray arrayWithObjects: @"MainMenu.xib", @"Base.lproj/MainMenu.xib",
+                                @"MainMenu.nib", @"Example.app", nil];
+  NSArray *types =
+      [NSArray arrayWithObjects: @"file.xib", @"file.xib", @"file.nib",
+                                @"wrapper.application", nil];
+  NSUInteger i;
+  for (i = 0; i < [paths count]; i++)
+    {
+      NSString *path = [paths objectAtIndex: i];
+      PBXFileReference *reference
+          = AUTORELEASE ([[PBXFileReference alloc] initWithPath: path]);
+      NSString *fileType = [reference explicitFileType]
+                               ? [reference explicitFileType]
+                               : [reference lastKnownFileType];
+      testAssert (
+          [fileType isEqual: [types objectAtIndex: i]],
+          @"XIB sources, compiled nibs, and app bundles have distinct native Xcode file types");
+      testAssert (
+          [[PBXFileReference extForFileType: fileType]
+              isEqual: [path pathExtension]],
+          @"Interface and application file types round-trip their extensions");
+    }
+}
+
+static void
 testProjectUnarchive (void)
 {
   NSString *path = @"../libs-xcode.xcodeproj/project.pbxproj";
@@ -502,6 +552,8 @@ main (int argc, const char **argv, char **env)
 
   testBuildtoolArgumentParsing ();
   testProjectUnarchive ();
+  testFrameworkFileTypes ();
+  testInterfaceFileTypes ();
   testBuildSettingInheritance ();
   testHeaderSearchPaths ();
   testFrameworkResourcesAndEnvironment ();

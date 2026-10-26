@@ -8261,6 +8261,10 @@ testUIKitProjectTemplates (NSString *directory)
                     {
                       linked = YES;
                       testAssert (
+                          [[[file fileRef] lastKnownFileType]
+                              isEqual: @"wrapper.framework"],
+                          @"UIKit is serialized as a framework so Apple Xcode links it");
+                      testAssert (
                           [[[file fileRef] sourceTree] isEqual: @"SDKROOT"]
                               && ![[[file fileRef] path] isAbsolutePath],
                           @"UIKit framework references are SDK-relative on every host");
@@ -8285,6 +8289,53 @@ testUIKitProjectTemplates (NSString *directory)
                       @"UIKit makefiles link UIKit without an AppKit model");
         }
     }
+}
+
+static void
+testAppKitResourceTypes (NSString *directory)
+{
+  NSString *root =
+      [directory stringByAppendingPathComponent: @"AppKit Resource Types"];
+  YCodeProject *project = [YCodeProject createNewProjectAtPath: root
+                                                          name: @"AppKitStarter"
+                                                          type: @"Xcode"
+                                                   productType: @"Application"];
+  testAssert (project != nil,
+              @"Create an AppKit project for native resource validation");
+  YCodeProject *reopened = AUTORELEASE ([[YCodeProject alloc] init]);
+  testAssert ([reopened
+                  readFromURL: [NSURL fileURLWithPath: [project projectPath]]
+                       ofType: @"YCodeXcodeProjectType"
+                        error: NULL],
+              @"Reopen the serialized AppKit project");
+  PBXTarget *target = [[[reopened project] targets] lastObject];
+  testAssert (
+      [[[target productReference] explicitFileType]
+          isEqual: @"wrapper.application"],
+      @"Serialized AppKit product is an application bundle, not a XIB");
+  BOOL found = NO;
+  NSEnumerator *phases = [[target buildPhases] objectEnumerator];
+  PBXBuildPhase *phase;
+  while ((phase = [phases nextObject]) != nil)
+    if ([phase isKindOfClass: [PBXResourcesBuildPhase class]])
+      {
+        NSEnumerator *files = [[phase files] objectEnumerator];
+        PBXBuildFile *file;
+        while ((file = [files nextObject]) != nil)
+          if ([[[file fileRef] path] isEqual: @"MainMenu.xib"])
+            {
+              found = YES;
+              testAssert (
+                  [[[file fileRef] lastKnownFileType] isEqual: @"file.xib"],
+                  @"Xcode's Resources phase recognizes MainMenu.xib as a compilable interface");
+            }
+      }
+  testAssert (found, @"MainMenu.xib is included in the Resources build phase");
+  NSDictionary *info = [NSDictionary
+      dictionaryWithContentsOfFile:
+          [root stringByAppendingPathComponent: @"AppKitStarterInfo.plist"]];
+  testAssert ([[info objectForKey: @"NSMainNibFile"] isEqual: @"MainMenu"],
+              @"The app loads the compiled MainMenu nib on macOS");
 }
 
 static void
@@ -9792,6 +9843,15 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-appkit-resources"])
+    {
+      testAppKitResourceTypes (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode AppKit resource checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-new-project"])
     {
       testProjectCreationInSelectedDirectory (temporaryDirectory);
@@ -9934,6 +9994,7 @@ main (void)
   testWindowFramePersistence ();
   testProjectCreationInSelectedDirectory (temporaryDirectory);
   testNewProjectTemplates (temporaryDirectory);
+  testAppKitResourceTypes (temporaryDirectory);
   testFrameworkDiscovery (temporaryDirectory);
   testUIKitProjectTemplates (temporaryDirectory);
   testApplicationStartup ();

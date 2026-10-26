@@ -75,7 +75,15 @@ static NSLock *lock = nil;
     {
       result = @"sourcecode.yacc";
     }
+  else if ([ext isEqualToString: @"framework"])
+    {
+      result = @"wrapper.framework";
+    }
   else if ([ext isEqualToString: @"app"])
+    {
+      result = @"wrapper.application";
+    }
+  else if ([ext isEqualToString: @"xib"])
     {
       result = @"file.xib";
     }
@@ -126,6 +134,10 @@ static NSLock *lock = nil;
   else if ([type isEqualToString: @"sourcecode.yacc"])
     {
       result = @"yy.tab";
+    }
+  else if ([type isEqualToString: @"wrapper.framework"])
+    {
+      result = @"framework";
     }
   else if ([type isEqualToString: @"wrapper.application"])
     {
