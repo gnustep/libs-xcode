@@ -5,7 +5,7 @@
     Authors = ("Gregory John Casamento <greg.casamento@gmail.com>");
     ApplicationRelease = "0.1";
     Copyright = "Copyright (C) 2017-2026 Free Software Foundation";
-    CopyrightDescription = "GNU GPL v2 or later; bundled icons: GNU GPL v3 or later.";
+    CopyrightDescription = "GNU GPL v2 or later.\nTerminal parser and icons: GNU GPL v3 or later.\nTerminal emulation code is based on libvterm.";
     FullVersionID = "0.1";
     NSBuildVersion = "0.1";
     URL = "https://github.com/gnustep/libs-xcode";

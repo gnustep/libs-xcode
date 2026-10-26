@@ -410,6 +410,20 @@ NSString *YCodeIssueColorsDidChangeNotification = @"YCodeIssueColorsDidChange";
                     object: nil];
 }
 
++ (BOOL) wordCompletionEnabled
+{
+  return ![[NSUserDefaults standardUserDefaults]
+      boolForKey: @"YCodeDisableWordCompletion"];
+}
+
++ (void) setWordCompletionEnabled: (BOOL)enabled
+{
+  [[NSUserDefaults standardUserDefaults]
+      setBool: !enabled
+       forKey: @"YCodeDisableWordCompletion"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
 + (BOOL) highlightMatchingDelimiters
 {
   return ![[NSUserDefaults standardUserDefaults]

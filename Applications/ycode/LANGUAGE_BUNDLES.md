@@ -46,6 +46,7 @@ is an XML property list containing integer `APIVersion` **1** and a nonempty
 | `FileNames` | Array of strings | Optional exact filenames. |
 | `Patterns` | Dictionary | Regex patterns described below; may be empty. |
 | `Indentation` | String | `braces`, `colon`, `blocks`, or `preserve`; omitted means preserve. |
+| `CompletionKeywords` | Array of strings | Optional vocabulary for Edit > Complete Word; combined with words in the current file. |
 | `ControlKeywords` | Array of strings | Brace-language control words followed by parenthesized conditions. |
 | `StandaloneControls` | Array of strings | Brace-language headers such as `else`, `try`, or `do`. |
 | `LineComment` | String | Optional marker for Edit > Comment/Uncomment Lines. |

@@ -18,6 +18,67 @@
 				<string>ts</string>
 				<string>tsx</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>abstract</string>
+				<string>as</string>
+				<string>async</string>
+				<string>await</string>
+				<string>break</string>
+				<string>case</string>
+				<string>catch</string>
+				<string>class</string>
+				<string>const</string>
+				<string>continue</string>
+				<string>debugger</string>
+				<string>declare</string>
+				<string>default</string>
+				<string>delete</string>
+				<string>do</string>
+				<string>else</string>
+				<string>enum</string>
+				<string>export</string>
+				<string>extends</string>
+				<string>false</string>
+				<string>finally</string>
+				<string>for</string>
+				<string>function</string>
+				<string>if</string>
+				<string>implements</string>
+				<string>import</string>
+				<string>in</string>
+				<string>infer</string>
+				<string>instanceof</string>
+				<string>interface</string>
+				<string>keyof</string>
+				<string>let</string>
+				<string>never</string>
+				<string>new</string>
+				<string>null</string>
+				<string>of</string>
+				<string>package</string>
+				<string>private</string>
+				<string>protected</string>
+				<string>public</string>
+				<string>readonly</string>
+				<string>return</string>
+				<string>static</string>
+				<string>super</string>
+				<string>switch</string>
+				<string>this</string>
+				<string>throw</string>
+				<string>true</string>
+				<string>try</string>
+				<string>type</string>
+				<string>typeof</string>
+				<string>undefined</string>
+				<string>unknown</string>
+				<string>var</string>
+				<string>void</string>
+				<string>while</string>
+				<string>with</string>
+				<string>yield</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>constant</key>
@@ -60,6 +121,75 @@
 			<key>Extensions</key>
 			<array>
 				<string>swift</string>
+			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>Self</string>
+				<string>actor</string>
+				<string>any</string>
+				<string>as</string>
+				<string>associatedtype</string>
+				<string>async</string>
+				<string>await</string>
+				<string>break</string>
+				<string>case</string>
+				<string>catch</string>
+				<string>class</string>
+				<string>continue</string>
+				<string>convenience</string>
+				<string>default</string>
+				<string>defer</string>
+				<string>deinit</string>
+				<string>do</string>
+				<string>else</string>
+				<string>enum</string>
+				<string>extension</string>
+				<string>fallthrough</string>
+				<string>false</string>
+				<string>final</string>
+				<string>for</string>
+				<string>func</string>
+				<string>guard</string>
+				<string>if</string>
+				<string>import</string>
+				<string>in</string>
+				<string>init</string>
+				<string>inout</string>
+				<string>internal</string>
+				<string>is</string>
+				<string>isolated</string>
+				<string>let</string>
+				<string>mutating</string>
+				<string>nil</string>
+				<string>nonisolated</string>
+				<string>nonmutating</string>
+				<string>open</string>
+				<string>operator</string>
+				<string>override</string>
+				<string>private</string>
+				<string>protocol</string>
+				<string>public</string>
+				<string>repeat</string>
+				<string>required</string>
+				<string>rethrows</string>
+				<string>return</string>
+				<string>self</string>
+				<string>some</string>
+				<string>static</string>
+				<string>struct</string>
+				<string>subscript</string>
+				<string>super</string>
+				<string>switch</string>
+				<string>throw</string>
+				<string>throws</string>
+				<string>true</string>
+				<string>try</string>
+				<string>typealias</string>
+				<string>unowned</string>
+				<string>var</string>
+				<string>weak</string>
+				<string>where</string>
+				<string>while</string>
 			</array>
 			<key>Patterns</key>
 			<dict>
@@ -109,6 +239,26 @@
 				<string>makefile</string>
 				<string>gnumakefile</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>-include</string>
+				<string>define</string>
+				<string>else</string>
+				<string>endef</string>
+				<string>endif</string>
+				<string>export</string>
+				<string>ifdef</string>
+				<string>ifeq</string>
+				<string>ifndef</string>
+				<string>ifneq</string>
+				<string>include</string>
+				<string>override</string>
+				<string>private</string>
+				<string>sinclude</string>
+				<string>undefine</string>
+				<string>unexport</string>
+				<string>vpath</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>constant</key>
@@ -143,6 +293,32 @@
 			<array>
 				<string>cmake</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>add_executable</string>
+				<string>add_library</string>
+				<string>cmake_minimum_required</string>
+				<string>else</string>
+				<string>elseif</string>
+				<string>endforeach</string>
+				<string>endfunction</string>
+				<string>endif</string>
+				<string>endmacro</string>
+				<string>endwhile</string>
+				<string>find_package</string>
+				<string>foreach</string>
+				<string>function</string>
+				<string>if</string>
+				<string>include</string>
+				<string>macro</string>
+				<string>option</string>
+				<string>project</string>
+				<string>return</string>
+				<string>set</string>
+				<string>target_include_directories</string>
+				<string>target_link_libraries</string>
+				<string>while</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>constant</key>
@@ -176,6 +352,33 @@
 				<string>bash</string>
 				<string>zsh</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>break</string>
+				<string>case</string>
+				<string>continue</string>
+				<string>do</string>
+				<string>done</string>
+				<string>elif</string>
+				<string>else</string>
+				<string>esac</string>
+				<string>exit</string>
+				<string>export</string>
+				<string>fi</string>
+				<string>for</string>
+				<string>function</string>
+				<string>if</string>
+				<string>in</string>
+				<string>local</string>
+				<string>readonly</string>
+				<string>return</string>
+				<string>select</string>
+				<string>source</string>
+				<string>then</string>
+				<string>time</string>
+				<string>until</string>
+				<string>while</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>constant</key>
@@ -202,6 +405,14 @@
 				<string>json</string>
 				<string>jsonc</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>NO</string>
+				<string>YES</string>
+				<string>false</string>
+				<string>null</string>
+				<string>true</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>keyword</key>
@@ -227,6 +438,14 @@
 				<string>strings</string>
 				<string>pcproj</string>
 				<string>project</string>
+			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>NO</string>
+				<string>YES</string>
+				<string>false</string>
+				<string>null</string>
+				<string>true</string>
 			</array>
 			<key>Patterns</key>
 			<dict>
@@ -262,6 +481,14 @@
 				<string>svg</string>
 				<string>xcscheme</string>
 				<string>gsmarkup</string>
+			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>NO</string>
+				<string>YES</string>
+				<string>false</string>
+				<string>null</string>
+				<string>true</string>
 			</array>
 			<key>Patterns</key>
 			<dict>

@@ -10,13 +10,22 @@
 #define _YCODETERMINALVIEW_H_
 
 #import <AppKit/AppKit.h>
-#include "Terminal/libvterm/include/vterm.h"
+#import "YCodeTerminalParser.h"
+
+typedef struct
+{
+  int row, col;
+} YCodeTerminalPosition;
+typedef struct
+{
+  int start_row, end_row, start_col, end_col;
+} YCodeTerminalRect;
 
 /** A project-local interactive terminal. All screen and PTY I/O is on the main thread. */
-@interface YCodeTerminalView : NSView
+@interface YCodeTerminalView : NSView <YCodeTerminalScreen>
 {
-  VTerm *_terminal;
-  VTermScreen *_screen;
+  YCodeTerminalParser *_terminal;
+  YCodeTerminalPosition _cursor;
   NSMutableArray *_history;
   NSMutableData *_pendingInput;
   NSString *_directory;

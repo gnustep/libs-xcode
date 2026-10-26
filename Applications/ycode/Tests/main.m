@@ -72,7 +72,7 @@
 @interface YCodeTerminalView (Testing)
 - (BOOL) cellAtRow: (NSInteger)row
            column: (int)column
-             cell: (VTermScreenCell *)cell;
+             cell: (YCodeTerminalGlyph *)cell;
 - (void) queueBytes: (const char *)bytes length: (size_t)length;
 - (NSPasteboard *) pasteboard;
 - (void) advanceBlink;
@@ -492,12 +492,95 @@ testTerminalRedrawing (void)
 }
 
 static void
+testNativeTerminalParser (void)
+{
+  YCodeTerminalTestView *view = [[YCodeTerminalTestView alloc]
+      initWithFrame: NSMakeRect (0, 0, 800, 400)];
+  YCodeTerminalTestView *other = [[YCodeTerminalTestView alloc]
+      initWithFrame: NSMakeRect (0, 0, 800, 400)];
+  YCodeTerminalGlyph cell;
+  terminalFeed (view, @"\033[2;4H\033[s\033[H\033[");
+  terminalFeed (view, @"uX");
+  [view cellAtRow: 1 column: 3 cell: &cell];
+  testAssert (cell.chars[0] == 'X',
+              @"Native parser restores bpytop CSI s/u cursor across reads");
+  terminalFeed (view, @"\033c\033[?69h\033[3;8s\033[?6hZ");
+  [view cellAtRow: 0 column: 2 cell: &cell];
+  testAssert (cell.chars[0] == 'Z',
+              @"CSI s still sets enabled horizontal margins");
+  terminalFeed (view, @"\033c\033[38:2::12:34:56mC\033[48:5:236m ");
+  [view cellAtRow: 0 column: 0 cell: &cell];
+  testAssert (cell.fg.rgb.red == 12 && cell.fg.rgb.blue == 56,
+              @"Native parser accepts colon-delimited truecolor");
+  terminalFeed (view, @"\033c\033[99999999999999999999;2HOK");
+  testAssert ([[view screenText] hasPrefix: @"OK"],
+              @"Overflowing terminal parameters are discarded");
+  terminalFeed (view, @"\033c\033]2;");
+  NSMutableData *oversized = [NSMutableData dataWithLength: 70000];
+  memset ([oversized mutableBytes], 'z', [oversized length]);
+  [view consumeData: oversized];
+  terminalFeed (view, @"\007OK");
+  testAssert (
+      [[view screenText] hasPrefix: @"OK"],
+      @"Oversized control strings are bounded and do not print payloads");
+  terminalFeed (view, @"\033c中\033[1;2HX");
+  [view cellAtRow: 0 column: 0 cell: &cell];
+  testAssert (cell.width == 1 && !cell.chars[0],
+              @"Overwriting wide continuation clears its leading glyph");
+  terminalFeed (view, @"\033c\033[31mR\033]4;1;rgb:12/34/56\033\\");
+  YCodeTerminalParser *parser = [view valueForKey: @"_terminal"];
+  [view cellAtRow: 0 column: 0 cell: &cell];
+  YCodeTerminalColor color = [parser resolvedColor: cell.fg];
+  testAssert (color.rgb.red == 0x12 && color.rgb.blue == 0x56,
+              @"OSC palette changes resolve existing indexed cells");
+  terminalFeed (other, @"\033[31mR");
+  [other cellAtRow: 0 column: 0 cell: &cell];
+  color = [[other valueForKey: @"_terminal"] resolvedColor: cell.fg];
+  testAssert (color.rgb.red != 0x12,
+              @"Palette state is isolated between project terminals");
+  terminalFeed (view, @"\033[6 q");
+  testAssert ([[view valueForKey: @"_cursorShape"] intValue] == 3
+                  && ![[view valueForKey: @"_cursorBlink"] boolValue],
+              @"Program-controlled steady bar cursor reaches the renderer");
+  [view takeOutput];
+  terminalFeed (view, @"\033[?1004h");
+  [parser focusChanged: YES];
+  [parser focusChanged: NO];
+  testAssert (
+      [[view takeOutput]
+          isEqual: [@"\033[I\033[O" dataUsingEncoding: NSUTF8StringEncoding]],
+      @"Focus reporting follows the enabled terminal mode");
+  terminalFeed (view, @"\033[?1002h\033[?1006h");
+  [parser mouseAtRow: 2 column: 3 button: 1 pressed: YES modifiers: 0];
+  [parser mouseAtRow: 2 column: 4 button: 0 pressed: YES modifiers: 0];
+  [parser mouseAtRow: 2 column: 4 button: 1 pressed: NO modifiers: 0];
+  testAssert (
+      [[view takeOutput] isEqual: [@"\033[<0;4;3M\033[<32;5;3M\033[<0;5;3m"
+                                     dataUsingEncoding: NSUTF8StringEncoding]],
+      @"SGR mouse reporting preserves press, drag, and release");
+  terminalFeed (view, @"\033c\033[?1000h");
+  [parser mouseAtRow: 0 column: 0 button: 1 pressed: YES modifiers: 0];
+  [parser mouseAtRow: 0 column: 0 button: 1 pressed: NO modifiers: 0];
+  testAssert (
+      [[view takeOutput] isEqual: [@"\033[M !!\033[M#!!"
+                                     dataUsingEncoding: NSUTF8StringEncoding]],
+      @"Legacy mouse reports remain byte-compatible");
+  terminalFeed (view, @"\033c\033[?1049h\033[2;4H\033[s\033[H\033[u⣿");
+  [view cellAtRow: 1 column: 3 cell: &cell];
+  testAssert (cell.chars[0] == 0x28ff && cell.width == 1,
+              @"bpytop braille graphs stay in their saved terminal cell");
+  [view release];
+  [other release];
+}
+
+static void
 testTerminal (NSString *temporaryDirectory)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   id savedTerminalPreferences =
       [[defaults objectForKey: @"YCodeTerminalPreferences"] retain];
   [YCodePreferences resetTerminalPreferences];
+  testNativeTerminalParser ();
   testTerminalRedrawing ();
   id savedWindowFrame =
       [[defaults objectForKey: @"NSWindow Frame YCodeMainWindow"] retain];
@@ -506,7 +589,7 @@ testTerminal (NSString *temporaryDirectory)
   testAssert (![view isRunning],
               @"Constructing a terminal does not start a shell");
   terminalFeed (view, @"abc\rZ\033[2;4HQ\033[1;2H\033[K");
-  VTermScreenCell cell;
+  YCodeTerminalGlyph cell;
   [view cellAtRow: 0 column: 0 cell: &cell];
   testAssert (cell.chars[0] == 'Z',
               @"Terminal carriage return overwrites the current line");
@@ -520,8 +603,9 @@ testTerminal (NSString *temporaryDirectory)
   [view cellAtRow: 0 column: 0 cell: &cell];
   testAssert (
       cell.chars[0] == 'C' && cell.fg.rgb.red == 12 && cell.fg.rgb.green == 34
-          && cell.fg.rgb.blue == 56 && cell.bg.indexed.idx == 196
-          && cell.attrs.bold && cell.attrs.underline,
+          && cell.fg.rgb.blue == 56 && cell.bg.index == 196
+          && (cell.attributes & YCodeTerminalBold)
+          && (cell.attributes & YCodeTerminalUnderline),
       @"Fragmented SGR supports truecolor, indexed color, bold, and underline");
   terminalFeed (view, @"\033[0m\033[2J\033[Hnormal\033[?1049h\033[Halternate");
   testAssert ([[view screenText] hasPrefix: @"alternate"],
@@ -762,6 +846,57 @@ testTerminal (NSString *temporaryDirectory)
                                                 error: NULL]
                       isEqual: @"Ycode terminal editor test\n"],
               @"An interactive Vim session edits, saves, exits, and restores the shell screen");
+        }
+      if ([[[NSProcessInfo processInfo] arguments]
+              containsObject: @"--terminal-bpytop"])
+        {
+          [preview
+              setContentSize: NSMakeSize (
+                                 [[view valueForKey: @"_cellWidth"] doubleValue]
+                                         * 100
+                                     + [NSScroller scrollerWidth],
+                                 [[view valueForKey: @"_cellHeight"]
+                                     doubleValue]
+                                     * 35)];
+          NSString *config = [temporaryDirectory
+              stringByAppendingPathComponent: @"bpytop-config"];
+          NSString *quoted =
+              [config stringByReplacingOccurrencesOfString: @"'"
+                                                withString: @"'\\''"];
+          NSString *command = [NSString
+              stringWithFormat: @"XDG_CONFIG_HOME='%@' /usr/bin/bpytop\r",
+                               quoted];
+          [view sendData: [command dataUsingEncoding: NSUTF8StringEncoding]];
+          NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow: 6];
+          while ([deadline timeIntervalSinceNow] > 0)
+            [[NSRunLoop currentRunLoop]
+                runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+          NSString *screen = [view screenText];
+          NSUInteger i, graphCells = 0;
+          for (i = 0; i < [screen length]; i++)
+            if ([screen characterAtIndex: i] >= 0x2800 &&
+                [screen characterAtIndex: i] <= 0x28ff)
+              graphCells++;
+          testAssert (
+              [[view valueForKey: @"_alternateScreen"] boolValue]
+                  && graphCells > 0,
+              @"Live bpytop draws braille graphs in its alternate screen");
+          [preview display];
+          NSBitmapImageRep *bitmap =
+              [view bitmapImageRepForCachingDisplayInRect: [view bounds]];
+          [view cacheDisplayInRect: [view bounds] toBitmapImageRep: bitmap];
+          [[bitmap representationUsingType: NSPNGFileType
+                                properties: [NSDictionary dictionary]]
+              writeToFile: @"/tmp/ycode-bpytop-native.png"
+               atomically: YES];
+          [view sendData: [@"q" dataUsingEncoding: NSUTF8StringEncoding]];
+          deadline = [NSDate dateWithTimeIntervalSinceNow: 5];
+          while ([[view valueForKey: @"_alternateScreen"] boolValue] &&
+                 [deadline timeIntervalSinceNow] > 0)
+            [[NSRunLoop currentRunLoop]
+                runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+          testAssert (![[view valueForKey: @"_alternateScreen"] boolValue],
+                      @"Live bpytop exits on q and restores the shell");
         }
       [view sendData: [@"exit\r" dataUsingEncoding: NSUTF8StringEncoding]];
       testAssert (terminalWait (view, @"Shell exited.") && ![view isRunning],
@@ -1016,12 +1151,12 @@ testTerminalPreferences (NSString *temporaryDirectory)
           && colorMatches ([terminal valueForKey: @"_backgroundColor"], 0.1,
                            0.15, 0.2),
       @"Terminal color controls immediately update default foreground and background");
-  VTermScreenCell cell;
+  YCodeTerminalGlyph cell;
   [terminal cellAtRow: [[terminal valueForKey: @"_history"] count]
                column: 0
                  cell: &cell];
   testAssert (
-      cell.fg.indexed.idx == 1 &&
+      cell.fg.index == 1 &&
           [[terminal screenText] rangeOfString: @"preserved"].location
               != NSNotFound,
       @"Preference changes retain terminal text and explicit ANSI colors");
@@ -2920,9 +3055,265 @@ testSyntaxHighlighting (void)
   }
 }
 
+/* Count automatic requests without entering the native popup's modal loop. */
+@interface YCodeCompletionProbe : YCodeTextView
+{
+@public
+  NSUInteger completionRequests;
+}
+
+@end
+
+@implementation YCodeCompletionProbe
+- (void) complete: (id)sender
+{
+  completionRequests++;
+}
+
+@end
+
+static void
+testAutomaticCompletion (void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey: @"YCodeDisableWordCompletion"] retain];
+  [YCodePreferences setWordCompletionEnabled: YES];
+  NSWindow *window =
+      [[NSWindow alloc] initWithContentRect: NSMakeRect (0, 0, 400, 300)
+                                  styleMask: NSTitledWindowMask
+                                    backing: NSBackingStoreBuffered
+                                      defer: NO];
+  [window setReleasedWhenClosed: NO];
+  YCodeCompletionProbe *view =
+      [[YCodeCompletionProbe alloc] initWithFrame: NSMakeRect (0, 0, 400, 300)];
+  [view setFilePath: @"/tmp/Automatic.m"];
+  [window setContentView: view];
+  [window makeKeyAndOrderFront: nil];
+  [window makeFirstResponder: view];
+  [view insertText: @"r"];
+  [view insertText: @"e"];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.45]];
+  testAssert (view->completionRequests == 0,
+              @"Two characters do not trigger automatic completion");
+  [view insertText: @"t"];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.15]];
+  testAssert (view->completionRequests == 0,
+              @"Completion waits for a typing pause");
+  [view insertText: @"u"];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.25]];
+  testAssert (view->completionRequests == 0,
+              @"Continued typing restarts the completion delay");
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.2]];
+  testAssert (view->completionRequests == 1,
+              @"A pause opens completion once for the latest prefix");
+  [view insertText: @"r"];
+  [view setSelectedRange: NSMakeRange (0, 0)];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.45]];
+  testAssert (view->completionRequests == 1,
+              @"Moving the caret cancels pending completion");
+  [view setString: @"re"];
+  [view setSelectedRange: NSMakeRange (2, 0)];
+  [view insertText: @"t"];
+  [YCodePreferences setWordCompletionEnabled: NO];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.45]];
+  testAssert (view->completionRequests == 1,
+              @"Disabling completion suppresses a pending popup");
+  [YCodePreferences setWordCompletionEnabled: YES];
+  [view setString: @"re"];
+  [view setSelectedRange: NSMakeRange (2, 0)];
+  [view insertText: @"t"];
+  [window makeFirstResponder: nil];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.45]];
+  testAssert (view->completionRequests == 1,
+              @"Leaving the editor cancels pending completion");
+  [window makeFirstResponder: view];
+  [view setString: @""];
+  [view insertText: @"ret"];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.45]];
+  testAssert (view->completionRequests == 1,
+              @"Inserting multiple characters does not trigger completion");
+  [view setString: @"zzzz"];
+  [view setSelectedRange: NSMakeRange (4, 0)];
+  [view insertText: @"z"];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.45]];
+  testAssert (view->completionRequests == 1,
+              @"No popup is requested when there are no matches");
+  [window close];
+  [view release];
+  [window release];
+  if (saved)
+    [defaults setObject: saved forKey: @"YCodeDisableWordCompletion"];
+  else
+    [defaults removeObjectForKey: @"YCodeDisableWordCompletion"];
+  [defaults synchronize];
+  [saved release];
+}
+
+static void
+testWordCompletion (void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id saved = [[defaults objectForKey: @"YCodeDisableWordCompletion"] retain];
+  [defaults removeObjectForKey: @"YCodeDisableWordCompletion"];
+  testAssert ([YCodePreferences wordCompletionEnabled],
+              @"Word completion defaults to enabled");
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+      initWithFilePath: @"/tmp/Completion.m"
+               content: @"returnValue returnValue ReturnOther; call(ret"];
+  YCodeTextView *view = (YCodeTextView *)[document textView];
+  NSWindow *window =
+      [[NSWindow alloc] initWithContentRect: NSMakeRect (0, 0, 400, 300)
+                                  styleMask: NSTitledWindowMask
+                                    backing: NSBackingStoreBuffered
+                                      defer: NO];
+  [window setReleasedWhenClosed: NO];
+  [window setContentView: [document editorView]];
+  [window makeKeyAndOrderFront: nil];
+  [window makeFirstResponder: view];
+  [view setSelectedRange: NSMakeRange ([[view string] length], 0)];
+  NSRange range = [view rangeForUserCompletion];
+  NSInteger index = -1;
+  NSArray *words = [view completionsForPartialWordRange: range
+                                    indexOfSelectedItem: &index];
+  testAssert (
+      range.length == 3 && index == 0 &&
+          [words isEqual: [NSArray arrayWithObjects: @"retain", @"return",
+                                                   @"returnValue", nil]],
+      @"Completion merges keywords and unsaved identifiers, sorted and deduplicated, with case-sensitive matching");
+  [YCodePreferences setWordCompletionEnabled: NO];
+  testAssert ([view rangeForUserCompletion].location == NSNotFound &&
+                  [[view completionsForPartialWordRange: range
+                                    indexOfSelectedItem: NULL] count]
+                      == 0,
+              @"Disabling completion takes effect in existing editors");
+  [view complete: nil];
+  [YCodePreferences setWordCompletionEnabled: YES];
+  [document setContent: @"[@int"];
+  [view setSelectedRange: NSMakeRange (5, 0)];
+  range = [view rangeForUserCompletion];
+  testAssert (NSEqualRanges (range, NSMakeRange (1, 4)) &&
+                  [[view completionsForPartialWordRange: range
+                                    indexOfSelectedItem: NULL]
+                      containsObject: @"@interface"],
+              @"Objective-C directives include their at sign");
+  [view setSelectedRange: NSMakeRange (3, 0)];
+  testAssert (
+      [view rangeForUserCompletion].location == NSNotFound,
+      @"Completion avoids duplicating a suffix in the middle of an identifier");
+  [view setSelectedRange: NSMakeRange (1, 4)];
+  testAssert ([view rangeForUserCompletion].location == NSNotFound,
+              @"Completion leaves selected text alone");
+  [view setFilePath: @"/tmp/Completion.py"];
+  [document setContent: @"lam"];
+  [view setSelectedRange: NSMakeRange (3, 0)];
+  testAssert (
+      [[view completionsForPartialWordRange: [view rangeForUserCompletion]
+                        indexOfSelectedItem: NULL] containsObject: @"lambda"],
+      @"Completion follows the active language bundle");
+  [view setFilePath: @"/tmp/Completion.unknown"];
+  [document setContent: @"localWord localWord loc"];
+  [view setSelectedRange: NSMakeRange ([[view string] length], 0)];
+  testAssert (
+      [[view completionsForPartialWordRange: [view rangeForUserCompletion]
+                        indexOfSelectedItem: NULL]
+          isEqual: [NSArray arrayWithObject: @"localWord"]],
+      @"Unknown languages still complete words from the current file");
+  testAssert ([[view completionsForPartialWordRange: NSMakeRange (NSNotFound, 0)
+                                indexOfSelectedItem: NULL] count]
+                  == 0,
+              @"Invalid completion ranges are harmless");
+#ifdef GNUSTEP
+  [view setFilePath: @"/tmp/Completion.m"];
+  [document setContent: @"ret"];
+  [document setModified: NO];
+  [view setSelectedRange: NSMakeRange (3, 0)];
+  range = [view rangeForUserCompletion];
+  NSUndoManager *undo = [view undoManager];
+  [undo removeAllActions];
+  [view insertCompletion: @"return"
+      forPartialWordRange: range
+                 movement: NSDownTextMovement
+                  isFinal: NO];
+  [view insertCompletion: @"ret"
+      forPartialWordRange: range
+                 movement: NSCancelTextMovement
+                  isFinal: NO];
+  testAssert (
+      [[view string] isEqual: @"ret"] && ![document isModified]
+          && ![undo canUndo],
+      @"Browsing and cancelling completion preserves text and undo history");
+  [undo beginUndoGrouping];
+  [view insertCompletion: @"return"
+      forPartialWordRange: range
+                 movement: NSOtherTextMovement
+                  isFinal: YES];
+  [undo endUndoGrouping];
+  testAssert ([[view string] isEqual: @"return"] && [document isModified],
+              @"Accepting completion edits and marks the document modified");
+  [undo undo];
+  testAssert ([[view string] isEqual: @"ret"],
+              @"Completion is undone in one step");
+  [undo redo];
+  testAssert ([[view string] isEqual: @"return"], @"Completion supports redo");
+  /* Exercise the actual suggestion window and its Return acceptance path. */
+  [document setContent: @"ret"];
+  [view setSelectedRange: NSMakeRange (3, 0)];
+  [NSApp postEvent: [NSEvent keyEventWithType: NSKeyDown
+                                          location: NSZeroPoint
+                                     modifierFlags: 0
+                                         timestamp: 0
+                                      windowNumber: [window windowNumber]
+                                           context: nil
+                                        characters: @"\r"
+                       charactersIgnoringModifiers: @"\r"
+                                         isARepeat: NO
+                                           keyCode: 0]
+           atStart: YES];
+  [view complete: nil];
+  testAssert (
+      [[view string] isEqual: @"retain"],
+      @"The native suggestion list accepts its selected keyword with Return");
+#endif
+  AppController *app = [[AppController alloc] init];
+  [app showPrefPanel: nil];
+  NSButton *checkbox = [app valueForKey: @"_wordCompletionCheckbox"];
+  testAssert ([checkbox state] == NSOnState,
+              @"Editor preference displays enabled completion");
+  [checkbox performClick: nil];
+  testAssert (![YCodePreferences wordCompletionEnabled],
+              @"Editor checkbox disables completion");
+  [checkbox performClick: nil];
+  testAssert ([YCodePreferences wordCompletionEnabled],
+              @"Editor checkbox re-enables completion");
+  [[app valueForKey: @"_preferencesPanel"] orderOut: nil];
+  [app release];
+  [document setModified: NO];
+  [window close];
+  [window release];
+  [document release];
+  if (saved)
+    [defaults setObject: saved forKey: @"YCodeDisableWordCompletion"];
+  else
+    [defaults removeObjectForKey: @"YCodeDisableWordCompletion"];
+  [defaults synchronize];
+  [saved release];
+}
+
 static void
 testEditorEditing (NSString *directory)
 {
+  id savedControlWidth = [[[NSUserDefaults standardUserDefaults]
+      objectForKey: @"YCodeControlIndentWidth"] retain];
+  [YCodePreferences setControlIndentWidth: 2];
   NSString *root = [directory stringByAppendingPathComponent: @"Editing Rules"];
   NSFileManager *manager = [NSFileManager defaultManager];
   [manager createDirectoryAtPath: root
@@ -3176,8 +3567,6 @@ testEditorEditing (NSString *directory)
   testAssert (
       [[view string] isEqual: @"if (ready)\n  "],
       @"Control statements add two literal spaces even with eight-column project tabs");
-  id savedControlWidth = [[[NSUserDefaults standardUserDefaults]
-      objectForKey: @"YCodeControlIndentWidth"] retain];
   [YCodePreferences setControlIndentWidth: 4];
   [document setContent: @"{"];
   [view setSelectedRange: NSMakeRange (1, 0)];
@@ -9030,6 +9419,15 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-completion"])
+    {
+      testWordCompletion ();
+      testAutomaticCompletion ();
+      NSLog (@"Ycode completion checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-editing"])
     {
       testEditorEditing (temporaryDirectory);
@@ -9239,6 +9637,8 @@ main (void)
     }
   id savedWindowFrame = [[[NSUserDefaults standardUserDefaults]
       objectForKey: @"NSWindow Frame YCodeMainWindow"] retain];
+  testWordCompletion ();
+  testAutomaticCompletion ();
   testPanelVisibilityPersistence ();
   testNavigatorFolderOrder ();
   testWindowFramePersistence ();

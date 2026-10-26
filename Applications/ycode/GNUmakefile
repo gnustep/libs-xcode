@@ -44,9 +44,6 @@ Ycode_LIB_DIRS += -L../../XCode/XCode.framework/Versions/0
 
 # Additional include directories
 ADDITIONAL_INCLUDE_DIRS += -I../..
-Ycode_INCLUDE_DIRS += -ITerminal/libvterm/include
-Ycode_C_FILES = $(wildcard Terminal/libvterm/src/*.c)
-Ycode_CFLAGS += -std=c99
 
 
 #
@@ -73,6 +70,8 @@ Resources/ProjectCenterIcons/FileMM.tiff
 #
 Ycode_HEADER_FILES = \
 YCodeTerminalView.h \
+YCodeTerminalTypes.h \
+YCodeTerminalParser.h \
 YCodeLanguage.h \
 YCodePreferences.h \
 AppController.h \
@@ -106,6 +105,7 @@ YCodeControlIcons.h
 #
 Ycode_OBJC_FILES = \
 YCodeTerminalView.m \
+YCodeTerminalParser.m \
 YCodeLanguage.m \
 YCodePreferences.m \
 AppController.m \

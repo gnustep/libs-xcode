@@ -27,6 +27,7 @@
   NSView *_editorPreferencesView;
   NSButton *_showEditorRulers;
   NSButton *_matchingDelimitersCheckbox;
+  NSButton *_wordCompletionCheckbox;
   NSButton *_fileWatchingCheckbox;
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;

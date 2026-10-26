@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Format tracked C/Objective-C sources using GNU and GNUstep conventions.
+"""Format tracked and unignored C/Objective-C sources using GNU and GNUstep conventions.
 
 Requires clang-format 19. With --check, report differences without writing.
 Comments and string literals are preserved, including embedded source fixtures.
@@ -161,8 +161,8 @@ def main():
     version = subprocess.check_output(['clang-format', '--version'], text=True)
     if not re.search(r'version 19\.', version):
         parser.error('clang-format 19 is required')
-    paths = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
-    paths = [path for path in paths if pathlib.Path(path).suffix in ('.c', '.h', '.m')]
+    paths = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT).decode().split('\0')
+    paths = [path for path in sorted(set(paths)) if (ROOT / path).is_file() and pathlib.Path(path).suffix in ('.c', '.h', '.m')]
     failures = 0
     changed = 0
     for name in paths:

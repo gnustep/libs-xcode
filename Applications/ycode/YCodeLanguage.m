@@ -62,6 +62,9 @@ YCodeStringArray (id value)
           || ([definition objectForKey: @"ControlKeywords"]
               && !YCodeStringArray (
                   [definition objectForKey: @"ControlKeywords"]))
+          || ([definition objectForKey: @"CompletionKeywords"]
+              && !YCodeStringArray (
+                  [definition objectForKey: @"CompletionKeywords"]))
           || ([definition objectForKey: @"StandaloneControls"]
               && !YCodeStringArray (
                   [definition objectForKey: @"StandaloneControls"]))
@@ -149,6 +152,11 @@ YCodeStringArray (id value)
 - (NSString *) indentationStyle
 {
   return [_definition objectForKey: @"Indentation"];
+}
+
+- (NSArray *) completionKeywords
+{
+  return [_definition objectForKey: @"CompletionKeywords"];
 }
 
 - (NSArray *) controlKeywords

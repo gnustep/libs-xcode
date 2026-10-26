@@ -163,6 +163,17 @@ selected match; otherwise it finds the next match first. Replace All affects
 only the current file and can be undone in one step. Switching tabs changes
 the panel's target file. Searching alone does not mark the file changed.
 
+**Edit > Complete Word** offers case-sensitive suggestions from words in the
+current file (including unsaved edits) and the active language's keywords.
+With GNUstep’s default key bindings, Escape also opens completion.
+Use the arrow keys to choose a suggestion and Return to accept it; Escape
+cancels. Suggestions also appear after a 0.35-second typing pause once the
+current word has at least three characters. Moving the caret or leaving the
+editor cancels pending suggestions. Inserting multiple characters at once does not trigger the popup.
+It is enabled by default; **Preferences > Editor > Enable word and keyword
+completion** turns it on or off immediately for all editors. This is lexical
+completion, without project indexing or type-aware member suggestions.
+
 Open text files update automatically when changed outside Ycode. Monitoring uses
 inotify on Linux, kqueue on macOS/BSD, and Windows directory-change notifications;
 there is no recurring file-polling timer. Watchers are shared by open files in
@@ -316,8 +327,7 @@ and choose a fixed-pitch font (6–72 points). Text, background, and cursor colo
 apply immediately through the Color panel. The cursor defaults to red. Choose
 Program controlled, Block, Outline, Vertical line, or Underline for its shape.
 
-The bundled MIT-licensed [libvterm](https://www.leonerd.org.uk/code/libvterm/)
-0.3.3 engine handles ANSI/VT100 and many VT220/xterm sequences: cursor motion,
+The native Objective-C parser ported from GNUstep Terminal.app handles ANSI/VT100 and many VT220/xterm sequences: cursor motion,
 erase/insert/delete, scrolling regions, saved cursors, alternate screens,
 DEC line drawing, UTF-8 with wide/combining characters, 16/256-color and
 24-bit color, bold/italic/underline/reverse/conceal/strike/blink, application
@@ -330,7 +340,10 @@ rendering are not implemented. Font coverage determines which Unicode glyphs
 can be displayed. Scrollback does not reflow when the pane width changes.
 Interactive sessions currently require POSIX PTYs (GNUstep on Unix or macOS);
 Windows reports that the terminal is unavailable. No external terminal app or
-separately installed libvterm is required.
+external emulator library is required. The Info panel retains the attribution
+that the terminal emulation code is based on libvterm. The parser is licensed
+under GNU GPL v3 or later; attribution and license texts are included in
+`Resources/ThirdPartyLicenses`.
 
 ## Debugging
 

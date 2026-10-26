@@ -24,27 +24,13 @@
         YCODE_DEBUG = { isa = XCBuildConfiguration; name = Debug; buildSettings = {}; };
         YCODE_RELEASE = { isa = XCBuildConfiguration; name = Release; buildSettings = {}; };
 
+        TERMINAL_NATIVE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTerminalParser.m"; sourceTree = "<group>"; };
+        TERMINAL_NATIVE_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTerminalParser.h"; sourceTree = "<group>"; };
+        TERMINAL_TYPES_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTerminalTypes.h"; sourceTree = "<group>"; };
+        TERMINAL_NATIVE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_NATIVE; };
         TERMINAL_YCODETERMINALVIEW_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = "YCodeTerminalView.h"; sourceTree = "<group>"; };
         TERMINAL_YCODETERMINALVIEW = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = "YCodeTerminalView.m"; sourceTree = "<group>"; };
         TERMINAL_YCODETERMINALVIEW_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_YCODETERMINALVIEW; };
-        TERMINAL_ENCODING = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/encoding.c"; sourceTree = "<group>"; };
-        TERMINAL_ENCODING_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_ENCODING; };
-        TERMINAL_KEYBOARD = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/keyboard.c"; sourceTree = "<group>"; };
-        TERMINAL_KEYBOARD_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_KEYBOARD; };
-        TERMINAL_MOUSE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/mouse.c"; sourceTree = "<group>"; };
-        TERMINAL_MOUSE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_MOUSE; };
-        TERMINAL_PARSER = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/parser.c"; sourceTree = "<group>"; };
-        TERMINAL_PARSER_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_PARSER; };
-        TERMINAL_PEN = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/pen.c"; sourceTree = "<group>"; };
-        TERMINAL_PEN_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_PEN; };
-        TERMINAL_SCREEN = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/screen.c"; sourceTree = "<group>"; };
-        TERMINAL_SCREEN_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_SCREEN; };
-        TERMINAL_STATE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/state.c"; sourceTree = "<group>"; };
-        TERMINAL_STATE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_STATE; };
-        TERMINAL_UNICODE = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/unicode.c"; sourceTree = "<group>"; };
-        TERMINAL_UNICODE_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_UNICODE; };
-        TERMINAL_VTERM = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.c"; path = "Terminal/libvterm/src/vterm.c"; sourceTree = "<group>"; };
-        TERMINAL_VTERM_BUILD = { isa = PBXBuildFile; fileRef = TERMINAL_VTERM; };
         DEBUGGER_REGISTRY_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeDebuggerRegistry.h; sourceTree = "<group>"; };
         DEBUGGER_REGISTRY_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeDebuggerRegistry.m; sourceTree = "<group>"; };
         DEBUGGER_REGISTRY_BUILD = { isa = PBXBuildFile; fileRef = DEBUGGER_REGISTRY_M; };
@@ -137,7 +123,6 @@
                 PRODUCT_NAME = Ycode;
                 ENABLE_USER_SCRIPT_SANDBOXING = NO;
 
-                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Terminal/libvterm/include");
 	    };
 	    isa = XCBuildConfiguration;
             name = Debug;
@@ -182,7 +167,7 @@
                 NATIVE_YCODEPROJECTNAVIGATORITEM,
                 NATIVE_YCODESYNTAXHIGHLIGHTER, YCODE_TEXT_SOURCE,
         YCODE_TEXT_HEADER,
-        TERMINAL_YCODETERMINALVIEW_H, TERMINAL_YCODETERMINALVIEW, TERMINAL_ENCODING, TERMINAL_KEYBOARD, TERMINAL_MOUSE, TERMINAL_PARSER, TERMINAL_PEN, TERMINAL_SCREEN, TERMINAL_STATE, TERMINAL_UNICODE, TERMINAL_VTERM,
+        TERMINAL_NATIVE_H, TERMINAL_TYPES_H, TERMINAL_NATIVE, TERMINAL_YCODETERMINALVIEW_H, TERMINAL_YCODETERMINALVIEW,
         YCODE_FILE_INSPECTOR_SOURCE,
         YCODE_IMAGE_INSPECTOR_SOURCE,
         YCODE_SOUND_INSPECTOR_SOURCE,
@@ -232,7 +217,7 @@
                 NATIVE_YCODEPROJECTNAVIGATORCONTROLLER_BUILD,
                 NATIVE_YCODEPROJECTNAVIGATORITEM_BUILD,
                 NATIVE_YCODESYNTAXHIGHLIGHTER_BUILD, YCODE_TEXT_BUILD,
-                TERMINAL_YCODETERMINALVIEW_BUILD, TERMINAL_ENCODING_BUILD, TERMINAL_KEYBOARD_BUILD, TERMINAL_MOUSE_BUILD, TERMINAL_PARSER_BUILD, TERMINAL_PEN_BUILD, TERMINAL_SCREEN_BUILD, TERMINAL_STATE_BUILD, TERMINAL_UNICODE_BUILD, TERMINAL_VTERM_BUILD,
+                TERMINAL_YCODETERMINALVIEW_BUILD, TERMINAL_NATIVE_BUILD,
         YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD, YCODE_WATCHER_BUILD, YCODE_LANGUAGE_BUILD,
         YCODE_FILE_INSPECTOR_BUILD,
         YCODE_IMAGE_INSPECTOR_BUILD,
@@ -306,7 +291,6 @@
                 PRODUCT_NAME = Ycode;
                 ENABLE_USER_SCRIPT_SANDBOXING = NO;
 
-                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Terminal/libvterm/include");
 	    };
 	    isa = XCBuildConfiguration;
 	    name = Release;

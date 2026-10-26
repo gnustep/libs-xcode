@@ -298,6 +298,8 @@ YCodeFileURLFromPath (NSString *path)
   [editMenu addItem: [NSMenuItem separatorItem]];
   [editMenu
       addItem: YCodeMenuItem (@"Find...", @selector (findInFile:), @"f", self)];
+  [editMenu addItem: YCodeMenuItem (@"Complete Word", @selector (completeWord:),
+                                   @"", self)];
   [editMenu addItem: YCodeMenuItem (@"Replace...", @selector (replaceInFile:),
                                    @"", self)];
   [editMenu addItem: [NSMenuItem separatorItem]];
@@ -989,6 +991,12 @@ YCodeFileURLFromPath (NSString *path)
   [[self currentEditorController] replaceInFile: sender];
 }
 
+- (IBAction) completeWord: (id)sender
+{
+  [[[[self currentEditorController] currentDocument] textView]
+      complete: sender];
+}
+
 - (IBAction) convertTabsToSpaces: (id)sender
 {
   [(YCodeTextView *)[[[self currentEditorController] currentDocument] textView]
@@ -1036,6 +1044,10 @@ YCodeFileURLFromPath (NSString *path)
     }
   if (action == @selector (createProjectSettings:))
     return [[self currentProject] canCreateSettingsFile];
+  if (action == @selector (completeWord:))
+    return [YCodePreferences wordCompletionEnabled] &&
+           [[[[self currentEditorController] currentDocument] textView]
+               isEditable];
   if (action == @selector (convertTabsToSpaces:))
     return [[[[self currentEditorController] currentDocument] textView]
         isEditable];
@@ -1531,6 +1543,11 @@ YCodeFileURLFromPath (NSString *path)
     }
 }
 
+- (void) changeWordCompletion: (NSButton *)sender
+{
+  [YCodePreferences setWordCompletionEnabled: [sender state] == NSOnState];
+}
+
 - (void) changeMatchingDelimiters: (NSButton *)sender
 {
   [YCodePreferences
@@ -1702,6 +1719,16 @@ YCodeFileURLFromPath (NSString *path)
           setToolTip:
               @"Automatically update project folders and detect changes to open files."];
       [_editorPreferencesView addSubview: _fileWatchingCheckbox];
+      _wordCompletionCheckbox = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (20, 281, 350, 28)]);
+      [_wordCompletionCheckbox setButtonType: NSSwitchButton];
+      [_wordCompletionCheckbox setTitle: @"Enable word and keyword completion"];
+      [_wordCompletionCheckbox setTarget: self];
+      [_wordCompletionCheckbox setAction: @selector (changeWordCompletion:)];
+      [_wordCompletionCheckbox
+          setToolTip:
+              @"Suggest words and keywords after a short typing pause, or use Edit > Complete Word."];
+      [_editorPreferencesView addSubview: _wordCompletionCheckbox];
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];
@@ -1751,6 +1778,9 @@ YCodeFileURLFromPath (NSString *path)
       [_colorPreferencesView addSubview: reset];
     }
   [self refreshEditorColorWells];
+  [_wordCompletionCheckbox setState: [YCodePreferences wordCompletionEnabled]
+                                        ? NSOnState
+                                        : NSOffState];
   [_matchingDelimitersCheckbox
       setState: [YCodePreferences highlightMatchingDelimiters] ? NSOnState
                                                               : NSOffState];

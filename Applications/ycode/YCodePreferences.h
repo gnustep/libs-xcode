@@ -68,6 +68,8 @@ extern NSString *YCodeIssueColorsDidChangeNotification;
 + (void) setTerminalCursorBlink: (BOOL)enabled;
 + (void) resetTerminalPreferences;
 /** Saved indentation defaults, used when project formatting does not override them. */
++ (BOOL) wordCompletionEnabled;
++ (void) setWordCompletionEnabled: (BOOL)enabled;
 + (BOOL) highlightMatchingDelimiters;
 + (void) setHighlightMatchingDelimiters: (BOOL)enabled;
 + (NSUInteger) tabWidth;

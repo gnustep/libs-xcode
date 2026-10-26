@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright (C) 2017-2026 Free Software Foundation. Terminal emulation code is based on libvterm, adapted through Terminal.app.</string>
 	<key>CFBundleIconFile</key>
 	<string>Ycode.icns</string>
 	<key>NSHighResolutionCapable</key>

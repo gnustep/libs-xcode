@@ -27,81 +27,26 @@
 @interface YCodeTerminalView (Private)
 - (void) poll: (NSTimer *)timer;
 - (void) queueBytes: (const char *)bytes length: (size_t)length;
-// GCC cannot encode libvterm's nested _Bool bitfields in Objective-C method
-// metadata. Keep the C callback typed and pass its value opaquely here.
-- (int) property: (VTermProp)property value: (void *)rawValue;
-- (int) pushLine: (int)columns cells: (const VTermScreenCell *)cells;
-- (int) popLine: (int)columns cells: (VTermScreenCell *)cells;
 - (void) clearHistory;
 - (void) resizeTerminal;
 - (void) updateScroller;
 - (void) scrollHistory: (NSScroller *)sender;
 - (void) preferencesChanged: (NSNotification *)notification;
 - (void) ringBell;
-- (void) invalidateTerminalRect: (VTermRect)rect;
-- (void) invalidateCursorAt: (VTermPos)position;
+- (void) invalidateTerminalRect: (YCodeTerminalRect)rect;
+- (void) invalidateCursorAt: (YCodeTerminalPosition)position;
 - (BOOL) cursorCanBlink;
 - (void) advanceBlink;
 - (void) windowFocusChanged: (NSNotification *)notification;
 @end
 
-static int
-terminalDamage (VTermRect rect, void *user)
-{
-  [(YCodeTerminalView *)user invalidateTerminalRect: rect];
-  return 1;
-}
-static int
-terminalCursor (VTermPos pos, VTermPos old, int visible, void *user)
-{
-  [(YCodeTerminalView *)user invalidateCursorAt: old];
-  [(YCodeTerminalView *)user invalidateCursorAt: pos];
-  return 1;
-}
-static int
-terminalProperty (VTermProp property, VTermValue *value, void *user)
-{
-  return [(YCodeTerminalView *)user property: property value: value];
-}
-static int
-terminalBell (void *user)
-{
-  [(YCodeTerminalView *)user ringBell];
-  return 1;
-}
-static int
-terminalPush (int columns, const VTermScreenCell *cells, void *user)
-{
-  return [(YCodeTerminalView *)user pushLine: columns cells: cells];
-}
-static int
-terminalPop (int columns, VTermScreenCell *cells, void *user)
-{
-  return [(YCodeTerminalView *)user popLine: columns cells: cells];
-}
-static int
-terminalClear (void *user)
-{
-  [(YCodeTerminalView *)user clearHistory];
-  return 1;
-}
-static void
-terminalOutput (const char *bytes, size_t length, void *user)
-{
-  [(YCodeTerminalView *)user queueBytes: bytes length: length];
-}
-static const VTermScreenCallbacks terminalCallbacks
-    = { terminalDamage,   NULL,         terminalCursor,
-        terminalProperty, terminalBell, NULL,
-        terminalPush,     terminalPop,  terminalClear };
-
 static NSString *
-terminalCellString (const VTermScreenCell *cell)
+terminalCellString (const YCodeTerminalGlyph *cell)
 {
-  unichar text[VTERM_MAX_CHARS_PER_CELL * 2];
+  unichar text[6 * 2];
   NSUInteger count = 0;
   int i;
-  for (i = 0; i < VTERM_MAX_CHARS_PER_CELL && cell->chars[i]; i++)
+  for (i = 0; i < 6 && cell->chars[i]; i++)
     {
       uint32_t c = cell->chars[i];
       if (c == (uint32_t)-1)
@@ -118,20 +63,6 @@ terminalCellString (const VTermScreenCell *cell)
   return count ? [NSString stringWithCharacters: text length: count] : @" ";
 }
 
-static VTermModifier
-terminalModifiers (NSEvent *event)
-{
-  NSUInteger flags = [event modifierFlags];
-  int result = 0;
-  if (flags & NSShiftKeyMask)
-    result |= VTERM_MOD_SHIFT;
-  if (flags & NSAlternateKeyMask)
-    result |= VTERM_MOD_ALT;
-  if (flags & NSControlKeyMask)
-    result |= VTERM_MOD_CTRL;
-  return (VTermModifier)result;
-}
-
 @implementation YCodeTerminalView
 - (id) initWithFrame: (NSRect)frame
 {
@@ -141,7 +72,7 @@ terminalModifiers (NSEvent *event)
       _selectionStart = _selectionEnd = -1;
       _cursorVisible = YES;
       _blinkOn = YES;
-      _cursorShape = VTERM_PROP_CURSORSHAPE_BLOCK;
+      _cursorShape = 1;
       _font = RETAIN ([YCodePreferences terminalFont]);
       _boldFont = RETAIN ([[NSFontManager sharedFontManager]
           convertFont: _font
@@ -168,14 +99,9 @@ terminalModifiers (NSEvent *event)
       _rows = MAX (2, (int)(frame.size.height / _cellHeight));
       _columns = MAX (
           2, (int)(MAX (0, frame.size.width - scrollerWidth) / _cellWidth));
-      _terminal = vterm_new (_rows, _columns);
-      vterm_set_utf8 (_terminal, 1);
-      vterm_output_set_callback (_terminal, terminalOutput, self);
-      _screen = vterm_obtain_screen (_terminal);
-      vterm_screen_set_callbacks (_screen, &terminalCallbacks, self);
-      vterm_screen_enable_altscreen (_screen, 1);
-      vterm_screen_set_damage_merge (_screen, VTERM_DAMAGE_SCREEN);
-      vterm_screen_reset (_screen, 1);
+      _terminal = [[YCodeTerminalParser alloc] initWithTerminalScreen: self
+                                                                width: _columns
+                                                               height: _rows];
       [self preferencesChanged: nil];
       [[NSNotificationCenter defaultCenter]
           addObserver: self
@@ -191,8 +117,7 @@ terminalModifiers (NSEvent *event)
 {
   [[NSNotificationCenter defaultCenter] removeObserver: self];
   [self stop];
-  if (_terminal)
-    vterm_free (_terminal);
+  RELEASE (_terminal);
   RELEASE (_font);
   RELEASE (_boldFont);
   RELEASE (_history);
@@ -232,18 +157,6 @@ terminalModifiers (NSEvent *event)
   ASSIGN (_backgroundColor, [YCodePreferences terminalBackgroundColor]);
   ASSIGN (_cursorColor, [YCodePreferences terminalCursorColor]);
   _preferredCursorShape = [YCodePreferences terminalCursorShape];
-  VTermColor fg, bg;
-  NSColor *color =
-      [_foregroundColor colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
-  vterm_color_rgb (&fg, lround ([color redComponent] * 255),
-                   lround ([color greenComponent] * 255),
-                   lround ([color blueComponent] * 255));
-  color =
-      [_backgroundColor colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
-  vterm_color_rgb (&bg, lround ([color redComponent] * 255),
-                   lround ([color greenComponent] * 255),
-                   lround ([color blueComponent] * 255));
-  vterm_screen_set_default_colors (_screen, &fg, &bg);
   _scrollbackLimit = [YCodePreferences terminalScrollbackLines];
   if ([_history count] > _scrollbackLimit)
     {
@@ -274,14 +187,14 @@ terminalModifiers (NSEvent *event)
   _blinkOn = YES;
   _lastBlink = [NSDate timeIntervalSinceReferenceDate];
   [[self window] setAcceptsMouseMovedEvents: YES];
-  vterm_state_focus_in (vterm_obtain_state (_terminal));
+  [_terminal focusChanged: YES];
   [self setNeedsDisplay: YES];
   return YES;
 }
 
 - (BOOL) resignFirstResponder
 {
-  vterm_state_focus_out (vterm_obtain_state (_terminal));
+  [_terminal focusChanged: NO];
   [self setNeedsDisplay: YES];
   return YES;
 }
@@ -328,7 +241,7 @@ terminalModifiers (NSEvent *event)
   return _master >= 0;
 }
 
-- (void) invalidateTerminalRect: (VTermRect)rect
+- (void) invalidateTerminalRect: (YCodeTerminalRect)rect
 {
   // While browsing history, screen rows and visible rows no longer coincide.
   if (_scrollOffset)
@@ -346,11 +259,11 @@ terminalModifiers (NSEvent *event)
                                               * _cellHeight)];
 }
 
-- (void) invalidateCursorAt: (VTermPos)position
+- (void) invalidateCursorAt: (YCodeTerminalPosition)position
 {
   if (_scrollOffset)
     return;
-  VTermRect rect
+  YCodeTerminalRect rect
       = { position.row, position.row + 1, position.col, position.col + 1 };
   [self invalidateTerminalRect: rect];
 }
@@ -370,8 +283,7 @@ terminalModifiers (NSEvent *event)
     return;
   if (_cursorVisible && !_scrollOffset && [self cursorCanBlink])
     {
-      VTermPos cursor;
-      vterm_state_get_cursorpos (vterm_obtain_state (_terminal), &cursor);
+      YCodeTerminalPosition cursor = _cursor;
       [self invalidateCursorAt: cursor];
     }
   // ANSI blinking text remains independent of the cursor preference/focus.
@@ -380,9 +292,9 @@ terminalModifiers (NSEvent *event)
   for (row = 0; row < _rows; row++)
     for (col = 0; col < _columns; col++)
       {
-        VTermScreenCell cell;
+        YCodeTerminalGlyph cell;
         if ([self cellAtRow: first + row column: col cell: &cell]
-            && cell.attrs.blink)
+            && (cell.attributes & YCodeTerminalBlink))
           [self setNeedsDisplayInRect: NSMakeRect (
                                           col * _cellWidth, row * _cellHeight,
                                           MAX (1, cell.width) * _cellWidth,
@@ -390,35 +302,75 @@ terminalModifiers (NSEvent *event)
       }
 }
 
-- (int) property: (VTermProp)property value: (void *)rawValue
+- (void) ts_sendCString: (const char *)bytes length: (int)length
 {
-  VTermValue *value = (VTermValue *)rawValue;
-  if (property == VTERM_PROP_CURSORVISIBLE)
-    _cursorVisible = value->boolean;
-  if (property == VTERM_PROP_CURSORBLINK)
-    _cursorBlink = value->boolean;
-  if (property == VTERM_PROP_CURSORSHAPE)
-    _cursorShape = value->number;
-  if (property == VTERM_PROP_ALTSCREEN)
+  [self queueBytes: bytes length: length];
+}
+
+- (void) ts_goto: (int)column row: (int)row
+{
+  if (_cursor.row == row && _cursor.col == column)
+    return;
+  [self invalidateCursorAt: _cursor];
+  _cursor.row = row;
+  _cursor.col = column;
+  [self invalidateCursorAt: _cursor];
+}
+
+- (void) ts_damageRow: (int)row
+{
+  YCodeTerminalRect rect = { row, row + 1, 0, _columns };
+  [self invalidateTerminalRect: rect];
+}
+
+- (void) ts_setTitle: (NSString *)title type: (int)type
+{
+  // Child programs cannot rename the project window.
+}
+
+- (void) ts_setCursorVisible: (BOOL)visible
+{
+  if (_cursorVisible != visible)
     {
-      _alternateScreen = value->boolean;
+      _cursorVisible = visible;
+      [self invalidateCursorAt: _cursor];
+    }
+}
+
+- (void) ts_setCursorShape: (int)shape blink: (BOOL)blink
+{
+  if (_cursorShape != shape || _cursorBlink != blink)
+    {
+      _cursorShape = shape;
+      _cursorBlink = blink;
+      [self invalidateCursorAt: _cursor];
+    }
+}
+
+- (void) ts_setAlternateScreen: (BOOL)alternate
+{
+  if (_alternateScreen != alternate)
+    {
+      _alternateScreen = alternate;
       _scrollOffset = 0;
       _selectionStart = _selectionEnd = -1;
+      [self setNeedsDisplay: YES];
     }
-  if (property == VTERM_PROP_MOUSE)
-    _mouseReporting = value->number != VTERM_PROP_MOUSE_NONE;
-  // Mouse modes and OSC requests do not change visible cells.
-  if (property == VTERM_PROP_ALTSCREEN)
-    [self setNeedsDisplay: YES];
-  else if (property == VTERM_PROP_CURSORVISIBLE
-           || property == VTERM_PROP_CURSORBLINK
-           || property == VTERM_PROP_CURSORSHAPE)
-    {
-      VTermPos cursor;
-      vterm_state_get_cursorpos (vterm_obtain_state (_terminal), &cursor);
-      [self invalidateCursorAt: cursor];
-    }
-  return 1;
+}
+
+- (void) ts_setMouseReporting: (BOOL)enabled
+{
+  _mouseReporting = enabled;
+}
+
+- (void) ts_bell
+{
+  [self ringBell];
+}
+
+- (void) ts_clearScrollback
+{
+  [self clearHistory];
 }
 
 - (void) clearHistory
@@ -429,7 +381,7 @@ terminalModifiers (NSEvent *event)
   [self setNeedsDisplay: YES];
 }
 
-- (int) pushLine: (int)columns cells: (const VTermScreenCell *)cells
+- (void) ts_appendScrollback: (const YCodeTerminalCell *)cells count: (int)columns
 {
   [_history addObject: [NSData dataWithBytes: cells
                                      length: columns * sizeof (*cells)]];
@@ -440,10 +392,9 @@ terminalModifiers (NSEvent *event)
     }
   if (_scrollOffset)
     _scrollOffset = MIN ((NSInteger)[_history count], _scrollOffset + 1);
-  return 1;
 }
 
-- (int) popLine: (int)columns cells: (VTermScreenCell *)cells
+- (BOOL) ts_popScrollback: (YCodeTerminalCell *)cells count: (int)columns
 {
   NSData *line = [_history lastObject];
   if (!line)
@@ -457,8 +408,7 @@ terminalModifiers (NSEvent *event)
 
 - (void) consumeData: (NSData *)data
 {
-  vterm_input_write (_terminal, [data bytes], [data length]);
-  vterm_screen_flush_damage (_screen);
+  [_terminal processBytes: [data bytes] length: [data length]];
   [self updateScroller];
 }
 
@@ -502,7 +452,7 @@ terminalModifiers (NSEvent *event)
   _rows = rows;
   _columns = cols;
   _selectionStart = _selectionEnd = -1;
-  vterm_set_size (_terminal, rows, cols);
+  [_terminal setTerminalScreenWidth: cols height: rows];
 #ifndef _WIN32
   if (_master >= 0)
     {
@@ -513,7 +463,6 @@ terminalModifiers (NSEvent *event)
       ioctl (_master, TIOCSWINSZ, &size);
     }
 #endif
-  vterm_screen_flush_damage (_screen);
   [self updateScroller];
   [self setNeedsDisplay: YES];
 }
@@ -668,7 +617,7 @@ terminalModifiers (NSEvent *event)
   _lastBlink = [NSDate timeIntervalSinceReferenceDate];
   [self clearHistory];
   [_pendingInput setLength: 0];
-  vterm_screen_reset (_screen, 1);
+  [_terminal reset: YES];
   _timer = RETAIN ([NSTimer timerWithTimeInterval: 0.02
                                            target: self
                                          selector: @selector (poll:)
@@ -836,7 +785,7 @@ terminalModifiers (NSEvent *event)
 
 - (BOOL) cellAtRow: (NSInteger)row
            column: (int)column
-             cell: (VTermScreenCell *)cell
+             cell: (YCodeTerminalGlyph *)cell
 {
   NSInteger history = _alternateScreen ? 0 : [_history count];
   memset (cell, 0, sizeof (*cell));
@@ -845,14 +794,14 @@ terminalModifiers (NSEvent *event)
   if (row < history)
     {
       NSData *line = [_history objectAtIndex: row];
-      if ((column + 1) * sizeof (*cell) > [line length])
+      if ((column + 1) * sizeof (YCodeTerminalCell) > [line length])
         return NO;
-      *cell = ((const VTermScreenCell *)[line bytes])[column];
+      *cell = ((const YCodeTerminalCell *)[line bytes])[column].originalCell;
       return YES;
     }
-  VTermPos position = { (int)(row - history), column };
-  return position.row < _rows
-         && vterm_screen_get_cell (_screen, position, cell);
+  YCodeTerminalPosition position = { (int)(row - history), column };
+  return position.row < _rows &&
+         [_terminal getGlyph: cell row: position.row column: position.col];
 }
 
 - (NSString *) screenText
@@ -864,9 +813,9 @@ terminalModifiers (NSEvent *event)
     {
       for (col = 0; col < _columns; col++)
         {
-          VTermScreenCell cell;
+          YCodeTerminalGlyph cell;
           if ([self cellAtRow: history + row column: col cell: &cell]
-              && cell.chars[0] != (uint32_t)-1)
+              && cell.width != 0)
             [text appendString: terminalCellString (&cell)];
         }
       [text appendString: @"\n"];
@@ -874,13 +823,13 @@ terminalModifiers (NSEvent *event)
   return text;
 }
 
-- (NSColor *) color: (VTermColor)color
+- (NSColor *) color: (YCodeTerminalColor)color
 {
-  if (VTERM_COLOR_IS_DEFAULT_FG (&color))
+  if (color.kind == YCodeTerminalColorDefaultForeground)
     return _foregroundColor;
-  if (VTERM_COLOR_IS_DEFAULT_BG (&color))
+  if (color.kind == YCodeTerminalColorDefaultBackground)
     return _backgroundColor;
-  vterm_screen_convert_color_to_rgb (_screen, &color);
+  color = [_terminal resolvedColor: color];
   return [NSColor colorWithCalibratedRed: color.rgb.red / 255.0
                                    green: color.rgb.green / 255.0
                                     blue: color.rgb.blue / 255.0
@@ -909,7 +858,7 @@ terminalModifiers (NSEvent *event)
           {
             NSRect rect = NSMakeRect (col * _cellWidth, row * _cellHeight,
                                       _cellWidth, _cellHeight);
-            VTermScreenCell cell;
+            YCodeTerminalGlyph cell;
             if (![self cellAtRow: first + row column: col cell: &cell])
               continue;
             NSRect paintRect = rect;
@@ -919,7 +868,7 @@ terminalModifiers (NSEvent *event)
                 || ![self needsToDrawRect: paintRect])
               continue;
             NSColor *fg = [self color: cell.fg], *bg = [self color: cell.bg];
-            if (cell.attrs.reverse)
+            if ((cell.attributes & YCodeTerminalReverse))
               {
                 NSColor *swap = fg;
                 fg = bg;
@@ -937,16 +886,18 @@ terminalModifiers (NSEvent *event)
                 NSRectFill (rect);
                 continue;
               }
-            if (cell.chars[0] == (uint32_t)-1 || cell.attrs.conceal
-                || (cell.attrs.blink && !_blinkOn))
+            if (cell.width == 0 || (cell.attributes & YCodeTerminalConceal)
+                || ((cell.attributes & YCodeTerminalBlink) && !_blinkOn))
               continue;
             // Keep backgrounds and decorations, but avoid shaping blank glyphs.
             if ((cell.chars[0] == 0
                  || (cell.chars[0] == ' ' && !cell.chars[1]))
-                && !cell.attrs.underline && !cell.attrs.strike)
+                && !(cell.attributes & YCodeTerminalUnderline)
+                && !(cell.attributes & YCodeTerminalStrike))
               continue;
-            NSFont *font = cell.attrs.bold ? _boldFont : _font;
-            if (cell.attrs.italic)
+            NSFont *font
+                = (cell.attributes & YCodeTerminalBold) ? _boldFont : _font;
+            if ((cell.attributes & YCodeTerminalItalic))
               {
                 NSFont *italic = [[NSFontManager sharedFontManager]
                     convertFont: font
@@ -958,15 +909,15 @@ terminalModifiers (NSEvent *event)
                 dictionaryWithObjectsAndKeys: font, NSFontAttributeName, fg,
                                              NSForegroundColorAttributeName,
                                              nil];
-            if (cell.attrs.underline)
+            if ((cell.attributes & YCodeTerminalUnderline))
               [attributes
                   setObject: [NSNumber
-                                numberWithInt: cell.attrs.underline
-                                                      == VTERM_UNDERLINE_DOUBLE
+                                numberWithInt: (cell.attributes
+                                               & YCodeTerminalDoubleUnderline)
                                                   ? NSUnderlineStyleDouble
                                                   : NSUnderlineStyleSingle]
                      forKey: NSUnderlineStyleAttributeName];
-            if (cell.attrs.strike)
+            if ((cell.attributes & YCodeTerminalStrike))
               [attributes
                   setObject: [NSNumber numberWithInt: NSUnderlineStyleSingle]
                      forKey: NSStrikethroughStyleAttributeName];
@@ -982,15 +933,11 @@ terminalModifiers (NSEvent *event)
       }
   if (_cursorVisible && !_scrollOffset && (![self cursorCanBlink] || _blinkOn))
     {
-      VTermPos cursor;
-      vterm_state_get_cursorpos (vterm_obtain_state (_terminal), &cursor);
+      YCodeTerminalPosition cursor = _cursor;
       [_cursorColor set];
       NSInteger shape = _preferredCursorShape;
       if (shape == 0)
-        shape
-            = _cursorShape == VTERM_PROP_CURSORSHAPE_UNDERLINE
-                  ? 4
-                  : (_cursorShape == VTERM_PROP_CURSORSHAPE_BAR_LEFT ? 3 : 2);
+        shape = _cursorShape == 2 ? 4 : (_cursorShape == 3 ? 3 : 2);
       NSRect rect
           = NSMakeRect (cursor.col * _cellWidth, cursor.row * _cellHeight,
                         _cellWidth, _cellHeight);
@@ -1002,9 +949,9 @@ terminalModifiers (NSEvent *event)
       else if (shape == 1)
         {
           NSRectFill (rect);
-          VTermScreenCell cell;
-          if (vterm_screen_get_cell (_screen, cursor, &cell)
-              && cell.chars[0] != (uint32_t)-1 && !cell.attrs.conceal)
+          YCodeTerminalGlyph cell;
+          if ([_terminal getGlyph: &cell row: cursor.row column: cursor.col]
+              && cell.width != 0 && !(cell.attributes & YCodeTerminalConceal))
             {
               NSColor *rgb = [_cursorColor
                   colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
@@ -1020,7 +967,9 @@ terminalModifiers (NSEvent *event)
                      drawAtPoint: rect.origin
                   withAttributes: [NSDictionary
                                      dictionaryWithObjectsAndKeys:
-                                         cell.attrs.bold ? _boldFont : _font,
+                                         (cell.attributes & YCodeTerminalBold)
+                                             ? _boldFont
+                                             : _font,
                                          NSFontAttributeName, ink,
                                          NSForegroundColorAttributeName, nil]];
               [NSGraphicsContext restoreGraphicsState];
@@ -1058,110 +1007,12 @@ terminalModifiers (NSEvent *event)
   _selectionStart = _selectionEnd = -1;
   _wheelRemainder = 0;
   [self updateScroller];
-  VTermModifier mods = terminalModifiers (event);
-  if (c == NSBackTabCharacter)
-    mods |= VTERM_MOD_SHIFT;
-  VTermKey key = VTERM_KEY_NONE;
-  switch (c)
-    {
-    case '\r':
-    case '\n':
-      key = VTERM_KEY_ENTER;
-      break;
-    case '\t':
-    case NSBackTabCharacter:
-      key = VTERM_KEY_TAB;
-      break;
-    case 0x7f:
-    case '\b':
-      key = VTERM_KEY_BACKSPACE;
-      break;
-    case 0x1b:
-      key = VTERM_KEY_ESCAPE;
-      break;
-    case NSUpArrowFunctionKey:
-      key = VTERM_KEY_UP;
-      break;
-    case NSDownArrowFunctionKey:
-      key = VTERM_KEY_DOWN;
-      break;
-    case NSLeftArrowFunctionKey:
-      key = VTERM_KEY_LEFT;
-      break;
-    case NSRightArrowFunctionKey:
-      key = VTERM_KEY_RIGHT;
-      break;
-    case NSHomeFunctionKey:
-      key = VTERM_KEY_HOME;
-      break;
-    case NSEndFunctionKey:
-      key = VTERM_KEY_END;
-      break;
-    case NSInsertFunctionKey:
-      key = VTERM_KEY_INS;
-      break;
-    case NSDeleteFunctionKey:
-      key = VTERM_KEY_DEL;
-      break;
-    case NSPageUpFunctionKey:
-      key = VTERM_KEY_PAGEUP;
-      break;
-    case NSPageDownFunctionKey:
-      key = VTERM_KEY_PAGEDOWN;
-      break;
-    }
-  if (c >= NSF1FunctionKey && c <= NSF35FunctionKey)
-    key = VTERM_KEY_FUNCTION (c - NSF1FunctionKey + 1);
-  if ([event modifierFlags] & NSNumericPadKeyMask)
-    {
-      if (c >= '0' && c <= '9')
-        key = VTERM_KEY_KP_0 + c - '0';
-      else if (c == '\r' || c == '\n' || c == NSEnterCharacter)
-        key = VTERM_KEY_KP_ENTER;
-      else if (c == '+')
-        key = VTERM_KEY_KP_PLUS;
-      else if (c == '-')
-        key = VTERM_KEY_KP_MINUS;
-      else if (c == '*')
-        key = VTERM_KEY_KP_MULT;
-      else if (c == '/')
-        key = VTERM_KEY_KP_DIVIDE;
-      else if (c == '.')
-        key = VTERM_KEY_KP_PERIOD;
-      else if (c == ',')
-        key = VTERM_KEY_KP_COMMA;
-      else if (c == '=')
-        key = VTERM_KEY_KP_EQUAL;
-    }
-  if (key)
-    vterm_keyboard_key (_terminal, key, mods);
-  else
-    {
-      // charactersIgnoringModifiers preserves the letter for Control/Alt chords.
-      if (mods & (VTERM_MOD_CTRL | VTERM_MOD_ALT))
-        characters = [event charactersIgnoringModifiers];
-      NSUInteger i;
-      for (i = 0; i < [characters length]; i++)
-        {
-          uint32_t code = [characters characterAtIndex: i];
-          if (code >= 0xd800 && code <= 0xdbff && i + 1 < [characters length])
-            {
-              unichar tail = [characters characterAtIndex: i + 1];
-              if (tail >= 0xdc00 && tail <= 0xdfff)
-                {
-                  code = 0x10000 + ((code - 0xd800) << 10) + tail - 0xdc00;
-                  i++;
-                }
-            }
-          vterm_keyboard_unichar (_terminal, code, mods);
-        }
-    }
+  [_terminal handleKeyEvent: event];
   if (redraw)
     [self setNeedsDisplay: YES];
   else if (!_blinkOn)
     {
-      VTermPos cursor;
-      vterm_state_get_cursorpos (vterm_obtain_state (_terminal), &cursor);
+      YCodeTerminalPosition cursor = _cursor;
       [self invalidateCursorAt: cursor];
     }
   _blinkOn = YES;
@@ -1194,12 +1045,11 @@ terminalModifiers (NSEvent *event)
   if (!_mouseReporting || ([event modifierFlags] & NSShiftKeyMask))
     return NO;
   NSPoint p = [self convertPoint: [event locationInWindow] fromView: nil];
-  vterm_mouse_move (_terminal,
-                    MIN (_rows - 1, MAX (0, (int)(p.y / _cellHeight))),
-                    MIN (_columns - 1, MAX (0, (int)(p.x / _cellWidth))),
-                    terminalModifiers (event));
-  if (button)
-    vterm_mouse_button (_terminal, button, pressed, terminalModifiers (event));
+  [_terminal mouseAtRow: MIN (_rows - 1, MAX (0, (int)(p.y / _cellHeight)))
+                 column: MIN (_columns - 1, MAX (0, (int)(p.x / _cellWidth)))
+                 button: button
+                pressed: pressed
+              modifiers: [event modifierFlags]];
   return YES;
 }
 
@@ -1338,9 +1188,9 @@ terminalModifiers (NSEvent *event)
   NSInteger i;
   for (i = start; i <= end; i++)
     {
-      VTermScreenCell cell;
+      YCodeTerminalGlyph cell;
       if ([self cellAtRow: i / _columns column: i % _columns cell: &cell]
-          && cell.chars[0] != (uint32_t)-1)
+          && cell.width != 0)
         [line appendString: terminalCellString (&cell)];
       if (i % _columns == _columns - 1 || i == end)
         {
@@ -1367,9 +1217,7 @@ terminalModifiers (NSEvent *event)
   text = [text stringByReplacingOccurrencesOfString: @"\033" withString: @""];
   text = [text stringByReplacingOccurrencesOfString: @"\r\n" withString: @"\n"];
   text = [text stringByReplacingOccurrencesOfString: @"\n" withString: @"\r"];
-  vterm_keyboard_start_paste (_terminal);
-  [self sendData: [text dataUsingEncoding: NSUTF8StringEncoding]];
-  vterm_keyboard_end_paste (_terminal);
+  [_terminal sendString: text];
   _scrollOffset = 0;
   _wheelRemainder = 0;
   [self updateScroller];

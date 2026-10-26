@@ -131,4 +131,12 @@ Program controlled, Block, Outline, Vertical line, or Underline for its shape.
 
 The terminal supports ANSI/VT100 and many VT220/xterm text features: cursor movement, scrolling regions, alternate screens, line drawing, UTF-8, 256 colors and truecolor, text attributes, application cursor/keypad modes, function keys, and mouse reporting. Programs see TERM=xterm-256color. Inline graphics, hyperlinks, clipboard control sequences, and double-sized text lines are not supported. Unicode appearance depends on installed fonts; scrollback does not reflow on resize.
 
-Interactive sessions require a Unix-like system with POSIX PTYs. Ycode uses SHELL from its environment, then the account shell or /bin/sh. If a terminal cannot start, check the reported error, project directory permissions, and shell availability. Terminal emulation uses the bundled MIT-licensed libvterm library; its license is included in the application's ThirdPartyLicenses resources.
+Interactive sessions require a Unix-like system with POSIX PTYs. Ycode uses SHELL from its environment, then the account shell or /bin/sh. If a terminal cannot start, check the reported error, project directory permissions, and shell availability. Terminal emulation uses the native Objective-C parser adapted from GNUstep Terminal.app, without an embedded libvterm library. The Info panel retains the attribution that the terminal emulation code is based on libvterm. Parser and attribution licenses are included in the application's ThirdPartyLicenses resources.
+
+WORD COMPLETION
+Choose Edit > Complete Word for words from the current file and language keywords.
+Use arrow keys and Return to accept; Escape cancels. Suggestions are case-sensitive.
+Preferences > Editor > Enable word and keyword completion toggles this feature
+for all editors immediately. It is on by default. Suggestions appear after a
+0.35-second typing pause once a word has at least three characters. Moving the
+caret or leaving the editor cancels pending suggestions.

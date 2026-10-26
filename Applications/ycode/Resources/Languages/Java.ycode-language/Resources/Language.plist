@@ -33,6 +33,68 @@
 				<string>try</string>
 				<string>finally</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>abstract</string>
+				<string>assert</string>
+				<string>boolean</string>
+				<string>break</string>
+				<string>byte</string>
+				<string>case</string>
+				<string>catch</string>
+				<string>char</string>
+				<string>class</string>
+				<string>const</string>
+				<string>continue</string>
+				<string>default</string>
+				<string>do</string>
+				<string>double</string>
+				<string>else</string>
+				<string>enum</string>
+				<string>extends</string>
+				<string>false</string>
+				<string>final</string>
+				<string>finally</string>
+				<string>float</string>
+				<string>for</string>
+				<string>goto</string>
+				<string>if</string>
+				<string>implements</string>
+				<string>import</string>
+				<string>instanceof</string>
+				<string>int</string>
+				<string>interface</string>
+				<string>long</string>
+				<string>native</string>
+				<string>new</string>
+				<string>non-sealed</string>
+				<string>null</string>
+				<string>package</string>
+				<string>permits</string>
+				<string>private</string>
+				<string>protected</string>
+				<string>public</string>
+				<string>record</string>
+				<string>return</string>
+				<string>sealed</string>
+				<string>short</string>
+				<string>static</string>
+				<string>strictfp</string>
+				<string>super</string>
+				<string>switch</string>
+				<string>synchronized</string>
+				<string>this</string>
+				<string>throw</string>
+				<string>throws</string>
+				<string>transient</string>
+				<string>true</string>
+				<string>try</string>
+				<string>var</string>
+				<string>void</string>
+				<string>volatile</string>
+				<string>while</string>
+				<string>yield</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>constant</key>

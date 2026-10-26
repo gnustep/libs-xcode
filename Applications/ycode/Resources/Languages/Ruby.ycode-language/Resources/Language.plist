@@ -27,6 +27,50 @@
 			<string>blocks</string>
 			<key>LineComment</key>
 			<string>#</string>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>BEGIN</string>
+				<string>END</string>
+				<string>__ENCODING__</string>
+				<string>__FILE__</string>
+				<string>__LINE__</string>
+				<string>alias</string>
+				<string>and</string>
+				<string>begin</string>
+				<string>break</string>
+				<string>case</string>
+				<string>class</string>
+				<string>def</string>
+				<string>defined?</string>
+				<string>do</string>
+				<string>else</string>
+				<string>elsif</string>
+				<string>end</string>
+				<string>ensure</string>
+				<string>false</string>
+				<string>for</string>
+				<string>if</string>
+				<string>in</string>
+				<string>module</string>
+				<string>next</string>
+				<string>nil</string>
+				<string>not</string>
+				<string>or</string>
+				<string>redo</string>
+				<string>rescue</string>
+				<string>retry</string>
+				<string>return</string>
+				<string>self</string>
+				<string>super</string>
+				<string>then</string>
+				<string>true</string>
+				<string>undef</string>
+				<string>unless</string>
+				<string>until</string>
+				<string>when</string>
+				<string>while</string>
+				<string>yield</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>keyword</key>

@@ -1,17 +1,18 @@
 Ycode terminal engine
 
-libvterm 0.3.3, by Paul Evans and contributors, is vendored in libvterm/.
-Source: https://www.leonerd.org.uk/code/libvterm/libvterm-0.3.3.tar.gz
-Archive SHA-256: 09156f43dd2128bd347cbeebe50d9a571d32c64e0cf18d211197946aff7226e0
-Upstream project: https://www.leonerd.org.uk/code/libvterm/
+YCodeTerminalParser.m, YCodeTerminalParser.h, and YCodeTerminalTypes.h
+are adapted from GNUstep Terminal.app's TerminalParser_VT100.m/.h and
+Terminal.h (the native parser replacement of 2026-10-23).
+The imported copyright and GPL v3-or-later notices are preserved.
+See ../Resources/ThirdPartyLicenses/Terminal-parser-GPL-3.txt.
 
-Local sources are formatted with the repository's GNU coding style. Formatting
-preserves upstream source tokens; use Tools/format-source.py from the repository
-root after importing upstream updates.
-License: MIT; see libvterm/LICENSE. All upstream source files are unchanged.
-The release includes generated encoding and Unicode tables, so building Ycode
-does not require downloading dependencies or running table generators.
+The Info panel retains the historical attribution: terminal emulation code
+is based on libvterm. The earlier MIT license remains in ThirdPartyLicenses
+for attribution. No libvterm sources or external emulator library are built.
 
-YCodeTerminalView supplies AppKit rendering, keyboard/mouse input, scrollback,
-and a POSIX PTY session. It advertises xterm-256color and UTF-8. The terminal
-engine is independent of the editor's ANSI transcript formatting.
+Ycode-specific integration includes row damage notifications, cursor style
+and blinking, focus and mouse reporting, preference-aware bell handling,
+and direct native-cell access for rendering and selection. The view retains
+its AppKit rendering, keyboard/mouse input, scrollback, and POSIX PTY session.
+It advertises xterm-256color and UTF-8. The terminal engine is independent
+of the editor's ANSI transcript formatting.

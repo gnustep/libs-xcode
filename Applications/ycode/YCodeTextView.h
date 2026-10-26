@@ -37,6 +37,7 @@
   BOOL editorUsesTabs;
   BOOL editorIndentSettingsLoaded;
   BOOL _fittingViewport;
+  BOOL _completionActive;
   NSDictionary *_delimiterMatches;
   NSRange _matchingDelimiterRange;
 }

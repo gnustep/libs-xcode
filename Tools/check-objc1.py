@@ -25,10 +25,9 @@ MODERN_EXPRESSIONS = re.compile(
 def main():
     flags = shlex.split(subprocess.check_output(['gnustep-config', '--objc-flags'], text=True))
     flags = [flag for flag in flags if flag not in ('-MMD', '-MP')]
-    includes = ['-I.', '-IXCode', '-IApplications/ycode', '-ITools/buildtool',
-                '-IApplications/ycode/Terminal/libvterm/include']
-    paths = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
-    paths = [path for path in paths if pathlib.Path(path).suffix in ('.c', '.m')]
+    includes = ['-I.', '-IXCode', '-IApplications/ycode', '-ITools/buildtool']
+    paths = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT).decode().split('\0')
+    paths = [path for path in sorted(set(paths)) if (ROOT / path).is_file() and pathlib.Path(path).suffix in ('.c', '.m')]
 
     def check(path):
         if path.endswith('.c'):

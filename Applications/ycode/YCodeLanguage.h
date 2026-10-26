@@ -49,6 +49,7 @@
 - (NSRegularExpression *) patternForToken: (NSString *)token;
 - (NSString *) codeByMaskingLiterals: (NSString *)text;
 - (NSString *) indentationStyle;
+- (NSArray *) completionKeywords;
 - (NSArray *) controlKeywords;
 - (NSArray *) standaloneControls;
 - (NSString *) lineComment;

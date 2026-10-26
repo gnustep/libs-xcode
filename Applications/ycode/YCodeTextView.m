@@ -30,6 +30,19 @@
 
 #define EDITOR_TAB_WIDTH 2
 
+static BOOL
+YCodeCompletionStart (unichar c)
+{
+  return c == '_' || [[NSCharacterSet letterCharacterSet] characterIsMember: c];
+}
+
+static BOOL
+YCodeCompletionCharacter (unichar c)
+{
+  return YCodeCompletionStart (c) ||
+         [[NSCharacterSet decimalDigitCharacterSet] characterIsMember: c];
+}
+
 /* Locate the header of a possibly multiline control condition. */
 static NSInteger
 YCodeControlStatementIndex (NSString *string, NSInteger index)
@@ -85,6 +98,8 @@ OpeningDelimiterForClosingDelimiter (unichar c)
 - (YCodeLanguage *) languageDefinition;
 - (NSString *) codeForText: (NSString *)text;
 - (void) alignBlockClosingLine;
+- (void) cancelAutomaticCompletion;
+- (void) showAutomaticCompletion;
 
 - (void) insertSpaceFillAlignedAtTabsOfSize: (unsigned int)tabSize;
 - (void) performIndentation;
@@ -1061,6 +1076,7 @@ OpeningDelimiterForClosingDelimiter (unichar c)
 
 - (void) setFilePath: (NSString *)path
 {
+  [self cancelAutomaticCompletion];
   ASSIGN (_filePath, path);
   DESTROY (_delimiterMatches);
   [self updateMatchingDelimiter: nil];
@@ -1223,6 +1239,158 @@ OpeningDelimiterForClosingDelimiter (unichar c)
   [self insertText: replacement];
 }
 
+/* Completion uses identifiers, not whitespace-delimited prose words. */
+- (NSRange) rangeForUserCompletion
+{
+  NSRange selection = [self selectedRange];
+  NSString *text = [self string];
+  NSUInteger end = selection.location;
+  if (![YCodePreferences wordCompletionEnabled] || ![self isEditable]
+      || selection.length || end == 0 || end > [text length])
+    return NSMakeRange (NSNotFound, 0);
+  NSUInteger start = end;
+  while (start > 0
+         && YCodeCompletionCharacter ([text characterAtIndex: start - 1]))
+    start--;
+  if (start == end || !YCodeCompletionStart ([text characterAtIndex: start]))
+    return NSMakeRange (NSNotFound, 0);
+  if (start > 0 && [text characterAtIndex: start - 1] == '@')
+    start--;
+  /* Completing in the middle of an identifier would duplicate its suffix. */
+  if (end < [text length]
+      && YCodeCompletionCharacter ([text characterAtIndex: end]))
+    return NSMakeRange (NSNotFound, 0);
+  return NSMakeRange (start, end - start);
+}
+
+- (NSArray *) completionsForPartialWordRange: (NSRange)range
+                        indexOfSelectedItem: (NSInteger *)index
+{
+  if (index)
+    *index = 0;
+  NSString *text = [self string];
+  if (![YCodePreferences wordCompletionEnabled] || ![self isEditable]
+      || range.location == NSNotFound || !range.length
+      || range.location > [text length]
+      || range.length > [text length] - range.location)
+    return [NSArray array];
+  NSString *prefix = [text substringWithRange: range];
+  NSMutableSet *matches = [NSMutableSet set];
+  NSEnumerator *keywords =
+      [[[self languageDefinition] completionKeywords] objectEnumerator];
+  NSString *word;
+  while ((word = [keywords nextObject]) != nil)
+    if ([word hasPrefix: prefix] && [word length] > [prefix length])
+      [matches addObject: word];
+  NSUInteger position = 0, length = [text length];
+  while (position < length)
+    {
+      NSUInteger start = position;
+      if ([text characterAtIndex: position] == '@' && position + 1 < length
+          && YCodeCompletionStart ([text characterAtIndex: position + 1]))
+        position++;
+      if (!YCodeCompletionStart ([text characterAtIndex: position]))
+        {
+          position++;
+          continue;
+        }
+      position++;
+      while (position < length
+             && YCodeCompletionCharacter ([text characterAtIndex: position]))
+        position++;
+      NSRange candidateRange = NSMakeRange (start, position - start);
+      if (NSIntersectionRange (candidateRange, range).length)
+        continue;
+      word = [text substringWithRange: candidateRange];
+      if ([word hasPrefix: prefix] && [word length] > [prefix length])
+        [matches addObject: word];
+    }
+  return [[matches allObjects] sortedArrayUsingSelector: @selector (compare:)];
+}
+
+- (void) cancelAutomaticCompletion
+{
+  [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                           selector: @selector
+                                           (showAutomaticCompletion)
+                                             object: nil];
+}
+
+- (void) showAutomaticCompletion
+{
+  NSRange range = [self rangeForUserCompletion];
+  if (!_completionActive && [[self window] isKeyWindow] &&
+      [[self window] firstResponder] == self && ![self hasMarkedText]
+      && range.location != NSNotFound && range.length >= 3 &&
+      [[self completionsForPartialWordRange: range
+                        indexOfSelectedItem: NULL] count])
+    [self complete: nil];
+}
+
+- (void) keyDown: (NSEvent *)event
+{
+  [self cancelAutomaticCompletion];
+  [super keyDown: event];
+}
+
+- (void) setSelectedRange: (NSRange)range
+                affinity: (NSSelectionAffinity)affinity
+          stillSelecting: (BOOL)flag
+{
+  [self cancelAutomaticCompletion];
+  [super setSelectedRange: range affinity: affinity stillSelecting: flag];
+}
+
+- (void) didChangeText
+{
+  [self cancelAutomaticCompletion];
+  [super didChangeText];
+}
+
+- (BOOL) resignFirstResponder
+{
+  [self cancelAutomaticCompletion];
+  return [super resignFirstResponder];
+}
+
+- (void) complete: (id)sender
+{
+  [self cancelAutomaticCompletion];
+  if (!_completionActive && [YCodePreferences wordCompletionEnabled])
+    {
+      _completionActive = YES;
+      @try
+        {
+          [super complete: sender];
+        }
+      @finally
+        {
+          _completionActive = NO;
+        }
+    }
+}
+
+#ifdef GNUSTEP
+/* GNUstep's default completion inserts every preview into the undo history.
+ * Keep browsing/cancelling read-only and commit only the accepted suggestion. */
+- (void) insertCompletion: (NSString *)word
+     forPartialWordRange: (NSRange)range
+                movement: (NSInteger)movement
+                 isFinal: (BOOL)flag
+{
+  if (!flag || movement == NSCancelTextMovement
+      || ![YCodePreferences wordCompletionEnabled] || ![self isEditable]
+      || range.location == NSNotFound
+      || NSMaxRange (range) > [[self string] length])
+    return;
+  [self breakUndoCoalescing];
+  [self setSelectedRange: range];
+  [super insertText: word];
+  [self breakUndoCoalescing];
+}
+
+#endif
+
 - (void) insertText: (id)insertString
 {
   NSString *text;
@@ -1269,6 +1437,17 @@ OpeningDelimiterForClosingDelimiter (unichar c)
   if (should_indent)
     {
       [self performIndentation];
+    }
+  [self cancelAutomaticCompletion];
+  if (!_completionActive && [text length] == 1
+      && YCodeCompletionCharacter ([text characterAtIndex: 0])
+      && ![self hasMarkedText])
+    {
+      NSRange range = [self rangeForUserCompletion];
+      if (range.location != NSNotFound && range.length >= 3)
+        [self performSelector: @selector (showAutomaticCompletion)
+                   withObject: nil
+                   afterDelay: 0.35];
     }
 }
 

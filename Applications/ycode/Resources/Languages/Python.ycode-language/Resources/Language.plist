@@ -14,6 +14,48 @@
 				<string>py</string>
 				<string>pyw</string>
 			</array>
+			<key>CompletionKeywords</key>
+			<array>
+				<string>False</string>
+				<string>None</string>
+				<string>True</string>
+				<string>and</string>
+				<string>as</string>
+				<string>assert</string>
+				<string>async</string>
+				<string>await</string>
+				<string>break</string>
+				<string>case</string>
+				<string>class</string>
+				<string>continue</string>
+				<string>def</string>
+				<string>del</string>
+				<string>elif</string>
+				<string>else</string>
+				<string>except</string>
+				<string>exec</string>
+				<string>finally</string>
+				<string>for</string>
+				<string>from</string>
+				<string>global</string>
+				<string>if</string>
+				<string>import</string>
+				<string>in</string>
+				<string>is</string>
+				<string>lambda</string>
+				<string>match</string>
+				<string>nonlocal</string>
+				<string>not</string>
+				<string>or</string>
+				<string>pass</string>
+				<string>print</string>
+				<string>raise</string>
+				<string>return</string>
+				<string>try</string>
+				<string>while</string>
+				<string>with</string>
+				<string>yield</string>
+			</array>
 			<key>Patterns</key>
 			<dict>
 				<key>constant</key>
