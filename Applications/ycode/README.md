@@ -74,11 +74,24 @@ the chosen location and generates the project inside it. There is no separate
 name dialog.
 Templates include Application, Tool, Bundle, Framework, Dynamic Library, and
 Static Library. For Application projects, **App framework** selects **AppKit**
-(the default) or **UIKit**. UIKit requires an installed GNUstep UIKit development
-framework and is disabled when unavailable, including native macOS builds.
-The UIKit template targets GNUstep desktop UIKit, not Apple iOS. It creates
-`main.m` and an application delegate that opens a programmatic `UIWindow`,
-with UIKit linkage in Xcode, ProjectCenter, and GNUmakefile formats.
+(the default) or **UIKit**. GNUstep discovers UIKit framework bundles or flat
+header/library installations using its library locations and `gnustep-config`.
+Both headers and a linkable library are required.
+
+On native macOS, UIKit requires the iOS Simulator SDK in the active Xcode
+installation (`xcode-select`, or `DEVELOPER_DIR`) and the **Xcode** project format.
+The UIKit choice is disabled when those prerequisites are unavailable. UIKit
+Xcode projects use SDK-relative framework references and default to iOS Simulator,
+with iPhone/iPad support and an iOS 14 deployment target. The same project can
+be built by GNUstep's `buildtool`, which resolves UIKit by library name rather
+than using Apple's SDK path. ProjectCenter and GNUmakefile UIKit projects remain
+GNUstep builds.
+
+The UIKit starter creates `main.m`, an application delegate, and a programmatic
+`UIWindow`, with a bundle identifier and launch metadata. Apple device builds
+require choosing the device SDK and configuring signing in Xcode. Use Xcode
+for simulator/device Run and Debug; Ycode's launcher is for desktop applications.
+
 AppKit applications start with `main.m`, `AppController.h/.m`, and a
 `MainMenu.xib` containing a window and About/Quit menu. The controller is wired
 as the application delegate and opens the window on launch. Source files,

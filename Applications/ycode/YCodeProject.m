@@ -90,6 +90,44 @@ YCodeCollectFileEntries (PBXGroup *group, NSString *parent, NSString *root,
   }
 }
 
+/* Run configuration tools directly, preserving PATH and DEVELOPER_DIR. Never
+ * embed tool output or installation paths in shell commands. */
+static NSString *
+YCodeConfigurationToolOutput (NSString *tool, NSArray *arguments)
+{
+  NSTask *task = AUTORELEASE ([[NSTask alloc] init]);
+  NSPipe *pipe = [NSPipe pipe];
+#ifdef _WIN32
+  [task setLaunchPath: tool];
+  [task setArguments: arguments];
+#else
+  [task setLaunchPath: @"/usr/bin/env"];
+  NSMutableArray *resolved = [NSMutableArray arrayWithObject: tool];
+  [resolved addObjectsFromArray: arguments];
+  [task setArguments: resolved];
+#endif
+  [task setStandardOutput: pipe];
+  [task setStandardError: [NSFileHandle fileHandleWithNullDevice]];
+  @try
+    {
+      [task launch];
+      NSData *data = [[pipe fileHandleForReading] readDataToEndOfFile];
+      [task waitUntilExit];
+      if ([task terminationStatus] != 0)
+        return nil;
+      NSString *output
+          = AUTORELEASE ([[NSString alloc] initWithData: data
+                                               encoding: NSUTF8StringEncoding]);
+      output = [output stringByTrimmingCharactersInSet:
+                           [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      return [output length] ? output : nil;
+    }
+  @catch (NSException *exception)
+    {
+      return nil;
+    }
+}
+
 static NSMutableDictionary *
 YCodeBuildSettingsForProduct (NSString *productName)
 {
@@ -535,20 +573,144 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
 
 #pragma mark - Class Methods
 
+/* These helpers accept search roots so packaged frameworks, flat GNUstep
+ * installations, and SDK paths can be checked without host-specific prefixes. */
++ (BOOL) framework: (NSString *)name
+    availableInDirectories: (NSArray *)directories
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSEnumerator *roots = [directories objectEnumerator];
+  NSString *root;
+  while ((root = [roots nextObject]) != nil)
+    {
+      NSString *framework =
+          [root stringByAppendingPathComponent:
+                    [name stringByAppendingPathExtension: @"framework"]];
+      NSString *header = [framework
+          stringByAppendingPathComponent:
+              [@"Headers" stringByAppendingPathComponent:
+                              [name stringByAppendingPathExtension: @"h"]]];
+      if (![manager isReadableFileAtPath: header])
+        continue;
+      NSArray *binaries = [NSArray
+          arrayWithObjects: name, [NSString stringWithFormat: @"%@.tbd", name],
+                           [NSString stringWithFormat: @"lib%@.so", name],
+                           [NSString stringWithFormat: @"lib%@.dylib", name],
+                           [NSString stringWithFormat: @"lib%@.a", name],
+                           [NSString stringWithFormat: @"%@.dll", name], nil];
+      NSEnumerator *files = [binaries objectEnumerator];
+      NSString *file;
+      while ((file = [files nextObject]) != nil)
+        if ([manager
+                isReadableFileAtPath: [framework
+                                         stringByAppendingPathComponent: file]])
+          return YES;
+    }
+  return NO;
+}
+
++ (BOOL) uiKitAvailableWithHeaders: (NSArray *)headers
+                        libraries: (NSArray *)libraries
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  BOOL headerFound = NO;
+  NSEnumerator *paths = [headers objectEnumerator];
+  NSString *path;
+  while ((path = [paths nextObject]) != nil)
+    if ([manager isReadableFileAtPath:
+                     [path stringByAppendingPathComponent: @"UIKit/UIKit.h"]])
+      headerFound = YES;
+  if (!headerFound)
+    return NO;
+  paths = [libraries objectEnumerator];
+  while ((path = [paths nextObject]) != nil)
+    {
+      NSEnumerator *names = [[NSArray
+          arrayWithObjects: @"libUIKit.so", @"libUIKit.dylib", @"libUIKit.a",
+                           @"libUIKit.dll.a", @"UIKit.lib", @"UIKit.dll", nil]
+          objectEnumerator];
+      NSString *name;
+      while ((name = [names nextObject]) != nil)
+        if ([manager
+                isReadableFileAtPath: [path
+                                         stringByAppendingPathComponent: name]])
+          return YES;
+    }
+  return NO;
+}
+
++ (NSString *) uiKitSimulatorSDKPath
+{
+  NSString *sdk = YCodeConfigurationToolOutput (
+      @"xcrun", [NSArray arrayWithObjects: @"--sdk", @"iphonesimulator",
+                                          @"--show-sdk-path", nil]);
+  if (![sdk isAbsolutePath])
+    return nil;
+  return
+      [self framework: @"UIKit"
+          availableInDirectories:
+              [NSArray arrayWithObject: [sdk stringByAppendingPathComponent:
+                                                @"System/Library/Frameworks"]]]
+          ? sdk
+          : nil;
+}
+
 + (BOOL) supportsUIKitApplications
 {
 #ifdef GNUSTEP
+  NSMutableArray *frameworks = [NSMutableArray array];
+  NSMutableArray *headers = [NSMutableArray array];
+  NSMutableArray *libraries = [NSMutableArray array];
   NSEnumerator *directories = [NSSearchPathForDirectoriesInDomains (
       NSLibraryDirectory, NSAllDomainsMask, YES) objectEnumerator];
   NSString *directory;
   while ((directory = [directories nextObject]) != nil)
-    if ([[NSFileManager defaultManager]
-            fileExistsAtPath:
-                [directory stringByAppendingPathComponent:
-                               @"Frameworks/UIKit.framework/Headers/UIKit.h"]])
-      return YES;
+    {
+      [frameworks
+          addObject: [directory stringByAppendingPathComponent: @"Frameworks"]];
+      [headers
+          addObject: [directory stringByAppendingPathComponent: @"Headers"]];
+      [libraries
+          addObject: [directory stringByAppendingPathComponent: @"Libraries"]];
+    }
+  NSEnumerator *domains = [[NSArray
+      arrayWithObjects: @"USER", @"LOCAL", @"SYSTEM", nil] objectEnumerator];
+  NSString *domain;
+  while ((domain = [domains nextObject]) != nil)
+    {
+      NSString *path = YCodeConfigurationToolOutput (
+          @"gnustep-config",
+          [NSArray
+              arrayWithObject:
+                  [NSString stringWithFormat: @"--variable=GNUSTEP_%@_HEADERS",
+                                             domain]]);
+      if ([path isAbsolutePath])
+        [headers addObject: path];
+      path = YCodeConfigurationToolOutput (
+          @"gnustep-config",
+          [NSArray
+              arrayWithObject: [NSString stringWithFormat:
+                                            @"--variable=GNUSTEP_%@_LIBRARIES",
+                                            domain]]);
+      if ([path isAbsolutePath])
+        [libraries addObject: path];
+    }
+  return [self framework: @"UIKit" availableInDirectories: frameworks] ||
+         [self uiKitAvailableWithHeaders: headers libraries: libraries];
+#else
+  return [self uiKitSimulatorSDKPath] != nil;
 #endif
-  return NO;
+}
+
++ (BOOL) supportsUIKitApplicationsInFormat: (NSString *)format
+{
+#ifndef GNUSTEP
+  if (![format isEqual: @"Xcode"])
+    return NO;
+#endif
+  return [[NSArray arrayWithObjects: @"Xcode", @"ProjectCenter", @"GNUmakefile",
+                                    nil] containsObject: format]
+         && [self supportsUIKitApplications];
 }
 
 + (NSArray *) newProjectTypes
@@ -590,7 +752,7 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
   if ((!uiKit && ![applicationFramework isEqual: @"AppKit"])
       || (uiKit
           && (![productType isEqual: @"Application"]
-              || ![self supportsUIKitApplications])))
+              || ![self supportsUIKitApplicationsInFormat: type])))
     return nil;
   NSFileManager *manager = [NSFileManager defaultManager];
   if (![[self newProjectTypes] containsObject: productType] || ![path length]
@@ -698,6 +860,23 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
       if (!uiKit)
         [info setObject: @"MainMenu" forKey: @"NSMainNibFile"];
       [info setObject: @"APPL" forKey: @"CFBundlePackageType"];
+      if (uiKit)
+        {
+          NSString *identifier = [@"org.gnustep."
+              stringByAppendingString:
+                  [productName stringByReplacingOccurrencesOfString: @"_"
+                                                         withString: @"-"]];
+          [info setObject: identifier forKey: @"CFBundleIdentifier"];
+          [info setObject: @"1.0" forKey: @"CFBundleShortVersionString"];
+          [info setObject: [NSDictionary dictionary] forKey: @"UILaunchScreen"];
+          [info setObject: [NSArray
+                              arrayWithObjects:
+                                  @"UIInterfaceOrientationPortrait",
+                                  @"UIInterfaceOrientationPortraitUpsideDown",
+                                  @"UIInterfaceOrientationLandscapeLeft",
+                                  @"UIInterfaceOrientationLandscapeRight", nil]
+                   forKey: @"UISupportedInterfaceOrientations"];
+        }
     }
   else if (bundle)
     [info setObject: @"ProjectObject" forKey: @"NSPrincipalClass"];
@@ -755,6 +934,21 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
         {
           [[configuration buildSettings] setObject: @"NO"
                                             forKey: @"CLANG_ENABLE_OBJC_ARC"];
+          if (uiKit && [type isEqual: @"Xcode"])
+            {
+              NSMutableDictionary *settings = [configuration buildSettings];
+              /* Apple resolves these relative to its selected SDK. GNUstep's
+               * buildtool maps framework names to its own compiler/link flags. */
+              [settings setObject: @"iphonesimulator" forKey: @"SDKROOT"];
+              [settings setObject: @"iphoneos iphonesimulator"
+                           forKey: @"SUPPORTED_PLATFORMS"];
+              [settings setObject: @"1,2" forKey: @"TARGETED_DEVICE_FAMILY"];
+              [settings setObject: @"14.0"
+                           forKey: @"IPHONEOS_DEPLOYMENT_TARGET"];
+              [settings setObject: [info objectForKey: @"CFBundleIdentifier"]
+                           forKey: @"PRODUCT_BUNDLE_IDENTIFIER"];
+              [settings setObject: @"Automatic" forKey: @"CODE_SIGN_STYLE"];
+            }
         }
     }
   if ([type isEqual: @"Xcode"])

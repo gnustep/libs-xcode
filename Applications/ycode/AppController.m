@@ -496,7 +496,7 @@ YCodeFileURLFromPath (NSString *path)
           [popup addItemWithTitle: title];
           [[popup lastItem] setRepresentedObject: value];
         }
-      if (index == 0)
+      if (index == 0 || index == 1)
         {
           [popup setTarget: self];
           [popup setAction: @selector (newProjectTypeChanged:)];
@@ -508,7 +508,7 @@ YCodeFileURLFromPath (NSString *path)
               setEnabled: [YCodeProject supportsUIKitApplications]];
           [popup
               setToolTip:
-                  @"AppKit is the default. UIKit requires the installed GNUstep UIKit development framework; this template does not target Apple iOS."];
+                  @"UIKit uses GNUstep development libraries or the active Xcode iOS Simulator SDK. Apple UIKit requires Xcode format."];
         }
       [view addSubview: popup];
     }
@@ -517,12 +517,18 @@ YCodeFileURLFromPath (NSString *path)
 
 - (void) newProjectTypeChanged: (NSPopUpButton *)sender
 {
-  NSPopUpButton *framework
-      = (NSPopUpButton *)[[sender superview] viewWithTag: 102];
-  BOOL application = [[[[sender selectedItem] representedObject] description]
-      isEqual: @"Application"];
+  NSView *view = [sender superview];
+  NSPopUpButton *framework = (NSPopUpButton *)[view viewWithTag: 102];
+  NSPopUpButton *type = (NSPopUpButton *)[view viewWithTag: 100];
+  NSPopUpButton *format = (NSPopUpButton *)[view viewWithTag: 101];
+  BOOL application =
+      [[[type selectedItem] representedObject] isEqual: @"Application"];
+  BOOL uiKit =
+      [YCodeProject supportsUIKitApplicationsInFormat: [[format selectedItem]
+                                                          representedObject]];
   [framework setEnabled: application];
-  if (!application)
+  [[framework itemAtIndex: 1] setEnabled: uiKit];
+  if (!application || !uiKit)
     [framework selectItemAtIndex: 0];
 }
 

@@ -8018,6 +8018,108 @@ testProjectCenterExport (NSString *directory)
 
 @end
 
+@interface YCodeProject (FrameworkDiscoveryTesting)
++ (BOOL) framework: (NSString *)name
+    availableInDirectories: (NSArray *)directories;
++ (BOOL) uiKitAvailableWithHeaders: (NSArray *)headers
+                        libraries: (NSArray *)libraries;
++ (NSString *) uiKitSimulatorSDKPath;
+@end
+
+static void
+testFrameworkDiscovery (NSString *directory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root = [directory
+      stringByAppendingPathComponent: @"Framework paths with spaces"];
+  NSString *sdk = [root stringByAppendingPathComponent: @"SDK Root"];
+  NSString *frameworks =
+      [sdk stringByAppendingPathComponent: @"System/Library/Frameworks"];
+  NSString *framework =
+      [frameworks stringByAppendingPathComponent: @"UIKit.framework"];
+  NSString *headers = [framework stringByAppendingPathComponent: @"Headers"];
+  [manager createDirectoryAtPath: headers
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [@"/* SDK header */"
+      writeToFile: [headers stringByAppendingPathComponent: @"UIKit.h"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  NSArray *roots = [NSArray arrayWithObject: frameworks];
+  testAssert (![YCodeProject framework: @"UIKit" availableInDirectories: roots],
+              @"Framework headers alone do not enable UIKit");
+  [@"SDK linker stub"
+      writeToFile: [framework stringByAppendingPathComponent: @"UIKit.tbd"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  testAssert (
+      [YCodeProject framework: @"UIKit" availableInDirectories: roots],
+      @"SDK frameworks resolve relative to paths containing spaces and accept linker stubs");
+  NSString *flatHeaders =
+      [root stringByAppendingPathComponent: @"Flat Headers"];
+  NSString *flatLibraries =
+      [root stringByAppendingPathComponent: @"Flat Libraries"];
+  [manager createDirectoryAtPath: [flatHeaders
+                                     stringByAppendingPathComponent: @"UIKit"]
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [manager createDirectoryAtPath: flatLibraries
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [@"/* UIKit */"
+      writeToFile: [flatHeaders stringByAppendingPathComponent: @"UIKit/UIKit.h"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  testAssert (
+      ![YCodeProject
+          uiKitAvailableWithHeaders: [NSArray arrayWithObject: flatHeaders]
+                          libraries: [NSArray arrayWithObject: flatLibraries]],
+      @"Flat installations require a library as well as headers");
+  [@"library"
+      writeToFile: [flatLibraries stringByAppendingPathComponent: @"libUIKit.so"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  testAssert (
+      [YCodeProject
+          uiKitAvailableWithHeaders: [NSArray arrayWithObject: flatHeaders]
+                          libraries: [NSArray arrayWithObject: flatLibraries]],
+      @"Flat GNUstep header and library directories may be separate");
+#ifndef _WIN32
+  NSString *tool = [root stringByAppendingPathComponent: @"xcrun"];
+  writeExecutable (
+      tool,
+      @"#!/bin/sh\n[ \"$1\" = --sdk ] && [ \"$2\" = iphonesimulator ] && [ \"$3\" = --show-sdk-path ] || exit 1\nprintf '%s\\n' \"$DEVELOPER_DIR/SDK Root\"\n");
+  NSMutableDictionary *environment = [NSMutableDictionary
+      dictionaryWithDictionary: [[NSProcessInfo processInfo] environment]];
+  [environment setObject: [root stringByAppendingString: @":/usr/bin:/bin"]
+                  forKey: @"PATH"];
+  [environment setObject: root forKey: @"DEVELOPER_DIR"];
+  NSUInteger i;
+  for (i = 0; i < 2; i++)
+    {
+      NSTask *task = AUTORELEASE ([[NSTask alloc] init]);
+      [task setLaunchPath: [[[NSProcessInfo processInfo] arguments]
+                              objectAtIndex: 0]];
+      [task setArguments: [NSArray arrayWithObjects: @"--check-uikit-sdk-path",
+                                                   i == 0 ? sdk : @"", nil]];
+      [task setEnvironment: environment];
+      [task launch];
+      [task waitUntilExit];
+      testAssert (
+          [task terminationStatus] == 0,
+          @"SDK discovery respects PATH and DEVELOPER_DIR and handles unavailable SDKs");
+      writeExecutable (tool, @"#!/bin/sh\nexit 1\n");
+    }
+#endif
+}
+
 static void
 testUIKitProjectTemplates (NSString *directory)
 {
@@ -8089,8 +8191,18 @@ testUIKitProjectTemplates (NSString *directory)
                                           type: [formats objectAtIndex: i]
                                    productType: @"Application"
                           applicationFramework: @"UIKit"];
+#ifndef GNUSTEP
+      if (i != 0)
+        {
+          testAssert (
+              project == nil
+                  && ![[NSFileManager defaultManager] fileExistsAtPath: root],
+              @"Apple UIKit rejects GNUstep-only formats before creating files");
+          continue;
+        }
+#endif
       testAssert (project != nil,
-                  @"Create UIKit applications in all three formats");
+                  @"Create UIKit applications in supported formats");
       NSDictionary *info = [NSDictionary
           dictionaryWithContentsOfFile:
               [root stringByAppendingPathComponent:
@@ -8113,6 +8225,28 @@ testUIKitProjectTemplates (NSString *directory)
       if (i != 2)
         {
           PBXTarget *target = [[[project project] targets] objectAtIndex: 0];
+          if (i == 0)
+            {
+              NSEnumerator *configurations = [[[target buildConfigurationList]
+                  buildConfigurations] objectEnumerator];
+              XCBuildConfiguration *configuration;
+              while ((configuration = [configurations nextObject]) != nil)
+                {
+                  NSDictionary *settings = [configuration buildSettings];
+                  testAssert (
+                      [[settings objectForKey: @"SDKROOT"]
+                          isEqual: @"iphonesimulator"]
+                          && [[settings objectForKey: @"SUPPORTED_PLATFORMS"]
+                              isEqual: @"iphoneos iphonesimulator"]
+                          && [[settings objectForKey: @"TARGETED_DEVICE_FAMILY"]
+                              isEqual: @"1,2"]
+                          &&
+                          [[settings objectForKey: @"PRODUCT_BUNDLE_IDENTIFIER"]
+                              isEqual: [info
+                                          objectForKey: @"CFBundleIdentifier"]],
+                      @"UIKit Xcode configurations select an Apple SDK and matching app identity without absolute host paths");
+                }
+            }
           NSEnumerator *phases = [[target buildPhases] objectEnumerator];
           PBXBuildPhase *phase;
           BOOL linked = NO;
@@ -8124,7 +8258,13 @@ testUIKitProjectTemplates (NSString *directory)
                 while ((file = [files nextObject]) != nil)
                   if ([[[[file fileRef] path] lastPathComponent]
                           isEqual: @"UIKit.framework"])
-                    linked = YES;
+                    {
+                      linked = YES;
+                      testAssert (
+                          [[[file fileRef] sourceTree] isEqual: @"SDKROOT"]
+                              && ![[[file fileRef] path] isAbsolutePath],
+                          @"UIKit framework references are SDK-relative on every host");
+                    }
               }
           testAssert (
               linked,
@@ -9631,11 +9771,21 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments count] == 3 &&
+      [arguments containsObject: @"--check-uikit-sdk-path"])
+    {
+      NSString *sdk = [YCodeProject uiKitSimulatorSDKPath];
+      NSString *expected = [arguments objectAtIndex: 2];
+      BOOL passed = [expected length] ? [sdk isEqual: expected] : sdk == nil;
+      [pool drain];
+      return passed ? 0 : 1;
+    }
   if ([arguments containsObject: @"--check-uikit-projects"])
     {
       NSString *directory = [arguments count] == 3
                                 ? [arguments objectAtIndex: 2]
                                 : temporaryDirectory;
+      testFrameworkDiscovery (directory);
       testUIKitProjectTemplates (directory);
       NSLog (@"Ycode UIKit template checks: %lu failures",
              (unsigned long)failures);
@@ -9784,6 +9934,7 @@ main (void)
   testWindowFramePersistence ();
   testProjectCreationInSelectedDirectory (temporaryDirectory);
   testNewProjectTemplates (temporaryDirectory);
+  testFrameworkDiscovery (temporaryDirectory);
   testUIKitProjectTemplates (temporaryDirectory);
   testApplicationStartup ();
   testHelp ();

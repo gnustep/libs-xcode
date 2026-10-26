@@ -142,7 +142,12 @@ for all editors immediately. It is on by default. Suggestions appear after a
 caret or leaving the editor cancels pending suggestions.
 
 APPLICATION FRAMEWORK
-New Project offers an App framework choice for Application targets. AppKit is
-the default. UIKit creates a programmatic window and links GNUstep UIKit in
-all three project formats. UIKit is disabled without its installed GNUstep
-development framework; this template does not target Apple iOS.
+New Project offers AppKit (default) or UIKit for Application targets.
+GNUstep locates UIKit headers and libraries through its configured search paths.
+Native macOS locates the iOS Simulator SDK through the active Xcode installation;
+Apple UIKit requires Xcode format. Unavailable choices are disabled.
+UIKit Xcode projects use SDK-relative references and default to iOS Simulator,
+with iOS 14 deployment and iPhone/iPad support. They also build with GNUstep
+buildtool. ProjectCenter and GNUmakefile UIKit projects target GNUstep.
+Apple device builds need SDK/signing configuration in Xcode. Use Xcode to run
+or debug on an Apple simulator or device; Ycode runs desktop applications.

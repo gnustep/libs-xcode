@@ -542,6 +542,25 @@
 {
   BOOL debug = _debugAfterBuild;
   _debugAfterBuild = NO;
+#ifndef GNUSTEP
+  XCConfigurationList *configurations =
+      [[self runnableTarget] buildConfigurationList];
+  XCBuildConfiguration *configuration =
+      [configurations configurationWithName: _buildConfiguration];
+  if (!configuration)
+    configuration = [configurations defaultConfiguration];
+  NSString *sdk = [[configuration buildSettings] objectForKey: @"SDKROOT"];
+  if ([sdk hasPrefix: @"iphone"])
+    {
+      _status = YCodeBuildStatusFailed;
+      [self
+          reportError:
+              @"Build succeeded. Run or debug this iOS target in Xcode using a simulator or device; Ycode's launcher supports desktop executables only.\n"];
+      if ([_delegate respondsToSelector: @selector (buildSystemDidFinishRun:)])
+        [(id)_delegate buildSystemDidFinishRun: self];
+      return NO;
+    }
+#endif
   NSString *executablePath = [self findExecutable];
   if (!executablePath)
     {

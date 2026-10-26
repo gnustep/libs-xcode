@@ -68,9 +68,10 @@
                                     type: (NSString *)type
                              productType: (NSString *)productType;
 
-/** Whether the installed GNUstep UIKit development framework is available. */
+/** Whether UIKit development files exist in the active build environment. */
 + (BOOL) supportsUIKitApplications;
-/** Create an application using AppKit (default) or GNUstep UIKit. */
++ (BOOL) supportsUIKitApplicationsInFormat: (NSString *)format;
+/** Create an application using AppKit (default) or UIKit in the active build environment. */
 + (YCodeProject *) createNewProjectAtPath: (NSString *)path
                                     name: (NSString *)name
                                     type: (NSString *)type
