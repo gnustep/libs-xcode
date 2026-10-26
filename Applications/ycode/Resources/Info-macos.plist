@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright (C) 2017-2026 Free Software Foundation. Terminal emulation code is based on libvterm, adapted through Terminal.app.</string>
+	<string>Copyright (C) 2017-2026 Free Software Foundation. Terminal emulation code is based on libvterm, adapted through GNUstep Terminal.app.
+libvterm: Copyright (c) 2008 Paul Evans &lt;leonerd@leonerd.org.uk&gt;, MIT License.
+Terminal parser: Copyright (C) 2026 Terminal contributors, GNU GPL v3 or later.</string>
 	<key>CFBundleIconFile</key>
 	<string>Ycode.icns</string>
 	<key>NSHighResolutionCapable</key>
