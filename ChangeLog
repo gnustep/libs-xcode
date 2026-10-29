@@ -1,3 +1,25 @@
+2026-10-29 Daniel Boyd <danieljboyd@icloud.com>
+
+* XCode/PBXProject+Testing.[hm]: New. `buildtool test`: build the
+ project, then run each unit-test target's bundle with xctest
+ (tools-xctest), selected with -target, a scheme's testables and
+ skipped/selected tests, or xcodebuild's -only-testing/-skip-testing.
+ A target whose TEST_HOST names an application in the project runs
+ inside it (xctest -host).
+* XCode/PBXContainer.[hm] (setTestOptions:, test): New.
+* XCode/GNUmakefile: Add PBXProject+Testing.[hm].
+* XCode/PBXProject+Testing.m: -only-testing becomes xctest's -XCTest
+ selection; skipped tests and TEST_HOST use xctest's -skip-testing and
+ -host only when its --help lists them, and fail with a message
+ otherwise.
+* Tools/buildtool/ToolDelegate.m (testOptions:): New. Add the test
+ action; for it, -target and -scheme choose the test targets instead
+ of narrowing the build, so test hosts are still built.
+* Tests/Fixtures/Xcode/unit-tests, Tests/run-buildtool-test-action.sh:
+ New. A project with unit tests, an application and hosted tests, and
+ regressions for `buildtool test`.
+* README.md: Document `buildtool test`.
+
 2026-01-10 Gregory John Casamento <greg.casamento@gmail.com>
 
 * XCode/PBXNativeTarget.m: Include TEST_TYPE in bundle-style

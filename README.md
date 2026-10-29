@@ -100,6 +100,31 @@ Supported xcodebuild-style options:
   `-parallelizeTargets`, `-quiet`, `-verbose`, `-list`, and
   `-showBuildSettings` are accepted for command-line compatibility.
 
+`buildtool test` builds the project, like `xcodebuild test`, then runs each
+unit-test target's `.xctest` bundle with `xctest` from
+[tools-xctest](https://github.com/gnustep/tools-xctest). For `test`,
+`-target` and `-scheme` choose the test targets (a scheme's testables and
+its skipped or selected tests) rather than narrowing the build, so test
+hosts are still built:
+
+```
+buildtool test                                  # every unit-test target
+buildtool test -target MyTests                  # one target
+buildtool test -scheme MyApp                    # a scheme's testables
+buildtool test -only-testing:MyTests/FooTests -skip-testing:MyTests/FooTests/testSlow
+```
+
+`-only-testing:` becomes an `-XCTest` selection, which any tools-xctest
+accepts. Skipping tests (`-skip-testing:`, or a scheme's skipped tests) needs
+an `xctest` that lists `-skip-testing` in its `--help`, and a test target
+whose `TEST_HOST` names an application in the project runs inside that
+application, which needs one that lists `-host` (and an X display, e.g.
+`xvfb-run -a buildtool test`). With an older `xctest`, those targets fail
+with a message saying so. `XCTEST` chooses the `xctest` program, and
+`XCTEST_FLAGS` passes extra options to it (e.g.
+`XCTEST_FLAGS="-junit-report results.xml"`). buildtool exits with status 1
+when the build or any test fails.
+
 Buildtool exits with status 0 on success and nonzero on a failed operation,
 invalid project path, or exception. An explicit project path never falls back
 to another project in the current directory.
