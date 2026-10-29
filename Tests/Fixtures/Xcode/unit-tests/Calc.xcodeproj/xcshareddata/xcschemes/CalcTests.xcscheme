@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion = "1500" version = "1.7">
+   <TestAction buildConfiguration = "Debug" shouldUseLaunchSchemeArgsEnv = "YES">
+      <Testables>
+         <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "CALCTESTS"
+               BuildableName = "CalcTests.xctest" BlueprintName = "CalcTests" ReferencedContainer = "container:Calc.xcodeproj">
+            </BuildableReference>
+            <SkippedTests>
+               <Test Identifier = "CalcTests/testAddsNegatives()">
+               </Test>
+            </SkippedTests>
+         </TestableReference>
+         <TestableReference skipped = "YES">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "APPTESTS"
+               BuildableName = "AppTests.xctest" BlueprintName = "AppTests" ReferencedContainer = "container:Calc.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+   </TestAction>
+</Scheme>

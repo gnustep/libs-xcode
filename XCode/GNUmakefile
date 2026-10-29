@@ -29,6 +29,7 @@ XCode_RESOURCE_FILES = Resources/Framework-mapping.plist \
 #
 XCode_HEADER_FILES = \
 GSXCBuildDatabase.h \
+PBXProject+Testing.h \
 GSXCBuildContext.h \
 GSXCCommon.h \
 NSArray+Additions.h \
@@ -79,6 +80,7 @@ XCode.h \
 #
 XCode_OBJC_FILES = \
 GSXCBuildDatabase.m \
+PBXProject+Testing.m \
 GSXCBuildContext.m \
 NSArray+Additions.m \
 NSString+PBXAdditions.m \

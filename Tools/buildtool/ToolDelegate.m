@@ -118,7 +118,7 @@ optionTakesNoValue (NSString *option)
       [NSArray arrayWithObjects: @"-alltargets", @"-parallelizeTargets",
                                 @"-quiet", @"-verbose", @"-list",
                                 @"-showBuildSettings", @"-license", @"build",
-                                @"install", @"clean", @"link", nil];
+                                @"install", @"clean", @"link", @"test", nil];
 
   return [options containsObject: option];
 }
@@ -208,6 +208,45 @@ projectFileForPath (NSString *path, BOOL *isProject)
     }
 
   return result;
+}
+
+// -target, -scheme, and xcodebuild's -only-testing:<id> and
+// -skip-testing:<id> (which can be repeated), for the test action.
+- (NSDictionary *) testOptions: (NSDictionary *)args
+{
+  NSMutableDictionary *options = [NSMutableDictionary dictionary];
+  NSMutableArray *only = [NSMutableArray array];
+  NSMutableArray *skip = [NSMutableArray array];
+  NSEnumerator *en =
+      [[[NSProcessInfo processInfo] arguments] objectEnumerator];
+  NSString *arg = nil;
+
+  if ([[args objectForKey: @"-target"] value] != nil)
+    {
+      [options setObject: [[args objectForKey: @"-target"] value]
+                  forKey: @"target"];
+    }
+  if ([[args objectForKey: @"-scheme"] value] != nil)
+    {
+      [options setObject: [[args objectForKey: @"-scheme"] value]
+                  forKey: @"scheme"];
+    }
+  while ((arg = [en nextObject]) != nil)
+    {
+      if ([arg hasPrefix: @"-only-testing:"])
+        {
+          [only addObject:
+                    [arg substringFromIndex: [@"-only-testing:" length]]];
+        }
+      else if ([arg hasPrefix: @"-skip-testing:"])
+        {
+          [skip addObject:
+                    [arg substringFromIndex: [@"-skip-testing:" length]]];
+        }
+    }
+  [options setObject: only forKey: @"only"];
+  [options setObject: skip forKey: @"skip"];
+  return options;
 }
 
 - (BOOL) applyTargetName: (NSString *)targetName toProject: (PBXProject *)project
@@ -336,6 +375,12 @@ projectFileForPath (NSString *path, BOOL *isProject)
           function = @"clean";
         }
 
+      opt = [args objectForKey: @"test"];
+      if (opt != nil)
+        {
+          function = @"test";
+        }
+
       opt = [args objectForKey: @"generate"];
       if (opt != nil)
         {
@@ -384,6 +429,10 @@ projectFileForPath (NSString *path, BOOL *isProject)
                 coder = [[PBXCoder alloc] initWithContentsOfFile: fileName];
                 container = [coder unarchive];
                 [container setParameter: parameter];
+                if ([function isEqualToString: @"test"])
+                  {
+                    [container setTestOptions: [self testOptions: args]];
+                  }
 
                 opt = [args objectForKey: @"-configuration"];
                 if (opt != nil)
@@ -397,7 +446,8 @@ projectFileForPath (NSString *path, BOOL *isProject)
                   {
                     opt = [args objectForKey: @"-scheme"];
                   }
-                if (opt != nil && [args objectForKey: @"-alltargets"] == nil &&
+                if (opt != nil && [args objectForKey: @"-alltargets"] == nil
+                    && ![function isEqualToString: @"test"] &&
                     [self applyTargetName: [opt value]
                                 toProject: [container rootObject]]
                         == NO)
