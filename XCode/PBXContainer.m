@@ -23,6 +23,7 @@
 */
 
 #import "PBXContainer.h"
+#import "PBXProject+Testing.h"
 #import "PBXCommon.h"
 #import "PBXProject.h"
 #import "PBXFileReference.h"
@@ -68,6 +69,7 @@
   RELEASE (_objects);
   RELEASE (_filename);
   RELEASE (_parameter);
+  RELEASE (_testOptions);
   RELEASE (_workspaceLink);
   RELEASE (_workspaceLibs);
   RELEASE (_workspaceIncludes);
@@ -238,6 +240,18 @@
 - (BOOL) clean
 {
   return [_rootObject clean];
+}
+
+- (void) setTestOptions: (NSDictionary *)options
+{
+  ASSIGN(_testOptions, options);
+}
+
+- (BOOL) test
+{
+  [self collectHeaderFileReferences];
+  [_rootObject setContainer: self];
+  return [_rootObject testWithOptions: _testOptions];
 }
 
 - (BOOL) install

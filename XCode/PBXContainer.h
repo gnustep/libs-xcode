@@ -41,7 +41,18 @@
   NSString *_workspaceLink;
   NSString *_workspaceLibs;
   NSString *_workspaceIncludes;
+  NSDictionary *_testOptions;
 }
+
+/**
+ * Options for -test; see -[PBXProject(Testing) testWithOptions:].
+ */
+- (void) setTestOptions: (NSDictionary *)options;
+
+/**
+ * Builds the project and runs its unit-test targets with xctest.
+ */
+- (BOOL) test;
 
 /**
  * Initializes the container with the given root object.
