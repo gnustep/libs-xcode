@@ -6108,6 +6108,103 @@ directoryItem (YCodeProjectNavigatorController *navigator,
   return nil;
 }
 
+static void
+testSynchronizedNavigator (NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root = [temporaryDirectory
+      stringByAppendingPathComponent: @"Synchronized Project"];
+  NSString *package =
+      [root stringByAppendingPathComponent: @"Example.xcodeproj"];
+  NSString *sources = [root stringByAppendingPathComponent: @"Sources/Nested"];
+  [manager createDirectoryAtPath: package
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [manager createDirectoryAtPath: sources
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *source = [sources stringByAppendingPathComponent: @"Example.m"];
+  [@"int example;\n" writeToFile: source
+                      atomically: YES
+                        encoding: NSUTF8StringEncoding
+                           error: NULL];
+  NSString *projectFile =
+      [package stringByAppendingPathComponent: @"project.pbxproj"];
+  [@"{ archiveVersion = 1; objectVersion = 77; objects = { ROOT = { isa = PBXProject; mainGroup = MAIN; targets = (); }; MAIN = { isa = PBXGroup; children = (SYNC); sourceTree = \"<group>\"; }; SYNC = { isa = PBXFileSystemSynchronizedRootGroup; path = Sources; sourceTree = SOURCE_ROOT; }; }; rootObject = ROOT; }"
+      writeToFile: projectFile
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  NSString *workingDirectory = [manager currentDirectoryPath];
+  YCodeProject *document = [[YCodeProject alloc] init];
+  testAssert (
+      [document readFromURL: [NSURL fileURLWithPath: package]
+                     ofType: @"YCodeXcodeProjectType"
+                      error: NULL],
+      @"Load filesystem-synchronized Xcode project from another working directory");
+  YCodeProjectNavigatorController *navigator = [document navigatorController];
+  [navigator projectDidChange];
+  YCodeProjectNavigatorItem *tree = [[navigator rootItems] objectAtIndex: 0];
+  YCodeProjectNavigatorItem *item = directoryItem (navigator, tree, source);
+  testAssert (
+      item != nil &&
+          [[item representedObject] isKindOfClass: [PBXFileReference class]],
+      @"Synchronized folders expose nested source references in the navigator");
+  testAssert ([[document editorController]
+                  openFile: [navigator resolvedFilePathForNavigatorItem: item]],
+              @"Synchronized source opens using its project-relative path");
+  testAssert (
+      [[manager currentDirectoryPath] isEqual: workingDirectory],
+      @"Loading synchronized folders leaves the process working directory unchanged");
+  PBXGroup *group =
+      [[[[document project] mainGroup] children] objectAtIndex: 0];
+  testAssert (
+      [[[navigator itemForObject: group] displayName] isEqual: @"Sources"],
+      @"Unnamed synchronized folder displays its directory name");
+  testAssert (
+      [[group children] count] == 0,
+      @"Navigator discovery does not add references to the serialized group");
+  NSString *added = [sources stringByAppendingPathComponent: @"Added.h"];
+  [@"/* added */" writeToFile: added
+                   atomically: YES
+                     encoding: NSUTF8StringEncoding
+                        error: NULL];
+  [manager removeItemAtPath: source error: NULL];
+  [navigator projectDidChange];
+  tree = [[navigator rootItems] objectAtIndex: 0];
+  testAssert (
+      directoryItem (navigator, tree, added) != nil
+          && directoryItem (navigator, tree, source) == nil,
+      @"Refreshing synchronized navigator discovers additions and removals");
+  testAssert ([document saveProjectToPath: package],
+              @"Save synchronized project");
+  NSDictionary *saved =
+      [NSDictionary dictionaryWithContentsOfFile: projectFile];
+  NSEnumerator *objects =
+      [[[saved objectForKey: @"objects"] allValues] objectEnumerator];
+  NSDictionary *object;
+  BOOL found = NO;
+  while ((object = [objects nextObject]) != nil)
+    {
+      if ([[object objectForKey: @"isa"]
+              isEqual: @"PBXFileSystemSynchronizedRootGroup"])
+        {
+          found = YES;
+          testAssert (
+              [[object objectForKey: @"path"] isEqual: @"Sources"] &&
+                  [[object objectForKey: @"children"] count] == 0,
+              @"Saving preserves the dynamic folder and its relative path");
+        }
+      testAssert (![[object objectForKey: @"path"] isEqual: @"Added.h"],
+                  @"Saving does not serialize discovered navigator files");
+    }
+  testAssert (found, @"Saved project retains its synchronized group type");
+  [document close];
+  [document release];
+}
+
 static YCodeProjectNavigatorItem *
 waitForDirectoryItem (YCodeProject *project, NSString *path, BOOL present)
 {
@@ -9865,6 +9962,7 @@ main (void)
   if ([arguments containsObject: @"--check-make-directory"])
     {
       testNavigatorFolderOrder ();
+      testSynchronizedNavigator (temporaryDirectory);
       testMakeDirectory (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode Makefile directory checks: %lu failures",
@@ -10400,6 +10498,7 @@ main (void)
   testArchitectureSelection (temporaryDirectory);
   testMakefileOpening (temporaryDirectory);
   testMakeDirectory (temporaryDirectory);
+  testSynchronizedNavigator (temporaryDirectory);
   testBuildAndRun (temporaryDirectory);
   testBuildIssuesPane (temporaryDirectory);
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];

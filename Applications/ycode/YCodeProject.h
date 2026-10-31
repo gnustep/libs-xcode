@@ -32,6 +32,7 @@
 @class YCodeEditorController;
 @class YCodeBuildSystem;
 @class PBXProject;
+@class PBXGroup;
 @class PBXContainer;
 @class PBXFileReference;
 
@@ -95,6 +96,9 @@
 /** Open a directory containing GNUmakefile, makefile, or Makefile. */
 + (BOOL) isMakeProjectDirectory: (NSString *)path;
 + (BOOL) isProjectDirectory: (NSString *)path;
+/* File references for display; synchronized listings are never serialized. */
+- (NSArray *) navigatorChildrenForGroup: (PBXGroup *)group
+                                atPath: (NSString *)path;
 - (BOOL) isDirectoryProject;
 - (BOOL) canCreateSettingsFile;
 - (NSString *) settingsExecutablePath;

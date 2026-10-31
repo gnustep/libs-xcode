@@ -506,7 +506,11 @@
   [_itemCache setObject: groupItem forKey: [NSValue valueWithPointer: group]];
 
   // Display groups first without changing the project's stored child order.
-  NSArray *children = [group children];
+  if (![[group name] length] && [[group path] length])
+    [groupItem setDisplayName: [[group path] lastPathComponent]];
+  NSArray *children = [_project
+      navigatorChildrenForGroup: group
+                         atPath: [self resolvedPathForNavigatorItem: groupItem]];
   NSEnumerator *childEnum = [children objectEnumerator];
   id child;
 

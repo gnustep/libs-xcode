@@ -34,6 +34,7 @@
 #import <XCode/PBXFileReference.h>
 #import <XCode/PBXTarget.h>
 #import <XCode/PBXGroup.h>
+#import <XCode/PBXFileSystemSynchronizedRootGroup.h>
 #import <XCode/PBXBuildFile.h>
 #import <XCode/PBXSourcesBuildPhase.h>
 #import <XCode/PBXResourcesBuildPhase.h>
@@ -460,6 +461,20 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
 }
 
 @implementation YCodeProject
+
+/* Synchronized folders have no stored file references. Keep their disk listing
+   separate from the build model so saving does not turn it into explicit files. */
+- (NSArray *) navigatorChildrenForGroup: (PBXGroup *)group
+                                atPath: (NSString *)path
+{
+  if (![group isKindOfClass: [PBXFileSystemSynchronizedRootGroup class]])
+    return [group children];
+  if (![path length])
+    return [NSArray array];
+  PBXGroup *listing = YCodeDirectoryGroup (
+      path, nil, nil, nil, [NSMutableDictionary dictionary], nil);
+  return [listing children];
+}
 
 + (BOOL) isMakeProjectDirectory: (NSString *)path
 {
