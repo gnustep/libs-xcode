@@ -498,6 +498,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 
 - (id) init
 {
+  static NSPoint nextWindowLocation = { 0.0, 0.0 };
   NSRect contentRect = NSMakeRect (100, 100, 980, 680);
   NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask
                          | NSMiniaturizableWindowMask | NSResizableWindowMask;
@@ -532,6 +533,8 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [self setupInterface];
       [self setShouldCascadeWindows: NO];
       [[self window] setFrameUsingName: @"YCodeMainWindow"];
+      nextWindowLocation =
+          [[self window] cascadeTopLeftFromPoint: nextWindowLocation];
       [self restoreSidebarWidths];
       [self fontsChanged: nil];
       // Share the last position across projects. A frame autosave name can

@@ -8745,17 +8745,21 @@ static void
 testWindowFramePersistence (void)
 {
   YCodeWindowController *first = [[YCodeWindowController alloc] init];
+  NSRect firstFrame = [[first window] frame];
   NSRect frame = NSMakeRect (80, 70, 760, 480);
   [[first window] setFrame: frame display: NO];
   [[NSNotificationCenter defaultCenter]
       postNotificationName: NSWindowDidMoveNotification
                     object: [first window]];
   YCodeWindowController *second = [[YCodeWindowController alloc] init];
-  testAssert (
-      NSEqualRects ([[second window] frame], frame),
-      @"New project windows restore the last main-window position and size");
+  NSRect secondFrame = [[second window] frame];
+  testAssert (NSEqualSizes (secondFrame.size, frame.size),
+              @"New project windows restore the last main-window size");
+  testAssert (NSMinX (secondFrame) > NSMinX (firstFrame)
+                  && NSMaxY (secondFrame) < NSMaxY (firstFrame),
+              @"Successive project windows cascade down and to the right");
   testAssert (![second shouldCascadeWindows],
-              @"Window cascading does not override saved placement");
+              @"Automatic cascading does not override explicit placement");
   frame.origin = NSMakePoint (120, 100);
   frame.size = NSMakeSize (800, 500);
   [[second window] setFrame: frame display: NO];
@@ -8763,8 +8767,11 @@ testWindowFramePersistence (void)
   [second release];
   YCodeWindowController *reopened = [[YCodeWindowController alloc] init];
   testAssert (
-      NSEqualRects ([[reopened window] frame], frame),
-      @"Closing a second project saves its placement while another window remains open");
+      NSEqualSizes ([[reopened window] frame].size, frame.size),
+      @"Closing a second project saves its size while another window remains open");
+  testAssert (NSMinX ([[reopened window] frame]) > NSMinX (secondFrame)
+                  && NSMaxY ([[reopened window] frame]) < NSMaxY (secondFrame),
+              @"A third project continues the window cascade");
   [reopened close];
   [reopened release];
   [first close];
@@ -10085,6 +10092,22 @@ main (void)
     }
   id savedWindowFrame = [[[NSUserDefaults standardUserDefaults]
       objectForKey: @"NSWindow Frame YCodeMainWindow"] retain];
+  if ([arguments containsObject: @"--check-window-placement"])
+    {
+      testWindowFramePersistence ();
+      if (savedWindowFrame)
+        [[NSUserDefaults standardUserDefaults]
+            setObject: savedWindowFrame
+               forKey: @"NSWindow Frame YCodeMainWindow"];
+      else
+        [[NSUserDefaults standardUserDefaults]
+            removeObjectForKey: @"NSWindow Frame YCodeMainWindow"];
+      [savedWindowFrame release];
+      NSLog (@"Ycode window placement checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   testWordCompletion ();
   testAutomaticCompletion ();
   testPanelVisibilityPersistence ();
