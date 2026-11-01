@@ -72,6 +72,7 @@
   IBOutlet NSView *_editorView;
   NSSplitView *_editorSplitView;
   CGFloat _buildPanelHeight;
+  BOOL _restoringBottomPanel;
   IBOutlet NSTabView *_editorTabView;
   IBOutlet YCEditorView *_editorTextView;
 

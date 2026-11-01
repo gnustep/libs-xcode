@@ -7253,6 +7253,9 @@ testBuildIssuesPane (NSString *temporaryDirectory)
                                                   error: NULL];
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   id savedIssueColors = [[defaults objectForKey: @"YCodeIssueColors"] retain];
+  id savedPanelHeight =
+      [[defaults objectForKey: @"YCodeBottomPanelHeight"] retain];
+  [defaults setDouble: 180 forKey: @"YCodeBottomPanelHeight"];
   [YCodePreferences resetIssueColors];
   testAssert (
       colorMatches ([YCodePreferences issueColorForSeverity: @"error"], 1, 0, 0)
@@ -7285,6 +7288,26 @@ testBuildIssuesPane (NSString *temporaryDirectory)
                   && NSHeight ([results frame]) > 0
                   && NSMaxY ([editor frame]) <= NSMinY ([results frame]),
               @"Build results resize the source instead of covering it");
+  testAssert (fabs (NSHeight ([results frame]) - 180) < 1,
+              @"Bottom pane restores its saved height");
+  [split setPosition: NSHeight ([split bounds]) * 0.35 ofDividerAtIndex: 0];
+  CGFloat resizedHeight = NSHeight ([results frame]);
+  testAssert (
+      fabs ([defaults doubleForKey: @"YCodeBottomPanelHeight"] - resizedHeight)
+          < 1,
+      @"Dragging the bottom divider immediately saves its height");
+  [controller setBottomPanelVisible: NO];
+  [controller setBottomPanelVisible: YES];
+  testAssert (
+      fabs (NSHeight ([results frame]) - resizedHeight) < 1,
+      @"Showing the bottom pane preserves heights above half the window");
+  YCodeWindowController *reopened = [[YCodeWindowController alloc] init];
+  [reopened setBottomPanelVisible: YES];
+  NSView *reopenedBottom = [reopened valueForKey: @"_bottomView"];
+  testAssert (fabs (NSHeight ([reopenedBottom frame]) - resizedHeight) < 1,
+              @"New windows restore the resized bottom pane height");
+  [reopened close];
+  [reopened release];
   [split setPosition: NSHeight ([split bounds]) * 0.6 ofDividerAtIndex: 0];
   [[controller window] setContentSize: NSMakeSize (1200, 780)];
   testAssert (!NSIntersectsRect ([editor frame], [results frame])
@@ -7682,6 +7705,11 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   else
     [defaults removeObjectForKey: @"YCodeIssueColors"];
   [savedIssueColors release];
+  if (savedPanelHeight)
+    [defaults setObject: savedPanelHeight forKey: @"YCodeBottomPanelHeight"];
+  else
+    [defaults removeObjectForKey: @"YCodeBottomPanelHeight"];
+  [savedPanelHeight release];
   [defaults synchronize];
   [[NSNotificationCenter defaultCenter]
       postNotificationName: YCodeIssueColorsDidChangeNotification

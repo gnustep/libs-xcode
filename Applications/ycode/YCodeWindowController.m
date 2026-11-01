@@ -474,6 +474,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 }
 
 @interface YCodeWindowController (Private)
+- (void) bottomPanelResized: (NSNotification *)notification;
 - (void) saveWindowFrame: (NSNotification *)notification;
 - (void) restoreSidebarWidths;
 - (void) fontsChanged: (NSNotification *)notification;
@@ -522,6 +523,9 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
         _inspectorWidth = 250;
       _navigatorVisible = ![defaults boolForKey: @"YCodeNavigatorHidden"];
       _inspectorVisible = ![defaults boolForKey: @"YCodeInspectorHidden"];
+      _buildPanelHeight = [defaults doubleForKey: @"YCodeBottomPanelHeight"];
+      if (!isfinite (_buildPanelHeight) || _buildPanelHeight <= 0)
+        _buildPanelHeight = 220;
       _bottomPanelVisible = NO;
 
       // Initialize controllers
@@ -540,6 +544,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       // Share the last position across projects. A frame autosave name can
       // only be owned by one live window, so save each window explicitly.
       NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+      [center addObserver: self
+                 selector: @selector (bottomPanelResized:)
+                     name: NSSplitViewDidResizeSubviewsNotification
+                   object: _editorSplitView];
       [center addObserver: self
                  selector: @selector (stopBuildClock:)
                      name: NSWindowWillCloseNotification
@@ -731,6 +739,21 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [defaults setDouble: width forKey: @"YCodeInspectorWidth"];
     }
   [defaults synchronize];
+}
+
+- (void) bottomPanelResized: (NSNotification *)notification
+{
+  if (_restoringBottomPanel || !_bottomPanelVisible ||
+      [_bottomView superview] != _editorSplitView)
+    return;
+  CGFloat height = NSHeight ([_bottomView frame]);
+  if (isfinite (height) && height > 0)
+    {
+      _buildPanelHeight = height;
+      NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+      [defaults setDouble: height forKey: @"YCodeBottomPanelHeight"];
+      [defaults synchronize];
+    }
 }
 
 - (void) saveWindowFrame: (NSNotification *)notification
@@ -1881,11 +1904,14 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   _bottomPanelVisible = visible;
   if (!_editorSplitView || !_bottomView)
     return;
+  _restoringBottomPanel = YES;
   if (visible && [_bottomView superview] == nil)
     {
       CGFloat height = NSHeight ([_editorSplitView bounds]);
       CGFloat panelHeight = _buildPanelHeight > 0 ? _buildPanelHeight : 220;
-      panelHeight = MIN (panelHeight, height * 0.5);
+      panelHeight
+          = MIN (panelHeight,
+                 MAX (0, height - 100 - [_editorSplitView dividerThickness]));
       [_bottomView
           setFrame: NSMakeRect (0, 0, NSWidth ([_editorSplitView bounds]),
                                panelHeight)];
@@ -1893,17 +1919,19 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
       [_editorSplitView addSubview: _bottomView];
       [_editorSplitView adjustSubviews];
-      [_editorSplitView
-               setPosition: MAX (0, height - panelHeight -
-                                       [_editorSplitView dividerThickness])
-          ofDividerAtIndex: 0];
+      CGFloat position
+          = height - panelHeight - [_editorSplitView dividerThickness];
+#ifdef GNUSTEP
+      position += [_editorSplitView dividerThickness] / 2;
+#endif
+      [_editorSplitView setPosition: MAX (0, position) ofDividerAtIndex: 0];
     }
   else if (!visible && [_bottomView superview])
     {
-      _buildPanelHeight = NSHeight ([_bottomView frame]);
       [_bottomView removeFromSuperview];
       [_editorSplitView adjustSubviews];
     }
+  _restoringBottomPanel = NO;
 }
 
 #pragma mark - Actions
