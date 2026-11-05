@@ -5,3 +5,7 @@ FileC, FileH, FileM, FileMM: Modules/Editors/ProjectCenter/Resources/
 FileProject: Images/
 Copyright Free Software Foundation. Distributed under GNU GPL version 3
 or later; see COPYING. ProjectCenter uses FileC for both C and C++.
+
+FileRust, FileRuby, FileJava: generated for Ycode using the ProjectCenter
+FileH icon as a style reference, then resized to 48x48 RGBA TIFF.
+Distributed with this icon set under GNU GPL version 3 or later.

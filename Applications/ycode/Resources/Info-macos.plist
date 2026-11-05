@@ -48,6 +48,51 @@ Terminal parser: Copyright (C) 2026 Terminal contributors, GNU GPL v3 or later.<
 			<key>NSDocumentClass</key>
 			<string>YCodeProject</string>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>YCodeRustSourceType</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>rs</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>FileRust.tiff</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>YCodeRubySourceType</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>rb</string>
+				<string>rake</string>
+				<string>gemspec</string>
+				<string>ru</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>FileRuby.tiff</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>YCodeJavaSourceType</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>java</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>FileJava.tiff</string>
+		</dict>
 	</array>
 </dict>
 </plist>

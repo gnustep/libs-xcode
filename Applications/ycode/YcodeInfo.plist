@@ -64,6 +64,27 @@
             NSName = YCodeCPlusPlusSourceType;
             NSRole = Editor;
             NSUnixExtensions = ( cc, cp, cpp, cxx, "c++", C );
+        },
+        {
+            NSHumanReadableName = "Rust source";
+            NSIcon = "FileRust.tiff";
+            NSName = YCodeRustSourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( rs );
+        },
+        {
+            NSHumanReadableName = "Ruby source";
+            NSIcon = "FileRuby.tiff";
+            NSName = YCodeRubySourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( rb, rake, gemspec, ru );
+        },
+        {
+            NSHumanReadableName = "Java source";
+            NSIcon = "FileJava.tiff";
+            NSName = YCodeJavaSourceType;
+            NSRole = Editor;
+            NSUnixExtensions = ( java );
         }
     );
 }

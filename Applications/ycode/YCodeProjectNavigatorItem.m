@@ -159,6 +159,13 @@ YCodeProjectCenterIcon (NSString *name)
   else if ([[NSArray arrayWithObjects: @"c", @"cc", @"cp", @"cpp", @"cxx",
                                       @"c++", nil] containsObject: ext])
     name = @"FileC";
+  else if ([ext isEqualToString: @"rs"])
+    name = @"FileRust";
+  else if ([[NSArray arrayWithObjects: @"rb", @"rake", @"gemspec", @"ru", nil]
+               containsObject: ext])
+    name = @"FileRuby";
+  else if ([ext isEqualToString: @"java"])
+    name = @"FileJava";
   NSImage *image = name ? YCodeProjectCenterIcon (name) : nil;
   if (!image)
     image = [[NSWorkspace sharedWorkspace] iconForFileType: ext ? ext : @""];

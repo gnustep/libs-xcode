@@ -62,7 +62,10 @@ Resources/ProjectCenterIcons \
 Resources/ProjectCenterIcons/FileH.tiff \
 Resources/ProjectCenterIcons/FileC.tiff \
 Resources/ProjectCenterIcons/FileM.tiff \
-Resources/ProjectCenterIcons/FileMM.tiff
+Resources/ProjectCenterIcons/FileMM.tiff \
+Resources/ProjectCenterIcons/FileRust.tiff \
+Resources/ProjectCenterIcons/FileRuby.tiff \
+Resources/ProjectCenterIcons/FileJava.tiff
 
 
 #
