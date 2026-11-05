@@ -14,6 +14,8 @@ Included bundles:
   and Vagrantfile. Supports block indentation, `do` blocks, and alignment of
   `end`, `else`, `elsif`, `when`, `rescue`, and `ensure`.
 - **Java**: Java, including annotations, text blocks, and brace indentation.
+- **Rust**: Rust (`rs`), including raw strings, byte strings, character literals,
+  lifetimes, keyword completion, line comments, and brace indentation.
 - **Standard**: the existing JavaScript/TypeScript, Swift, Make, CMake, shell,
   JSON, plist, and XML definitions.
 
@@ -60,7 +62,8 @@ lines. These keys are supported:
   this order, with later categories taking precedence.
 - `annotation`: painted after keywords using the preprocessor color.
 - `literal`: painted last; **capture group 1 must match comments**. The other
-  alternative matches strings. All internal grouping should be noncapturing.
+  alternative matches strings. Internal grouping should be noncapturing unless
+  needed for a backreference (as in Rust raw-string delimiters).
   This same pattern masks comments and strings during indentation and delimiter
   matching, preserving UTF-16 offsets and line endings.
 - `fileName`: matches the basename before extension lookup. Anchor the regex
@@ -101,7 +104,8 @@ inside Ycode and should come from trusted sources.
 
 These are lexical editing rules, not compiler parsers. Complex nested Ruby
 percent literals, heredocs, regex literals, and interpolation are not fully
-parsed. Ruby indentation is intended for conventional multiline blocks;
+parsed. Rust block comments are recognized without tracking nested comment depth.
+Ruby indentation is intended for conventional multiline blocks;
 multiline Python headers and parser-based formatting need a future provider API.
 Adding a language bundle does not add a compiler, debugger, completion engine,
 or language-server client.

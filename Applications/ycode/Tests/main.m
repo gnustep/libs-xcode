@@ -9354,6 +9354,36 @@ testLanguageBundles (NSString *directory)
           [[[registry languageForFile: @"Gemfile"] identifier] isEqual: @"ruby"],
       @"Discover Java and Ruby bundles including Ruby build files");
   YCodeLanguage *python = [registry languageForFile: @"example.py"];
+  YCodeLanguage *rust = [registry languageForFile: @"example.rs"];
+  testAssert ([[rust identifier] isEqual: @"rust"] &&
+                  [[rust indentationStyle] isEqual: @"braces"] &&
+                  [[rust lineComment] isEqual: @"//"] &&
+                  [[rust completionKeywords] containsObject: @"impl"],
+              @"Discover Rust with indentation, commenting, and completion");
+  NSString *rustSource
+      = @"fn borrow<'a>(value: &'a str) {\n"
+         "  let raw = r##\"text \"# // }\n more\"##;\n"
+         "  let bytes = br#\"/* } */\"#;\n"
+         "  let ch = '}'; let byte = b'}'; let escaped = '\\u{7d}';\n"
+         "  let text = b\"} //\"; /* } */ // }\n"
+         "  value\n}";
+  NSString *rustCode = [rust codeByMaskingLiterals: rustSource];
+  testAssert (
+      [rustCode length] == [rustSource length] &&
+          [rustCode hasPrefix: @"fn borrow<'a>(value: &'a str) {"] &&
+          [rustCode hasSuffix: @"  value\n}"] &&
+          [[rustCode componentsSeparatedByString: @"}"] count] == 2 &&
+          [[rustCode componentsSeparatedByString: @"\n"] count] ==
+              [[rustSource componentsSeparatedByString: @"\n"] count],
+      @"Rust masks raw strings, characters, and comments but preserves lifetimes");
+  NSString *rustNumbers = @"0xffu8 0o77 0b10_01 42usize 1.5f32 1..2";
+  testAssert (
+      [[rust patternForToken: @"number"]
+          numberOfMatchesInString: rustNumbers
+                          options: 0
+                            range: NSMakeRange (0, [rustNumbers length])]
+          == 7,
+      @"Rust recognizes numeric bases and suffixes without consuming range dots");
   NSString *source = @"if ready: # }\n  value = \"\"\"[\n)\"\"\"\n  call()";
   NSString *code = [python codeByMaskingLiterals: source];
   testAssert (
