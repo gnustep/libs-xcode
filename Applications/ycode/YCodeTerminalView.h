@@ -2,7 +2,7 @@
    Copyright (C) 2026 Free Software Foundation
 
    This file is part of Ycode and is distributed under the GNU General
-   Public License, version 2 or (at your option) any later version.
+   Public License, version 3 or (at your option) any later version.
    See COPYING for details. There is no warranty.
 */
 

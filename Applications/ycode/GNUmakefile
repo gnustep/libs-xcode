@@ -50,6 +50,7 @@ ADDITIONAL_INCLUDE_DIRS += -I../..
 # Resource files
 #
 Ycode_RESOURCE_FILES = \
+COPYING \
 TestHost/YCodeTestHost.bundle \
 Resources/Ycode.tiff \
 Resources/YcodeHelp.txt \

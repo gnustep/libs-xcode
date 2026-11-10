@@ -1,5 +1,9 @@
 # Ycode
 
+Ycode is licensed under the GNU General Public License, version 3 or (at
+your option) any later version. See [COPYING](COPYING) for the full license.
+Third-party components retain their accompanying copyright and license notices.
+
 Ycode is a GNUstep IDE for editing, building, running, testing, and debugging
 projects. It uses libs-xcode to read Xcode projects, imports and exports
 ProjectCenter projects, and works directly with Makefile folders. Interface
