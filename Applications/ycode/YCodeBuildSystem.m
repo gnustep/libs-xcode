@@ -878,6 +878,11 @@
 - (BOOL) buildWithGNUMake
 {
   NSMutableArray *arguments = [NSMutableArray array];
+  NSUInteger jobs = [[NSProcessInfo processInfo] activeProcessorCount];
+  if (jobs < 1)
+    jobs = 1;
+  [arguments
+      addObject: [NSString stringWithFormat: @"-j%lu", (unsigned long)jobs]];
   if ([_buildConfiguration isEqual: @"Debug"])
     [arguments addObject: @"debug=yes"];
   else if ([_buildConfiguration isEqual: @"Release"])
