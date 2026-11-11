@@ -76,6 +76,8 @@ The Debugger command field accepts GDB commands such as backtrace and print vari
 
 On GNUstep, Preferences and Help are in Info. On macOS, Preferences is in the application menu and Ycode Help is in Help. Preferences > Editor includes “Watch files for external changes”, enabled by default. Turning it off stops automatic folder updates and external-change detection for open files. Turning it back on refreshes open projects and checks their files immediately. The setting is saved for future sessions.
 
+Preferences > Editor offers an optional vertical column guide, disabled by default and set to column 80. Enable Show column guide at column, enter a positive column number, and press Return. It follows the editor font and horizontal scrolling independently of the rulers.
+
 Preferences controls pane fonts, editor colors, tab width, spaces versus tabs, indentation, rulers, and matching delimiters. Project indentation can use compiler indentation settings from the active target.
 
 Build issues are grouped by source file, then by Errors, Warnings, and Notes in an expandable outline. Only categories containing diagnostics appear, in that order; category headings use the configured severity colors. File headers show the path and issue count; build-tool messages without a source location appear under Build tools. Select a diagnostic to jump to its source line. New groups expand automatically, while collapsed groups stay collapsed as more build output arrives.

@@ -31,7 +31,42 @@ NSString *YCodeConnectionPreferencesDidChangeNotification
 NSString *YCodeFileWatchingPreferencesDidChangeNotification
     = @"YCodeFileWatchingPreferencesDidChange";
 NSString *YCodeIssueColorsDidChangeNotification = @"YCodeIssueColorsDidChange";
+NSString *YCodeColumnGuideDidChangeNotification = @"YCodeColumnGuideDidChange";
+
 @implementation YCodePreferences
++ (BOOL) columnGuideEnabled
+{
+  return [[NSUserDefaults standardUserDefaults]
+      boolForKey: @"YCodeColumnGuideEnabled"];
+}
+
++ (void) setColumnGuideEnabled: (BOOL)enabled
+{
+  [[NSUserDefaults standardUserDefaults] setBool: enabled
+                                          forKey: @"YCodeColumnGuideEnabled"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeColumnGuideDidChangeNotification
+                    object: nil];
+}
+
++ (NSInteger) columnGuideColumn
+{
+  NSInteger column = [[NSUserDefaults standardUserDefaults]
+      integerForKey: @"YCodeColumnGuideColumn"];
+  return column > 0 ? column : 80;
+}
+
++ (void) setColumnGuideColumn: (NSInteger)column
+{
+  [[NSUserDefaults standardUserDefaults] setInteger: column > 0 ? column : 80
+                                             forKey: @"YCodeColumnGuideColumn"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeColumnGuideDidChangeNotification
+                    object: nil];
+}
+
 + (NSColor *) issueColorForSeverity: (NSString *)severity
 {
   NSString *key = [[severity lowercaseString] hasSuffix: @"error"] ? @"error"

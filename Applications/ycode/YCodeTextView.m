@@ -157,6 +157,11 @@ OpeningDelimiterForClosingDelimiter (unichar c)
   self = [super initWithFrame: frame textContainer: container];
   if (self)
     {
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (columnGuideChanged:)
+                 name: YCodeColumnGuideDidChangeNotification
+               object: nil];
       _matchingDelimiterRange = NSMakeRange (NSNotFound, 0);
       NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
       [center addObserver: self
@@ -259,10 +264,37 @@ OpeningDelimiterForClosingDelimiter (unichar c)
   [self setNeedsDisplay: YES];
 }
 
-#ifdef GNUSTEP
+- (void) columnGuideChanged: (NSNotification *)notification
+{
+  [self setNeedsDisplay: YES];
+}
+
 - (void) drawViewBackgroundInRect: (NSRect)rect
 {
   [super drawViewBackgroundInRect: rect];
+  if ([YCodePreferences columnGuideEnabled])
+    {
+      NSFont *font = [self font];
+      if (font != nil)
+        {
+          NSDictionary *attributes =
+              [NSDictionary dictionaryWithObject: font
+                                          forKey: NSFontAttributeName];
+          CGFloat advance = [@"0" sizeWithAttributes: attributes].width;
+          CGFloat x = [self textContainerOrigin].x +
+                      [[self textContainer] lineFragmentPadding] +
+                      [YCodePreferences columnGuideColumn] * advance;
+          NSRect guide = NSIntersectionRect (
+              rect, NSMakeRect (floor (x), NSMinY ([self bounds]), 1,
+                                NSHeight ([self bounds])));
+          if (advance > 0 && !NSIsEmptyRect (guide))
+            {
+              [[[self textColor] colorWithAlphaComponent: 0.25] set];
+              NSRectFillUsingOperation (guide, NSCompositeSourceOver);
+            }
+        }
+    }
+#ifdef GNUSTEP
   // GNUstep's layout manager stores temporary background attributes but its
   // background renderer only reads attributes from the text storage.
   if (!_matchingDelimiterRange.length
@@ -283,9 +315,8 @@ OpeningDelimiterForClosingDelimiter (unichar c)
       if (NSIntersectsRect (highlight, rect))
         NSRectFillUsingOperation (highlight, NSCompositeSourceOver);
     }
-}
-
 #endif
+}
 
 - (NSUInteger) editorTabWidth
 {

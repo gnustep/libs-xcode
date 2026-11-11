@@ -26,6 +26,8 @@
   NSView *_colorPreferencesView;
   NSView *_editorPreferencesView;
   NSButton *_showEditorRulers;
+  NSButton *_columnGuideCheckbox;
+  NSTextField *_columnGuideField;
   NSButton *_matchingDelimitersCheckbox;
   NSButton *_wordCompletionCheckbox;
   NSButton *_fileWatchingCheckbox;

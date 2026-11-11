@@ -270,6 +270,11 @@ uses Info for About, Preferences, and Help, with Services, Hide, and Quit at
 the top level. Build and run commands are in Project; window commands are in
 Windows. The editor rulers show character columns across the top and source
 line numbers down the side, following the font size and scroll position.
+In Preferences > Editor, enable **Show column guide at column** to draw a
+vertical guide after the chosen number of character columns. It is off by
+default, with column 80 selected. Enter a positive column number and press
+Return to apply it to open editors. The guide follows the editor font and
+horizontal scrolling independently of the rulers.
 The editable area fills the window as it grows while long lines remain
 horizontally scrollable. Return adds an indentation level after an opening
 brace or a control statement awaiting its body, ignoring punctuation in comments

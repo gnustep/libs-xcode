@@ -1606,6 +1606,15 @@ YCodeFileURLFromPath (NSString *path)
       setHighlightMatchingDelimiters: [sender state] == NSOnState];
 }
 
+- (void) changeColumnGuide: (id)sender
+{
+  [YCodePreferences setColumnGuideColumn: [_columnGuideField integerValue]];
+  [_columnGuideField setIntegerValue: [YCodePreferences columnGuideColumn]];
+  [YCodePreferences
+      setColumnGuideEnabled: [_columnGuideCheckbox state] == NSOnState];
+  [_columnGuideField setEnabled: [YCodePreferences columnGuideEnabled]];
+}
+
 - (void) changeEditorRulers: (NSButton *)sender
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -1781,6 +1790,21 @@ YCodeFileURLFromPath (NSString *path)
           setToolTip:
               @"Suggest words and keywords after a short typing pause, or use Edit > Complete Word."];
       [_editorPreferencesView addSubview: _wordCompletionCheckbox];
+      _columnGuideCheckbox = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (20, 241, 240, 28)]);
+      [_columnGuideCheckbox setButtonType: NSSwitchButton];
+      [_columnGuideCheckbox setTitle: @"Show column guide at column:"];
+      [_columnGuideCheckbox setTarget: self];
+      [_columnGuideCheckbox setAction: @selector (changeColumnGuide:)];
+      [_editorPreferencesView addSubview: _columnGuideCheckbox];
+      _columnGuideField = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (285, 243, 70, 24)]);
+      [_columnGuideField setTarget: self];
+      [_columnGuideField setAction: @selector (changeColumnGuide:)];
+      [_columnGuideField
+          setToolTip:
+              @"Draw a guide after this many character columns. Enter a positive number (default 80)."];
+      [_editorPreferencesView addSubview: _columnGuideField];
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];
@@ -1853,6 +1877,10 @@ YCodeFileURLFromPath (NSString *path)
   [_projectIndentation setState: [YCodePreferences useProjectIndentation]
                                     ? NSOnState
                                     : NSOffState];
+  [_columnGuideCheckbox
+      setState: [YCodePreferences columnGuideEnabled] ? NSOnState : NSOffState];
+  [_columnGuideField setIntegerValue: [YCodePreferences columnGuideColumn]];
+  [_columnGuideField setEnabled: [YCodePreferences columnGuideEnabled]];
   [_showEditorRulers setState: [[NSUserDefaults standardUserDefaults]
                                   boolForKey: @"YCodeHideEditorRulers"]
                                   ? NSOffState

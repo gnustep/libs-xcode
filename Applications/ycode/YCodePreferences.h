@@ -29,7 +29,13 @@ extern NSString *YCodeTerminalPreferencesDidChangeNotification;
 extern NSString *YCodeConnectionPreferencesDidChangeNotification;
 extern NSString *YCodeFileWatchingPreferencesDidChangeNotification;
 extern NSString *YCodeIssueColorsDidChangeNotification;
+extern NSString *YCodeColumnGuideDidChangeNotification;
 @interface YCodePreferences : NSObject
+/** Optional editor guide after the selected character column; defaults to off, 80. */
++ (BOOL) columnGuideEnabled;
++ (void) setColumnGuideEnabled: (BOOL)enabled;
++ (NSInteger) columnGuideColumn;
++ (void) setColumnGuideColumn: (NSInteger)column;
 /** Severity colors for the Issues pane, independent of compiler ANSI colors. */
 + (NSColor *) issueColorForSeverity: (NSString *)severity;
 + (void) setIssueColor: (NSColor *)color forSeverity: (NSString *)severity;

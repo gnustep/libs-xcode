@@ -3309,6 +3309,102 @@ testWordCompletion (void)
 }
 
 static void
+testColumnGuide (void)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedEnabled =
+      [[defaults objectForKey: @"YCodeColumnGuideEnabled"] retain];
+  id savedColumn = [[defaults objectForKey: @"YCodeColumnGuideColumn"] retain];
+  [defaults removeObjectForKey: @"YCodeColumnGuideEnabled"];
+  [defaults removeObjectForKey: @"YCodeColumnGuideColumn"];
+  testAssert (![YCodePreferences columnGuideEnabled] &&
+                  [YCodePreferences columnGuideColumn] == 80,
+              @"Column guide defaults to disabled at column 80");
+  NSWindow *window =
+      [[NSWindow alloc] initWithContentRect: NSMakeRect (0, 0, 900, 180)
+                                  styleMask: NSTitledWindowMask
+                                    backing: NSBackingStoreBuffered
+                                      defer: NO];
+  [window setReleasedWhenClosed: NO];
+  YCodeTextView *view =
+      [[YCodeTextView alloc] initWithFrame: NSMakeRect (0, 0, 900, 180)];
+  [view setFont: [NSFont userFixedPitchFontOfSize: 12]];
+  [view setTextColor: [NSColor blackColor]];
+  [view setBackgroundColor: [NSColor whiteColor]];
+  [window setContentView: view];
+  [window orderFront: nil];
+  NSUInteger iteration;
+  for (iteration = 0; iteration < 4; iteration++)
+    {
+      if (iteration == 1)
+        [YCodePreferences setColumnGuideEnabled: YES];
+      if (iteration == 2)
+        {
+          [YCodePreferences setColumnGuideColumn: 40];
+          [view setFont: [NSFont userFixedPitchFontOfSize: 16]];
+        }
+      if (iteration == 3)
+        [YCodePreferences setColumnGuideEnabled: NO];
+      NSDictionary *attributes =
+          [NSDictionary dictionaryWithObject: [view font]
+                                      forKey: NSFontAttributeName];
+      NSInteger x = floor ([view textContainerOrigin].x +
+                           [[view textContainer] lineFragmentPadding] +
+                           [YCodePreferences columnGuideColumn] *
+                               [@"0" sizeWithAttributes: attributes].width);
+      [window display];
+      NSBitmapImageRep *bitmap =
+          [view bitmapImageRepForCachingDisplayInRect: [view bounds]];
+      [view cacheDisplayInRect: [view bounds] toBitmapImageRep: bitmap];
+      testAssert (colorMatches ([bitmap colorAtX: x + 3 y: 50], 1, 1, 1),
+                  @"Guide leaves neighboring background clear");
+      testAssert (
+          colorMatches ([bitmap colorAtX: x y: 50], 1, 1, 1)
+              == ![YCodePreferences columnGuideEnabled],
+          @"Guide renders only when enabled and follows column and font changes");
+    }
+  [YCodePreferences setColumnGuideColumn: -1];
+  testAssert ([YCodePreferences columnGuideColumn] == 80,
+              @"Invalid guide columns fall back to 80");
+  AppController *app = [AppController new];
+  [app showPrefPanel: nil];
+  NSPopUpButton *groups = [app valueForKey: @"_preferencesGroup"];
+  [groups selectItemWithTitle: @"Editor"];
+  [groups sendAction: [groups action] to: [groups target]];
+  NSButton *checkbox = [app valueForKey: @"_columnGuideCheckbox"];
+  NSTextField *field = [app valueForKey: @"_columnGuideField"];
+  testAssert ([checkbox state] == NSOffState && ![field isEnabled] &&
+                  [field integerValue] == 80,
+              @"Editor preferences reflect guide defaults");
+  [checkbox performClick: nil];
+  [field setIntegerValue: 100];
+  [NSApp sendAction: [field action] to: [field target] from: field];
+  testAssert ([YCodePreferences columnGuideEnabled] &&
+                  [YCodePreferences columnGuideColumn] == 100 &&
+                  [field isEnabled],
+              @"Editor controls enable and configure the column guide");
+  [[app valueForKey: @"_preferencesPanel"] orderOut: nil];
+  [app release];
+  [window close];
+  [view release];
+  [window release];
+  if (savedEnabled)
+    [defaults setObject: savedEnabled forKey: @"YCodeColumnGuideEnabled"];
+  else
+    [defaults removeObjectForKey: @"YCodeColumnGuideEnabled"];
+  if (savedColumn)
+    [defaults setObject: savedColumn forKey: @"YCodeColumnGuideColumn"];
+  else
+    [defaults removeObjectForKey: @"YCodeColumnGuideColumn"];
+  [savedEnabled release];
+  [savedColumn release];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeColumnGuideDidChangeNotification
+                    object: nil];
+}
+
+static void
 testEditorEditing (NSString *directory)
 {
   id savedControlWidth = [[[NSUserDefaults standardUserDefaults]
@@ -9774,6 +9870,15 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-column-guide"])
+    {
+      testColumnGuide ();
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode column guide checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-terminal-preferences"])
     {
       testTerminalPreferences (temporaryDirectory);
@@ -9912,6 +10017,7 @@ main (void)
     }
   if ([arguments containsObject: @"--check-editing"])
     {
+      testColumnGuide ();
       testEditorEditing (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode editing checks: %lu failures", (unsigned long)failures);
@@ -10567,6 +10673,7 @@ main (void)
     }
   [document close];
   testWindowResizing (temporaryDirectory);
+  testColumnGuide ();
   testEditorEditing (temporaryDirectory);
   testEditorBundles ();
   testEditorBundleFiles (temporaryDirectory);
