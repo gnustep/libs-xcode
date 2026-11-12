@@ -1576,6 +1576,8 @@ YCodeFileURLFromPath (NSString *path)
       setHidden: [_preferencesGroup indexOfSelectedItem] != 5];
   [_issuePreferencesView
       setHidden: [_preferencesGroup indexOfSelectedItem] != 6];
+  if ([_editorPreferencesView isHidden])
+    [_columnGuideColorWell deactivate];
   if ([_issuePreferencesView isHidden])
     [_issueColorWells makeObjectsPerformSelector: @selector (deactivate)];
   if ([_connectionPreferencesView isHidden])
@@ -1604,6 +1606,11 @@ YCodeFileURLFromPath (NSString *path)
 {
   [YCodePreferences
       setHighlightMatchingDelimiters: [sender state] == NSOnState];
+}
+
+- (void) changeColumnGuideColor: (NSColorWell *)sender
+{
+  [YCodePreferences setColumnGuideColor: [sender color]];
 }
 
 - (void) changeColumnGuide: (id)sender
@@ -1805,6 +1812,20 @@ YCodeFileURLFromPath (NSString *path)
           setToolTip:
               @"Draw a guide after this many character columns. Enter a positive number (default 80)."];
       [_editorPreferencesView addSubview: _columnGuideField];
+      NSTextField *guideColorLabel = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, 201, 250, 24)]);
+      [guideColorLabel setStringValue: @"Column guide color"];
+      [guideColorLabel setEditable: NO];
+      [guideColorLabel setSelectable: NO];
+      [guideColorLabel setBezeled: NO];
+      [guideColorLabel setDrawsBackground: NO];
+      [_editorPreferencesView addSubview: guideColorLabel];
+      _columnGuideColorWell = AUTORELEASE (
+          [[NSColorWell alloc] initWithFrame: NSMakeRect (285, 201, 70, 26)]);
+      [_columnGuideColorWell setContinuous: YES];
+      [_columnGuideColorWell setTarget: self];
+      [_columnGuideColorWell setAction: @selector (changeColumnGuideColor:)];
+      [_editorPreferencesView addSubview: _columnGuideColorWell];
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];
@@ -1877,6 +1898,10 @@ YCodeFileURLFromPath (NSString *path)
   [_projectIndentation setState: [YCodePreferences useProjectIndentation]
                                     ? NSOnState
                                     : NSOffState];
+  [_columnGuideColorWell
+      setColor: [YCodePreferences columnGuideColor]
+                   ?: [[YCodeSyntaxHighlighter preferredColorForKey: @"text"]
+                          colorWithAlphaComponent: 0.25]];
   [_columnGuideCheckbox
       setState: [YCodePreferences columnGuideEnabled] ? NSOnState : NSOffState];
   [_columnGuideField setIntegerValue: [YCodePreferences columnGuideColumn]];

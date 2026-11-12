@@ -149,6 +149,9 @@
 - (NSString *) lastSourceFileDefaultsKey;
 - (void) rememberCurrentSourceFile;
 - (void) restoreLastSourceFile;
+- (NSString *) cursorPositionKeyForDocument: (YCodeEditorDocument *)document;
+- (void) saveCursorPositionForDocument: (YCodeEditorDocument *)document;
+- (void) saveCursorPositions: (NSNotification *)notification;
 @end
 
 @interface YCodeEditorController (FindPanel)
@@ -165,6 +168,11 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
   self = [super init];
   if (self)
     {
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (saveCursorPositions:)
+                 name: NSApplicationWillTerminateNotification
+               object: nil];
       _openDocuments = [[NSMutableArray alloc] init];
       _documentTabs = [[NSMutableDictionary alloc] init];
       _fileWatchers = [NSMutableDictionary new];
@@ -215,6 +223,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) dealloc
 {
+  [self saveCursorPositions: nil];
   [self stopWatchingFiles];
   RELEASE (_fileWatchers);
   RELEASE (_changedDirectories);
@@ -427,6 +436,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 {
   if (_currentDocument != document)
     {
+      [self saveCursorPositionForDocument: _currentDocument];
       ASSIGN (_currentDocument, document);
       [self updateFindPanel];
       [self rememberCurrentSourceFile];
@@ -447,6 +457,40 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 }
 
 #pragma mark - Project Editor Session
+
+- (NSString *) cursorPositionKeyForDocument: (YCodeEditorDocument *)document
+{
+  NSString *path = [document filePath];
+  if (![path length] || ![document textView])
+    return nil;
+  if (![path isAbsolutePath])
+    path = [[[NSFileManager defaultManager] currentDirectoryPath]
+        stringByAppendingPathComponent: path];
+  path = [[path stringByStandardizingPath] stringByResolvingSymlinksInPath];
+  return [@"YCodeCursorPosition:" stringByAppendingString: path];
+}
+
+- (void) saveCursorPositionForDocument: (YCodeEditorDocument *)document
+{
+  NSString *key = [self cursorPositionKeyForDocument: document];
+  if (!key)
+    return;
+  NSUInteger location = [document selectedRange].location;
+  if (location == NSNotFound)
+    return;
+  [[NSUserDefaults standardUserDefaults]
+      setObject: [NSNumber numberWithUnsignedInteger: location]
+         forKey: key];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+- (void) saveCursorPositions: (NSNotification *)notification
+{
+  NSEnumerator *documents = [_openDocuments objectEnumerator];
+  YCodeEditorDocument *document;
+  while ((document = [documents nextObject]) != nil)
+    [self saveCursorPositionForDocument: document];
+}
 
 - (NSString *) lastSourceFileDefaultsKey
 {
@@ -513,6 +557,12 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
       [defaults removeObjectForKey: key];
       [defaults synchronize];
     }
+  else
+    {
+      NSTextView *textView = [_currentDocument textView];
+      if (textView)
+        [[textView window] makeFirstResponder: textView];
+    }
 }
 
 #pragma mark - File Operations
@@ -566,6 +616,15 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
       [_documentTabs setObject: tabItem forKey: filePath];
       [self updateFileWatchers];
       [self setCurrentDocument: document];
+      // Restore known files; unseen files begin at the first character.
+      NSString *key = [self cursorPositionKeyForDocument: document];
+      id saved = key ? [[NSUserDefaults standardUserDefaults] objectForKey: key]
+                     : nil;
+      NSUInteger location = 0;
+      if ([saved isKindOfClass: [NSNumber class]] && [saved doubleValue] >= 0)
+        location
+            = MIN ([saved unsignedIntegerValue], [[textView string] length]);
+      [document setSelectedRange: NSMakeRange (location, 0)];
 
       RELEASE (tabItem);
       RELEASE (document);
@@ -621,6 +680,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
   while ((document = [documents nextObject]) != nil)
     if (![self confirmClosingDocument: document])
       return NO;
+  [self saveCursorPositions: nil];
   return YES;
 }
 
@@ -634,6 +694,8 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
   if (![self confirmClosingDocument: document])
     return NO;
+
+  [self saveCursorPositionForDocument: document];
 
   // Remove tab
   NSTabViewItem *tabItem = [_documentTabs objectForKey: filePath];

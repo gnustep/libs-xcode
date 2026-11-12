@@ -289,7 +289,8 @@ OpeningDelimiterForClosingDelimiter (unichar c)
                                 NSHeight ([self bounds])));
           if (advance > 0 && !NSIsEmptyRect (guide))
             {
-              [[[self textColor] colorWithAlphaComponent: 0.25] set];
+              NSColor *color = [YCodePreferences columnGuideColor];
+              [(color ?: [[self textColor] colorWithAlphaComponent: 0.25]) set];
               NSRectFillUsingOperation (guide, NSCompositeSourceOver);
             }
         }

@@ -541,6 +541,16 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           [[self window] cascadeTopLeftFromPoint: nextWindowLocation];
       [self restoreSidebarWidths];
       [self fontsChanged: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (cursorPositionChanged:)
+                 name: NSTextViewDidChangeSelectionNotification
+               object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (cursorPositionChanged:)
+                 name: NSTextDidChangeNotification
+               object: nil];
       // Share the last position across projects. A frame autosave name can
       // only be owned by one live window, so save each window explicitly.
       NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
@@ -1331,7 +1341,40 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   NSString *time = (_hasBuildDuration || _buildStartedAt > 0)
                        ? [NSString stringWithFormat: @"%.1fs", duration]
                        : @"—";
+  NSTextView *view = [[_editorController currentDocument] textView];
+  if (view)
+    {
+      NSString *text = [view string];
+      NSUInteger location = MIN ([view selectedRange].location, [text length]);
+      NSUInteger row = 1;
+      NSUInteger start = 0;
+      while (start < location)
+        {
+          NSUInteger end, contentsEnd;
+          [text getLineStart: NULL
+                         end: &end
+                 contentsEnd: &contentsEnd
+                    forRange: NSMakeRange (start, 0)];
+          if (end > location || end <= start)
+            break;
+          /* The last unterminated line still contains the caret at EOF. */
+          if (end == contentsEnd)
+            break;
+          start = end;
+          row++;
+        }
+      return
+          [NSString stringWithFormat: @"%@ - Col %lu, Row %lu - %@ - %@", name,
+                                     (unsigned long)(location - start + 1),
+                                     (unsigned long)row, activity, time];
+    }
   return [NSString stringWithFormat: @"%@ - %@ - %@", name, activity, time];
+}
+
+- (void) cursorPositionChanged: (NSNotification *)notification
+{
+  if ([notification object] == [[_editorController currentDocument] textView])
+    [self updateBuildStatus: nil];
 }
 
 - (void) updateBuildStatus: (id)sender
@@ -1573,6 +1616,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   if (notification && [notification object] != _editorController)
     return;
   [self fileModificationChanged: nil];
+  [self updateBuildStatus: nil];
   [self updateDebuggerViews];
   NSString *identifier = [[_editorController currentDocument] isImageDocument]
                              ? @"image"
@@ -3424,7 +3468,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   if ([itemIdentifier isEqualToString: @"buildStatus"])
     {
       NSTextField *field = AUTORELEASE (
-          [[NSTextField alloc] initWithFrame: NSMakeRect (0, 0, 280, 26)]);
+          [[NSTextField alloc] initWithFrame: NSMakeRect (0, 0, 400, 26)]);
       [field setEditable: NO];
       [field setSelectable: NO];
       [field setFont: [NSFont systemFontOfSize: 12]];
@@ -3433,8 +3477,8 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [item setLabel: @"Status"];
       [item setPaletteLabel: @"Project Status"];
       [item setView: field];
-      [item setMinSize: NSMakeSize (220, 26)];
-      [item setMaxSize: NSMakeSize (420, 26)];
+      [item setMinSize: NSMakeSize (320, 26)];
+      [item setMaxSize: NSMakeSize (540, 26)];
       [item setVisibilityPriority: NSToolbarItemVisibilityPriorityHigh];
     }
   else if ([itemIdentifier isEqualToString: @"architecture"])

@@ -36,6 +36,9 @@ extern NSString *YCodeColumnGuideDidChangeNotification;
 + (void) setColumnGuideEnabled: (BOOL)enabled;
 + (NSInteger) columnGuideColumn;
 + (void) setColumnGuideColumn: (NSInteger)column;
+/** Custom guide color, or nil to use the editor text color at 25% opacity. */
++ (NSColor *) columnGuideColor;
++ (void) setColumnGuideColor: (NSColor *)color;
 /** Severity colors for the Issues pane, independent of compiler ANSI colors. */
 + (NSColor *) issueColorForSeverity: (NSString *)severity;
 + (void) setIssueColor: (NSColor *)color forSeverity: (NSString *)severity;

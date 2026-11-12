@@ -3309,12 +3309,144 @@ testWordCompletion (void)
 }
 
 static void
+testInitialCursorPosition (NSString *directory)
+{
+  [[NSFileManager defaultManager] createDirectoryAtPath: directory
+                            withIntermediateDirectories: YES
+                                             attributes: nil
+                                                  error: NULL];
+  NSString *path = [directory stringByAppendingPathComponent: @"Cursor.txt"];
+  NSString *positionKey = [@"YCodeCursorPosition:"
+      stringByAppendingString: [[path stringByStandardizingPath]
+                                  stringByResolvingSymlinksInPath]];
+  id savedPosition = [[[NSUserDefaults standardUserDefaults]
+      objectForKey: positionKey] retain];
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey: positionKey];
+  NSMutableString *contents = [NSMutableString string];
+  NSUInteger index;
+  for (index = 0; index < 200; index++)
+    [contents appendString: @"A line of text\n"];
+  [contents writeToFile: path
+             atomically: YES
+               encoding: NSUTF8StringEncoding
+                  error: NULL];
+  YCodeEditorController *editor = [YCodeEditorController new];
+  NSTabView *tabs =
+      [[NSTabView alloc] initWithFrame: NSMakeRect (0, 0, 500, 300)];
+  [editor setTabView: tabs];
+  testAssert ([editor openFile: path], @"Open a multiline cursor fixture");
+  YCodeEditorDocument *document = [editor currentDocument];
+  testAssert (NSEqualRanges ([document selectedRange], NSMakeRange (0, 0)),
+              @"Newly opened files place the caret at the first character");
+  testAssert (NSMinY ([[[document scrollView] contentView] bounds]) == 0,
+              @"Newly opened files show the top of the document");
+  [document setSelectedRange: NSMakeRange (2000, 0)];
+  [editor openFile: path];
+  testAssert ([document selectedRange].location == 2000,
+              @"Selecting an already open file preserves its cursor");
+  [editor closeFile: path];
+  [editor openFile: path];
+  testAssert (NSEqualRanges ([[editor currentDocument] selectedRange],
+                             NSMakeRange (2000, 0)),
+              @"Reopening a closed file restores its cursor");
+  testAssert (
+      NSMinY ([[[[editor currentDocument] scrollView] contentView] bounds])
+          > 0,
+      @"Restoring a cursor scrolls to its region");
+  [[[editor currentDocument] textView] setSelectedRange: NSMakeRange (2200, 0)];
+  testAssert ([editor canCloseFiles],
+              @"Session closure saves open cursor positions");
+  [editor release];
+  [tabs release];
+  editor = [YCodeEditorController new];
+  tabs = [[NSTabView alloc] initWithFrame: NSMakeRect (0, 0, 500, 300)];
+  [editor setTabView: tabs];
+  [editor openFile: path];
+  testAssert ([[editor currentDocument] selectedRange].location == 2200,
+              @"A new editor session restores the last cursor position");
+  testAssert (
+      NSMinY ([[[[editor currentDocument] scrollView] contentView] bounds])
+          > 0,
+      @"A new session reveals the restored cursor region");
+  [editor closeFile: path];
+  [@"short" writeToFile: path
+             atomically: YES
+               encoding: NSUTF8StringEncoding
+                  error: NULL];
+  [editor openFile: path];
+  testAssert ([[editor currentDocument] selectedRange].location == 5,
+              @"Saved positions beyond a shortened file clamp to EOF");
+  [editor closeFile: path];
+  [[NSUserDefaults standardUserDefaults] setObject: @"invalid"
+                                            forKey: positionKey];
+  [editor openFile: path];
+  testAssert ([[editor currentDocument] selectedRange].location == 0,
+              @"Invalid saved cursor positions start at the beginning");
+  [editor closeFile: path];
+  [editor release];
+  [tabs release];
+  NSString *sourceKey = [@"YCodeLastSourceFile:"
+      stringByAppendingString: [[directory stringByStandardizingPath]
+                                  stringByResolvingSymlinksInPath]];
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedSource = [[defaults objectForKey: sourceKey] retain];
+  [defaults setObject: path forKey: sourceKey];
+  [defaults setInteger: 2 forKey: positionKey];
+  YCodeProject *project = [YCodeProject new];
+  [project readFromURL: [NSURL fileURLWithPath: directory]
+                ofType: @"YCodeMakeProjectType"
+                 error: NULL];
+  YCodeWindowController *controller = [YCodeWindowController new];
+  [controller setProject: project];
+  [controller showWindow: nil];
+  NSTextView *restored =
+      [[[controller editorController] currentDocument] textView];
+  testAssert (
+      restored != nil && [[controller window] firstResponder] == restored,
+      @"Startup restoration focuses the text editor for immediate typing");
+  testAssert ([restored selectedRange].location == 2,
+              @"Focusing the restored editor preserves its saved cursor");
+  if ([[controller window] firstResponder] == restored)
+    {
+      [(NSTextView *)[[controller window] firstResponder] insertText: @"X"];
+      testAssert (
+          [[restored string] isEqual: @"shXort"],
+          @"Typing immediately after restoration edits at the saved cursor");
+    }
+  [[[controller editorController] currentDocument] setModified: NO];
+  [controller close];
+  [controller release];
+  [project release];
+  if (savedSource)
+    [defaults setObject: savedSource forKey: sourceKey];
+  else
+    [defaults removeObjectForKey: sourceKey];
+  [savedSource release];
+  if (savedPosition)
+    [[NSUserDefaults standardUserDefaults] setObject: savedPosition
+                                              forKey: positionKey];
+  else
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey: positionKey];
+  [savedPosition release];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+static void
 testColumnGuide (void)
 {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   id savedEnabled =
       [[defaults objectForKey: @"YCodeColumnGuideEnabled"] retain];
   id savedColumn = [[defaults objectForKey: @"YCodeColumnGuideColumn"] retain];
+  id savedColor = [[defaults objectForKey: @"YCodeColumnGuideColor"] retain];
+  [defaults removeObjectForKey: @"YCodeColumnGuideColor"];
+  testAssert ([YCodePreferences columnGuideColor] == nil,
+              @"Guide color defaults to following editor text");
+  [defaults setObject: [NSArray arrayWithObjects: @"2", @"0", @"0", @"1", nil]
+               forKey: @"YCodeColumnGuideColor"];
+  testAssert ([YCodePreferences columnGuideColor] == nil,
+              @"Malformed guide colors fall back to editor text");
+  [defaults removeObjectForKey: @"YCodeColumnGuideColor"];
   [defaults removeObjectForKey: @"YCodeColumnGuideEnabled"];
   [defaults removeObjectForKey: @"YCodeColumnGuideColumn"];
   testAssert (![YCodePreferences columnGuideEnabled] &&
@@ -3340,6 +3472,10 @@ testColumnGuide (void)
         [YCodePreferences setColumnGuideEnabled: YES];
       if (iteration == 2)
         {
+          [view setNeedsDisplay: NO];
+          [YCodePreferences setColumnGuideColor: [NSColor redColor]];
+          testAssert ([view needsDisplay],
+                      @"Guide color changes invalidate open editors");
           [YCodePreferences setColumnGuideColumn: 40];
           [view setFont: [NSFont userFixedPitchFontOfSize: 16]];
         }
@@ -3356,6 +3492,9 @@ testColumnGuide (void)
       NSBitmapImageRep *bitmap =
           [view bitmapImageRepForCachingDisplayInRect: [view bounds]];
       [view cacheDisplayInRect: [view bounds] toBitmapImageRep: bitmap];
+      if (iteration == 2)
+        testAssert (colorMatches ([bitmap colorAtX: x y: 50], 1, 0, 0),
+                    @"Guide renders the saved custom color");
       testAssert (colorMatches ([bitmap colorAtX: x + 3 y: 50], 1, 1, 1),
                   @"Guide leaves neighboring background clear");
       testAssert (
@@ -3383,6 +3522,16 @@ testColumnGuide (void)
                   [YCodePreferences columnGuideColumn] == 100 &&
                   [field isEnabled],
               @"Editor controls enable and configure the column guide");
+  NSColorWell *well = [app valueForKey: @"_columnGuideColorWell"];
+  testAssert (colorMatches ([well color], 1, 0, 0),
+              @"Guide color picker loads the saved color");
+  [well setColor: [NSColor blueColor]];
+  [NSApp sendAction: [well action] to: [well target] from: well];
+  testAssert (colorMatches ([YCodePreferences columnGuideColor], 0, 0, 1),
+              @"Guide color picker saves the selected color");
+  [app showPrefPanel: nil];
+  testAssert (colorMatches ([well color], 0, 0, 1),
+              @"Reopening preferences retains the guide color");
   [[app valueForKey: @"_preferencesPanel"] orderOut: nil];
   [app release];
   [window close];
@@ -3396,6 +3545,11 @@ testColumnGuide (void)
     [defaults setObject: savedColumn forKey: @"YCodeColumnGuideColumn"];
   else
     [defaults removeObjectForKey: @"YCodeColumnGuideColumn"];
+  if (savedColor)
+    [defaults setObject: savedColor forKey: @"YCodeColumnGuideColor"];
+  else
+    [defaults removeObjectForKey: @"YCodeColumnGuideColor"];
+  [savedColor release];
   [savedEnabled release];
   [savedColumn release];
   [defaults synchronize];
@@ -5916,6 +6070,38 @@ testArchitectureSelection (NSString *temporaryDirectory)
   testAssert (
       [[statusField stringValue] isEqual: @"Architecture Project - Ready - —"],
       @"Status starts with the project name and Ready before any build");
+  YCodeEditorController *editor = [window editorController];
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+      initWithFilePath: [directory stringByAppendingPathComponent: @"cursor.txt"]
+               content: @"first\r\nsecond\n"];
+  [editor setCurrentDocument: document];
+  NSTextView *textView = [document textView];
+  [textView setSelectedRange: NSMakeRange (0, 0)];
+  testAssert (
+      [[statusField stringValue]
+          isEqual: @"Architecture Project - Col 1, Row 1 - Ready - —"],
+      @"Status places one-based cursor coordinates between project and activity");
+  [textView setSelectedRange: NSMakeRange (10, 0)];
+  testAssert (
+      [[statusField stringValue] rangeOfString: @"Col 4, Row 2"].location
+          != NSNotFound,
+      @"Cursor status updates on movement and handles CRLF");
+  [textView setSelectedRange: NSMakeRange (14, 0)];
+  testAssert (
+      [[statusField stringValue] rangeOfString: @"Col 1, Row 3"].location
+          != NSNotFound,
+      @"Trailing newline starts a new row at EOF");
+  [textView setString: @"abc"];
+  [textView setSelectedRange: NSMakeRange (3, 0)];
+  testAssert (
+      [[statusField stringValue] rangeOfString: @"Col 4, Row 1"].location
+          != NSNotFound,
+      @"Unterminated line includes the caret at EOF");
+  [editor setCurrentDocument: nil];
+  testAssert (
+      [[statusField stringValue] isEqual: @"Architecture Project - Ready - —"],
+      @"Closing the text editor clears cursor coordinates");
+  [document release];
   NSPopUpButton *selector
       = (NSPopUpButton *)[[[toolbar items] objectAtIndex: index] view];
   YCodeBuildSystem *build = [project buildSystem];
@@ -9870,6 +10056,15 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-initial-cursor"])
+    {
+      testInitialCursorPosition (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode initial cursor checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-column-guide"])
     {
       testColumnGuide ();
@@ -10673,6 +10868,7 @@ main (void)
     }
   [document close];
   testWindowResizing (temporaryDirectory);
+  testInitialCursorPosition (temporaryDirectory);
   testColumnGuide ();
   testEditorEditing (temporaryDirectory);
   testEditorBundles ();

@@ -67,6 +67,47 @@ NSString *YCodeColumnGuideDidChangeNotification = @"YCodeColumnGuideDidChange";
                     object: nil];
 }
 
++ (NSColor *) columnGuideColor
+{
+  NSArray *rgba = [[NSUserDefaults standardUserDefaults]
+      arrayForKey: @"YCodeColumnGuideColor"];
+  if ([rgba count] != 4)
+    return nil;
+  NSUInteger index;
+  for (index = 0; index < 4; index++)
+    {
+      id value = [rgba objectAtIndex: index];
+      if (![value respondsToSelector: @selector (doubleValue)]
+          || !isfinite ([value doubleValue]) || [value doubleValue] < 0 ||
+          [value doubleValue] > 1)
+        return nil;
+    }
+  return [NSColor colorWithCalibratedRed: [[rgba objectAtIndex: 0] doubleValue]
+                                   green: [[rgba objectAtIndex: 1] doubleValue]
+                                    blue: [[rgba objectAtIndex: 2] doubleValue]
+                                   alpha: [[rgba objectAtIndex: 3] doubleValue]];
+}
+
++ (void) setColumnGuideColor: (NSColor *)color
+{
+  color = [color colorUsingColorSpaceName: NSCalibratedRGBColorSpace];
+  if (!color)
+    return;
+  [[NSUserDefaults standardUserDefaults]
+      setObject: [NSArray
+                    arrayWithObjects:
+                        [NSNumber numberWithDouble: [color redComponent]],
+                        [NSNumber numberWithDouble: [color greenComponent]],
+                        [NSNumber numberWithDouble: [color blueComponent]],
+                        [NSNumber numberWithDouble: [color alphaComponent]],
+                        nil]
+         forKey: @"YCodeColumnGuideColor"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeColumnGuideDidChangeNotification
+                    object: nil];
+}
+
 + (NSColor *) issueColorForSeverity: (NSString *)severity
 {
   NSString *key = [[severity lowercaseString] hasSuffix: @"error"] ? @"error"

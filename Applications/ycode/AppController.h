@@ -28,6 +28,7 @@
   NSButton *_showEditorRulers;
   NSButton *_columnGuideCheckbox;
   NSTextField *_columnGuideField;
+  NSColorWell *_columnGuideColorWell;
   NSButton *_matchingDelimitersCheckbox;
   NSButton *_wordCompletionCheckbox;
   NSButton *_fileWatchingCheckbox;

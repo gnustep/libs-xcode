@@ -274,7 +274,7 @@ In Preferences > Editor, enable **Show column guide at column** to draw a
 vertical guide after the chosen number of character columns. It is off by
 default, with column 80 selected. Enter a positive column number and press
 Return to apply it to open editors. The guide follows the editor font and
-horizontal scrolling independently of the rulers.
+horizontal scrolling independently of the rulers. Choose Column guide color in the same pane to save a custom color and apply it immediately to open editors.
 The editable area fills the window as it grows while long lines remain
 horizontally scrollable. Return adds an indentation level after an opening
 brace or a control statement awaiting its body, ignoring punctuation in comments
@@ -488,8 +488,12 @@ sources and dependencies. Project Save As does not convert or move this folder.
 
 ## Architecture selection
 
-The status field after Architecture shows `Project Name - Activity - Build Time`,
-followed by a separator. Build time updates in seconds while building and retains
+The status field after Architecture shows
+`Project Name - Col 1, Row 1 - Activity - Build Time`, followed by a separator.
+The one-based character column and row follow the cursor in the active text
+editor and are omitted when no text editor is active. Cursor positions are saved
+per file between sessions; reopening a known file reveals its saved cursor, while
+a new file starts at the beginning. Build time updates in seconds while building and retains
 the completed duration until the next build or project change. Activity reflects
 building, running, debugging, testing, cleaning, failure, or cancellation; otherwise
 it shows Ready. Before the first build, the duration is shown as a dash.
