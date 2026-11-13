@@ -10964,6 +10964,22 @@ waitForWorkflowGit (YCodeGitController *git)
 }
 
 static void
+selectWorkflowGitPaths (YCodeGitController *git, NSArray *paths)
+{
+  NSArray *entries = [git valueForKey: @"_entries"];
+  NSMutableIndexSet *indexes = [NSMutableIndexSet indexSet];
+  NSUInteger i;
+  for (i = 0; i < [entries count]; i++)
+    if ([paths
+            containsObject: [[entries objectAtIndex: i] objectForKey: @"path"]])
+      [indexes addIndex: i];
+  testAssert ([indexes count] == [paths count],
+              @"Select the requested Git fixture paths");
+  [[git valueForKey: @"_table"] selectRowIndexes: indexes
+                           byExtendingSelection: NO];
+}
+
+static void
 captureWorkflowPanel (id controller, NSString *filename)
 {
   NSString *directory = [[[NSProcessInfo processInfo] environment]
@@ -11116,6 +11132,17 @@ testProjectWorkflows (NSString *temporaryDirectory)
                           isEqual: @"A "],
                   @"Git panel stages selected untracked files");
       [table selectAll: nil];
+      answerCloseAlert (NSAlertSecondButtonReturn);
+      [git revert: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          [manager fileExistsAtPath: first] && [manager fileExistsAtPath: second]
+              && [[[git valueForKey: @"_status"] stringValue]
+                     rangeOfString: @"failed"]
+                         .location
+                     != NSNotFound,
+          @"Revert before the first commit reports Git's error and preserves staged new files");
+      [table selectAll: nil];
       [git unstage: nil];
       waitForWorkflowGit (git);
       entries = [git valueForKey: @"_entries"];
@@ -11207,6 +11234,114 @@ testProjectWorkflows (NSString *temporaryDirectory)
                   != nil
               && [manager fileExistsAtPath: oddPath],
           @"Stage and unstage literal filenames preserve the worktree");
+      NSString *originalFirst = workflowGit (
+          root,
+          [NSArray arrayWithObjects: @"show", @"HEAD:First File.txt", nil]);
+      NSString *originalSecond = workflowGit (
+          root, [NSArray arrayWithObjects: @"show", @"HEAD:Second.txt", nil]);
+      [@"staged edit\n" writeToFile: first
+                         atomically: YES
+                           encoding: NSUTF8StringEncoding
+                              error: NULL];
+      workflowGit (root, [NSArray arrayWithObjects: @"add", @"--",
+                                                   @"First File.txt", nil]);
+      [@"unstaged edit\n" writeToFile: first
+                           atomically: YES
+                             encoding: NSUTF8StringEncoding
+                                error: NULL];
+      workflowGit (
+          root, [NSArray arrayWithObjects: @"rm", @"--", @"Second.txt", nil]);
+      [firstDocument loadFromFile];
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      selectWorkflowGitPaths (
+          git, [NSArray arrayWithObjects: @"First File.txt", odd, nil]);
+      [git revert: nil];
+      testAssert (
+          ![git isBusy] &&
+              [[[git valueForKey: @"_status"] stringValue]
+                  rangeOfString: @"Untracked files"]
+                      .location
+                  != NSNotFound,
+          @"Revert refuses mixed tracked and untracked selections without touching files");
+      selectWorkflowGitPaths (git,
+                              [NSArray arrayWithObject: @"First File.txt"]);
+      [firstDocument setContent: @"unsaved buffer edit\n"];
+      [firstDocument setModified: YES];
+      [git revert: nil];
+      testAssert (
+          ![git isBusy] &&
+              [[[git valueForKey: @"_status"] stringValue]
+                  rangeOfString: @"unsaved edits"]
+                      .location
+                  != NSNotFound,
+          @"Revert protects unsaved editor changes before showing confirmation");
+      [firstDocument setContent: @"unstaged edit\n"];
+      [firstDocument setModified: NO];
+      answerCloseAlert (NSAlertFirstButtonReturn);
+      [git revert: nil];
+      testAssert (
+          [[NSString stringWithContentsOfFile: first
+                                     encoding: NSUTF8StringEncoding
+                                        error: NULL] isEqual: @"unstaged edit\n"]
+              &&
+              [workflowGit (
+                  root, [NSArray arrayWithObjects: @"diff", @"--cached",
+                                                  @"--name-only", nil]) length]
+                  > 0,
+          @"Cancelling Revert preserves both working files and staged changes");
+      answerCloseAlert (NSAlertSecondButtonReturn);
+      [git revert: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          [[NSString stringWithContentsOfFile: first
+                                     encoding: NSUTF8StringEncoding
+                                        error: NULL] isEqual: originalFirst]
+              && [[firstDocument content] isEqual: originalFirst],
+          @"Revert restores HEAD and refreshes the selected open editor");
+      testAssert (
+          ![manager fileExistsAtPath: second] &&
+              [manager fileExistsAtPath: oddPath],
+          @"Single-file Revert preserves unselected staged deletions and untracked files");
+      [@"another edit\n" writeToFile: first
+                          atomically: YES
+                            encoding: NSUTF8StringEncoding
+                               error: NULL];
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      selectWorkflowGitPaths (
+          git,
+          [NSArray arrayWithObjects: @"First File.txt", @"Second.txt", nil]);
+      answerCloseAlert (NSAlertSecondButtonReturn);
+      [git revert: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          [[NSString stringWithContentsOfFile: first
+                                     encoding: NSUTF8StringEncoding
+                                        error: NULL] isEqual: originalFirst]
+              &&
+              [[NSString stringWithContentsOfFile: second
+                                         encoding: NSUTF8StringEncoding
+                                            error: NULL] isEqual: originalSecond]
+              && ![workflowGit (root,
+                                [NSArray arrayWithObjects: @"diff", @"--cached",
+                                                          @"--name-only", nil])
+                  length],
+          @"Multi-file Revert restores modified and deleted files and clears their staged changes");
+      /* A staged new path is tracked in the index, but absent from HEAD. */
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      selectWorkflowGitPaths (git, [NSArray arrayWithObject: odd]);
+      [git stage: nil];
+      waitForWorkflowGit (git);
+      selectWorkflowGitPaths (git, [NSArray arrayWithObject: odd]);
+      answerCloseAlert (NSAlertSecondButtonReturn);
+      [git revert: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          ![manager fileExistsAtPath: oddPath] &&
+              [[git valueForKey: @"_entries"] count] == 0,
+          @"Confirmed Revert removes staged additions with literal special-character paths absent from HEAD");
       [manager removeItemAtPath: oddPath error: NULL];
       NSString *renamed = @"Renamed File.txt";
       workflowGit (root,
@@ -11229,6 +11364,40 @@ testProjectWorkflows (NSString *temporaryDirectory)
                                                          @"--name-only", nil]);
       testAssert (![staged length],
                   @"Unstaging a rename handles both source and destination");
+      workflowGit (root,
+                   [NSArray arrayWithObjects: @"add", @"-A", @"--",
+                                             @"First File.txt", renamed, nil]);
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      selectWorkflowGitPaths (git, [NSArray arrayWithObject: renamed]);
+      answerCloseAlert (NSAlertSecondButtonReturn);
+      [git revert: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          [manager fileExistsAtPath: first]
+              && ![manager
+                  fileExistsAtPath: [root
+                                       stringByAppendingPathComponent: renamed]]
+              && [[git valueForKey: @"_entries"] count] == 0,
+          @"Revert restores both paths of a staged rename");
+      /* A copy's source is not part of the selected change. Reverting the copy
+         must never discard independent changes in that source file. */
+      NSArray *copyEntries = [NSArray
+          arrayWithObject: [NSDictionary
+                              dictionaryWithObjectsAndKeys: @"C ", @"status",
+                                                           @"Copy.txt",
+                                                           @"path",
+                                                           @"First File.txt",
+                                                           @"original", nil]];
+      [git setValue: copyEntries forKey: @"_entries"];
+      [table reloadData];
+      [table selectAll: nil];
+      testAssert (
+          [[git performSelector: @selector (selectedPaths)]
+              isEqual: [NSArray arrayWithObject: @"Copy.txt"]],
+          @"Selecting a copy excludes its independently editable source path");
+      [git refresh: nil];
+      waitForWorkflowGit (git);
       NSString *zero = [NSString stringWithFormat: @"%C", (unichar)0];
       NSData *conflict =
           [[NSString stringWithFormat: @"UU conflict.txt%@", zero]

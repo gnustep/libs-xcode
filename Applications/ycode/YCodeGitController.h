@@ -62,6 +62,8 @@
 - (IBAction) refresh: (id)sender;
 - (IBAction) stage: (id)sender;
 - (IBAction) unstage: (id)sender;
+/** Confirm and restore selected tracked paths to HEAD in the index and worktree. */
+- (IBAction) revert: (id)sender;
 - (IBAction) diff: (id)sender;
 - (IBAction) stagedDiff: (id)sender;
 - (IBAction) history: (id)sender;

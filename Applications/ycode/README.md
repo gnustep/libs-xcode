@@ -533,6 +533,15 @@ editor tabs first. **Unstage** removes selected changes from the index while
 preserving working files, including before the first commit. Renames include
 both their original and new paths.
 
+Select one or more tracked files and choose **Revert…** to restore their last
+committed versions (HEAD), discarding both staged and unstaged changes. The
+confirmation lists every affected path and defaults to Cancel. Deleted files
+are restored; staged new files absent from HEAD are removed. Renames restore
+both paths. This operation cannot be undone in the editor. Save or close files
+with unsaved editor edits first. Untracked files are refused and left unchanged;
+Revert requires an existing commit. Open text editors refresh after success,
+and Git errors are displayed in the output area.
+
 Enter a message and choose **Commit Staged Changes** to commit all staged changes
 in the repository, irrespective of the row selection. **History** shows the
 latest 50 commit summaries. Git's configured identity, hooks and signing settings
@@ -544,7 +553,8 @@ Double-click a conflicted file to edit its conflict markers in Ycode, save it,
 and Stage it after resolving the conflict. This is manual conflict resolution;
 there is no three-way merge editor. Branch switching, fetching, pushing and
 pulling remain available through the integrated terminal. The panel does not
-perform network operations or discard working changes. Gorm remains the external
+perform network operations. Working changes are discarded only through the
+confirmed Revert action. Gorm remains the external
 interface editor.
 
 ## Makefile folders

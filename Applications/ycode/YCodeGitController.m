@@ -47,18 +47,19 @@
       [_panel setTitle: @"Source Control"];
       [_panel setMinSize: NSMakeSize (900, 520)];
       NSView *content = [_panel contentView];
-      NSArray *titles = [NSArray
-          arrayWithObjects: @"Refresh", @"Open File", @"Diff", @"Staged Diff",
-                           @"Stage", @"Unstage", @"History", @"Cancel", nil];
+      NSArray *titles =
+          [NSArray arrayWithObjects: @"Refresh", @"Open File", @"Diff",
+                                    @"Staged Diff", @"Stage", @"Unstage",
+                                    @"Revert…", @"History", @"Cancel", nil];
       NSArray *actions =
           [NSArray arrayWithObjects: @"refresh:", @"openFile:", @"diff:",
                                     @"stagedDiff:", @"stage:", @"unstage:",
-                                    @"history:", @"cancel:", nil];
+                                    @"revert:", @"history:", @"cancel:", nil];
       NSUInteger i;
       for (i = 0; i < [titles count]; i++)
         {
           NSButton *button = AUTORELEASE ([[NSButton alloc]
-              initWithFrame: NSMakeRect (12 + i * 110, 576, 106, 30)]);
+              initWithFrame: NSMakeRect (12 + i * 98, 576, 94, 30)]);
           [button setTitle: [titles objectAtIndex: i]];
           [button setBezelStyle: NSRoundedBezelStyle];
           [button setTarget: self];
@@ -194,7 +195,7 @@
       if (action == @selector (cancel:))
         enabled = _task != nil;
       if (action == @selector (stage:) || action == @selector (unstage:)
-          || action == @selector (openFile:))
+          || action == @selector (openFile:) || action == @selector (revert:))
         enabled = enabled && [_table numberOfSelectedRows] > 0;
       [button setEnabled: enabled];
     }
@@ -444,8 +445,29 @@
                           ? [output stringByAppendingString:
                                         @"\n[Output truncated at 8 MiB]"]
                           : output];
+  if ([operation isEqual: @"revert"])
+    {
+      /* Refresh open editors even when automatic file watching is disabled.
+         Edits made while Git ran remain protected by the document's conflict handling. */
+      NSEnumerator *documents =
+          [[[_owner editorController] openDocuments] objectEnumerator];
+      YCodeEditorDocument *document;
+      while ((document = [documents nextObject]) != nil)
+        {
+          NSEnumerator *paths = [_pendingPaths objectEnumerator];
+          NSString *path;
+          while ((path = [paths nextObject]) != nil)
+            if ([[[document filePath] stringByResolvingSymlinksInPath]
+                    isEqual: [[_root stringByAppendingPathComponent: path]
+                                stringByResolvingSymlinksInPath]])
+              {
+                [document checkForExternalChanges];
+                break;
+              }
+        }
+    }
   if ([operation isEqual: @"stage"] || [operation isEqual: @"unstage"] ||
-      [operation isEqual: @"commit"])
+      [operation isEqual: @"commit"] || [operation isEqual: @"revert"])
     {
       if ([operation isEqual: @"commit"])
         [_message setStringValue: @""];
@@ -479,7 +501,9 @@
         {
           NSDictionary *entry = [_entries objectAtIndex: i];
           [paths addObject: [entry objectForKey: @"path"]];
-          if ([entry objectForKey: @"original"])
+          if ([entry objectForKey: @"original"] &&
+              [[entry objectForKey: @"status"] rangeOfString: @"R"].location
+                  != NSNotFound)
             [paths addObject: [entry objectForKey: @"original"]];
         }
       i = [selection indexGreaterThanIndex: i];
@@ -528,6 +552,77 @@
   [self runArguments: [NSArray arrayWithObjects: @"rev-parse", @"--verify",
                                                @"HEAD", nil]
            operation: @"check HEAD"];
+}
+
+- (BOOL) canRevertPaths: (NSArray *)paths
+{
+  if (_task || _closed || !_root || ![paths count])
+    return NO;
+  NSEnumerator *enumerator = [paths objectEnumerator];
+  NSString *path;
+  while ((path = [enumerator nextObject]) != nil)
+    {
+      NSString *absolute = [[_root stringByAppendingPathComponent: path]
+          stringByResolvingSymlinksInPath];
+      NSEnumerator *documents =
+          [[[_owner editorController] openDocuments] objectEnumerator];
+      YCodeEditorDocument *document;
+      while ((document = [documents nextObject]) != nil)
+        if ([[[document filePath] stringByResolvingSymlinksInPath]
+                isEqual: absolute]
+            && [document isModified])
+          {
+            [_status
+                setStringValue:
+                    @"Save or close the selected files with unsaved edits before reverting."];
+            return NO;
+          }
+    }
+  return YES;
+}
+
+- (IBAction) revert: (id)sender
+{
+  NSArray *paths = [self selectedPaths];
+  if (![self canRevertPaths: paths])
+    return;
+  NSIndexSet *selection = [_table selectedRowIndexes];
+  NSUInteger row = [selection firstIndex];
+  while (row != NSNotFound)
+    {
+      if (row < [_entries count] &&
+          [[[_entries objectAtIndex: row] objectForKey: @"status"]
+              isEqual: @"??"])
+        {
+          [_status
+              setStringValue:
+                  @"Untracked files have no committed version. Deselect them before reverting; no files were changed."];
+          return;
+        }
+      row = [selection indexGreaterThanIndex: row];
+    }
+  /* Keep the selection fixed while the modal confirmation processes events. */
+  paths = [[paths copy] autorelease];
+  NSAlert *alert = AUTORELEASE ([NSAlert new]);
+  [alert setMessageText: @"Revert selected files to the last commit?"];
+  [alert
+      setInformativeText:
+          [NSString
+              stringWithFormat:
+                  @"Discard all staged and unstaged changes in these %lu paths and restore HEAD. Deleted files will be restored; staged new files absent from HEAD will be removed. This cannot be undone in the editor.\n\n%@",
+                  (unsigned long)[paths count],
+                  [paths componentsJoinedByString: @"\n"]]];
+  [alert addButtonWithTitle: @"Cancel"];
+  [alert addButtonWithTitle: @"Revert"];
+  if ([alert runModal] != NSAlertSecondButtonReturn
+      || ![self canRevertPaths: paths])
+    return;
+  ASSIGN (_pendingPaths, paths);
+  NSMutableArray *args =
+      [NSMutableArray arrayWithObjects: @"restore", @"--source=HEAD",
+                                       @"--staged", @"--worktree", @"--", nil];
+  [args addObjectsFromArray: paths];
+  [self runArguments: args operation: @"revert"];
 }
 
 - (void) showDiffStaged: (BOOL)staged
