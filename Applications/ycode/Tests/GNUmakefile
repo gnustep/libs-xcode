@@ -23,7 +23,7 @@ ycode_tests_TOOL_LIBS += -lXCode -lgnustep-gui
 
 check:: all
 	LD_LIBRARY_PATH="$(CURDIR)/../../../XCode/XCode.framework/Versions/0:$$LD_LIBRARY_PATH" \
-	./$(GNUSTEP_OBJ_DIR)/ycode_tests
+	./$(GNUSTEP_OBJ_DIR)/ycode_tests $(YCODE_TEST_ARGUMENTS)
 
 include $(GNUSTEP_MAKEFILES)/test-tool.make
 

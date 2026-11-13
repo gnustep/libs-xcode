@@ -156,6 +156,8 @@
  * Project and view menu entry points.
  */
 - (IBAction) buildProject: (id)sender;
+- (IBAction) replaceInProject: (id)sender;
+- (IBAction) showSourceControl: (id)sender;
 - (IBAction) openTerminal: (id)sender;
 - (IBAction) cleanProject: (id)sender;
 - (IBAction) runProject: (id)sender;

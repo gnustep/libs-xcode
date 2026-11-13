@@ -26,6 +26,8 @@
 #import "YCodeControlIcons.h"
 #import "YCodeVariablesView.h"
 #import "YCodeWindowController.h"
+#import "YCodeGitController.h"
+#import "YCodeProjectReplace.h"
 #import "YCodeTerminalView.h"
 #import "YCodeProject.h"
 #import <XCode/PBXProject.h>
@@ -567,6 +569,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                      name: NSWindowWillCloseNotification
                    object: [self window]];
       [center addObserver: self
+                 selector: @selector (closeWorkflowPanels:)
+                     name: NSWindowWillCloseNotification
+                   object: [self window]];
+      [center addObserver: self
                  selector: @selector (issueColorsChanged:)
                      name: YCodeIssueColorsDidChangeNotification
                    object: nil];
@@ -791,6 +797,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   [self stopBuildClock: nil];
   [[_project buildSystem] setDelegate: nil];
   [[_project buildSystem] stop];
+  [_gitController close];
+  RELEASE (_gitController);
+  [_projectReplace close];
+  RELEASE (_projectReplace);
   RELEASE (_project);
   RELEASE (_navigatorController);
   RELEASE (_editorController);
@@ -858,6 +868,13 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [_issueGroups removeAllObjects];
       [_issueGroupsByPath removeAllObjects];
       [self reloadIssueOutline];
+    }
+  if (_project != project)
+    {
+      [_gitController close];
+      DESTROY (_gitController);
+      [_projectReplace close];
+      DESTROY (_projectReplace);
     }
   ASSIGN (_project, project);
   [[_project buildSystem] setDelegate: self];
@@ -2365,6 +2382,34 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 }
 
 #pragma mark - Search and Tests
+
+- (void) closeWorkflowPanels: (NSNotification *)notification
+{
+  [_gitController close];
+  DESTROY (_gitController);
+  [_projectReplace close];
+  DESTROY (_projectReplace);
+}
+
+- (IBAction) replaceInProject: (id)sender
+{
+  if (!_project)
+    return;
+  if (!_projectReplace)
+    _projectReplace =
+        [[YCodeProjectReplace alloc] initWithWindowController: self];
+  [_projectReplace show];
+}
+
+- (IBAction) showSourceControl: (id)sender
+{
+  if (!_project)
+    return;
+  if (!_gitController)
+    _gitController =
+        [[YCodeGitController alloc] initWithWindowController: self];
+  [_gitController show];
+}
 
 - (void) setupResultNavigators
 {

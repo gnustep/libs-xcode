@@ -73,6 +73,8 @@ Resources/ProjectCenterIcons/FileJava.tiff
 # Header files
 #
 Ycode_HEADER_FILES = \
+YCodeGitController.h \
+YCodeProjectReplace.h \
 YCodeTerminalView.h \
 YCodeTerminalTypes.h \
 YCodeTerminalParser.h \
@@ -111,6 +113,8 @@ YCodeControlIcons.h
 # Objective-C Class files
 #
 Ycode_OBJC_FILES = \
+YCodeGitController.m \
+YCodeProjectReplace.m \
 YCodeTerminalView.m \
 YCodeTerminalParser.m \
 YCodeCompilerSettings.m \

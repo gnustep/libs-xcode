@@ -45,6 +45,10 @@ and folders containing a GNUmakefile or Makefile.
   targets. If automatic detection is ambiguous, choose the executable in a file
   panel. Add build targets or architecture environments as needed.
 
+Ycode also provides **Edit > Replace in Project** with a before/after preview and
+undoable edits, and **Project > Source Control** for local Git status, diffs,
+staging, commits, and history. Gorm remains the interface editor.
+
 ![Ycode development environment](https://github.com/user-attachments/assets/0fa131b6-b02a-4870-bfd1-d2d78d511e27)
 
 Build Ycode with an installed GNUstep development environment, including

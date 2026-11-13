@@ -37,11 +37,15 @@
 @class YCInspectorView;
 @class YCodeVariablesView;
 @class YCodeTerminalView;
+@class YCodeGitController;
+@class YCodeProjectReplace;
 
 @interface YCodeWindowController
     : NSWindowController <YCodeBuildSystemDelegate>
 {
   YCodeProject *_project;
+  YCodeGitController *_gitController;
+  YCodeProjectReplace *_projectReplace;
   NSTimer *_buildStatusTimer;
   NSTimeInterval _buildStartedAt;
   NSTimeInterval _buildDuration;
@@ -163,6 +167,10 @@
 - (IBAction) toggleBreakpoint: (id)sender;
 - (IBAction) debugConsoleCommand: (id)sender;
 - (IBAction) searchProject: (id)sender;
+/** All searchable project files, including referenced external files. */
+- (NSArray *) projectSearchPaths;
+- (IBAction) replaceInProject: (id)sender;
+- (IBAction) showSourceControl: (id)sender;
 - (IBAction) testProject: (id)sender;
 - (IBAction) buildProject: (id)sender;
 - (IBAction) cleanProject: (id)sender;

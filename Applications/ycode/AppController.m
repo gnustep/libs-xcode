@@ -327,6 +327,8 @@ YCodeFileURLFromPath (NSString *path)
                              @selector (restartCodeIntelligence:), @"", self)];
   [editMenu addItem: YCodeMenuItem (@"Replace...", @selector (replaceInFile:),
                                    @"", self)];
+  [editMenu addItem: YCodeMenuItem (@"Replace in Project...",
+                                   @selector (replaceInProject:), @"", self)];
   [editMenu addItem: [NSMenuItem separatorItem]];
   [editMenu addItem: YCodeMenuItem (@"Comment/Uncomment Lines",
                                    @selector (toggleLineComment:), @"", nil)];
@@ -393,6 +395,9 @@ YCodeFileURLFromPath (NSString *path)
                                       @selector (showProjectCompilerSettings:),
                                       @"", self)];
   [productMenu addItem: [NSMenuItem separatorItem]];
+  [productMenu
+      addItem: YCodeMenuItem (@"Source Control...",
+                             @selector (showSourceControl:), @"", self)];
   [productMenu addItem: YCodeMenuItem (@"Open Terminal",
                                       @selector (openTerminal:), @"", self)];
   NSArray *controlTitles = [NSArray
@@ -1128,6 +1133,16 @@ YCodeFileURLFromPath (NSString *path)
       convertTabsToSpaces: sender];
 }
 
+- (IBAction) replaceInProject: (id)sender
+{
+  [[self currentProjectWindowController] replaceInProject: sender];
+}
+
+- (IBAction) showSourceControl: (id)sender
+{
+  [[self currentProjectWindowController] showSourceControl: sender];
+}
+
 - (IBAction) buildProject: (id)sender
 {
   YCodeWindowController *controller = [self currentProjectWindowController];
@@ -1159,6 +1174,9 @@ YCodeFileURLFromPath (NSString *path)
 - (BOOL) validateMenuItem: (NSMenuItem *)item
 {
   SEL action = [item action];
+  if (action == @selector (replaceInProject:)
+      || action == @selector (showSourceControl:))
+    return [self currentProject] != nil;
   if (action == @selector (openTerminal:))
     {
       YCodeWindowController *controller =

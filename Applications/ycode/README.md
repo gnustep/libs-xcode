@@ -186,6 +186,22 @@ selected match; otherwise it finds the next match first. Replace All affects
 only the current file and can be undone in one step. Switching tabs changes
 the panel's target file. Searching alone does not mark the file changed.
 
+**Edit > Replace in Project...** opens a modeless replacement preview. Enter
+literal search and replacement text, optionally enable **Case sensitive**, and
+choose **Preview**. Empty replacement text deletes matches. The preview lists
+changed files and replacement counts; select a row to inspect its before/after
+contents and uncheck files to exclude them. It uses unsaved text in open editors,
+skips binary/unreadable files and version-control metadata, and includes external
+files referenced by the project.
+
+**Apply to Editors** opens the selected files and makes undoable, unsaved edits.
+Save the files when ready; Undo in each file reverses that file's replacement.
+If a selected file changed since the preview, cannot be opened as editable text,
+or has an external-change conflict, Ycode stops before applying replacements.
+Resolve the conflict and preview again. Editing either search field or changing
+case sensitivity invalidates the preview. This is literal replacement, without
+regular expressions or semantic renaming.
+
 **Edit > Complete Word** offers case-sensitive suggestions from words in the
 current file (including unsaved edits) and the active language's keywords.
 With GNUstep’s default key bindings, Escape also opens completion.
@@ -499,6 +515,37 @@ The field in the Debugger tab accepts GDB commands such as `print variable`,
 `backtrace`, `break main`, `disable 1`, and `enable 1`. Press Return to send a
 command. **Project > Stop** ends the debugger session; an inferior's normal exit
 leaves GDB available for another Go. A failed build never launches the debugger.
+
+## Source control
+
+**Project > Source Control...** (**Product** on macOS) opens a Git panel for the
+repository containing the project folder. Git must be available on `PATH`.
+The panel shows the entire repository, including changes outside a project
+subdirectory. **Refresh** reads current saved-file status. The two status
+characters describe the index and working tree; `??` means untracked and `U`
+indicates an unmerged conflict.
+
+Select files and choose **Diff** or **Staged Diff** to review changes. With no
+selection these commands review the whole repository. Untracked files appear in
+status but do not appear in Git diffs until staged; **Open File** opens them for
+inspection. **Stage** stages selected paths, including deletions; save modified
+editor tabs first. **Unstage** removes selected changes from the index while
+preserving working files, including before the first commit. Renames include
+both their original and new paths.
+
+Enter a message and choose **Commit Staged Changes** to commit all staged changes
+in the repository, irrespective of the row selection. **History** shows the
+latest 50 commit summaries. Git's configured identity, hooks and signing settings
+still apply. Errors appear in the output area; the message is retained after a
+failed commit. Commands run in the background; **Cancel** stops the active Git
+process, after which Refresh reports the repository's current state.
+
+Double-click a conflicted file to edit its conflict markers in Ycode, save it,
+and Stage it after resolving the conflict. This is manual conflict resolution;
+there is no three-way merge editor. Branch switching, fetching, pushing and
+pulling remain available through the integrated terminal. The panel does not
+perform network operations or discard working changes. Gorm remains the external
+interface editor.
 
 ## Makefile folders
 

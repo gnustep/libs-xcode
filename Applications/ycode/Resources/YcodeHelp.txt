@@ -159,3 +159,13 @@ with iOS 14 deployment and iPhone/iPad support. They also build with GNUstep
 buildtool. ProjectCenter and GNUmakefile UIKit projects target GNUstep.
 Apple device builds need SDK/signing configuration in Xcode. Use Xcode to run
 or debug on an Apple simulator or device; Ycode runs desktop applications.
+
+PROJECT-WIDE REPLACEMENT
+
+Edit > Replace in Project opens a preview for literal replacements, including unsaved editor text. Enter Find and Replace with, choose case sensitivity, then Preview. Select a file to see before/after contents; uncheck files to exclude them. Empty replacement deletes matches. Apply to Editors makes unsaved, undoable changes in the selected editor tabs. Save when ready and use Undo per file to reverse the change. Changed files and external-change conflicts require a fresh preview before applying. Version-control metadata and unreadable/binary files are skipped.
+
+SOURCE CONTROL
+
+Project > Source Control (Product on macOS) opens the Git repository containing your project. Git must be on PATH. Refresh displays saved-file status for the whole repository. Select files for Diff, Staged Diff, Stage or Unstage; no selection makes diff commands show the whole repository. Save unsaved editor changes before staging. Untracked files appear in status and can be opened for inspection; they appear in diffs after staging. Unstage preserves working files and supports repositories without a first commit.
+
+Enter a message and choose Commit Staged Changes to commit all staged changes, regardless of selection. History lists the latest 50 commits. Git identity, hooks and signing still apply; errors appear in the output area. Cancel stops the active Git process; refresh afterward. Open conflicted files, edit their markers, save and stage the resolutions. Use Terminal for branch and remote operations. Interface files continue to open in Gorm or their associated application.

@@ -17,6 +17,12 @@
         NATIVE_YCODEEDITORDOCUMENT = { isa = PBXFileReference; path = "YCodeEditorDocument.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
         NATIVE_YCODEEDITORDOCUMENT_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEEDITORDOCUMENT; };
         NATIVE_YCODEEDITORCONTROLLER = { isa = PBXFileReference; path = "YCodeEditorController.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
+        YCODEGITCONTROLLER_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeGitController.h; sourceTree = "<group>"; };
+        YCODEGITCONTROLLER_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeGitController.m; sourceTree = "<group>"; };
+        YCODEGITCONTROLLER_BUILD = { isa = PBXBuildFile; fileRef = YCODEGITCONTROLLER_M; };
+        YCODEPROJECTREPLACE_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeProjectReplace.h; sourceTree = "<group>"; };
+        YCODEPROJECTREPLACE_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeProjectReplace.m; sourceTree = "<group>"; };
+        YCODEPROJECTREPLACE_BUILD = { isa = PBXBuildFile; fileRef = YCODEPROJECTREPLACE_M; };
         NATIVE_YCODEEDITORCONTROLLER_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEEDITORCONTROLLER; };
         NATIVE_YCODEBUILDSYSTEM = { isa = PBXFileReference; path = "YCodeBuildSystem.m"; sourceTree = "<group>"; lastKnownFileType = "sourcecode.c.objc"; };
         NATIVE_YCODEBUILDSYSTEM_BUILD = { isa = PBXBuildFile; fileRef = NATIVE_YCODEBUILDSYSTEM; };
@@ -191,6 +197,7 @@
         YCODE_FILE_INSPECTOR_HEADER,
         YCODE_IMAGE_INSPECTOR_HEADER,
         YCODE_SOUND_INSPECTOR_HEADER,
+        YCODEGITCONTROLLER_H, YCODEGITCONTROLLER_M, YCODEPROJECTREPLACE_H, YCODEPROJECTREPLACE_M,
         YCODE_PREFERENCES_H, YCODE_PREFERENCES_M, YCODE_WATCHER_H, YCODE_WATCHER_M, YCODE_COMPILER_H, YCODE_COMPILER_M, YCODE_BROWSER_H, YCODE_BROWSER_M, YCODE_LSP_H, YCODE_LSP_M, YCODE_LANGUAGE_H, YCODE_LANGUAGE_M,
         YCODE_FILE_ICONS,
         YCODE_DOCUMENT_ICON_H, YCODE_DOCUMENT_ICON_C, YCODE_DOCUMENT_ICON_M, YCODE_DOCUMENT_ICON_MM, YCODE_DOCUMENT_ICON_JAVA, YCODE_DOCUMENT_ICON_RUBY, YCODE_DOCUMENT_ICON_RUST,
@@ -227,6 +234,7 @@
 	"3EFFAD06-3C2F-A000-447C-11BA1E695B29" = {
 	    files = (
 		NATIVE_YCODEBUILDSYSTEM_BUILD,
+                YCODEGITCONTROLLER_BUILD, YCODEPROJECTREPLACE_BUILD,
                 NATIVE_YCODEEDITORCONTROLLER_BUILD,
                 NATIVE_YCODEEDITORDOCUMENT_BUILD,
                 NATIVE_YCODEEDITORREGISTRY_BUILD,

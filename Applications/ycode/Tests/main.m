@@ -43,6 +43,8 @@
 #import <XCode/XCConfigurationList.h>
 #import "YCodeBuildSystem.h"
 #import "YCodeWindowController.h"
+#import "YCodeGitController.h"
+#import "YCodeProjectReplace.h"
 #import "YCodeProject.h"
 #import "YCodeDocumentController.h"
 #import "YCodeProjectNavigatorController.h"
@@ -288,6 +290,18 @@ testApplicationStartup (void)
                          @selector (hide:),
               @"Hide and Quit are at the end of the main menu");
 #endif
+  NSMenu *editMenu = [[[NSApp mainMenu] itemWithTitle: @"Edit"] submenu];
+#ifdef GNUSTEP
+  NSMenu *productMenu = [[[NSApp mainMenu] itemWithTitle: @"Project"] submenu];
+#else
+  NSMenu *productMenu = [[[NSApp mainMenu] itemWithTitle: @"Product"] submenu];
+#endif
+  testAssert (
+      [[editMenu itemWithTitle: @"Replace in Project..."] action] ==
+              @selector (replaceInProject:)
+          && [[productMenu itemWithTitle: @"Source Control..."] action] ==
+                 @selector (showSourceControl:),
+      @"Project replacement and source control are reachable from the application menus");
   [NSApp setDelegate: nil];
   [delegate autorelease];
 }
@@ -10914,6 +10928,334 @@ testCompilerSettings (NSString *temporaryDirectory)
   [project release];
 }
 
+static NSString *
+workflowGit (NSString *directory, NSArray *arguments)
+{
+  NSTask *task = [NSTask new];
+  NSPipe *pipe = [NSPipe pipe];
+  [task setLaunchPath: @"/usr/bin/env"];
+  NSMutableArray *args = [NSMutableArray arrayWithObject: @"git"];
+  [args addObjectsFromArray: arguments];
+  [task setArguments: args];
+  [task setCurrentDirectoryPath: directory];
+  [task setStandardOutput: pipe];
+  [task setStandardError: pipe];
+  [task launch];
+  NSData *data = [[pipe fileHandleForReading] readDataToEndOfFile];
+  [task waitUntilExit];
+  testAssert (
+      [task terminationStatus] == 0,
+      [NSString stringWithFormat: @"Git fixture command: %@", arguments]);
+  NSString *output
+      = AUTORELEASE ([[NSString alloc] initWithData: data
+                                           encoding: NSUTF8StringEncoding]);
+  [task release];
+  return output;
+}
+
+static void
+waitForWorkflowGit (YCodeGitController *git)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow: 15];
+  while ([git isBusy] && [deadline timeIntervalSinceNow] > 0)
+    [[NSRunLoop currentRunLoop]
+        runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+  testAssert (![git isBusy], @"Git operations finish without blocking the UI");
+}
+
+static void
+captureWorkflowPanel (id controller, NSString *filename)
+{
+  NSString *directory = [[[NSProcessInfo processInfo] environment]
+      objectForKey: @"YCODE_WORKFLOW_SCREENSHOTS"];
+  if (![directory length])
+    return;
+  NSPanel *panel = [controller valueForKey: @"_panel"];
+  [panel display];
+  NSView *view = [panel contentView];
+  NSBitmapImageRep *bitmap =
+      [view bitmapImageRepForCachingDisplayInRect: [view bounds]];
+  [view cacheDisplayInRect: [view bounds] toBitmapImageRep: bitmap];
+  NSData *data = [bitmap representationUsingType: NSPNGFileType
+                                      properties: [NSDictionary dictionary]];
+  [data writeToFile: [directory stringByAppendingPathComponent: filename]
+         atomically: YES];
+}
+
+static void
+testProjectWorkflows (NSString *temporaryDirectory)
+{
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSString *root = [temporaryDirectory
+      stringByAppendingPathComponent: @"Project Workflows With Spaces"];
+  [manager createDirectoryAtPath: root
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *first = [root stringByAppendingPathComponent: @"First File.txt"];
+  NSString *second = [root stringByAppendingPathComponent: @"Second.txt"];
+  [@"needle NEEDLE\r\n" writeToFile: first
+                         atomically: YES
+                           encoding: NSUTF8StringEncoding
+                              error: NULL];
+  [@"needle second\n" writeToFile: second
+                       atomically: YES
+                         encoding: NSUTF8StringEncoding
+                            error: NULL];
+  YCodeProject *document = [YCodeProject new];
+  PBXProject *project = AUTORELEASE ([PBXProject new]);
+  PBXGroup *group = AUTORELEASE ([PBXGroup new]);
+  [group setSourceTree: @"<group>"];
+  [project setMainGroup: group];
+  [document setProject: project];
+  [document
+      setProjectPath: [root
+                         stringByAppendingPathComponent: @"Example.xcodeproj"]];
+  [document addFilesToProject: [NSArray arrayWithObjects: first, second, nil]];
+  YCodeWindowController *window = [YCodeWindowController new];
+  [window setProject: document];
+  [window showWindow: nil];
+  [window replaceInProject: nil];
+  YCodeProjectReplace *replace = [window valueForKey: @"_projectReplace"];
+  /* Programmatic field setup must not claim the shared X selection. */
+  [[replace valueForKey: @"_panel"] makeFirstResponder: nil];
+  NSTextField *find = [replace valueForKey: @"_find"];
+  NSTextField *replacement = [replace valueForKey: @"_replacement"];
+  [find setStringValue: @"needle"];
+  [replacement setStringValue: @"thread"];
+  [replace preview: nil];
+  NSArray *changes = [replace valueForKey: @"_changes"];
+  testAssert (
+      [changes count] == 2 &&
+          [[[changes objectAtIndex: 0] objectForKey: @"count"] intValue] == 2,
+      @"Project replacement previews case-insensitive matches across files");
+  captureWorkflowPanel (replace, @"replace-preview.png");
+  testAssert (
+      [[NSString stringWithContentsOfFile: first
+                                 encoding: NSUTF8StringEncoding
+                                    error: NULL] isEqual: @"needle NEEDLE\r\n"],
+      @"Preview leaves disk contents untouched");
+  /* A disk edit after preview must prevent changes to every selected file. */
+  [@"changed needle\n" writeToFile: second
+                        atomically: YES
+                          encoding: NSUTF8StringEncoding
+                             error: NULL];
+  [replace apply: nil];
+  YCodeEditorController *editor = [window editorController];
+  testAssert (![[editor documentForFilePath: first] isModified],
+              @"Stale project replacement applies no earlier file edits");
+  [editor openFile: first];
+  YCodeEditorDocument *firstDocument = [editor documentForFilePath: first];
+  [firstDocument setContent: @"unsaved needle NEEDLE\r\n"];
+  [replace preview: nil];
+  changes = [replace valueForKey: @"_changes"];
+  if ([changes count] == 2)
+    [[changes objectAtIndex: 1] setObject: [NSNumber numberWithBool: NO]
+                                  forKey: @"include"];
+  [replace apply: nil];
+  testAssert ([[firstDocument content] isEqual: @"unsaved thread thread\r\n"] &&
+                  [firstDocument isModified],
+              @"Project replacement uses unsaved text and preserves CRLF");
+  testAssert ([editor documentForFilePath: second] == nil &&
+                  [[NSString stringWithContentsOfFile: second
+                                             encoding: NSUTF8StringEncoding
+                                                error: NULL]
+                      isEqual: @"changed needle\n"],
+              @"Excluded replacement files stay unopened and unchanged");
+  [[[firstDocument textView] undoManager] undo];
+  testAssert ([[firstDocument content] isEqual: @"unsaved needle NEEDLE\r\n"],
+              @"Project replacement can be undone per file");
+  [(NSButton *)[replace valueForKey: @"_caseSensitive"] setState: NSOnState];
+  [replacement setStringValue: @""];
+  [replace preview: nil];
+  [replace apply: nil];
+  testAssert ([[firstDocument content] isEqual: @"unsaved  NEEDLE\r\n"],
+              @"Case-sensitive project replacement supports deletion");
+  [editor saveAllFiles];
+  [replace close];
+
+#ifndef _WIN32
+  BOOL hasGit = NO;
+  NSEnumerator *gitPaths =
+      [[[[[NSProcessInfo processInfo] environment] objectForKey: @"PATH"]
+          componentsSeparatedByString: @":"] objectEnumerator];
+  NSString *gitPath;
+  while ((gitPath = [gitPaths nextObject]) != nil)
+    if ([manager
+            isExecutableFileAtPath: [gitPath
+                                       stringByAppendingPathComponent: @"git"]])
+      hasGit = YES;
+  if (hasGit)
+    {
+      workflowGit (root, [NSArray arrayWithObjects: @"init", @"-q", nil]);
+      workflowGit (root, [NSArray arrayWithObjects: @"config", @"user.name",
+                                                   @"Ycode Test", nil]);
+      workflowGit (
+          root, [NSArray arrayWithObjects: @"config", @"user.email",
+                                          @"ycode-test@example.invalid", nil]);
+      workflowGit (root,
+                   [NSArray arrayWithObjects: @"config", @"commit.gpgSign",
+                                             @"false", nil]);
+      workflowGit (root,
+                   [NSArray arrayWithObjects: @"config", @"core.hooksPath",
+                                             @"/dev/null", nil]);
+      [window showSourceControl: nil];
+      YCodeGitController *git = [window valueForKey: @"_gitController"];
+      waitForWorkflowGit (git);
+      NSArray *entries = [git valueForKey: @"_entries"];
+      testAssert (
+          [entries count] == 2,
+          @"Git panel discovers repository status in a path with spaces");
+      NSTableView *table = [git valueForKey: @"_table"];
+      [table selectAll: nil];
+      [git stage: nil];
+      waitForWorkflowGit (git);
+      entries = [git valueForKey: @"_entries"];
+      testAssert ([entries count] == 2 &&
+                      [[[entries objectAtIndex: 0] objectForKey: @"status"]
+                          isEqual: @"A "],
+                  @"Git panel stages selected untracked files");
+      [table selectAll: nil];
+      [git unstage: nil];
+      waitForWorkflowGit (git);
+      entries = [git valueForKey: @"_entries"];
+      testAssert (
+          [entries count] == 2 &&
+              [[[entries objectAtIndex: 0] objectForKey: @"status"]
+                  isEqual: @"??"],
+          @"Unstage works before the first commit without deleting files");
+      [table selectAll: nil];
+      [git stage: nil];
+      waitForWorkflowGit (git);
+      [git stagedDiff: nil];
+      waitForWorkflowGit (git);
+      testAssert ([[[git valueForKey: @"_details"] string]
+                      rangeOfString: @"First File.txt"]
+                          .location
+                      != NSNotFound,
+                  @"Staged diff displays repository changes");
+      captureWorkflowPanel (git, @"git-review.png");
+      [[git valueForKey: @"_message"]
+          setStringValue:
+              @"Test commit with $(literal) and quotes ' untouched"];
+      [git commit: nil];
+      waitForWorkflowGit (git);
+      testAssert ([[git valueForKey: @"_entries"] count] == 0,
+                  @"Git panel commits staged changes and refreshes status");
+      [git history: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          [[[git valueForKey: @"_details"] string] rangeOfString: @"$(literal)"]
+                  .location
+              != NSNotFound,
+          @"History shows the exact commit message without shell interpretation");
+      YCodeEditorDocument *secondDocument =
+          [editor documentForFilePath: second];
+      NSString *savedSecond = [[secondDocument content] copy];
+      [secondDocument setContent: @"unsaved editor change\n"];
+      [secondDocument setModified: YES];
+      [@"saved disk change\n" writeToFile: second
+                               atomically: YES
+                                 encoding: NSUTF8StringEncoding
+                                    error: NULL];
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      [table selectAll: nil];
+      [git stage: nil];
+      waitForWorkflowGit (git);
+      testAssert ([[[git valueForKey: @"_status"] stringValue]
+                      rangeOfString: @"Save the selected files"]
+                          .location
+                      != NSNotFound,
+                  @"Staging refuses files with unsaved editor changes");
+      testAssert (
+          ![workflowGit (root, [NSArray arrayWithObjects: @"diff", @"--cached",
+                                                         @"--name-only", nil])
+              length],
+          @"Refused staging leaves the index unchanged");
+      [savedSecond writeToFile: second
+                    atomically: YES
+                      encoding: NSUTF8StringEncoding
+                         error: NULL];
+      [secondDocument setModified: NO];
+      [secondDocument reloadFromFile];
+      [savedSecond release];
+      /* Leading dashes, literal glob characters and newlines must survive status
+     parsing and be passed to Git as literal path arguments. */
+      NSString *odd = @"-file [literal]*\nname.txt";
+      NSString *oddPath = [root stringByAppendingPathComponent: odd];
+      [@"odd contents\n" writeToFile: oddPath
+                          atomically: YES
+                            encoding: NSUTF8StringEncoding
+                               error: NULL];
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      entries = [git valueForKey: @"_entries"];
+      testAssert (
+          [entries count] == 1 &&
+              [[[entries objectAtIndex: 0] objectForKey: @"path"] isEqual: odd],
+          @"Porcelain parsing preserves newlines, spaces, glob characters and leading dashes");
+      [table selectAll: nil];
+      [git stage: nil];
+      waitForWorkflowGit (git);
+      [table selectAll: nil];
+      [git unstage: nil];
+      waitForWorkflowGit (git);
+      testAssert (
+          [[[git valueForKey: @"_entries"] objectAtIndex: 0]
+              objectForKey: @"status"]
+                  != nil
+              && [manager fileExistsAtPath: oddPath],
+          @"Stage and unstage literal filenames preserve the worktree");
+      [manager removeItemAtPath: oddPath error: NULL];
+      NSString *renamed = @"Renamed File.txt";
+      workflowGit (root,
+                   [NSArray arrayWithObjects: @"mv", @"--", @"First File.txt",
+                                             renamed, nil]);
+      [git refresh: nil];
+      waitForWorkflowGit (git);
+      entries = [git valueForKey: @"_entries"];
+      testAssert ([entries count] == 1 &&
+                      [[[entries objectAtIndex: 0] objectForKey: @"original"]
+                          isEqual: @"First File.txt"]
+                      && [[[entries objectAtIndex: 0] objectForKey: @"path"]
+                          isEqual: renamed],
+                  @"Git rename status preserves both paths");
+      [table selectAll: nil];
+      [git unstage: nil];
+      waitForWorkflowGit (git);
+      NSString *staged
+          = workflowGit (root, [NSArray arrayWithObjects: @"diff", @"--cached",
+                                                         @"--name-only", nil]);
+      testAssert (![staged length],
+                  @"Unstaging a rename handles both source and destination");
+      NSString *zero = [NSString stringWithFormat: @"%C", (unichar)0];
+      NSData *conflict =
+          [[NSString stringWithFormat: @"UU conflict.txt%@", zero]
+              dataUsingEncoding: NSUTF8StringEncoding];
+      testAssert ([[[[YCodeGitController entriesFromStatusData: conflict]
+                      objectAtIndex: 0] objectForKey: @"status"] isEqual: @"UU"],
+                  @"Git status retains unmerged conflict markers");
+      testAssert (
+          [YCodeGitController
+              entriesFromStatusData:
+                  [@" M unterminated" dataUsingEncoding: NSUTF8StringEncoding]]
+              == nil,
+          @"Truncated porcelain status is rejected");
+      [git close];
+    }
+  else
+    NSLog (@"SKIP: Git workflow integration (git is not installed)");
+#endif
+  NSEnumerator *documents = [[editor openDocuments] objectEnumerator];
+  YCodeEditorDocument *source;
+  while ((source = [documents nextObject]) != nil)
+    [source setModified: NO];
+  [[window window] close];
+  [window release];
+  [document release];
+}
+
 int
 main (void)
 {
@@ -10932,6 +11274,17 @@ main (void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject: @"--check-project-workflows"])
+    {
+      [NSApp finishLaunching];
+      testApplicationStartup ();
+      testProjectWorkflows (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode project workflow checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-project-documents"])
     {
       testProjectDocumentOpening (temporaryDirectory);
@@ -11217,6 +11570,7 @@ main (void)
     {
       testResultNavigation (temporaryDirectory);
       testSearchAndTestNavigator (temporaryDirectory);
+      testProjectWorkflows (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode test navigation checks: %lu failures",
              (unsigned long)failures);
