@@ -3308,6 +3308,283 @@ testWordCompletion (void)
   [saved release];
 }
 
+@interface YCodeLanguageServerProbe : NSObject <YCodeLanguageServerDelegate>
+{
+@public
+  id result;
+  NSString *error;
+  BOOL completed;
+}
+
+@end
+@implementation YCodeLanguageServerProbe
+- (void) languageServer: (YCodeLanguageServer *)server
+    receivedDefinition: (id)value
+               context: (id)context
+                 error: (NSString *)message
+{
+  ASSIGN (result, value);
+  ASSIGN (error, message);
+  completed = YES;
+}
+
+- (void) dealloc
+{
+  RELEASE (result);
+  RELEASE (error);
+  [super dealloc];
+}
+
+@end
+
+static void
+waitForLanguageServer (YCodeLanguageServerProbe *probe)
+{
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow: 10];
+  while (!probe->completed && [deadline timeIntervalSinceNow] > 0)
+    [[NSRunLoop currentRunLoop]
+        runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+  testAssert (probe->completed,
+              @"Language server replies without blocking the UI run loop");
+}
+
+static void
+testLanguageServer (NSString *directory)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedMode = [[defaults objectForKey: @"YCodeLanguageServerMode"] retain];
+  id savedPath = [[defaults objectForKey: @"YCodeLanguageServerPath"] retain];
+  [defaults removeObjectForKey: @"YCodeLanguageServerMode"];
+  testAssert ([[YCodePreferences languageServerMode] isEqual: @"automatic"],
+              @"Code intelligence defaults to optional automatic discovery");
+  [YCodePreferences setLanguageServerMode: @"disabled" path: @""];
+  testAssert ([YCodeLanguageServer executablePath] == nil,
+              @"Disabled mode never discovers clangd");
+  [YCodePreferences setLanguageServerMode: @"custom" path: @"/missing/clangd"];
+  testAssert ([YCodeLanguageServer executablePath] == nil,
+              @"Missing custom clangd is unavailable without launching");
+  NSString *text = @"a😀b\r\ncafé\n";
+  NSDictionary *position = [YCodeLanguageServer positionForOffset: 7
+                                                           inText: text];
+  testAssert ([[position objectForKey: @"line"] integerValue] == 1 &&
+                  [[position objectForKey: @"character"] integerValue] == 1 &&
+                  [YCodeLanguageServer offsetForPosition: position inText: text]
+                      == 7,
+              @"LSP positions round-trip UTF-16 characters and CRLF lines");
+  testAssert ([[[YCodeLanguageServer positionForOffset: 3 inText: text]
+                  objectForKey: @"character"] integerValue]
+                  == 3,
+              @"Supplementary Unicode characters occupy two UTF-16 units");
+  testAssert (
+      [[YCodeLanguageServer languageIDForPath: @"test.mm"]
+          isEqual: @"objective-cpp"]
+          && [YCodeLanguageServer languageIDForPath: @"test.py"] == nil,
+      @"Language bundles limit clangd to configured C-family documents");
+  [[NSFileManager defaultManager] createDirectoryAtPath: directory
+                            withIntermediateDirectories: YES
+                                             attributes: nil
+                                                  error: NULL];
+  NSString *fixture = [[[NSFileManager defaultManager] currentDirectoryPath]
+      stringByAppendingPathComponent: @"Fixtures/clangd-test-server.py"];
+  [YCodePreferences setLanguageServerMode: @"custom" path: fixture];
+  AppController *app = [AppController new];
+  [app showPrefPanel: nil];
+  NSPopUpButton *mode = [app valueForKey: @"_languageServerMode"];
+  NSTextField *field = [app valueForKey: @"_languageServerPath"];
+  testAssert ([mode indexOfSelectedItem] == 2 &&
+                  [[field stringValue] isEqual: fixture] && [field isEnabled],
+              @"Preferences display a saved custom language server");
+  [mode selectItemAtIndex: 1];
+  [NSApp sendAction: [mode action] to: [mode target] from: mode];
+  testAssert ([[YCodePreferences languageServerMode] isEqual: @"disabled"]
+                  && ![field isEnabled],
+              @"Preferences can disable code intelligence");
+  [[app valueForKey: @"_preferencesPanel"] orderOut: nil];
+  [app release];
+  [YCodePreferences setLanguageServerMode: @"custom" path: fixture];
+  NSString *path =
+      [directory stringByAppendingPathComponent: @"unsaved file.m"];
+  YCodeLanguageServerProbe *probe = [YCodeLanguageServerProbe new];
+  YCodeLanguageServer *server =
+      [[YCodeLanguageServer alloc] initWithDelegate: probe];
+  testAssert ([server startInDirectory: directory],
+              @"Launch custom LSP server without a shell");
+  [server synchronizePath: path text: text];
+  [server definitionForPath: path offset: 8 context: @"first"];
+  waitForLanguageServer (probe);
+  testAssert (
+      !probe->error &&
+          [[[probe->result lastObject] objectForKey: @"observedText"]
+              isEqual: text],
+      @"Initialization queues requests and reads fragmented UTF-8 frames");
+  probe->completed = NO;
+  [server synchronizePath: path text: @"unsaved change"];
+  [server definitionForPath: path offset: 3 context: @"changed"];
+  waitForLanguageServer (probe);
+  testAssert (!probe->error &&
+                  [[[probe->result lastObject] objectForKey: @"observedText"]
+                      isEqual: @"unsaved change"],
+              @"Definition lookup sees unsaved edits after didChange");
+  [server closePath: path];
+  probe->completed = NO;
+  [server synchronizePath: path text: @"reopened"];
+  [server definitionForPath: path offset: 0 context: @"reopened"];
+  waitForLanguageServer (probe);
+  testAssert (!probe->error &&
+                  [[[probe->result lastObject] objectForKey: @"observedText"]
+                      isEqual: @"reopened"],
+              @"Closed documents can be reopened in the same server");
+  probe->completed = NO;
+  [server synchronizePath: path text: @"MALFORMED"];
+  [server definitionForPath: path offset: 0 context: @"malformed"];
+  waitForLanguageServer (probe);
+  testAssert (probe->error && ![server isRunning],
+              @"Malformed framing stops only the language server");
+  testAssert ([server startInDirectory: directory],
+              @"The server can restart after a protocol failure");
+  probe->completed = NO;
+  [server synchronizePath: path text: @"CRASH"];
+  [server definitionForPath: path offset: 0 context: @"crash"];
+  waitForLanguageServer (probe);
+  testAssert (probe->error && ![server isRunning],
+              @"Server exit completes pending requests with an error");
+  [server stop];
+  [server release];
+  [probe release];
+
+  [YCodePreferences setLanguageServerMode: @"automatic" path: @""];
+  if ([YCodeLanguageServer executablePath])
+    {
+      NSString *source =
+          [directory stringByAppendingPathComponent: @"semantic source.m"];
+      NSString *header =
+          [directory stringByAppendingPathComponent: @"semantic header.h"];
+      NSString *headerContents
+          = @"#ifdef SEMANTIC_TEST\n@interface SemanticThing\n+ (int) answer;\n@end\n#endif\n";
+      [headerContents writeToFile: header
+                       atomically: YES
+                         encoding: NSUTF8StringEncoding
+                            error: NULL];
+      NSString *contents
+          = @"#include \"semantic header.h\"\nint use(void) { return [SemanticThing answer]; }\n";
+      [contents writeToFile: source
+                 atomically: YES
+                   encoding: NSUTF8StringEncoding
+                      error: NULL];
+      NSDictionary *command = [NSDictionary
+          dictionaryWithObjectsAndKeys:
+              directory, @"directory", source, @"file",
+              [NSArray arrayWithObjects: @"clang", @"-x", @"objective-c",
+                                        @"-DSEMANTIC_TEST=1", @"-c", source,
+                                        nil],
+              @"arguments", nil];
+      [[NSJSONSerialization
+          dataWithJSONObject: [NSArray arrayWithObject: command]
+                     options: 0
+                       error: NULL]
+          writeToFile: [directory stringByAppendingPathComponent:
+                                     @"compile_commands.json"]
+           atomically: YES];
+      YCodeEditorController *editor = [YCodeEditorController new];
+      [editor openFile: header];
+      NSString *unsavedHeader =
+          [@"\n\n" stringByAppendingString: headerContents];
+      [[editor currentDocument] setContent: unsavedHeader];
+      [editor openFile: source];
+      YCodeEditorDocument *sourceDocument = [editor currentDocument];
+      NSUInteger offset = [contents rangeOfString: @"answer"].location;
+      [sourceDocument setSelectedRange: NSMakeRange (offset, 0)];
+      testAssert ([editor canGoToDefinition],
+                  @"Real clangd navigation is enabled for Objective-C");
+      [editor goToDefinition: nil];
+      NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow: 10];
+      while (![editor canGoBack] && [deadline timeIntervalSinceNow] > 0)
+        [[NSRunLoop currentRunLoop]
+            runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+      testAssert (
+          [editor canGoBack] &&
+              [[[[editor currentDocument] filePath] lastPathComponent]
+                  isEqual: @"semantic header.h"]
+              && [[editor currentDocument] selectedRange].location ==
+                     [unsavedHeader rangeOfString: @"answer"].location,
+          @"Real clangd resolves an Objective-C method using build flags and unsaved headers across paths with spaces");
+      [editor goBack: nil];
+      testAssert ([editor currentDocument] == sourceDocument &&
+                      [sourceDocument selectedRange].location == offset,
+                  @"Go Back restores the source file and cursor");
+      /* Force a late reply after a cursor move without timing-dependent sleeps. */
+      NSDictionary *context = [NSDictionary
+          dictionaryWithObjectsAndKeys: source, @"path",
+                                       [NSNumber
+                                           numberWithUnsignedInteger: offset],
+                                       @"offset", contents, @"text",
+                                       [editor
+                                           valueForKey: @"_definitionRequest"],
+                                       @"request", nil];
+      [sourceDocument setSelectedRange: NSMakeRange (0, 0)];
+      NSDictionary *location = [NSDictionary
+          dictionaryWithObjectsAndKeys:
+              [[NSURL fileURLWithPath: header] absoluteString], @"uri",
+              [NSDictionary
+                  dictionaryWithObject: [YCodeLanguageServer
+                                           positionForOffset: 0
+                                                      inText: unsavedHeader]
+                                forKey: @"start"],
+              @"range", nil];
+      [editor languageServer: [editor valueForKey: @"_languageServer"]
+          receivedDefinition: location
+                     context: context
+                       error: nil];
+      testAssert ([editor currentDocument] == sourceDocument &&
+                      [sourceDocument selectedRange].location == 0
+                      && ![editor canGoBack],
+                  @"Late definition responses cannot move a changed cursor");
+      [YCodePreferences setLanguageServerMode: @"disabled" path: @""];
+      testAssert (
+          ![editor canGoToDefinition] &&
+              [editor valueForKey: @"_languageServer"] == nil,
+          @"Disabling code intelligence stops an active project server immediately");
+      [YCodePreferences setLanguageServerMode: @"automatic" path: @""];
+      [editor goToDefinition: nil];
+      NSTask *task = [[[editor valueForKey: @"_languageServer"]
+          valueForKey: @"_task"] retain];
+      [editor release];
+      deadline = [NSDate dateWithTimeIntervalSinceNow: 2];
+      while ([task isRunning] && [deadline timeIntervalSinceNow] > 0)
+        [[NSRunLoop currentRunLoop]
+            runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+      testAssert (
+          ![task isRunning],
+          @"Releasing an editor stops an initializing language server safely");
+      [task release];
+    }
+  else
+    NSLog (
+        @"SKIP: real clangd integration (clangd is not installed); protocol checks still ran");
+  if (savedMode)
+    [defaults setObject: savedMode forKey: @"YCodeLanguageServerMode"];
+  else
+    [defaults removeObjectForKey: @"YCodeLanguageServerMode"];
+  if (savedPath)
+    [defaults setObject: savedPath forKey: @"YCodeLanguageServerPath"];
+  else
+    [defaults removeObjectForKey: @"YCodeLanguageServerPath"];
+  NSArray *keys = [[defaults dictionaryRepresentation] allKeys];
+  NSEnumerator *keyEnumerator = [keys objectEnumerator];
+  NSString *key;
+  NSString *prefix = [@"YCodeCursorPosition:"
+      stringByAppendingString: [directory stringByAppendingString: @"/"]];
+  while ((key = [keyEnumerator nextObject]))
+    if ([key hasPrefix: prefix])
+      [defaults removeObjectForKey: key];
+  [savedMode release];
+  [savedPath release];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeLanguageServerPreferencesDidChangeNotification
+                    object: nil];
+}
+
 static void
 testInitialCursorPosition (NSString *directory)
 {
@@ -10056,6 +10333,15 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-language-server"])
+    {
+      testLanguageServer (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode language server checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-initial-cursor"])
     {
       testInitialCursorPosition (temporaryDirectory);
@@ -10868,6 +11154,7 @@ main (void)
     }
   [document close];
   testWindowResizing (temporaryDirectory);
+  testLanguageServer (temporaryDirectory);
   testInitialCursorPosition (temporaryDirectory);
   testColumnGuide ();
   testEditorEditing (temporaryDirectory);

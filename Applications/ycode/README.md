@@ -197,6 +197,41 @@ It is enabled by default; **Preferences > Editor > Enable word and keyword
 completion** turns it on or off immediately for all editors. This is lexical
 completion, without project indexing or type-aware member suggestions.
 
+**Edit > Go to Definition** optionally uses clangd for Objective-C, Objective-C++,
+C, and C++. Place the cursor on a symbol to open its definition; **Edit > Go Back**
+returns to the previous file and cursor. When clangd returns several locations,
+Ycode opens the first. Navigation uses unsaved text from all open C-family files
+in that project. Replies are ignored if you move the cursor, edit the source, or
+switch files before the lookup finishes.
+
+In **Preferences > Editor**, set **Code intelligence** to **Automatic (clangd)**,
+**Disabled**, or **Custom executable**. Automatic searches `PATH` for `clangd`;
+Custom accepts an absolute executable path, including a versioned name such as
+`/usr/bin/clangd-19`. Press Return after changing the path. Availability is shown
+below the controls. Changes stop existing server sessions; the next definition
+lookup starts a fresh session. **Edit > Restart Code Intelligence** also resets
+the current project's connection; the next lookup launches it again.
+
+clangd is an optional runtime tool, never a build dependency. Without it, semantic
+navigation is disabled, while highlighting, lexical completion, search, builds,
+and debugging remain available. There are no missing-server startup dialogs.
+The server starts lazily on the first definition request, communicates in the
+background, and is stopped when the project closes. A failed request or crashed
+server reports an error without closing the editor.
+
+Accurate navigation requires accurate compiler settings. clangd discovers
+`compile_commands.json` or `compile_flags.txt` in the source directory or a
+parent directory. A compilation database should contain each file's actual
+compiler arguments and working directory, including GNUstep/runtime flags,
+header search paths, defines, SDK settings, and target configuration. For a simple
+project, `compile_flags.txt` contains one compiler argument per line. Use the
+flags from that project's build; do not assume clangd's generic fallback knows
+where GNUstep headers are installed. Ycode consumes these files through clangd;
+it does not yet generate a compilation database from libs-xcode. After changing
+the target or compiler configuration, update the database and restart code
+intelligence. This first integration supplies definition navigation; live
+semantic diagnostics, semantic completion, and refactoring are not yet exposed.
+
 Open text files update automatically when changed outside Ycode. Monitoring uses
 inotify on Linux, kqueue on macOS/BSD, and Windows directory-change notifications;
 there is no recurring file-polling timer. Watchers are shared by open files in

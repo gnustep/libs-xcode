@@ -154,6 +154,11 @@
 - (void) saveCursorPositions: (NSNotification *)notification;
 @end
 
+@interface YCodeEditorController (CodeIntelligence)
+- (void) synchronizeLanguageServer;
+- (void) languageServerTextChanged: (NSNotification *)notification;
+@end
+
 @interface YCodeEditorController (FindPanel)
 - (void) updateFindPanel;
 @end
@@ -172,6 +177,17 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
           addObserver: self
              selector: @selector (saveCursorPositions:)
                  name: NSApplicationWillTerminateNotification
+               object: nil];
+      _definitionHistory = [NSMutableArray new];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (languageServerTextChanged:)
+                 name: NSTextStorageDidProcessEditingNotification
+               object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (restartCodeIntelligence:)
+                 name: YCodeLanguageServerPreferencesDidChangeNotification
                object: nil];
       _openDocuments = [[NSMutableArray alloc] init];
       _documentTabs = [[NSMutableDictionary alloc] init];
@@ -223,6 +239,10 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) dealloc
 {
+  [NSObject cancelPreviousPerformRequestsWithTarget: self];
+  [_languageServer stop];
+  DESTROY (_languageServer);
+  RELEASE (_definitionHistory);
   [self saveCursorPositions: nil];
   [self stopWatchingFiles];
   RELEASE (_fileWatchers);
@@ -249,6 +269,12 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) fileModificationChanged: (NSNotification *)notification
 {
+  [self synchronizeLanguageServer];
+  NSEnumerator *savedDocuments = [_openDocuments objectEnumerator];
+  YCodeEditorDocument *savedDocument;
+  while ((savedDocument = [savedDocuments nextObject]))
+    if (![savedDocument isModified])
+      [_languageServer savedPath: [savedDocument filePath]];
   NSEnumerator *enumerator = [_openDocuments objectEnumerator];
   YCodeEditorDocument *document;
   while ((document = [enumerator nextObject]) != nil)
@@ -286,6 +312,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 - (void) stopWatchingFiles
 {
   _fileWatchingStopped = YES;
+  [_languageServer stop];
   [self clearFileWatchers];
 }
 
@@ -401,6 +428,11 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) setProject: (YCodeProject *)project
 {
+  if (_project != project)
+    {
+      [self restartCodeIntelligence: nil];
+      [_definitionHistory removeAllObjects];
+    }
   ASSIGN (_project, project);
   [self restoreLastSourceFile];
 }
@@ -436,6 +468,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 {
   if (_currentDocument != document)
     {
+      _definitionRequest++;
       [self saveCursorPositionForDocument: _currentDocument];
       ASSIGN (_currentDocument, document);
       [self updateFindPanel];
@@ -565,6 +598,192 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
     }
 }
 
+#pragma mark - Optional Code Intelligence
+
+- (BOOL) canGoToDefinition
+{
+  return [_currentDocument textView] && [YCodeLanguageServer executablePath] &&
+         [YCodeLanguageServer languageIDForPath: [_currentDocument filePath]];
+}
+
+- (BOOL) canGoBack
+{
+  return [_definitionHistory count] > 0;
+}
+
+- (IBAction) restartCodeIntelligence: (id)sender
+{
+  _definitionRequest++;
+  [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                           selector: @selector
+                                           (synchronizeLanguageServer)
+                                             object: nil];
+  [_languageServer stop];
+  DESTROY (_languageServer);
+}
+
+- (void) synchronizeLanguageServer
+{
+  if (![_languageServer isRunning])
+    return;
+  NSEnumerator *documents = [_openDocuments objectEnumerator];
+  YCodeEditorDocument *document;
+  while ((document = [documents nextObject]))
+    if ([document textView])
+      [_languageServer synchronizePath: [document filePath]
+                                  text: [document content]];
+}
+
+- (void) languageServerTextChanged: (NSNotification *)notification
+{
+  if (![_languageServer isRunning]
+      || !([[notification object] editedMask] & NSTextStorageEditedCharacters))
+    return;
+  NSEnumerator *documents = [_openDocuments objectEnumerator];
+  YCodeEditorDocument *document;
+  while ((document = [documents nextObject]))
+    if ([[document textView] textStorage] == [notification object])
+      {
+        [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                                 selector: @selector
+                                                 (synchronizeLanguageServer)
+                                                   object: nil];
+        [self performSelector: @selector (synchronizeLanguageServer)
+                   withObject: nil
+                   afterDelay: 0.15];
+        return;
+      }
+}
+
+- (IBAction) goToDefinition: (id)sender
+{
+  if (![self canGoToDefinition])
+    {
+      NSBeep ();
+      return;
+    }
+  if (!_languageServer)
+    _languageServer = [[YCodeLanguageServer alloc] initWithDelegate: self];
+  NSString *directory =
+      [_project projectDirectoryPath]
+          ?: [[_currentDocument filePath] stringByDeletingLastPathComponent];
+  if (![_languageServer startInDirectory: directory])
+    {
+      NSRunAlertPanel (@"Code Intelligence",
+                       @"Unable to start clangd. Check Preferences > Editor.",
+                       @"OK", nil, nil);
+      return;
+    }
+  [self synchronizeLanguageServer];
+  NSUInteger offset = [_currentDocument selectedRange].location;
+  NSDictionary *context = [NSDictionary
+      dictionaryWithObjectsAndKeys:
+          [_currentDocument filePath], @"path",
+          [NSNumber numberWithUnsignedInteger: offset], @"offset",
+          [[[_currentDocument content] copy] autorelease], @"text",
+          [NSNumber numberWithUnsignedInteger: ++_definitionRequest],
+          @"request", nil];
+  [_languageServer definitionForPath: [_currentDocument filePath]
+                              offset: offset
+                             context: context];
+}
+
+- (void) languageServer: (YCodeLanguageServer *)server
+    receivedDefinition: (id)result
+               context: (id)context
+                 error: (NSString *)error
+{
+  /* Never let a delayed reply move a caret the user has since moved or edited. */
+  if (server != _languageServer ||
+      [[context objectForKey: @"request"] unsignedIntegerValue]
+          != _definitionRequest
+      || ![[_currentDocument filePath] isEqual: [context objectForKey: @"path"]]
+      || [_currentDocument selectedRange].location !=
+             [[context objectForKey: @"offset"] unsignedIntegerValue]
+      || ![[_currentDocument content] isEqual: [context objectForKey: @"text"]])
+    return;
+  if (error)
+    {
+      NSRunAlertPanel (@"Code Intelligence", @"%@", @"OK", nil, nil, error);
+      return;
+    }
+  if ([result isKindOfClass: [NSArray class]])
+    result = [result count] ? [result objectAtIndex: 0] : nil;
+  if (![result isKindOfClass: [NSDictionary class]])
+    {
+      NSRunAlertPanel (
+          @"Go to Definition",
+          @"No definition found. Check compile_commands.json or compile_flags.txt for this project.",
+          @"OK", nil, nil);
+      return;
+    }
+  id uri = [result objectForKey: @"uri"] ?: [result objectForKey: @"targetUri"];
+  NSURL *url =
+      [uri isKindOfClass: [NSString class]] ? [NSURL URLWithString: uri] : nil;
+  id range = [result objectForKey: @"range"]
+                 ?: [result objectForKey: @"targetSelectionRange"];
+  if (![url isFileURL] || ![range isKindOfClass: [NSDictionary class]])
+    return;
+  NSString *path = [url path];
+  YCodeEditorDocument *target = [self documentForFilePath: path];
+  NSString *text
+      = target ? [target content]
+               : [NSString stringWithContentsOfFile: path
+                                           encoding: NSUTF8StringEncoding
+                                              error: NULL];
+  NSUInteger offset = text
+                          ? [YCodeLanguageServer
+                                offsetForPosition: [range objectForKey: @"start"]
+                                           inText: text]
+                          : NSNotFound;
+  if (offset == NSNotFound || ![self openFile: path])
+    {
+      NSRunAlertPanel (@"Go to Definition",
+                       @"Unable to open the definition location.", @"OK", nil,
+                       nil);
+      return;
+    }
+  [_definitionHistory
+      addObject: [NSDictionary
+                    dictionaryWithObjectsAndKeys: [context
+                                                     objectForKey: @"path"],
+                                                 @"path",
+                                                 [context
+                                                     objectForKey: @"offset"],
+                                                 @"offset", nil]];
+  if ([_definitionHistory count] > 100)
+    [_definitionHistory removeObjectAtIndex: 0];
+  [_currentDocument
+      setSelectedRange: NSMakeRange (
+                           MIN (offset, [[_currentDocument content] length]),
+                           0)];
+  [[[_currentDocument textView] window]
+      makeFirstResponder: [_currentDocument textView]];
+}
+
+- (IBAction) goBack: (id)sender
+{
+  NSDictionary *location =
+      [[[_definitionHistory lastObject] retain] autorelease];
+  if (!location)
+    return;
+  _definitionRequest++;
+  if ([self openFile: [location objectForKey: @"path"]])
+    {
+      NSUInteger offset
+          = MIN ([[location objectForKey: @"offset"] unsignedIntegerValue],
+                 [[_currentDocument content] length]);
+      [_currentDocument setSelectedRange: NSMakeRange (offset, 0)];
+      [[[_currentDocument textView] window]
+          makeFirstResponder: [_currentDocument textView]];
+      [_definitionHistory removeLastObject];
+    }
+  else
+    NSRunAlertPanel (@"Go Back",
+                     @"The previous source file is no longer available.",
+                     @"OK", nil, nil);
+}
+
 #pragma mark - File Operations
 
 - (BOOL) openFile: (NSString *)filePath
@@ -626,6 +845,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
             = MIN ([saved unsignedIntegerValue], [[textView string] length]);
       [document setSelectedRange: NSMakeRange (location, 0)];
 
+      [self synchronizeLanguageServer];
       RELEASE (tabItem);
       RELEASE (document);
       return YES;
@@ -696,6 +916,8 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
     return NO;
 
   [self saveCursorPositionForDocument: document];
+
+  [_languageServer closePath: [document filePath]];
 
   // Remove tab
   NSTabViewItem *tabItem = [_documentTabs objectForKey: filePath];

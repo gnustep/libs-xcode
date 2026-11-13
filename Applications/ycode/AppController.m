@@ -9,6 +9,7 @@
 */
 
 #import "YCodePreferences.h"
+#import "YCodeLanguageServer.h"
 #import "YCodeControlIcons.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "AppController.h"
@@ -300,6 +301,13 @@ YCodeFileURLFromPath (NSString *path)
       addItem: YCodeMenuItem (@"Find...", @selector (findInFile:), @"f", self)];
   [editMenu addItem: YCodeMenuItem (@"Complete Word", @selector (completeWord:),
                                    @"", self)];
+  [editMenu addItem: YCodeMenuItem (@"Go to Definition",
+                                   @selector (goToDefinition:), @"", self)];
+  [editMenu
+      addItem: YCodeMenuItem (@"Go Back", @selector (goBack:), @"", self)];
+  [editMenu
+      addItem: YCodeMenuItem (@"Restart Code Intelligence",
+                             @selector (restartCodeIntelligence:), @"", self)];
   [editMenu addItem: YCodeMenuItem (@"Replace...", @selector (replaceInFile:),
                                    @"", self)];
   [editMenu addItem: [NSMenuItem separatorItem]];
@@ -1043,6 +1051,21 @@ YCodeFileURLFromPath (NSString *path)
   [[self currentEditorController] replaceInFile: sender];
 }
 
+- (IBAction) goToDefinition: (id)sender
+{
+  [[self currentEditorController] goToDefinition: sender];
+}
+
+- (IBAction) goBack: (id)sender
+{
+  [[self currentEditorController] goBack: sender];
+}
+
+- (IBAction) restartCodeIntelligence: (id)sender
+{
+  [[self currentEditorController] restartCodeIntelligence: sender];
+}
+
 - (IBAction) completeWord: (id)sender
 {
   [[[[self currentEditorController] currentDocument] textView]
@@ -1096,6 +1119,13 @@ YCodeFileURLFromPath (NSString *path)
     }
   if (action == @selector (createProjectSettings:))
     return [[self currentProject] canCreateSettingsFile];
+  if (action == @selector (goToDefinition:))
+    return [[self currentEditorController] canGoToDefinition];
+  if (action == @selector (goBack:))
+    return [[self currentEditorController] canGoBack];
+  if (action == @selector (restartCodeIntelligence:))
+    return [self currentEditorController] != nil &&
+           [YCodeLanguageServer executablePath] != nil;
   if (action == @selector (completeWord:))
     return [YCodePreferences wordCompletionEnabled] &&
            [[[[self currentEditorController] currentDocument] textView]
@@ -1597,6 +1627,37 @@ YCodeFileURLFromPath (NSString *path)
     }
 }
 
+- (void) refreshLanguageServerPreferences
+{
+  NSArray *modes =
+      [NSArray arrayWithObjects: @"automatic", @"disabled", @"custom", nil];
+  [_languageServerMode
+      selectItemAtIndex: [modes indexOfObject: [YCodePreferences
+                                                 languageServerMode]]];
+  [_languageServerPath setStringValue: [YCodePreferences languageServerPath]];
+  [_languageServerPath
+      setEnabled: [[YCodePreferences languageServerMode] isEqual: @"custom"]];
+  NSString *path = [YCodeLanguageServer executablePath];
+  NSString *status
+      = path ? [NSString stringWithFormat: @"Available: %@", path]
+        : [[YCodePreferences languageServerMode] isEqual: @"disabled"]
+            ? @"Code intelligence is disabled."
+            : @"clangd not found. Basic editing remains available.";
+  [_languageServerStatus setStringValue: status];
+  [_languageServerStatus setToolTip: status];
+}
+
+- (void) changeLanguageServerPreferences: (id)sender
+{
+  NSArray *modes =
+      [NSArray arrayWithObjects: @"automatic", @"disabled", @"custom", nil];
+  [YCodePreferences
+      setLanguageServerMode: [modes objectAtIndex: [_languageServerMode
+                                                     indexOfSelectedItem]]
+                       path: [_languageServerPath stringValue]];
+  [self refreshLanguageServerPreferences];
+}
+
 - (void) changeWordCompletion: (NSButton *)sender
 {
   [YCodePreferences setWordCompletionEnabled: [sender state] == NSOnState];
@@ -1826,6 +1887,50 @@ YCodeFileURLFromPath (NSString *path)
       [_columnGuideColorWell setTarget: self];
       [_columnGuideColorWell setAction: @selector (changeColumnGuideColor:)];
       [_editorPreferencesView addSubview: _columnGuideColorWell];
+      NSTextField *serverLabel = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, 154, 140, 24)]);
+      [serverLabel setStringValue: @"Code intelligence"];
+      [serverLabel setEditable: NO];
+      [serverLabel setSelectable: NO];
+      [serverLabel setBezeled: NO];
+      [serverLabel setDrawsBackground: NO];
+      [_editorPreferencesView addSubview: serverLabel];
+      _languageServerMode = AUTORELEASE ([[NSPopUpButton alloc]
+          initWithFrame: NSMakeRect (170, 152, 185, 28)
+              pullsDown: NO]);
+      [_languageServerMode
+          addItemsWithTitles: [NSArray arrayWithObjects: @"Automatic (clangd)",
+                                                       @"Disabled",
+                                                       @"Custom executable",
+                                                       nil]];
+      [_languageServerMode setTarget: self];
+      [_languageServerMode
+          setAction: @selector (changeLanguageServerPreferences:)];
+      [_editorPreferencesView addSubview: _languageServerMode];
+      NSTextField *pathLabel = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, 119, 140, 24)]);
+      [pathLabel setStringValue: @"clangd executable"];
+      [pathLabel setEditable: NO];
+      [pathLabel setSelectable: NO];
+      [pathLabel setBezeled: NO];
+      [pathLabel setDrawsBackground: NO];
+      [_editorPreferencesView addSubview: pathLabel];
+      _languageServerPath = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (170, 119, 185, 24)]);
+      [_languageServerPath setTarget: self];
+      [_languageServerPath
+          setAction: @selector (changeLanguageServerPreferences:)];
+      [_languageServerPath
+          setToolTip: @"Absolute path to clangd. Press Return to apply."];
+      [_editorPreferencesView addSubview: _languageServerPath];
+      _languageServerStatus = AUTORELEASE (
+          [[NSTextField alloc] initWithFrame: NSMakeRect (20, 53, 335, 54)]);
+      [_languageServerStatus setEditable: NO];
+      [_languageServerStatus setSelectable: YES];
+      [_languageServerStatus setBezeled: NO];
+      [_languageServerStatus setDrawsBackground: NO];
+      [_languageServerStatus setFont: [NSFont systemFontOfSize: 11]];
+      [_editorPreferencesView addSubview: _languageServerStatus];
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];
@@ -1898,6 +2003,7 @@ YCodeFileURLFromPath (NSString *path)
   [_projectIndentation setState: [YCodePreferences useProjectIndentation]
                                     ? NSOnState
                                     : NSOffState];
+  [self refreshLanguageServerPreferences];
   [_columnGuideColorWell
       setColor: [YCodePreferences columnGuideColor]
                    ?: [[YCodeSyntaxHighlighter preferredColorForKey: @"text"]

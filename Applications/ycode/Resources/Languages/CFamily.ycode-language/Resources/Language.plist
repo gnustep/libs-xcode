@@ -14,6 +14,11 @@
 				<string>m</string>
 				<string>h</string>
 			</array>
+			<key>LanguageServer</key>
+			<dict>
+				<key>Command</key><string>clangd</string>
+				<key>LanguageID</key><string>objective-c</string>
+			</dict>
 			<key>CompletionKeywords</key>
 			<array>
 				<string>@autoreleasepool</string>
@@ -140,6 +145,11 @@
 			<array>
 				<string>mm</string>
 			</array>
+			<key>LanguageServer</key>
+			<dict>
+				<key>Command</key><string>clangd</string>
+				<key>LanguageID</key><string>objective-cpp</string>
+			</dict>
 			<key>CompletionKeywords</key>
 			<array>
 				<string>@autoreleasepool</string>
@@ -280,6 +290,11 @@
 			<array>
 				<string>c</string>
 			</array>
+			<key>LanguageServer</key>
+			<dict>
+				<key>Command</key><string>clangd</string>
+				<key>LanguageID</key><string>c</string>
+			</dict>
 			<key>CompletionKeywords</key>
 			<array>
 				<string>_Atomic</string>
@@ -392,6 +407,11 @@
 				<string>h++</string>
 				<string>C</string>
 			</array>
+			<key>LanguageServer</key>
+			<dict>
+				<key>Command</key><string>clangd</string>
+				<key>LanguageID</key><string>cpp</string>
+			</dict>
 			<key>CompletionKeywords</key>
 			<array>
 				<string>_Atomic</string>

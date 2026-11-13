@@ -31,6 +31,9 @@
   NSColorWell *_columnGuideColorWell;
   NSButton *_matchingDelimitersCheckbox;
   NSButton *_wordCompletionCheckbox;
+  NSPopUpButton *_languageServerMode;
+  NSTextField *_languageServerPath;
+  NSTextField *_languageServerStatus;
   NSButton *_fileWatchingCheckbox;
   NSView *_fontPreferencesView;
   NSView *_tabPreferencesView;

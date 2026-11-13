@@ -33,7 +33,41 @@ NSString *YCodeFileWatchingPreferencesDidChangeNotification
 NSString *YCodeIssueColorsDidChangeNotification = @"YCodeIssueColorsDidChange";
 NSString *YCodeColumnGuideDidChangeNotification = @"YCodeColumnGuideDidChange";
 
+NSString *YCodeLanguageServerPreferencesDidChangeNotification
+    = @"YCodeLanguageServerPreferencesDidChange";
+
 @implementation YCodePreferences
++ (NSString *) languageServerMode
+{
+  NSString *mode = [[NSUserDefaults standardUserDefaults]
+      stringForKey: @"YCodeLanguageServerMode"];
+  return [[NSArray arrayWithObjects: @"automatic", @"disabled", @"custom", nil]
+             containsObject: mode]
+             ? mode
+             : @"automatic";
+}
+
++ (NSString *) languageServerPath
+{
+  return [[NSUserDefaults standardUserDefaults]
+             stringForKey: @"YCodeLanguageServerPath"]
+             ?: @"";
+}
+
++ (void) setLanguageServerMode: (NSString *)mode path: (NSString *)path
+{
+  if (![[NSArray arrayWithObjects: @"automatic", @"disabled", @"custom", nil]
+          containsObject: mode])
+    return;
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  [defaults setObject: mode forKey: @"YCodeLanguageServerMode"];
+  [defaults setObject: path ?: @"" forKey: @"YCodeLanguageServerPath"];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeLanguageServerPreferencesDidChangeNotification
+                    object: nil];
+}
+
 + (BOOL) columnGuideEnabled
 {
   return [[NSUserDefaults standardUserDefaults]

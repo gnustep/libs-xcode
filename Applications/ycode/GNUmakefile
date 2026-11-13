@@ -76,6 +76,7 @@ Ycode_HEADER_FILES = \
 YCodeTerminalView.h \
 YCodeTerminalTypes.h \
 YCodeTerminalParser.h \
+YCodeLanguageServer.h \
 YCodeLanguage.h \
 YCodePreferences.h \
 AppController.h \
@@ -110,6 +111,7 @@ YCodeControlIcons.h
 Ycode_OBJC_FILES = \
 YCodeTerminalView.m \
 YCodeTerminalParser.m \
+YCodeLanguageServer.m \
 YCodeLanguage.m \
 YCodePreferences.m \
 AppController.m \

@@ -27,6 +27,7 @@
 
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
+#import "YCodeLanguageServer.h"
 
 extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 
@@ -37,9 +38,13 @@ extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 @interface YCodeEditorTabView : NSTabView
 @end
 
-@interface YCodeEditorController : NSObject <NSTabViewDelegate>
+@interface YCodeEditorController
+    : NSObject <NSTabViewDelegate, YCodeLanguageServerDelegate>
 {
   BOOL _fileWatchingStopped;
+  YCodeLanguageServer *_languageServer;
+  NSMutableArray *_definitionHistory;
+  NSUInteger _definitionRequest;
   YCodeProject *_project;
 
   NSTabView *_tabView;
@@ -123,6 +128,12 @@ extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 - (IBAction) closeCurrentFile: (id)sender;
 - (IBAction) findInFile: (id)sender;
 - (IBAction) replaceInFile: (id)sender;
+/** Optional semantic navigation; lexical editor features remain independent. */
+- (BOOL) canGoToDefinition;
+- (BOOL) canGoBack;
+- (IBAction) goToDefinition: (id)sender;
+- (IBAction) goBack: (id)sender;
+- (IBAction) restartCodeIntelligence: (id)sender;
 - (IBAction) findNext: (id)sender;
 - (IBAction) findPrevious: (id)sender;
 - (IBAction) replaceMatch: (id)sender;

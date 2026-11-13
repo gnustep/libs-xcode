@@ -30,7 +30,12 @@ extern NSString *YCodeConnectionPreferencesDidChangeNotification;
 extern NSString *YCodeFileWatchingPreferencesDidChangeNotification;
 extern NSString *YCodeIssueColorsDidChangeNotification;
 extern NSString *YCodeColumnGuideDidChangeNotification;
+extern NSString *YCodeLanguageServerPreferencesDidChangeNotification;
 @interface YCodePreferences : NSObject
+/** Optional clangd mode: automatic (default), disabled, or custom. */
++ (NSString *) languageServerMode;
++ (NSString *) languageServerPath;
++ (void) setLanguageServerMode: (NSString *)mode path: (NSString *)path;
 /** Optional editor guide after the selected character column; defaults to off, 80. */
 + (BOOL) columnGuideEnabled;
 + (void) setColumnGuideEnabled: (BOOL)enabled;
