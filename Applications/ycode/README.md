@@ -197,40 +197,69 @@ It is enabled by default; **Preferences > Editor > Enable word and keyword
 completion** turns it on or off immediately for all editors. This is lexical
 completion, without project indexing or type-aware member suggestions.
 
-**Edit > Go to Definition** optionally uses clangd for Objective-C, Objective-C++,
-C, and C++. Place the cursor on a symbol to open its definition; **Edit > Go Back**
-returns to the previous file and cursor. When clangd returns several locations,
-Ycode opens the first. Navigation uses unsaved text from all open C-family files
-in that project. Replies are ignored if you move the cursor, edit the source, or
-switch files before the lookup finishes.
+Optional clangd integration supports **Edit > Go to Definition**, **Go Back**,
+**Show Type and Documentation**, **Document Symbols**, **Find References**,
+**Complete Code**, and **Live Diagnostics** for C, C++, Objective-C, and
+Objective-C++. Results appear in a searchable, modeless panel. Select a location
+and press Return in the filter or double-click a row to open it. Completion
+applies an undoable text edit; snippets and completions requiring additional
+edits are omitted. Empty semantic results fall back to word completion.
+Diagnostics underline errors and warnings without changing file contents.
 
-In **Preferences > Editor**, set **Code intelligence** to **Automatic (clangd)**,
-**Disabled**, or **Custom executable**. Automatic searches `PATH` for `clangd`;
-Custom accepts an absolute executable path, including a versioned name such as
-`/usr/bin/clangd-19`. Press Return after changing the path. Availability is shown
-below the controls. Changes stop existing server sessions; the next definition
-lookup starts a fresh session. **Edit > Restart Code Intelligence** also resets
-the current project's connection; the next lookup launches it again.
+In **Preferences > Editor**, choose **Automatic (clangd)**, **Disabled**, or
+**Custom executable**. Automatic searches PATH; Custom accepts an absolute path
+such as `/usr/bin/clangd-19` (press Return to apply). clangd remains optional.
+Opening a C-family file in a project starts it in the background when available.
+Unsaved documents are synchronized. Responses from obsolete text or cursor
+positions are discarded; diagnostic versions must match the current document.
+**Edit > Restart Code Intelligence** refreshes the connection. Highlighting,
+word completion, search, builds, and debugging remain available without clangd.
 
-clangd is an optional runtime tool, never a build dependency. Without it, semantic
-navigation is disabled, while highlighting, lexical completion, search, builds,
-and debugging remain available. There are no missing-server startup dialogs.
-The server starts lazily on the first definition request, communicates in the
-background, and is stopped when the project closes. A failed request or crashed
-server reports an error without closing the editor.
+Ycode captures compiler commands during buildtool and Make/GNUmake builds and
+keeps generated compilation databases in the user cache, separated by project,
+target, scheme, configuration, and architecture. Buildtool captures unchanged
+translation units too. Make capture covers common compiler names found on PATH;
+an initial clean build may be needed to capture every source file. Absolute
+compiler paths, custom compiler names, and response-file expansion are not
+intercepted by the Make helper. CMake builds configure database export and use
+the selected configuration and target. Automatic discovery checks the project
+root, `build/`, captured commands, and then source-file ancestors. Within each
+directory, `compile_commands.json` takes priority over `compile_flags.txt`.
+These existing files are never overwritten by the capture helper.
+For other toolchains, supply `compile_commands.json` or `compile_flags.txt` with
+real compiler flags. Native xcodebuild requires an externally supplied database.
+Semantic accuracy depends on those flags and clangd's support for the toolchain.
+Refactoring and snippet completion are not implemented.
 
-Accurate navigation requires accurate compiler settings. clangd discovers
-`compile_commands.json` or `compile_flags.txt` in the source directory or a
-parent directory. A compilation database should contain each file's actual
-compiler arguments and working directory, including GNUstep/runtime flags,
-header search paths, defines, SDK settings, and target configuration. For a simple
-project, `compile_flags.txt` contains one compiler argument per line. Use the
-flags from that project's build; do not assume clangd's generic fallback knows
-where GNUstep headers are installed. Ycode consumes these files through clangd;
-it does not yet generate a compilation database from libs-xcode. After changing
-the target or compiler configuration, update the database and restart code
-intelligence. This first integration supplies definition navigation; live
-semantic diagnostics, semantic completion, and refactoring are not yet exposed.
+**Project > Code Intelligence Settings…** (**Product** on macOS) selects a
+compilation database directory or a `compile_commands.json` / `compile_flags.txt`
+file and supplies extra compiler arguments. Blank means automatic discovery.
+Relative paths are resolved against the project directory; `~` is expanded.
+Enter one argument per line, without shell quoting: for example,
+`-I/home/me/Headers With Spaces` is a single argument. Extra arguments are added
+to database commands and used as fallback arguments when no command exists.
+These settings affect code intelligence, not compilation or linking.
+
+**Preferences > Editor > Compiler defaults…** supplies defaults for projects
+without overrides. Global database paths must be absolute. Uncheck **Use global
+defaults** in a project's panel to replace both defaults; rechecking it restores
+inheritance. An empty project path and flags explicitly select automatic
+discovery without the global flags. Settings are stored in GNUstep user defaults
+for the project's path, not in shared project files.
+
+The panel reports the selected source or a configuration error. Extra flags use
+a private database copy that is removed when its connection is replaced or
+closed; original databases are not modified. Applying settings restarts affected
+clangd connections. After editing an external database, use **Restart Code
+Intelligence** to refresh its private copy. Invalid explicit paths and malformed databases are reported
+as settings errors. An empty definition reply reports the selected settings and
+suggests checking Live Diagnostics; it does not assume settings are missing.
+
+**Edit > Open File Quickly…** (Command-Shift-O) filters the project's files by
+path. The project navigator accepts files dragged from a file manager into an
+Xcode project, adding references at the project root. Files can also be dragged
+out to other applications. Directory projects keep their filesystem-derived
+layout; internal drag reordering and moving files are not implemented.
 
 Open text files update automatically when changed outside Ycode. Monitoring uses
 inotify on Linux, kqueue on macOS/BSD, and Windows directory-change notifications;

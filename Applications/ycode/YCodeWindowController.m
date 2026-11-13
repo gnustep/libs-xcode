@@ -555,6 +555,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       // only be owned by one live window, so save each window explicitly.
       NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
       [center addObserver: self
+                 selector: @selector (updateBuildStatus:)
+                     name: @"YCodeBuildStatusChanged"
+                   object: nil];
+      [center addObserver: self
                  selector: @selector (bottomPanelResized:)
                      name: NSSplitViewDidResizeSubviewsNotification
                    object: _editorSplitView];
@@ -775,6 +779,14 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver: self];
+  /* Windows and their views can survive until queued AppKit events drain. */
+  [_mainSplitView setDelegate: nil];
+  [_contentSplitView setDelegate: nil];
+  [_editorSplitView setDelegate: nil];
+  [_bottomTabView setDelegate: nil];
+  [_toolbar setDelegate: nil];
+  if ([self isWindowLoaded] && [[self window] delegate] == self)
+    [[self window] setDelegate: nil];
   [_terminalView stop];
   [self stopBuildClock: nil];
   [[_project buildSystem] setDelegate: nil];

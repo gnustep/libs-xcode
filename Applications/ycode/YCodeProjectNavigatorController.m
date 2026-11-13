@@ -345,6 +345,8 @@
     }
 
   ASSIGN (_outlineView, outlineView);
+  [_outlineView
+      registerForDraggedTypes: [NSArray arrayWithObject: NSFilenamesPboardType]];
   NSTableColumn *column = [_outlineView outlineTableColumn];
   YCodeNavigatorCell *cell = [[YCodeNavigatorCell alloc] initTextCell: @""];
   // The outline view supplies disclosure triangles; the cell supplies the icon.
@@ -933,7 +935,12 @@
                item: (id)item
          childIndex: (NSInteger)index
 {
-  return NO; // TODO: Implement drag and drop support
+  NSArray *paths =
+      [[info draggingPasteboard] propertyListForType: NSFilenamesPboardType];
+  if (![paths isKindOfClass: [NSArray class]] || [_project isDirectoryProject])
+    return NO;
+  [_project addFilesToProject: paths];
+  return YES;
 }
 
 - (id) outlineView: (NSOutlineView *)outlineView
@@ -960,14 +967,45 @@
                   proposedItem: (id)item
             proposedChildIndex: (NSInteger)index
 {
-  return NSDragOperationNone; // TODO: Implement drag validation
+  if ([_project isDirectoryProject] || [info draggingSource] == outlineView)
+    return NSDragOperationNone;
+  NSArray *paths =
+      [[info draggingPasteboard] propertyListForType: NSFilenamesPboardType];
+  if (![paths isKindOfClass: [NSArray class]] || ![paths count])
+    return NSDragOperationNone;
+  NSEnumerator *en = [paths objectEnumerator];
+  NSString *path;
+  while ((path = [en nextObject]))
+    {
+      BOOL directory = NO;
+      if (![path isKindOfClass: [NSString class]]
+          || ![[NSFileManager defaultManager] fileExistsAtPath: path
+                                                   isDirectory: &directory]
+          || directory)
+        return NSDragOperationNone;
+    }
+  [outlineView setDropItem: nil dropChildIndex: NSOutlineViewDropOnItemIndex];
+  return NSDragOperationCopy;
 }
 
 - (BOOL) outlineView: (NSOutlineView *)outlineView
          writeItems: (NSArray *)items
        toPasteboard: (NSPasteboard *)pasteboard
 {
-  return NO; // TODO: Implement drag support
+  NSMutableArray *paths = [NSMutableArray array];
+  NSEnumerator *en = [items objectEnumerator];
+  id item;
+  while ((item = [en nextObject]))
+    {
+      NSString *path = [self resolvedFilePathForNavigatorItem: item];
+      if (path)
+        [paths addObject: path];
+    }
+  if (![paths count])
+    return NO;
+  [pasteboard declareTypes: [NSArray arrayWithObject: NSFilenamesPboardType]
+                     owner: nil];
+  return [pasteboard setPropertyList: paths forType: NSFilenamesPboardType];
 }
 
 - (void) outlineView: (NSOutlineView *)outlineView

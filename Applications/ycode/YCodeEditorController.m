@@ -24,6 +24,8 @@
 
 #import "YCodePreferences.h"
 #import "YCodeEditorController.h"
+#import "YCodeCompilerSettings.h"
+#import "YCodeBuildSystem.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeProject.h"
 #import "YCodeSyntaxHighlighter.h"
@@ -156,6 +158,11 @@
 
 @interface YCodeEditorController (CodeIntelligence)
 - (void) synchronizeLanguageServer;
+- (BOOL) ensureLanguageServer;
+- (void) startCodeIntelligence;
+- (void) requestCodeMethod: (NSString *)method;
+- (void) showSemanticResult: (id)result context: (NSDictionary *)context;
+- (void) clearCodeDiagnosticsForDocument: (YCodeEditorDocument *)document;
 - (void) languageServerTextChanged: (NSNotification *)notification;
 @end
 
@@ -179,6 +186,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
                  name: NSApplicationWillTerminateNotification
                object: nil];
       _definitionHistory = [NSMutableArray new];
+      _codeDiagnostics = [NSMutableDictionary new];
       [[NSNotificationCenter defaultCenter]
           addObserver: self
              selector: @selector (languageServerTextChanged:)
@@ -188,6 +196,16 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
           addObserver: self
              selector: @selector (restartCodeIntelligence:)
                  name: YCodeLanguageServerPreferencesDidChangeNotification
+               object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (compilationDatabaseChanged:)
+                 name: @"YCodeCompilationDatabaseChanged"
+               object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (compilerSettingsChanged:)
+                 name: YCodeCompilerSettingsDidChangeNotification
                object: nil];
       _openDocuments = [[NSMutableArray alloc] init];
       _documentTabs = [[NSMutableDictionary alloc] init];
@@ -239,9 +257,15 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (void) dealloc
 {
+  if ([_tabView delegate] == self)
+    [_tabView setDelegate: nil];
   [NSObject cancelPreviousPerformRequestsWithTarget: self];
   [_languageServer stop];
   DESTROY (_languageServer);
+  [YCodeCompilerSettings removePreparedConfiguration: _compilerConfiguration];
+  DESTROY (_compilerConfiguration);
+  DESTROY (_codeBrowser);
+  RELEASE (_codeDiagnostics);
   RELEASE (_definitionHistory);
   [self saveCursorPositions: nil];
   [self stopWatchingFiles];
@@ -312,7 +336,14 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 - (void) stopWatchingFiles
 {
   _fileWatchingStopped = YES;
+  [_codeBrowser close];
+  [NSObject
+      cancelPreviousPerformRequestsWithTarget: self
+                                     selector: @selector (startCodeIntelligence)
+                                       object: nil];
   [_languageServer stop];
+  [YCodeCompilerSettings removePreparedConfiguration: _compilerConfiguration];
+  DESTROY (_compilerConfiguration);
   [self clearFileWatchers];
 }
 
@@ -471,6 +502,14 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
       _definitionRequest++;
       [self saveCursorPositionForDocument: _currentDocument];
       ASSIGN (_currentDocument, document);
+      [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                               selector: @selector
+                                               (startCodeIntelligence)
+                                                 object: nil];
+      if (_project && [document textView])
+        [self performSelector: @selector (startCodeIntelligence)
+                   withObject: nil
+                   afterDelay: 0.4];
       [self updateFindPanel];
       [self rememberCurrentSourceFile];
       [[NSNotificationCenter defaultCenter]
@@ -613,13 +652,28 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
 - (IBAction) restartCodeIntelligence: (id)sender
 {
+  [_codeBrowser close];
   _definitionRequest++;
+  [NSObject
+      cancelPreviousPerformRequestsWithTarget: self
+                                     selector: @selector (startCodeIntelligence)
+                                       object: nil];
   [NSObject cancelPreviousPerformRequestsWithTarget: self
                                            selector: @selector
                                            (synchronizeLanguageServer)
                                              object: nil];
   [_languageServer stop];
   DESTROY (_languageServer);
+  [YCodeCompilerSettings removePreparedConfiguration: _compilerConfiguration];
+  DESTROY (_compilerConfiguration);
+  NSEnumerator *documents = [_openDocuments objectEnumerator];
+  YCodeEditorDocument *document;
+  while ((document = [documents nextObject]))
+    [self clearCodeDiagnosticsForDocument: document];
+  if (_project)
+    [self performSelector: @selector (startCodeIntelligence)
+               withObject: nil
+               afterDelay: 0.4];
 }
 
 - (void) synchronizeLanguageServer
@@ -644,6 +698,18 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
   while ((document = [documents nextObject]))
     if ([[document textView] textStorage] == [notification object])
       {
+        /* Layout managers have not adjusted temporary ranges until this
+           text-storage notification returns. Clear them on the next turn. */
+        if ([document filePath])
+          [_codeDiagnostics removeObjectForKey: [document filePath]];
+        [NSObject
+            cancelPreviousPerformRequestsWithTarget: self
+                                           selector: @selector
+                                           (clearCodeDiagnosticsForDocument:)
+                                             object: document];
+        [self performSelector: @selector (clearCodeDiagnosticsForDocument:)
+                   withObject: document
+                   afterDelay: 0];
         [NSObject cancelPreviousPerformRequestsWithTarget: self
                                                  selector: @selector
                                                  (synchronizeLanguageServer)
@@ -655,37 +721,115 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
       }
 }
 
-- (IBAction) goToDefinition: (id)sender
+- (void) compilationDatabaseChanged: (NSNotification *)notification
+{
+  if ([notification object] == [_project buildSystem])
+    [self restartCodeIntelligence: nil];
+}
+
+- (void) compilerSettingsChanged: (NSNotification *)notification
+{
+  if (![notification object] ||
+      [[YCodeCompilerSettings defaultsKeyForProject: [notification object]]
+          isEqual: [YCodeCompilerSettings defaultsKeyForProject: _project]])
+    [self restartCodeIntelligence: nil];
+}
+
+- (BOOL) ensureLanguageServer
 {
   if (![self canGoToDefinition])
+    return NO;
+  if (![_languageServer isRunning])
     {
-      NSBeep ();
-      return;
-    }
-  if (!_languageServer)
-    _languageServer = [[YCodeLanguageServer alloc] initWithDelegate: self];
-  NSString *directory =
-      [_project projectDirectoryPath]
-          ?: [[_currentDocument filePath] stringByDeletingLastPathComponent];
-  if (![_languageServer startInDirectory: directory])
-    {
-      NSRunAlertPanel (@"Code Intelligence",
-                       @"Unable to start clangd. Check Preferences > Editor.",
-                       @"OK", nil, nil);
-      return;
+      [YCodeCompilerSettings
+          removePreparedConfiguration: _compilerConfiguration];
+      ASSIGN (
+          _compilerConfiguration,
+          [YCodeCompilerSettings
+              prepareConfiguration:
+                  [YCodeCompilerSettings
+                      configurationForProject: _project
+                                   sourcePath: [_currentDocument filePath]]]);
+      if ([_compilerConfiguration objectForKey: @"error"])
+        return NO;
+      if (!_languageServer)
+        _languageServer = [[YCodeLanguageServer alloc] initWithDelegate: self];
+      [_languageServer
+          setCompilationDatabaseDirectory: [_compilerConfiguration
+                                              objectForKey: @"directory"]];
+      NSMutableArray *flags = [NSMutableArray
+          arrayWithObject:
+              [@"-working-directory="
+                  stringByAppendingString: [_compilerConfiguration
+                                              objectForKey: @"root"]]];
+      [flags
+          addObjectsFromArray: [_compilerConfiguration objectForKey: @"flags"]];
+      [_languageServer setFallbackFlags: flags];
+      if (![_languageServer
+              startInDirectory: [_compilerConfiguration objectForKey: @"root"]])
+        return NO;
     }
   [self synchronizeLanguageServer];
-  NSUInteger offset = [_currentDocument selectedRange].location;
+  return YES;
+}
+
+- (void) startCodeIntelligence
+{
+  if (_project && !_fileWatchingStopped)
+    [self ensureLanguageServer];
+}
+
+- (void) requestCodeMethod: (NSString *)method
+{
+  if (![self ensureLanguageServer])
+    {
+      if ([_compilerConfiguration objectForKey: @"error"])
+        NSRunAlertPanel (@"Code Intelligence Settings", @"%@", @"OK", nil, nil,
+                         [_compilerConfiguration objectForKey: @"error"]);
+      else
+        NSBeep ();
+      return;
+    }
   NSDictionary *context = [NSDictionary
       dictionaryWithObjectsAndKeys:
-          [_currentDocument filePath], @"path",
-          [NSNumber numberWithUnsignedInteger: offset], @"offset",
-          [[[_currentDocument content] copy] autorelease], @"text",
+          [_currentDocument filePath], @"path", method, @"method",
+          [NSNumber numberWithUnsignedInteger: [_currentDocument selectedRange]
+                                                  .location],
+          @"offset", [[[_currentDocument content] copy] autorelease], @"text",
           [NSNumber numberWithUnsignedInteger: ++_definitionRequest],
           @"request", nil];
-  [_languageServer definitionForPath: [_currentDocument filePath]
-                              offset: offset
-                             context: context];
+  [_languageServer requestMethod: method
+                            path: [_currentDocument filePath]
+                          offset: [_currentDocument selectedRange].location
+                         context: context];
+}
+
+- (IBAction) goToDefinition: (id)sender
+{
+  [self requestCodeMethod: @"textDocument/definition"];
+}
+
+- (void) showCodeInformation: (id)sender
+{
+  [self requestCodeMethod: @"textDocument/hover"];
+}
+
+- (void) showDocumentSymbols: (id)sender
+{
+  [self requestCodeMethod: @"textDocument/documentSymbol"];
+}
+
+- (void) findReferences: (id)sender
+{
+  [self requestCodeMethod: @"textDocument/references"];
+}
+
+- (void) completeCode: (id)sender
+{
+  if ([self canGoToDefinition])
+    [self requestCodeMethod: @"textDocument/completion"];
+  else
+    [[_currentDocument textView] complete: sender];
 }
 
 - (void) languageServer: (YCodeLanguageServer *)server
@@ -707,14 +851,20 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
       NSRunAlertPanel (@"Code Intelligence", @"%@", @"OK", nil, nil, error);
       return;
     }
+  NSString *method = [context objectForKey: @"method"];
+  if (method && ![method isEqual: @"textDocument/definition"])
+    {
+      [self showSemanticResult: result context: context];
+      return;
+    }
   if ([result isKindOfClass: [NSArray class]])
     result = [result count] ? [result objectAtIndex: 0] : nil;
   if (![result isKindOfClass: [NSDictionary class]])
     {
       NSRunAlertPanel (
-          @"Go to Definition",
-          @"No definition found. Check compile_commands.json or compile_flags.txt for this project.",
-          @"OK", nil, nil);
+          @"Go to Definition", @"%@", @"OK", nil, nil,
+          [YCodeCompilerSettings
+              noDefinitionMessageForConfiguration: _compilerConfiguration]);
       return;
     }
   id uri = [result objectForKey: @"uri"] ?: [result objectForKey: @"targetUri"];
@@ -784,6 +934,377 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
                      @"OK", nil, nil);
 }
 
+- (YCodeCodeBrowser *) codeBrowser
+{
+  if (!_codeBrowser)
+    _codeBrowser = [[YCodeCodeBrowser alloc] initWithTarget: self];
+  return _codeBrowser;
+}
+
+- (void) quickOpenFile: (id)sender
+{
+  NSMutableArray *items = [NSMutableArray array];
+  NSEnumerator *entries = [[_project projectFileEntries] objectEnumerator];
+  NSDictionary *entry;
+  while ((entry = [entries nextObject]))
+    {
+      NSString *path = [entry objectForKey: @"path"];
+      if ([path length])
+        [items addObject: [NSDictionary
+                             dictionaryWithObjectsAndKeys: path, @"path", path,
+                                                          @"title", nil]];
+    }
+  [[self codeBrowser] showItems: items title: @"Open File Quickly"];
+}
+
+- (void) appendSymbols: (NSArray *)symbols
+                 path: (NSString *)path
+               prefix: (NSString *)prefix
+              toItems: (NSMutableArray *)items
+{
+  NSEnumerator *enumerator = [symbols objectEnumerator];
+  NSDictionary *symbol;
+  while ((symbol = [enumerator nextObject]))
+    {
+      if (![symbol isKindOfClass: [NSDictionary class]])
+        continue;
+      NSString *name = [symbol objectForKey: @"name"];
+      if (![name isKindOfClass: [NSString class]])
+        continue;
+      NSString *title = [prefix stringByAppendingString: name];
+      id location = [symbol objectForKey: @"location"];
+      id range = [symbol objectForKey: @"selectionRange"]
+                     ?: [symbol objectForKey: @"range"];
+      NSString *target = path;
+      if ([location isKindOfClass: [NSDictionary class]])
+        {
+          id uri = [location objectForKey: @"uri"];
+          NSURL *url = [uri isKindOfClass: [NSString class]]
+                           ? [NSURL URLWithString: uri]
+                           : nil;
+          if ([url isFileURL])
+            target = [url path];
+          range = [location objectForKey: @"range"];
+        }
+      if ([range isKindOfClass: [NSDictionary class]] &&
+          [[range objectForKey: @"start"] isKindOfClass: [NSDictionary class]])
+        [items addObject: [NSDictionary
+                             dictionaryWithObjectsAndKeys:
+                                 title, @"title", target, @"path",
+                                 [range objectForKey: @"start"], @"position",
+                                 [symbol objectForKey: @"detail"] ?: title,
+                                 @"detail", nil]];
+      if ([[symbol objectForKey: @"children"] isKindOfClass: [NSArray class]])
+        [self appendSymbols: [symbol objectForKey: @"children"]
+                       path: target
+                     prefix: [title stringByAppendingString: @" › "]
+                    toItems: items];
+    }
+}
+
+- (void) showSemanticResult: (id)result context: (NSDictionary *)context
+{
+  NSString *method = [context objectForKey: @"method"];
+  NSMutableArray *items = [NSMutableArray array];
+  NSString *title = @"Code Information";
+  if ([method isEqual: @"textDocument/hover"])
+    {
+      id contents = [result isKindOfClass: [NSDictionary class]]
+                        ? [result objectForKey: @"contents"]
+                        : nil;
+      NSArray *parts = [contents isKindOfClass: [NSArray class]] ? contents
+                       : contents && contents != [NSNull null]
+                           ? [NSArray arrayWithObject: contents]
+                           : [NSArray array];
+      NSMutableArray *text = [NSMutableArray array];
+      NSEnumerator *enumerator = [parts objectEnumerator];
+      id part;
+      while ((part = [enumerator nextObject]))
+        {
+          id value = [part isKindOfClass: [NSDictionary class]]
+                         ? [part objectForKey: @"value"]
+                         : part;
+          if ([value isKindOfClass: [NSString class]])
+            [text addObject: value];
+        }
+      NSString *detail = [text componentsJoinedByString: @"\n\n"];
+      if ([detail length])
+        [items addObject: [NSDictionary dictionaryWithObjectsAndKeys:
+                                           @"Type and documentation", @"title",
+                                           detail, @"detail", nil]];
+    }
+  else if ([method isEqual: @"textDocument/documentSymbol"])
+    {
+      title = @"Document Symbols";
+      if ([result isKindOfClass: [NSArray class]])
+        [self appendSymbols: result
+                       path: [context objectForKey: @"path"]
+                     prefix: @""
+                    toItems: items];
+    }
+  else if ([method isEqual: @"textDocument/references"])
+    {
+      title = @"References";
+      NSEnumerator *enumerator = [result isKindOfClass: [NSArray class]]
+                                     ? [result objectEnumerator]
+                                     : nil;
+      NSDictionary *location;
+      while ((location = [enumerator nextObject]))
+        {
+          if (![location isKindOfClass: [NSDictionary class]])
+            continue;
+          id uri = [location objectForKey: @"uri"],
+             range = [location objectForKey: @"range"];
+          NSURL *url = [uri isKindOfClass: [NSString class]]
+                           ? [NSURL URLWithString: uri]
+                           : nil;
+          id position = [range isKindOfClass: [NSDictionary class]]
+                            ? [range objectForKey: @"start"]
+                            : nil;
+          if ([url isFileURL] && [position isKindOfClass: [NSDictionary class]])
+            [items
+                addObject: [NSDictionary
+                              dictionaryWithObjectsAndKeys:
+                                  [url path], @"path", position, @"position",
+                                  [NSString stringWithFormat:
+                                                @"%@:%lu", [url path],
+                                                (unsigned long)[[position
+                                                    objectForKey: @"line"]
+                                                    unsignedIntegerValue]
+                                                    + 1],
+                                  @"title", nil]];
+        }
+    }
+  else if ([method isEqual: @"textDocument/completion"])
+    {
+      title = @"Code Completion";
+      id candidates = [result isKindOfClass: [NSDictionary class]]
+                          ? [result objectForKey: @"items"]
+                          : result;
+      NSEnumerator *enumerator = [candidates isKindOfClass: [NSArray class]]
+                                     ? [candidates objectEnumerator]
+                                     : nil;
+      NSDictionary *candidate;
+      while ((candidate = [enumerator nextObject]))
+        {
+          if (![candidate isKindOfClass: [NSDictionary class]] ||
+              [[candidate objectForKey: @"insertTextFormat"] integerValue] == 2
+              || [[candidate objectForKey: @"additionalTextEdits"] count])
+            continue;
+          NSString *label = [candidate objectForKey: @"label"];
+          if (![label isKindOfClass: [NSString class]])
+            continue;
+          [items addObject: [NSDictionary
+                               dictionaryWithObjectsAndKeys:
+                                   label, @"title",
+                                   [candidate objectForKey: @"detail"] ?: label,
+                                   @"detail", candidate, @"completion",
+                                   context, @"context", nil]];
+        }
+      if (![items count])
+        {
+          [[_currentDocument textView] complete: nil];
+          return;
+        }
+    }
+  [[self codeBrowser] showItems: items title: title];
+}
+
+- (void) activateCodeItem: (NSDictionary *)item
+{
+  NSDictionary *completion = [item objectForKey: @"completion"];
+  if (completion)
+    {
+      NSDictionary *context = [item objectForKey: @"context"];
+      NSTextView *view = [_currentDocument textView];
+      if (![[_currentDocument filePath] isEqual: [context objectForKey: @"path"]]
+          || ![[view string] isEqual: [context objectForKey: @"text"]] ||
+          [view selectedRange].location !=
+              [[context objectForKey: @"offset"] unsignedIntegerValue])
+        {
+          [_codeBrowser close];
+          return;
+        }
+      NSRange replacement = [view rangeForUserCompletion];
+      if (replacement.location == NSNotFound)
+        replacement = [view selectedRange];
+      id edit = [completion objectForKey: @"textEdit"];
+      NSString *text = [completion objectForKey: @"insertText"]
+                           ?: [completion objectForKey: @"label"];
+      if ([edit isKindOfClass: [NSDictionary class]])
+        {
+          id range =
+              [edit objectForKey: @"range"] ?: [edit objectForKey: @"replace"];
+          if (![range isKindOfClass: [NSDictionary class]])
+            return;
+          NSUInteger start = [YCodeLanguageServer
+              offsetForPosition: [range objectForKey: @"start"]
+                         inText: [view string]];
+          NSUInteger end = [YCodeLanguageServer
+              offsetForPosition: [range objectForKey: @"end"]
+                         inText: [view string]];
+          if (start == NSNotFound || end == NSNotFound || end < start)
+            return;
+          replacement = NSMakeRange (start, end - start);
+          text = [edit objectForKey: @"newText"];
+        }
+      if (![text isKindOfClass: [NSString class]])
+        return;
+      [_codeBrowser close];
+      if ([view shouldChangeTextInRange: replacement replacementString: text])
+        {
+          [[view textStorage] replaceCharactersInRange: replacement
+                                            withString: text];
+          [view didChangeText];
+          [view setSelectedRange: NSMakeRange (
+                                     replacement.location + [text length], 0)];
+        }
+      [[view window] makeKeyAndOrderFront: nil];
+      [[view window] makeFirstResponder: view];
+      return;
+    }
+  NSString *path = [item objectForKey: @"path"];
+  if (!path)
+    return;
+  NSString *oldPath = [[_currentDocument filePath] copy];
+  NSUInteger oldOffset = _currentDocument
+                             ? [_currentDocument selectedRange].location
+                             : NSNotFound;
+  if ([self openFile: path])
+    {
+      if (oldPath && oldOffset != NSNotFound)
+        [_definitionHistory
+            addObject: [NSDictionary
+                          dictionaryWithObjectsAndKeys:
+                              oldPath, @"path",
+                              [NSNumber numberWithUnsignedInteger: oldOffset],
+                              @"offset", nil]];
+      id position = [item objectForKey: @"position"];
+      if (position)
+        {
+          NSUInteger offset = [YCodeLanguageServer
+              offsetForPosition: position
+                         inText: [_currentDocument content]];
+          if (offset != NSNotFound)
+            [_currentDocument setSelectedRange: NSMakeRange (offset, 0)];
+        }
+      [_codeBrowser close];
+      [[[_currentDocument textView] window] makeKeyAndOrderFront: nil];
+      [[[_currentDocument textView] window]
+          makeFirstResponder: [_currentDocument textView]];
+    }
+  [oldPath release];
+}
+
+- (void) clearCodeDiagnosticsForDocument: (YCodeEditorDocument *)document
+{
+  [NSObject cancelPreviousPerformRequestsWithTarget: self
+                                           selector: @selector
+                                           (clearCodeDiagnosticsForDocument:)
+                                             object: document];
+  if (!document)
+    return;
+  NSLayoutManager *layout = [[document textView] layoutManager];
+  NSRange range = NSMakeRange (0, [[document content] length]);
+  [layout removeTemporaryAttribute: NSUnderlineStyleAttributeName
+                 forCharacterRange: range];
+  [layout removeTemporaryAttribute: NSUnderlineColorAttributeName
+                 forCharacterRange: range];
+  if ([document filePath])
+    [_codeDiagnostics removeObjectForKey: [document filePath]];
+  if ([_codeBrowser isShowingTitle: @"Live Diagnostics"])
+    [self refreshCodeDiagnostics];
+}
+
+- (void) languageServer: (YCodeLanguageServer *)server
+           diagnostics: (NSArray *)diagnostics
+               forPath: (NSString *)path
+                  text: (NSString *)text
+{
+  YCodeEditorDocument *document = [self documentForFilePath: path];
+  if (server != _languageServer || !document
+      || ![[document content] isEqual: text])
+    return;
+  [self clearCodeDiagnosticsForDocument: document];
+  NSMutableArray *items = [NSMutableArray array];
+  NSEnumerator *enumerator = [diagnostics objectEnumerator];
+  NSDictionary *diagnostic;
+  while ((diagnostic = [enumerator nextObject]))
+    {
+      if (![diagnostic isKindOfClass: [NSDictionary class]])
+        continue;
+      id range = [diagnostic objectForKey: @"range"],
+         message = [diagnostic objectForKey: @"message"];
+      if (![range isKindOfClass: [NSDictionary class]]
+          || ![message isKindOfClass: [NSString class]])
+        continue;
+      NSUInteger start =
+          [YCodeLanguageServer offsetForPosition: [range objectForKey: @"start"]
+                                          inText: text];
+      NSUInteger end =
+          [YCodeLanguageServer offsetForPosition: [range objectForKey: @"end"]
+                                          inText: text];
+      if (start == NSNotFound || end == NSNotFound || end < start)
+        continue;
+      NSInteger severity =
+          [[diagnostic objectForKey: @"severity"] integerValue];
+      NSString *label = severity == 1   ? @"Error"
+                        : severity == 2 ? @"Warning"
+                                        : @"Note";
+      [items addObject: [NSDictionary
+                           dictionaryWithObjectsAndKeys:
+                               path, @"path", [range objectForKey: @"start"],
+                               @"position",
+                               [NSString
+                                   stringWithFormat: @"%@:%lu — %@: %@",
+                                                    [path lastPathComponent],
+                                                    (unsigned long)[[[range
+                                                        objectForKey: @"start"]
+                                                        objectForKey: @"line"]
+                                                        unsignedIntegerValue]
+                                                        + 1,
+                                                    label, message],
+                               @"title", message, @"detail", nil]];
+      if (start < [text length])
+        {
+          NSRange underline
+              = NSMakeRange (start, MIN (MAX ((NSUInteger)1, end - start),
+                                         [text length] - start));
+          [[[document textView] layoutManager]
+              addTemporaryAttributes:
+                  [NSDictionary
+                      dictionaryWithObjectsAndKeys:
+                          [NSNumber numberWithInt: NSUnderlineStyleSingle],
+                          NSUnderlineStyleAttributeName,
+                          severity == 1 ? [NSColor redColor]
+                                        : [NSColor orangeColor],
+                          NSUnderlineColorAttributeName, nil]
+                   forCharacterRange: underline];
+        }
+    }
+  [_codeDiagnostics setObject: items forKey: path];
+  if ([_codeBrowser isShowingTitle: @"Live Diagnostics"])
+    [self refreshCodeDiagnostics];
+}
+
+- (void) refreshCodeDiagnostics
+{
+  NSMutableArray *items = [NSMutableArray array];
+  NSEnumerator *enumerator = [[[_codeDiagnostics allKeys]
+      sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
+  NSString *path;
+  while ((path = [enumerator nextObject]))
+    [items addObjectsFromArray: [_codeDiagnostics objectForKey: path]];
+  [[self codeBrowser] updateItems: items];
+}
+
+- (void) showCodeDiagnostics: (id)sender
+{
+  [self ensureLanguageServer];
+  [[self codeBrowser] showItems: [NSArray array] title: @"Live Diagnostics"];
+  [self refreshCodeDiagnostics];
+}
+
 #pragma mark - File Operations
 
 - (BOOL) openFile: (NSString *)filePath
@@ -825,6 +1346,9 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
           [[YCodeEditorTabItem alloc] initWithIdentifier: filePath];
       [tabItem setLabel: [filePath lastPathComponent]];
       [tabItem setView: [document editorView]];
+      /* Avoid GNUstep key-loop reconstruction through a closed tab. */
+      [tabItem setInitialFirstResponder: [document textView]
+                                            ?: [document editorView]];
       [tabItem setToolTip: filePath];
 
       if (_tabView)
@@ -917,6 +1441,7 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
 
   [self saveCursorPositionForDocument: document];
 
+  [self clearCodeDiagnosticsForDocument: document];
   [_languageServer closePath: [document filePath]];
 
   // Remove tab
@@ -1126,6 +1651,9 @@ NSString *const YCodeCurrentDocumentDidChangeNotification
       [[YCodeEditorTabItem alloc] initWithIdentifier: fileName];
   [tabItem setLabel: fileName];
   [tabItem setView: [document editorView]];
+  /* Avoid GNUstep key-loop reconstruction through a closed tab. */
+  [tabItem
+      setInitialFirstResponder: [document textView] ?: [document editorView]];
 
   if (_tabView)
     {

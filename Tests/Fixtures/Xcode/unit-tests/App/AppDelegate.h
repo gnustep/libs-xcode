@@ -4,5 +4,6 @@
 {
   BOOL launched;
 }
-@property BOOL launched;
+- (BOOL) launched;
+- (void) setLaunched: (BOOL)value;
 @end

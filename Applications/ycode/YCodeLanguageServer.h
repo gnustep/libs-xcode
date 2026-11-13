@@ -35,6 +35,14 @@
                  error: (NSString *)error;
 @end
 
+/* Informal callbacks preserve Objective-C 1 compatibility for optional features. */
+@interface NSObject (YCodeLanguageServerFeatures)
+- (void) languageServer: (YCodeLanguageServer *)server
+           diagnostics: (NSArray *)diagnostics
+               forPath: (NSString *)path
+                  text: (NSString *)text;
+@end
+
 /** Optional, asynchronous clangd connection. All public methods run on the main thread. */
 @interface YCodeLanguageServer : NSObject
 {
@@ -49,6 +57,9 @@
   NSMutableArray *_pending;
   id<YCodeLanguageServerDelegate> _delegate;
   NSInteger _nextID;
+  NSInteger _documentVersion;
+  NSString *_compilationDatabaseDirectory;
+  NSArray *_fallbackFlags;
   BOOL _ready;
   BOOL _failed;
 }
@@ -59,6 +70,12 @@
 + (NSUInteger) offsetForPosition: (NSDictionary *)position
                          inText: (NSString *)text;
 - (id) initWithDelegate: (id<YCodeLanguageServerDelegate>)delegate;
+- (void) setFallbackFlags: (NSArray *)flags;
+- (void) setCompilationDatabaseDirectory: (NSString *)directory;
+- (void) requestMethod: (NSString *)method
+                 path: (NSString *)path
+               offset: (NSUInteger)offset
+              context: (id)context;
 - (BOOL) startInDirectory: (NSString *)directory;
 - (void) stop;
 - (void) synchronizePath: (NSString *)path text: (NSString *)text;

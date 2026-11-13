@@ -50,6 +50,7 @@
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
 #import "YCodeEditorRegistry.h"
+#import "YCodeCompilerSettings.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "YCEditorView.h"
 #import "YCInspectorView.h"
@@ -955,6 +956,10 @@ testTerminal (NSString *temporaryDirectory)
       [terminal isRunning] &&
           [[[tabs selectedTabViewItem] identifier] isEqual: @"terminal"],
       @"Open Terminal reveals its tab and starts a project shell");
+  /* Let queued window/tab layout finish before measuring the visible PTY. */
+  [[window window] displayIfNeeded];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
   int expectedColumns = MAX (
       2, (int)(([tabs contentRect].size.width - [NSScroller scrollerWidth]) /
                [[terminal valueForKey: @"_cellWidth"] doubleValue]));
@@ -978,6 +983,9 @@ testTerminal (NSString *temporaryDirectory)
   int terminalChild = [[terminal valueForKey: @"_child"] intValue];
   [[window window] setContentSize: NSMakeSize (900, 600)];
   [tabs selectTabViewItemWithIdentifier: @"terminal"];
+  [[window window] displayIfNeeded];
+  [[NSRunLoop currentRunLoop]
+      runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
   expectedColumns = MAX (
       2, (int)(([tabs contentRect].size.width - [NSScroller scrollerWidth]) /
                [[terminal valueForKey: @"_cellWidth"] doubleValue]));
@@ -2146,6 +2154,7 @@ testTabPreferences (NSString *directory)
 static void
 testFontAndSidebarPreferences (void)
 {
+  [NSApp activateIgnoringOtherApps: YES];
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   NSArray *keys = [NSArray
       arrayWithObjects: @"YCodeFonts", @"YCodeNavigatorWidth",
@@ -2742,11 +2751,13 @@ testHiddenRulersDebugGutter (void)
   YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
       initWithFilePath: @"Gutter.m"
                content: @"first line\nsecond line\n"];
+  YCodeDebugger *debugger =
+      [[YCodeDebugger alloc] initWithBackendIdentifier: @"gdb"];
   NSScrollView *scroll = [document scrollView];
   YCEditorRulerView *ruler = (YCEditorRulerView *)[scroll verticalRulerView];
   testAssert (![scroll rulersVisible],
               @"Hidden rulers stay hidden outside debugging");
-  [ruler setDebugger: nil file: @"Gutter.m" active: YES];
+  [ruler setDebugger: debugger file: @"Gutter.m" active: YES];
   testAssert (
       [scroll rulersVisible] && [scroll hasVerticalRuler]
           && ![scroll hasHorizontalRuler] && [ruler debugGutterVisible] &&
@@ -2770,6 +2781,7 @@ testHiddenRulersDebugGutter (void)
   testAssert (![scroll rulersVisible],
               @"Stopping debugging restores the hidden-ruler layout");
   [document release];
+  [debugger release];
   if (saved)
     [defaults setObject: saved forKey: @"YCodeHideEditorRulers"];
   else
@@ -3039,7 +3051,8 @@ testSyntaxHighlighting (void)
     NSArray *example;
     while ((example = [exampleEnumerator nextObject]) != nil)
       {
-        document = [[YCodeEditorDocument alloc]
+        document = [[[[YCodeEditorRegistry sharedRegistry]
+            editorClassForFilePath: @"Example.txt"] alloc]
             initWithFilePath: [example objectAtIndex: 0]
                      content: [example objectAtIndex: 1]];
         highlighter = [document syntaxHighlighter];
@@ -3314,10 +3327,19 @@ testWordCompletion (void)
   id result;
   NSString *error;
   BOOL completed;
+  NSUInteger diagnosticUpdates;
 }
 
 @end
 @implementation YCodeLanguageServerProbe
+- (void) languageServer: (YCodeLanguageServer *)server
+           diagnostics: (NSArray *)diagnostics
+               forPath: (NSString *)path
+                  text: (NSString *)text
+{
+  diagnosticUpdates++;
+}
+
 - (void) languageServer: (YCodeLanguageServer *)server
     receivedDefinition: (id)value
                context: (id)context
@@ -3425,6 +3447,45 @@ testLanguageServer (NSString *directory)
                   [[[probe->result lastObject] objectForKey: @"observedText"]
                       isEqual: @"unsaved change"],
               @"Definition lookup sees unsaved edits after didChange");
+  NSArray *methods = [NSArray
+      arrayWithObjects: @"textDocument/hover", @"textDocument/documentSymbol",
+                       @"textDocument/references", @"textDocument/completion",
+                       nil];
+  NSEnumerator *methodsEnumerator = [methods objectEnumerator];
+  NSString *method;
+  while ((method = [methodsEnumerator nextObject]))
+    {
+      probe->completed = NO;
+      NSUInteger before = probe->diagnosticUpdates;
+      [server requestMethod: method path: path offset: 3 context: method];
+      waitForLanguageServer (probe);
+      testAssert (
+          !probe->error && probe->result
+              && probe->diagnosticUpdates == before + 1,
+          [NSString
+              stringWithFormat:
+                  @"%@ round-trips and rejects stale/unversioned diagnostics",
+                  method]);
+    }
+  NSMutableString *largeText =
+      [NSMutableString stringWithCapacity: 1024 * 1024];
+  NSUInteger iteration;
+  for (iteration = 0; iteration < 65536; iteration++)
+    [largeText appendString: @"int value = 42;\n"];
+  for (iteration = 0; iteration < 8; iteration++)
+    {
+      [server closePath: path];
+      [server synchronizePath: path text: largeText];
+      probe->completed = NO;
+      [server requestMethod: @"textDocument/hover"
+                       path: path
+                     offset: iteration
+                    context: @"large document"];
+      waitForLanguageServer (probe);
+      testAssert (
+          !probe->error && [server isRunning],
+          @"Repeated large-document reopen and analysis keep the connection responsive");
+    }
   [server closePath: path];
   probe->completed = NO;
   [server synchronizePath: path text: @"reopened"];
@@ -3485,6 +3546,40 @@ testLanguageServer (NSString *directory)
           writeToFile: [directory stringByAppendingPathComponent:
                                      @"compile_commands.json"]
            atomically: YES];
+      NSString *external = [directory
+          stringByAppendingPathComponent: @"External Compiler Settings"];
+      NSFileManager *files = [NSFileManager defaultManager];
+      [files createDirectoryAtPath: external
+          withIntermediateDirectories: YES
+                           attributes: nil
+                                error: NULL];
+      NSString *databasePath =
+          [directory stringByAppendingPathComponent: @"compile_commands.json"];
+      NSString *externalPath =
+          [external stringByAppendingPathComponent: @"compile_commands.json"];
+      [files moveItemAtPath: databasePath toPath: externalPath error: NULL];
+      YCodeLanguageServerProbe *externalProbe = [YCodeLanguageServerProbe new];
+      YCodeLanguageServer *externalServer =
+          [[YCodeLanguageServer alloc] initWithDelegate: externalProbe];
+      [externalServer setCompilationDatabaseDirectory: external];
+      testAssert (
+          [externalServer startInDirectory: directory],
+          @"Start clangd with an explicitly selected compilation database");
+      [externalServer synchronizePath: source text: contents];
+      [externalServer
+          definitionForPath: source
+                     offset: [contents rangeOfString: @"answer"].location
+                    context: @"external database"];
+      waitForLanguageServer (externalProbe);
+      testAssert (
+          !externalProbe->error &&
+              [externalProbe->result isKindOfClass: [NSArray class]] &&
+              [externalProbe->result count] > 0,
+          @"Real clangd reads compiler defines from the selected external cache directory");
+      [externalServer stop];
+      [externalServer release];
+      [externalProbe release];
+      [files moveItemAtPath: externalPath toPath: databasePath error: NULL];
       YCodeEditorController *editor = [YCodeEditorController new];
       [editor openFile: header];
       NSString *unsavedHeader =
@@ -7187,6 +7282,8 @@ testMakeDirectory (NSString *temporaryDirectory)
       [directory stringByAppendingPathComponent: @".ycode.plist"];
   BOOL wasEdited = [project isDocumentEdited];
   AppController *app = AUTORELEASE ([[AppController alloc] init]);
+  NSMenu *savedMenu = [[NSApp mainMenu] retain];
+  [NSApp setMainMenu: nil];
   [app buildMainMenu];
   NSMenuItem *createItem
       = (NSMenuItem *)[[[[NSApp mainMenu] itemWithTitle: @"File"] submenu]
@@ -7195,6 +7292,8 @@ testMakeDirectory (NSString *temporaryDirectory)
                   [createItem action] == @selector (createProjectSettings:) &&
                   [createItem target] == app,
               @"File menu contains the create-settings action");
+  [NSApp setMainMenu: savedMenu];
+  [savedMenu release];
   testAssert ([project canCreateSettingsFile],
               @"Makefile folder permits creating missing settings");
   [[project settings] setObject: @"preserved" forKey: @"CustomSetting"];
@@ -7850,6 +7949,10 @@ testBuildIssuesPane (NSString *temporaryDirectory)
   testAssert (fabs (NSHeight ([results frame]) - 180) < 1,
               @"Bottom pane restores its saved height");
   [split setPosition: NSHeight ([split bounds]) * 0.35 ofDividerAtIndex: 0];
+  /* The interactive divider sends this after its geometry changes. */
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: NSSplitViewDidResizeSubviewsNotification
+                    object: split];
   CGFloat resizedHeight = NSHeight ([results frame]);
   testAssert (
       fabs ([defaults doubleForKey: @"YCodeBottomPanelHeight"] - resizedHeight)
@@ -10228,10 +10331,18 @@ testWindowResizing (NSString *directory)
           && [[[[project editorController] currentDocument] textView] string]
                  != nil,
       @"Selected source has a visible editor tab and text contents");
+#ifdef GNUSTEP
+  /* GNUstep's protocol requires nil-returning view delegates even for cell
+     outlines. Check the active rendering mode, not selector availability. */
+  testAssert (
+      ![[outline valueForKey: @"_viewBased"] boolValue],
+      @"Navigator uses its icon/text cells instead of empty row views");
+#else
   testAssert (
       ![[outline delegate] respondsToSelector: @selector (outlineView:
                                                   viewForTableColumn:item:)],
       @"Navigator uses its icon/text cells instead of empty row views");
+#endif
   testAssert ([outline numberOfRows] > 0,
               @"Navigator keeps project rows visible");
   [[controller window] makeKeyAndOrderFront: nil];
@@ -10271,6 +10382,536 @@ testWindowResizing (NSString *directory)
       [defaults setObject: [savedSidebars objectForKey: key] forKey: key];
     else
       [defaults removeObjectForKey: key];
+}
+
+static void
+testCodeUnderstanding (NSString *directory)
+{
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id mode = [[defaults objectForKey: @"YCodeLanguageServerMode"] retain];
+  id serverPath = [[defaults objectForKey: @"YCodeLanguageServerPath"] retain];
+  NSString *fixture = [[[NSFileManager defaultManager] currentDirectoryPath]
+      stringByAppendingPathComponent: @"Fixtures/clangd-test-server.py"];
+  [YCodePreferences setLanguageServerMode: @"custom" path: fixture];
+  NSString *path =
+      [directory stringByAppendingPathComponent: @"understanding.c"];
+  [@"val" writeToFile: path
+           atomically: YES
+             encoding: NSUTF8StringEncoding
+                error: NULL];
+  YCodeEditorController *editor = [YCodeEditorController new];
+  [editor openFile: path];
+  YCodeEditorDocument *document = [editor currentDocument];
+  [document setSelectedRange: NSMakeRange (3, 0)];
+  [editor completeCode: nil];
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow: 5];
+  while (![editor valueForKey: @"_codeBrowser"] &&
+         [deadline timeIntervalSinceNow] > 0)
+    [[NSRunLoop currentRunLoop]
+        runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+  YCodeCodeBrowser *browser = [editor valueForKey: @"_codeBrowser"];
+  NSArray *items = [browser valueForKey: @"_items"];
+  testAssert ([items count] == 1,
+              @"Semantic completion appears in searchable results");
+  testAssert (
+      [[[editor valueForKey: @"_codeDiagnostics"] objectForKey: path] count] == 1
+          && ![document isModified],
+      @"Live diagnostics reach the editor without marking the file modified");
+  if ([items count])
+    {
+      NSDictionary *item = [[items objectAtIndex: 0] retain];
+      [editor activateCodeItem: item];
+      testAssert ([[document content] isEqual: @"value"] &&
+                      [document isModified],
+                  @"Completion applies the server text edit");
+      [[[document textView] undoManager] undo];
+      testAssert ([[document content] isEqual: @"val"],
+                  @"Semantic completion is undoable");
+      [document setSelectedRange: NSMakeRange (0, 0)];
+      [editor activateCodeItem: item];
+      testAssert ([[document content] isEqual: @"val"],
+                  @"Moved cursor rejects a stale completion");
+      [item release];
+    }
+  [editor showDocumentSymbols: nil];
+  deadline = [NSDate dateWithTimeIntervalSinceNow: 5];
+  while (![browser isShowingTitle: @"Document Symbols"] &&
+         [deadline timeIntervalSinceNow] > 0)
+    [[NSRunLoop currentRunLoop]
+        runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.02]];
+  testAssert (
+      [browser isShowingTitle: @"Document Symbols"] &&
+          [[browser valueForKey: @"_items"] count] == 1,
+      @"Document symbols use a positionless request and display locations");
+  [browser close];
+  [editor release];
+  if (mode)
+    [defaults setObject: mode forKey: @"YCodeLanguageServerMode"];
+  else
+    [defaults removeObjectForKey: @"YCodeLanguageServerMode"];
+  if (serverPath)
+    [defaults setObject: serverPath forKey: @"YCodeLanguageServerPath"];
+  else
+    [defaults removeObjectForKey: @"YCodeLanguageServerPath"];
+  [mode release];
+  [serverPath release];
+}
+
+static void
+testCompilationCapture (NSString *temporaryDirectory)
+{
+  NSString *directory = [temporaryDirectory
+      stringByAppendingPathComponent: @"Compiler Capture With Spaces"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath: directory
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [@"int value = VALUE;\n"
+      writeToFile: [directory stringByAppendingPathComponent: @"source file.c"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  [@"all:\n\tcc -DVALUE=42 -c 'source file.c' -o 'source file.o'\n"
+      writeToFile: [directory stringByAppendingPathComponent: @"Makefile"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  YCodeProject *project = [YCodeProject new];
+  testAssert ([project readFromURL: [NSURL fileURLWithPath: directory]
+                            ofType: @"YCodeMakeProjectType"
+                             error: NULL],
+              @"Open compiler capture fixture");
+  YCodeBuildSystem *build = [project buildSystem];
+  NSString *databaseDirectory = [[build compilationDatabaseDirectory] copy];
+  testAssert ([build build], @"Build with compiler interception");
+  waitForBuild (build, NO);
+  NSData *data = [NSData
+      dataWithContentsOfFile: [databaseDirectory stringByAppendingPathComponent:
+                                                    @"compile_commands.json"]];
+  NSArray *commands = data ? [NSJSONSerialization JSONObjectWithData: data
+                                                             options: 0
+                                                               error: NULL]
+                           : nil;
+  testAssert (
+      [build status] == YCodeBuildStatusSuccess && [commands count] == 1,
+      @"Actual Make compiler invocation produces a compilation database");
+  NSDictionary *command = [commands lastObject];
+  testAssert (
+      [[command objectForKey: @"arguments"] containsObject: @"-DVALUE=42"] &&
+          [[command objectForKey: @"arguments"] containsObject: @"source file.c"]
+          && [[command objectForKey: @"directory"] isEqual: directory],
+      @"Capture preserves defines, working directory and arguments containing spaces");
+  YCodeEditorController *editor = [YCodeEditorController new];
+  [editor setProject: project];
+  [editor quickOpenFile: nil];
+  YCodeCodeBrowser *browser = [editor valueForKey: @"_codeBrowser"];
+  NSTextField *filter = [browser valueForKey: @"_filter"];
+  [filter setStringValue: @"source file.c"];
+  [browser controlTextDidChange: nil];
+  NSArray *matches = [browser valueForKey: @"_visibleItems"];
+  testAssert ([matches count] == 1, @"Quick Open filters project paths");
+  if ([matches count])
+    [editor activateCodeItem: [matches objectAtIndex: 0]];
+  testAssert (
+      [[[editor currentDocument] filePath]
+          isEqual: [directory stringByAppendingPathComponent: @"source file.c"]],
+      @"Quick Open activates the selected file");
+  [editor setProject: nil];
+  [editor stopWatchingFiles];
+  [editor release];
+  [@"all:\n\tcc -DVALUE=99 -c 'source file.c' -o 'source file.o'\n"
+      writeToFile: [directory stringByAppendingPathComponent: @"Makefile"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  testAssert ([build build], @"Repeat a build after flags change");
+  waitForBuild (build, NO);
+  data = [NSData
+      dataWithContentsOfFile: [databaseDirectory stringByAppendingPathComponent:
+                                                    @"compile_commands.json"]];
+  commands = data ? [NSJSONSerialization JSONObjectWithData: data
+                                                    options: 0
+                                                      error: NULL]
+                  : nil;
+  testAssert (
+      [commands count] == 1 &&
+          [[[commands lastObject] objectForKey: @"arguments"]
+              containsObject: @"-DVALUE=99"],
+      @"Repeated builds replace captured flags without duplicate entries");
+  [@"not valid C"
+      writeToFile: [directory stringByAppendingPathComponent: @"source file.c"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  testAssert ([build build], @"Start a failing compiler invocation");
+  waitForBuild (build, NO);
+  testAssert ([build status] == YCodeBuildStatusFailed,
+              @"Compiler interception preserves failure exit status");
+  [build setBuildConfiguration: @"Other"];
+  testAssert (
+      ![[build compilationDatabaseDirectory] isEqual: databaseDirectory],
+      @"Configurations use separate compilation databases");
+  NSString *other = [[build compilationDatabaseDirectory] copy];
+  [build setTargetName: @"different"];
+  testAssert (![[build compilationDatabaseDirectory] isEqual: other],
+              @"Targets use separate compilation databases");
+  [manager removeItemAtPath: databaseDirectory error: NULL];
+  [other release];
+  [databaseDirectory release];
+  [project release];
+}
+
+static void
+testCompilerSettings (NSString *temporaryDirectory)
+{
+  NSUserDefaults *windowDefaults = [NSUserDefaults standardUserDefaults];
+  id savedWindowFrame =
+      [[windowDefaults objectForKey: @"NSWindow Frame YCodeMainWindow"] retain];
+  YCodeWindowController *closingController = [YCodeWindowController new];
+  NSArray *survivingViews = [[NSArray alloc]
+      initWithObjects: [closingController valueForKey: @"_mainSplitView"],
+                      [closingController valueForKey: @"_contentSplitView"],
+                      [closingController valueForKey: @"_editorSplitView"],
+                      [closingController valueForKey: @"_bottomTabView"], nil];
+  [closingController close];
+  [closingController release];
+  NSEnumerator *viewsEnumerator = [survivingViews objectEnumerator];
+  id survivingView;
+  while ((survivingView = [viewsEnumerator nextObject]))
+    testAssert (
+        [survivingView delegate] == nil,
+        @"Closed windows detach delegates before queued view events run");
+  [survivingViews release];
+  if (savedWindowFrame)
+    [windowDefaults setObject: savedWindowFrame
+                       forKey: @"NSWindow Frame YCodeMainWindow"];
+  else
+    [windowDefaults removeObjectForKey: @"NSWindow Frame YCodeMainWindow"];
+  [savedWindowFrame release];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  id savedDefaults = [[defaults objectForKey: @"YCodeCompilerDefaults"] retain];
+  id savedMode = [[defaults objectForKey: @"YCodeLanguageServerMode"] retain];
+  id savedServer = [[defaults objectForKey: @"YCodeLanguageServerPath"] retain];
+  NSString *root =
+      [temporaryDirectory stringByAppendingPathComponent: @"Compiler Settings"];
+  NSString *external =
+      [root stringByAppendingPathComponent: @"External Database"];
+  [manager createDirectoryAtPath: external
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  YCodeProject *project = [YCodeProject new];
+  [project setProjectPath:
+               [root stringByAppendingPathComponent: @"Settings.xcodeproj"]];
+  NSString *key = [YCodeCompilerSettings defaultsKeyForProject: project];
+  NSString *source = [root stringByAppendingPathComponent: @"source file.c"];
+  NSString *text
+      = @"#ifdef EXTRA_SETTING\nint configured_symbol = 1;\n#endif\nint use(void) { return configured_symbol; }\n";
+  [text writeToFile: source
+         atomically: YES
+           encoding: NSUTF8StringEncoding
+              error: NULL];
+  NSArray *baseArguments =
+      [NSArray arrayWithObjects: @"clang", @"-c", @"--", source, nil];
+  NSDictionary *entry = [NSDictionary
+      dictionaryWithObjectsAndKeys: root, @"directory", source, @"file",
+                                   baseArguments, @"arguments", nil];
+  NSDictionary *commandEntry = [NSDictionary
+      dictionaryWithObjectsAndKeys:
+          root, @"directory", @"relative file.c", @"file",
+          @"clang '-DNAME=two words' -c 'relative file.c'", @"command", nil];
+  NSString *database =
+      [external stringByAppendingPathComponent: @"compile_commands.json"];
+  NSData *original = [NSJSONSerialization
+      dataWithJSONObject: [NSArray arrayWithObjects: entry, commandEntry, nil]
+                 options: 0
+                   error: NULL];
+  [original writeToFile: database atomically: YES];
+  NSDictionary *global = [NSDictionary
+      dictionaryWithObjectsAndKeys: external, @"DatabasePath",
+                                   [NSArray arrayWithObject: @"-DGLOBAL=1"],
+                                   @"ExtraFlags", nil];
+  [YCodeCompilerSettings saveSettings: global forProject: nil];
+  testAssert (
+      [[YCodeCompilerSettings settingsForProject: project] isEqual: global],
+      @"Projects initially inherit global compiler defaults");
+  NSArray *flags = [YCodeCompilerSettings
+      flagsFromText:
+          @"-DEXTRA_SETTING=1\n-Iinclude with spaces\n\n-DTEXT=hello world\n"];
+  testAssert (
+      [flags count] == 3 &&
+          [[flags objectAtIndex: 1] isEqual: @"-Iinclude with spaces"],
+      @"One-argument-per-line flags preserve spaces without shell quoting");
+  NSDictionary *custom = [NSDictionary
+      dictionaryWithObjectsAndKeys: @"External Database/compile_commands.json",
+                                   @"DatabasePath", flags, @"ExtraFlags", nil];
+  [YCodeCompilerSettings saveSettings: custom forProject: project];
+  NSDictionary *configuration =
+      [YCodeCompilerSettings configurationForProject: project
+                                          sourcePath: source];
+  testAssert ([[configuration objectForKey: @"source"] isEqual: database] &&
+                  [[configuration objectForKey: @"flags"] isEqual: flags],
+              @"Project-relative database overrides replace global defaults");
+  NSDictionary *prepared =
+      [YCodeCompilerSettings prepareConfiguration: configuration];
+  NSString *privateDirectory = [prepared objectForKey: @"directory"];
+  NSData *data = [NSData
+      dataWithContentsOfFile: [privateDirectory stringByAppendingPathComponent:
+                                                   @"compile_commands.json"]];
+  NSArray *commands = data ? [NSJSONSerialization JSONObjectWithData: data
+                                                             options: 0
+                                                               error: NULL]
+                           : nil;
+  NSArray *arguments = [[commands firstObject] objectForKey: @"arguments"];
+  testAssert (
+      ![prepared objectForKey: @"error"] && [commands count] == 2 &&
+          [arguments indexOfObject: @"-DEXTRA_SETTING=1"] < [arguments
+              indexOfObject: @"--"],
+      @"Extra flags are inserted before the compiler's end-of-options delimiter");
+  testAssert ([[[commands lastObject] objectForKey: @"arguments"]
+                  containsObject: @"-DNAME=two words"]
+                  && [[[commands lastObject] objectForKey: @"arguments"]
+                      containsObject: @"relative file.c"],
+              @"Command-form databases preserve quoted argument boundaries");
+  testAssert ([original isEqual: [NSData dataWithContentsOfFile: database]],
+              @"Compiler overrides leave the original database unchanged");
+  NSString *message =
+      [YCodeCompilerSettings noDefinitionMessageForConfiguration: prepared];
+  testAssert (
+      [message rangeOfString: @"returned no definition"].location != NSNotFound
+          && [message rangeOfString: database].location != NSNotFound &&
+          [message rangeOfString: @"No compilation database"].location
+              == NSNotFound,
+      @"An empty definition result reports the selected database without claiming settings are missing");
+  YCodeProject *reopened = [YCodeProject new];
+  [reopened setProjectPath: [project projectPath]];
+  testAssert (
+      [[YCodeCompilerSettings settingsForProject: reopened] isEqual: custom],
+      @"Project overrides persist when the project is reopened");
+  [reopened release];
+  [YCodePreferences setLanguageServerMode: @"automatic" path: @""];
+  if ([YCodeLanguageServer executablePath])
+    {
+      YCodeLanguageServerProbe *probe = [YCodeLanguageServerProbe new];
+      YCodeLanguageServer *server =
+          [[YCodeLanguageServer alloc] initWithDelegate: probe];
+      [server setCompilationDatabaseDirectory: privateDirectory];
+      testAssert ([server startInDirectory: root],
+                  @"Start real clangd with compiler overrides");
+      [server synchronizePath: source text: text];
+      NSUInteger offset = [text rangeOfString: @"configured_symbol"
+                                      options: NSBackwardsSearch]
+                              .location;
+      [server definitionForPath: source offset: offset context: @"extra flag"];
+      waitForLanguageServer (probe);
+      testAssert (
+          !probe->error && [probe->result isKindOfClass: [NSArray class]] &&
+              [probe->result count] > 0,
+          @"Real clangd resolves a symbol enabled only by the extra compiler flag");
+      [server stop];
+      [server release];
+      [probe release];
+      NSString *fallbackDirectory =
+          [root stringByAppendingPathComponent: @"No Database"];
+      [manager createDirectoryAtPath: fallbackDirectory
+          withIntermediateDirectories: YES
+                           attributes: nil
+                                error: NULL];
+      probe = [YCodeLanguageServerProbe new];
+      server = [[YCodeLanguageServer alloc] initWithDelegate: probe];
+      [server setCompilationDatabaseDirectory: fallbackDirectory];
+      [server setFallbackFlags: [NSArray arrayWithObject: @"-DEXTRA_SETTING=1"]];
+      [server startInDirectory: root];
+      [server synchronizePath: source text: text];
+      [server definitionForPath: source offset: offset context: @"fallback flag"];
+      waitForLanguageServer (probe);
+      testAssert (
+          !probe->error && [probe->result isKindOfClass: [NSArray class]] &&
+              [probe->result count] > 0,
+          @"Real clangd receives fallback flags when there is no compilation database");
+      [server stop];
+      [server release];
+      [probe release];
+    }
+  [YCodeCompilerSettings removePreparedConfiguration: prepared];
+  testAssert (![manager fileExistsAtPath: privateDirectory],
+              @"Private databases can be removed after the server stops");
+  NSString *flagsPath =
+      [root stringByAppendingPathComponent: @"compile_flags.txt"];
+  [@"-Iinclude\n" writeToFile: flagsPath
+                   atomically: YES
+                     encoding: NSUTF8StringEncoding
+                        error: NULL];
+  [YCodeCompilerSettings
+      saveSettings: [NSDictionary
+                       dictionaryWithObjectsAndKeys: @"", @"DatabasePath",
+                                                    flags, @"ExtraFlags", nil]
+        forProject: project];
+  configuration = [YCodeCompilerSettings configurationForProject: project
+                                                      sourcePath: source];
+  testAssert ([[configuration objectForKey: @"source"] isEqual: flagsPath],
+              @"Automatic selection honors the project's compile_flags.txt");
+  prepared = [YCodeCompilerSettings prepareConfiguration: configuration];
+  NSString *copiedFlags =
+      [NSString stringWithContentsOfFile:
+                    [[prepared objectForKey: @"directory"]
+                        stringByAppendingPathComponent: @"compile_flags.txt"]
+                                encoding: NSUTF8StringEncoding
+                                   error: NULL];
+  testAssert (
+      [copiedFlags
+          rangeOfString: [@"-working-directory=" stringByAppendingString: root]]
+                  .location
+              != NSNotFound
+          && [copiedFlags rangeOfString: @"-Iinclude\n"].location != NSNotFound,
+      @"Private compile_flags preserves the original working directory and flags");
+  if ([YCodeLanguageServer executablePath])
+    {
+      NSString *includes = [root stringByAppendingPathComponent: @"include"];
+      [manager createDirectoryAtPath: includes
+          withIntermediateDirectories: YES
+                           attributes: nil
+                                error: NULL];
+      NSString *header = [includes stringByAppendingPathComponent: @"defs.h"];
+      [@"int from_header;\n" writeToFile: header
+                              atomically: YES
+                                encoding: NSUTF8StringEncoding
+                                   error: NULL];
+      NSString *headerText
+          = @"#include \"defs.h\"\nint use(void) { return from_header; }\n";
+      YCodeLanguageServerProbe *probe = [YCodeLanguageServerProbe new];
+      YCodeLanguageServer *server =
+          [[YCodeLanguageServer alloc] initWithDelegate: probe];
+      [server setCompilationDatabaseDirectory: [prepared
+                                                  objectForKey: @"directory"]];
+      [server startInDirectory: root];
+      [server synchronizePath: source text: headerText];
+      [server
+          definitionForPath: source
+                     offset: [headerText rangeOfString: @"from_header"].location
+                    context: @"relative include"];
+      waitForLanguageServer (probe);
+      testAssert (
+          !probe->error && [probe->result isKindOfClass: [NSArray class]] &&
+              [probe->result count] > 0,
+          @"Real clangd preserves relative include paths when compile_flags.txt is copied");
+      [server stop];
+      [server release];
+      [probe release];
+    }
+  [YCodeCompilerSettings removePreparedConfiguration: prepared];
+  NSString *explicitFlags =
+      [external stringByAppendingPathComponent: @"compile_flags.txt"];
+  [@"-DEXPLICIT_FLAGS=1\n" writeToFile: explicitFlags
+                            atomically: YES
+                              encoding: NSUTF8StringEncoding
+                                 error: NULL];
+  [YCodeCompilerSettings
+      saveSettings: [NSDictionary dictionaryWithObject: explicitFlags
+                                               forKey: @"DatabasePath"]
+        forProject: project];
+  prepared = [YCodeCompilerSettings
+      prepareConfiguration: [YCodeCompilerSettings
+                               configurationForProject: project
+                                            sourcePath: source]];
+  testAssert (
+      [prepared objectForKey: @"temporary"] != nil
+          && ![manager fileExistsAtPath: [[prepared objectForKey: @"directory"]
+                                            stringByAppendingPathComponent:
+                                                @"compile_commands.json"]],
+      @"Selecting compile_flags.txt explicitly overrides a neighboring JSON database");
+  [YCodeCompilerSettings removePreparedConfiguration: prepared];
+  YCodeCompilerSettings *panel =
+      [[YCodeCompilerSettings alloc] initWithProject: project];
+  [[panel valueForKey: @"_inherit"] setState: NSOffState];
+  [[panel valueForKey: @"_database"] setStringValue: @"External Database"];
+  [[panel valueForKey: @"_flags"] setString: @"-DUI_SETTING=1\n"];
+  [panel apply: nil];
+  testAssert (
+      [[[YCodeCompilerSettings settingsForProject: project]
+          objectForKey: @"ExtraFlags"]
+          isEqual: [NSArray arrayWithObject: @"-DUI_SETTING=1"]],
+      @"Project settings controls apply the entered compiler arguments");
+  [[panel valueForKey: @"_inherit"] setState: NSOnState];
+  [panel changeInheritance: nil];
+  [panel apply: nil];
+  testAssert (
+      ![defaults objectForKey: key] &&
+          [[YCodeCompilerSettings settingsForProject: project] isEqual: global],
+      @"Use global defaults removes the project override");
+  [panel release];
+  panel = [[YCodeCompilerSettings alloc] initWithProject: nil];
+  [[panel valueForKey: @"_database"] setStringValue: @"relative/database"];
+  [panel apply: nil];
+  testAssert (
+      [[defaults dictionaryForKey: @"YCodeCompilerDefaults"] isEqual: global],
+      @"Global controls reject ambiguous relative database paths");
+  [panel release];
+  [YCodeCompilerSettings
+      saveSettings: [NSDictionary dictionaryWithObject: @"missing"
+                                               forKey: @"DatabasePath"]
+        forProject: project];
+  configuration = [YCodeCompilerSettings configurationForProject: project
+                                                      sourcePath: source];
+  testAssert (
+      [configuration objectForKey: @"error"] != nil &&
+          [configuration objectForKey: @"source"] == nil,
+      @"A missing explicit database is reported instead of silently using another database");
+  [YCodeCompilerSettings saveSettings: custom forProject: project];
+  NSString *fixture = [[[NSFileManager defaultManager] currentDirectoryPath]
+      stringByAppendingPathComponent: @"Fixtures/clangd-test-server.py"];
+  [YCodePreferences setLanguageServerMode: @"custom" path: fixture];
+  YCodeEditorController *editor = [YCodeEditorController new];
+  [editor setProject: project];
+  [editor openFile: source];
+  [editor showCodeInformation: nil];
+  NSString *temporary = [(NSString *)[[editor
+      valueForKey: @"_compilerConfiguration"] objectForKey: @"temporary"] copy];
+  testAssert ([temporary length] > 0 && [manager fileExistsAtPath: temporary],
+              @"Editor starts with the private overridden database");
+  [YCodeCompilerSettings saveSettings: nil forProject: project];
+  testAssert (
+      [editor valueForKey: @"_languageServer"] == nil
+          && ![manager fileExistsAtPath: temporary],
+      @"Applying settings stops the previous server and removes its private database");
+  [editor stopWatchingFiles];
+  [editor setProject: nil];
+  [editor release];
+  [temporary release];
+  [@"not json" writeToFile: database
+                atomically: YES
+                  encoding: NSUTF8StringEncoding
+                     error: NULL];
+  [YCodeCompilerSettings saveSettings: custom forProject: project];
+  prepared = [YCodeCompilerSettings
+      prepareConfiguration: [YCodeCompilerSettings
+                               configurationForProject: project
+                                            sourcePath: source]];
+  testAssert ([prepared objectForKey: @"error"] != nil,
+              @"Malformed compilation databases produce a settings error");
+  [defaults removeObjectForKey: key];
+  if (savedDefaults)
+    [defaults setObject: savedDefaults forKey: @"YCodeCompilerDefaults"];
+  else
+    [defaults removeObjectForKey: @"YCodeCompilerDefaults"];
+  if (savedMode)
+    [defaults setObject: savedMode forKey: @"YCodeLanguageServerMode"];
+  else
+    [defaults removeObjectForKey: @"YCodeLanguageServerMode"];
+  if (savedServer)
+    [defaults setObject: savedServer forKey: @"YCodeLanguageServerPath"];
+  else
+    [defaults removeObjectForKey: @"YCodeLanguageServerPath"];
+  [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: YCodeCompilerSettingsDidChangeNotification
+                    object: nil];
+  [savedDefaults release];
+  [savedMode release];
+  [savedServer release];
+  [project release];
 }
 
 int
@@ -10329,6 +10970,26 @@ main (void)
       testModelViewer (temporaryDirectory);
       [manager removeItemAtPath: temporaryDirectory error: NULL];
       NSLog (@"Ycode editor bundle checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
+  if ([arguments containsObject: @"--check-compiler-settings"])
+    {
+      testCompilerSettings (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode compiler settings checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
+  if ([arguments containsObject: @"--check-code-understanding"])
+    {
+      testLanguageServer (temporaryDirectory);
+      testCodeUnderstanding (temporaryDirectory);
+      testCompilationCapture (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode code understanding checks: %lu failures",
              (unsigned long)failures);
       [pool drain];
       return failures ? 1 : 0;
@@ -10753,6 +11414,8 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  [NSApp finishLaunching];
+  [NSApp activateIgnoringOtherApps: YES];
   testWordCompletion ();
   testAutomaticCompletion ();
   testPanelVisibilityPersistence ();
@@ -11155,6 +11818,9 @@ main (void)
   [document close];
   testWindowResizing (temporaryDirectory);
   testLanguageServer (temporaryDirectory);
+  testCodeUnderstanding (temporaryDirectory);
+  testCompilationCapture (temporaryDirectory);
+  testCompilerSettings (temporaryDirectory);
   testInitialCursorPosition (temporaryDirectory);
   testColumnGuide ();
   testEditorEditing (temporaryDirectory);

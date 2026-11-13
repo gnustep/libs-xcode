@@ -60,3 +60,6 @@ done
 if [ "${CODE_SIGNING_ALLOWED:-NO}" = YES ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
   codesign --force --sign "$EXPANDED_CODE_SIGN_IDENTITY" "$frameworks/XCode.framework"
 fi
+
+# Compiler interception helper used to record Make/GNUmake build commands.
+xcrun clang "$@" -fno-objc-arc -framework Foundation "$source_root/CompilerCapture/main.m" -o "$resources/ycode-compiler-capture"

@@ -138,6 +138,7 @@ typedef enum
 /**
  * Build configuration
  */
+- (NSString *) compilationDatabaseDirectory;
 - (NSString *) buildConfiguration;
 - (void) setBuildConfiguration: (NSString *)configuration;
 - (NSString *) targetName;

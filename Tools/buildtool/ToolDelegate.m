@@ -235,13 +235,11 @@ projectFileForPath (NSString *path, BOOL *isProject)
     {
       if ([arg hasPrefix: @"-only-testing:"])
         {
-          [only addObject:
-                    [arg substringFromIndex: [@"-only-testing:" length]]];
+          [only addObject: [arg substringFromIndex: [@"-only-testing:" length]]];
         }
       else if ([arg hasPrefix: @"-skip-testing:"])
         {
-          [skip addObject:
-                    [arg substringFromIndex: [@"-skip-testing:" length]]];
+          [skip addObject: [arg substringFromIndex: [@"-skip-testing:" length]]];
         }
     }
   [options setObject: only forKey: @"only"];

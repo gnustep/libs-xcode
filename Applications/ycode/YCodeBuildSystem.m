@@ -163,6 +163,91 @@
          || _status == YCodeBuildStatusTesting;
 }
 
+/* Keep generated commands separate for each project and build selection. */
+- (NSString *) compilationDatabaseDirectory
+{
+  NSArray *parts =
+      [NSArray arrayWithObjects: [_project projectDirectoryPath] ?: @"",
+                                _targetName ?: @"", _scheme ?: @"",
+                                _buildConfiguration ?: @"",
+                                [self architecture] ?: @"", nil];
+  NSString *directory = [NSSearchPathForDirectoriesInDomains (
+      NSCachesDirectory, NSUserDomainMask, YES) lastObject];
+  directory =
+      [directory stringByAppendingPathComponent: @"Ycode/CompilationDatabases"];
+  NSEnumerator *en = [parts objectEnumerator];
+  NSString *part;
+  while ((part = [en nextObject]))
+    {
+      part = [part stringByReplacingOccurrencesOfString: @"%"
+                                             withString: @"%25"];
+      part = [part stringByReplacingOccurrencesOfString: @"/"
+                                             withString: @"%2F"];
+      part = [part stringByReplacingOccurrencesOfString: @"."
+                                             withString: @"%2E"];
+      directory = [directory
+          stringByAppendingPathComponent: [@"v" stringByAppendingString: part]];
+    }
+  return directory;
+}
+
+- (void) mergeCompilationDatabase
+{
+  NSString *directory = [[[_currentTask environment]
+      objectForKey: @"YCODE_CDB_FRAGMENTS"] stringByDeletingLastPathComponent];
+  if (!directory)
+    return;
+  NSString *path =
+      [directory stringByAppendingPathComponent: @"compile_commands.json"];
+  NSString *fragments =
+      [directory stringByAppendingPathComponent: @"fragments"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSArray *names = [manager contentsOfDirectoryAtPath: fragments error: NULL];
+  if (![names count])
+    return;
+  NSMutableDictionary *entries = [NSMutableDictionary dictionary];
+  NSData *data = [NSData dataWithContentsOfFile: path];
+  id previous = data ? [NSJSONSerialization JSONObjectWithData: data
+                                                       options: 0
+                                                         error: NULL]
+                     : nil;
+  NSEnumerator *en = [previous isKindOfClass: [NSArray class]]
+                         ? [previous objectEnumerator]
+                         : nil;
+  id entry;
+  while ((entry = [en nextObject]))
+    if ([entry isKindOfClass: [NSDictionary class]] &&
+        [entry objectForKey: @"file"])
+      [entries setObject: entry forKey: [entry objectForKey: @"file"]];
+  en = [names objectEnumerator];
+  NSString *name;
+  while ((name = [en nextObject]))
+    {
+      NSString *fragment = [fragments stringByAppendingPathComponent: name];
+      data = [NSData dataWithContentsOfFile: fragment];
+      entry = data ? [NSJSONSerialization JSONObjectWithData: data
+                                                     options: 0
+                                                       error: NULL]
+                   : nil;
+      if ([entry isKindOfClass: [NSDictionary class]] &&
+          [entry objectForKey: @"file"])
+        [entries setObject: entry forKey: [entry objectForKey: @"file"]];
+      [manager removeItemAtPath: fragment error: NULL];
+    }
+  NSMutableArray *commands = [NSMutableArray array];
+  en = [[[entries allKeys] sortedArrayUsingSelector: @selector (compare:)]
+      objectEnumerator];
+  while ((name = [en nextObject]))
+    [commands addObject: [entries objectForKey: name]];
+  data = [NSJSONSerialization dataWithJSONObject: commands
+                                         options: NSJSONWritingPrettyPrinted
+                                           error: NULL];
+  [data writeToFile: path atomically: YES];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeCompilationDatabaseChanged"
+                    object: self];
+}
+
 #pragma mark - Build Configuration
 
 - (NSString *) buildConfiguration
@@ -173,6 +258,9 @@
 - (void) setBuildConfiguration: (NSString *)configuration
 {
   ASSIGN (_buildConfiguration, configuration);
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeCompilationDatabaseChanged"
+                    object: self];
 }
 
 - (NSString *) targetName
@@ -183,6 +271,9 @@
 - (void) setTargetName: (NSString *)name
 {
   ASSIGN (_targetName, name);
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeCompilationDatabaseChanged"
+                    object: self];
 }
 
 - (NSString *) scheme
@@ -193,6 +284,9 @@
 - (void) setScheme: (NSString *)scheme
 {
   ASSIGN (_scheme, scheme);
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeCompilationDatabaseChanged"
+                    object: self];
 }
 
 + (NSString *) hostArchitecture
@@ -236,6 +330,9 @@
   else
     [defaults removeObjectForKey: [self architecturePreferenceKey]];
   [defaults synchronize];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: @"YCodeCompilationDatabaseChanged"
+                    object: self];
 }
 
 - (NSDictionary *) architectureEnvironments
@@ -798,7 +895,12 @@
   if (_currentTask && _status != YCodeBuildStatusCancelled)
     {
       if (!_runStopped)
-        _status = YCodeBuildStatusCancelled;
+        {
+          _status = YCodeBuildStatusCancelled;
+          [[NSNotificationCenter defaultCenter]
+              postNotificationName: @"YCodeBuildStatusChanged"
+                            object: self];
+        }
       if ([_currentTask isRunning])
         [_currentTask terminate];
     }
@@ -892,20 +994,31 @@
   return [self runCommand: @"make" withArguments: arguments];
 }
 
+- (NSArray *) cmakeBuildArguments
+{
+  NSMutableArray *arguments =
+      [NSMutableArray arrayWithObjects: @"--build", @"build", @"--config",
+                                       _buildConfiguration ?: @"Debug", nil];
+  if ([_targetName length])
+    [arguments
+        addObjectsFromArray: [NSArray arrayWithObjects: @"--target", _targetName,
+                                                      nil]];
+  return arguments;
+}
+
 - (BOOL) buildWithCMake
 {
-  NSString *cache = [[_project projectDirectoryPath]
-      stringByAppendingPathComponent: @"build/CMakeCache.txt"];
-  if (![[NSFileManager defaultManager] fileExistsAtPath: cache])
-    {
-      _configureBeforeBuild = YES;
-      return [self runCommand: @"cmake"
-                withArguments: [NSArray arrayWithObjects: @"-S", @".", @"-B",
-                                                        @"build", nil]];
-    }
-  return
-      [self runCommand: @"cmake"
-          withArguments: [NSArray arrayWithObjects: @"--build", @"build", nil]];
+  _configureBeforeBuild = YES;
+  return [self
+         runCommand: @"cmake"
+      withArguments:
+          [NSArray
+              arrayWithObjects: @"-S", @".", @"-B", @"build",
+                               @"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+                               [@"-DCMAKE_BUILD_TYPE="
+                                   stringByAppendingString: _buildConfiguration
+                                                               ?: @"Debug"],
+                               nil]];
 }
 
 - (BOOL) cleanWithXcode
@@ -1036,6 +1149,99 @@
                           (buildSystemDidFinishBuild:success:)])
         [(id)_delegate buildSystemDidFinishBuild: self success: NO];
       return NO;
+    }
+  if (_status == YCodeBuildStatusBuilding || _testAfterBuild)
+    {
+      NSString *fragments = [[self compilationDatabaseDirectory]
+          stringByAppendingPathComponent: @"fragments"];
+      if ([[NSFileManager defaultManager] createDirectoryAtPath: fragments
+                                    withIntermediateDirectories: YES
+                                                     attributes: nil
+                                                          error: NULL])
+        {
+          NSMutableDictionary *captureEnvironment =
+              [NSMutableDictionary dictionaryWithDictionary: environment];
+          [captureEnvironment setObject: fragments
+                                 forKey: @"YCODE_CDB_FRAGMENTS"];
+          NSString *helper =
+              [[NSBundle mainBundle] pathForResource: @"ycode-compiler-capture"
+                                              ofType: nil];
+          if (![command isEqual: @"cmake"] &&
+              [[NSFileManager defaultManager] isExecutableFileAtPath: helper])
+            {
+              NSString *wrappers = [[self compilationDatabaseDirectory]
+                  stringByAppendingPathComponent: @"compilers"];
+              NSFileManager *manager = [NSFileManager defaultManager];
+              [manager createDirectoryAtPath: wrappers
+                  withIntermediateDirectories: YES
+                                   attributes: nil
+                                        error: NULL];
+              NSString *originalPath =
+                  [environment objectForKey: @"PATH"] ?: @"/usr/bin:/bin";
+              NSArray *directories =
+                  [originalPath componentsSeparatedByString: @":"];
+              NSMutableArray *names = [NSMutableArray
+                  arrayWithObjects: @"cc", @"c++", @"gcc", @"g++", @"clang",
+                                   @"clang++", nil];
+              int version;
+              for (version = 10; version <= 30; version++)
+                {
+                  [names addObject: [NSString
+                                       stringWithFormat: @"clang-%d", version]];
+                  [names addObject: [NSString stringWithFormat: @"clang++-%d",
+                                                              version]];
+                  [names addObject: [NSString
+                                       stringWithFormat: @"gcc-%d", version]];
+                  [names addObject: [NSString
+                                       stringWithFormat: @"g++-%d", version]];
+                }
+              NSMutableDictionary *compilers =
+                  [NSMutableDictionary dictionary];
+              NSEnumerator *namesEnumerator = [names objectEnumerator];
+              NSString *name;
+              while ((name = [namesEnumerator nextObject]))
+                {
+                  NSEnumerator *pathsEnumerator =
+                      [directories objectEnumerator];
+                  NSString *search;
+                  while ((search = [pathsEnumerator nextObject]))
+                    {
+                      NSString *candidate =
+                          [search stringByAppendingPathComponent: name];
+                      if (![candidate isAbsolutePath]
+                          || ![manager isExecutableFileAtPath: candidate])
+                        continue;
+                      NSString *link =
+                          [wrappers stringByAppendingPathComponent: name];
+                      [manager removeItemAtPath: link error: NULL];
+                      if ([manager createSymbolicLinkAtPath: link
+                                        withDestinationPath: helper
+                                                      error: NULL])
+                        [compilers setObject: candidate forKey: name];
+                      break;
+                    }
+                }
+              NSData *mapping =
+                  [NSJSONSerialization dataWithJSONObject: compilers
+                                                  options: 0
+                                                    error: NULL];
+              NSString *json = AUTORELEASE ([[NSString alloc]
+                  initWithData: mapping
+                      encoding: NSUTF8StringEncoding]);
+              if (json)
+                {
+                  [captureEnvironment setObject: json
+                                         forKey: @"YCODE_REAL_COMPILERS"];
+                  [captureEnvironment setObject: originalPath
+                                         forKey: @"YCODE_CAPTURE_PATH"];
+                  [captureEnvironment
+                      setObject: [NSString stringWithFormat: @"%@:%@", wrappers,
+                                                           originalPath]
+                         forKey: @"PATH"];
+                }
+            }
+          environment = captureEnvironment;
+        }
     }
   if ([[self architecture] length])
     {
@@ -1281,6 +1487,11 @@
     return;
   BOOL success = (_terminationStatus == 0 || _runStopped);
   YCodeBuildStatus operation = _status;
+  [self mergeCompilationDatabase];
+  if (operation == YCodeBuildStatusBuilding)
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName: @"YCodeCompilationDatabaseChanged"
+                      object: self];
   BOOL launch
       = _runAfterBuild && success && operation == YCodeBuildStatusBuilding;
   [self releaseTask];
@@ -1289,8 +1500,7 @@
       && operation == YCodeBuildStatusBuilding)
     {
       _configureBeforeBuild = NO;
-      [self runCommand: @"cmake"
-          withArguments: [NSArray arrayWithObjects: @"--build", @"build", nil]];
+      [self runCommand: @"cmake" withArguments: [self cmakeBuildArguments]];
       return;
     }
   _configureBeforeBuild = NO;

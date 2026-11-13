@@ -1,5 +1,5 @@
 #import <XCTest/XCTest.h>
-#import "Calc.h"
+#import "../Sources/Calc.h"
 
 @interface CalcTests : XCTestCase
 @end
@@ -8,19 +8,19 @@
 
 - (void) testAdds
 {
-  XCTAssertEqual([Calc add: 2 to: 3], (NSInteger)5);
+  XCTAssertEqual ([Calc add: 2 to: 3], (NSInteger)5);
 }
 
 - (void) testAddsNegatives
 {
-  XCTAssertEqual([Calc add: -2 to: -3], (NSInteger)-5);
+  XCTAssertEqual ([Calc add: -2 to: -3], (NSInteger)-5);
 }
 
 - (void) testKnownBroken
 {
-  if (getenv("CALC_TESTS_FAIL"))
+  if (getenv ("CALC_TESTS_FAIL"))
     {
-      XCTAssertEqual([Calc add: 2 to: 2], (NSInteger)5, @"deliberately wrong");
+      XCTAssertEqual ([Calc add: 2 to: 2], (NSInteger)5, @"deliberately wrong");
     }
 }
 

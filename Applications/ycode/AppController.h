@@ -15,11 +15,13 @@
 
 @class YCodeWindowController;
 @class YCodeProject;
+@class YCodeCompilerSettings;
 
 @interface AppController : NSObject
 {
   YCodeWindowController *windowController;
   NSPanel *_preferencesPanel;
+  YCodeCompilerSettings *_compilerSettingsPanel;
   NSWindow *_helpWindow;
   NSMutableArray *_editorColorWells;
   NSPopUpButton *_preferencesGroup;

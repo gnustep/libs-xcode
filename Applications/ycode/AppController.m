@@ -13,6 +13,7 @@
 #import "YCodeControlIcons.h"
 #import "YCodeSyntaxHighlighter.h"
 #import "AppController.h"
+#import "YCodeCompilerSettings.h"
 #import "YCodeWindowController.h"
 #import "YCodeDocumentController.h"
 #import "YCodeProject.h"
@@ -143,6 +144,7 @@ YCodeFileURLFromPath (NSString *path)
 - (void) dealloc
 {
   RELEASE (_fontChoices);
+  RELEASE (_compilerSettingsPanel);
   RELEASE (_editorColorWells);
   RELEASE (_preferencesPanel);
   RELEASE (_issueColorWells);
@@ -304,6 +306,21 @@ YCodeFileURLFromPath (NSString *path)
   [editMenu addItem: YCodeMenuItem (@"Go to Definition",
                                    @selector (goToDefinition:), @"", self)];
   [editMenu
+      addItem: YCodeMenuItem (@"Show Type and Documentation",
+                             @selector (showCodeInformation:), @"", self)];
+  [editMenu
+      addItem: YCodeMenuItem (@"Document Symbols",
+                             @selector (showDocumentSymbols:), @"", self)];
+  [editMenu addItem: YCodeMenuItem (@"Find References",
+                                   @selector (findReferences:), @"", self)];
+  [editMenu addItem: YCodeMenuItem (@"Complete Code", @selector (completeCode:),
+                                   @"", self)];
+  [editMenu
+      addItem: YCodeMenuItem (@"Live Diagnostics",
+                             @selector (showCodeDiagnostics:), @"", self)];
+  [editMenu addItem: YCodeMenuItem (@"Open File Quickly…",
+                                   @selector (quickOpenFile:), @"O", self)];
+  [editMenu
       addItem: YCodeMenuItem (@"Go Back", @selector (goBack:), @"", self)];
   [editMenu
       addItem: YCodeMenuItem (@"Restart Code Intelligence",
@@ -372,6 +389,9 @@ YCodeFileURLFromPath (NSString *path)
       addItem: YCodeMenuItem (@"Run", @selector (runProject:), @"r", self)];
   [productMenu
       addItem: YCodeMenuItem (@"Stop", @selector (stopProject:), @".", self)];
+  [productMenu addItem: YCodeMenuItem (@"Code Intelligence Settings…",
+                                      @selector (showProjectCompilerSettings:),
+                                      @"", self)];
   [productMenu addItem: [NSMenuItem separatorItem]];
   [productMenu addItem: YCodeMenuItem (@"Open Terminal",
                                       @selector (openTerminal:), @"", self)];
@@ -1056,6 +1076,36 @@ YCodeFileURLFromPath (NSString *path)
   [[self currentEditorController] goToDefinition: sender];
 }
 
+- (void) showCodeInformation: (id)sender
+{
+  [[self currentEditorController] showCodeInformation: sender];
+}
+
+- (void) showDocumentSymbols: (id)sender
+{
+  [[self currentEditorController] showDocumentSymbols: sender];
+}
+
+- (void) findReferences: (id)sender
+{
+  [[self currentEditorController] findReferences: sender];
+}
+
+- (void) completeCode: (id)sender
+{
+  [[self currentEditorController] completeCode: sender];
+}
+
+- (void) showCodeDiagnostics: (id)sender
+{
+  [[self currentEditorController] showCodeDiagnostics: sender];
+}
+
+- (void) quickOpenFile: (id)sender
+{
+  [[self currentEditorController] quickOpenFile: sender];
+}
+
 - (IBAction) goBack: (id)sender
 {
   [[self currentEditorController] goBack: sender];
@@ -1119,7 +1169,17 @@ YCodeFileURLFromPath (NSString *path)
     }
   if (action == @selector (createProjectSettings:))
     return [[self currentProject] canCreateSettingsFile];
-  if (action == @selector (goToDefinition:))
+  if (action == @selector (showProjectCompilerSettings:))
+    return [[self currentProject] projectPath] != nil;
+  if (action == @selector (quickOpenFile:))
+    return [self currentProject] != nil;
+  if (action == @selector (completeCode:))
+    return [[[self currentEditorController] currentDocument] textView] != nil;
+  if (action == @selector (goToDefinition:)
+      || action == @selector (showCodeInformation:)
+      || action == @selector (showDocumentSymbols:)
+      || action == @selector (findReferences:)
+      || action == @selector (showCodeDiagnostics:))
     return [[self currentEditorController] canGoToDefinition];
   if (action == @selector (goBack:))
     return [[self currentEditorController] canGoBack];
@@ -1627,6 +1687,23 @@ YCodeFileURLFromPath (NSString *path)
     }
 }
 
+- (void) showProjectCompilerSettings: (id)sender
+{
+  if (![self currentProject])
+    return;
+  DESTROY (_compilerSettingsPanel);
+  _compilerSettingsPanel =
+      [[YCodeCompilerSettings alloc] initWithProject: [self currentProject]];
+  [_compilerSettingsPanel show];
+}
+
+- (void) showCompilerDefaults: (id)sender
+{
+  DESTROY (_compilerSettingsPanel);
+  _compilerSettingsPanel = [[YCodeCompilerSettings alloc] initWithProject: nil];
+  [_compilerSettingsPanel show];
+}
+
 - (void) refreshLanguageServerPreferences
 {
   NSArray *modes =
@@ -1931,6 +2008,12 @@ YCodeFileURLFromPath (NSString *path)
       [_languageServerStatus setDrawsBackground: NO];
       [_languageServerStatus setFont: [NSFont systemFontOfSize: 11]];
       [_editorPreferencesView addSubview: _languageServerStatus];
+      NSButton *compilerDefaults = AUTORELEASE (
+          [[NSButton alloc] initWithFrame: NSMakeRect (170, 12, 185, 30)]);
+      [compilerDefaults setTitle: @"Compiler defaults…"];
+      [compilerDefaults setTarget: self];
+      [compilerDefaults setAction: @selector (showCompilerDefaults:)];
+      [_editorPreferencesView addSubview: compilerDefaults];
       [self setupFontPreferences];
       [self setupTabPreferences];
       [self setupTerminalPreferences];

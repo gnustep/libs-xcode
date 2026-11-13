@@ -53,7 +53,7 @@ is an XML property list containing integer `APIVersion` **1** and a nonempty
 | `StandaloneControls` | Array of strings | Brace-language headers such as `else`, `try`, or `do`. |
 | `LineComment` | String | Optional marker for Edit > Comment/Uncomment Lines. |
 | `HighlightStringKeys` | Boolean | Color strings followed by `:` or `=` as keys. |
-| `LanguageServer` | Dictionary | Optional clangd configuration: `Command = clangd` and `LanguageID` (`c`, `cpp`, `objective-c`, or `objective-cpp`). Enables optional definition navigation; executable selection is controlled by Preferences > Editor. Other server commands are not launched. |
+| `LanguageServer` | Dictionary | Optional clangd configuration: `Command = clangd` and `LanguageID` (`c`, `cpp`, `objective-c`, or `objective-cpp`). Enables optional definition navigation, type information, symbols, references, completion, and diagnostics; executable selection is controlled by Preferences > Editor. Other server commands are not launched. |
 
 `Patterns` uses `NSRegularExpression` syntax with anchors matching individual
 lines. These keys are supported:

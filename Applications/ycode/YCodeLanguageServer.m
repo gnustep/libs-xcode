@@ -255,6 +255,8 @@ YCodeIsExecutableFile (NSString *path)
 - (void) dealloc
 {
   [self stop];
+  RELEASE (_compilationDatabaseDirectory);
+  RELEASE (_fallbackFlags);
   RELEASE (_buffer);
   RELEASE (_documents);
   RELEASE (_requests);
@@ -265,6 +267,16 @@ YCodeIsExecutableFile (NSString *path)
 - (BOOL) isRunning
 {
   return _task && !_failed && [_task isRunning];
+}
+
+- (void) setFallbackFlags: (NSArray *)flags
+{
+  ASSIGN (_fallbackFlags, flags);
+}
+
+- (void) setCompilationDatabaseDirectory: (NSString *)directory
+{
+  ASSIGN (_compilationDatabaseDirectory, directory);
 }
 
 - (BOOL) startInDirectory: (NSString *)directory
@@ -326,6 +338,28 @@ YCodeIsExecutableFile (NSString *path)
           @"rootUri",
           [NSDictionary dictionaryWithObject: general forKey: @"general"],
           @"capabilities", nil];
+  NSMutableDictionary *initialization =
+      [NSMutableDictionary dictionaryWithDictionary: parameters];
+  NSDictionary *textCapabilities = [NSDictionary
+      dictionaryWithObject: [NSDictionary
+                               dictionaryWithObject: [NSNumber
+                                                        numberWithBool: YES]
+                                             forKey: @"versionSupport"]
+                    forKey: @"publishDiagnostics"];
+  [initialization
+      setObject: [NSDictionary dictionaryWithObjectsAndKeys: general, @"general",
+                                                           textCapabilities,
+                                                           @"textDocument",
+                                                           nil]
+         forKey: @"capabilities"];
+  NSMutableDictionary *options = [NSMutableDictionary dictionary];
+  if ([_compilationDatabaseDirectory length])
+    [options setObject: _compilationDatabaseDirectory
+                forKey: @"compilationDatabasePath"];
+  if ([_fallbackFlags count])
+    [options setObject: _fallbackFlags forKey: @"fallbackFlags"];
+  [initialization setObject: options forKey: @"initializationOptions"];
+  parameters = initialization;
   [self sendMethod: @"initialize"
         parameters: parameters
         identifier: [NSNumber numberWithInt: 0]];
@@ -443,7 +477,7 @@ YCodeIsExecutableFile (NSString *path)
           receivedDefinition: nil
                      context: context
                        error:
-                           @"Definition lookup timed out. clangd may still be indexing this project."];
+                           @"Code intelligence request timed out. clangd may still be indexing this project."];
     }
   [context release];
 }
@@ -522,6 +556,30 @@ YCodeIsExecutableFile (NSString *path)
   NSNumber *identifier = [message objectForKey: @"id"];
   if ([message objectForKey: @"method"])
     {
+      if ([[message objectForKey: @"method"]
+              isEqual: @"textDocument/publishDiagnostics"])
+        {
+          id params = [message objectForKey: @"params"];
+          if (![params isKindOfClass: [NSDictionary class]])
+            return;
+          id uri = [params objectForKey: @"uri"];
+          NSDictionary *document = [uri isKindOfClass: [NSString class]]
+                                       ? [_documents objectForKey: uri]
+                                       : nil;
+          id version = [params objectForKey: @"version"];
+          id diagnostics = [params objectForKey: @"diagnostics"];
+          if (document && [diagnostics isKindOfClass: [NSArray class]]
+              && ([version isKindOfClass: [NSNumber class]] &&
+                  [version isEqual: [document objectForKey: @"version"]])
+              && [_delegate respondsToSelector: @selector
+                            (languageServer:diagnostics:forPath:text:)])
+            [(id)_delegate languageServer: self
+                              diagnostics: diagnostics
+                                  forPath: [[NSURL URLWithString: uri] path]
+                                     text: [document objectForKey: @"text"]];
+          return;
+        }
+
       /* We advertise no server-request capabilities. Reply rather than hang. */
       if (identifier)
         [self sendMessage: [NSDictionary
@@ -587,7 +645,7 @@ YCodeIsExecutableFile (NSString *path)
                    context: context
                      error:
                          [message objectForKey: @"error"]
-                             ? @"clangd could not resolve this definition. Check the project's compiler settings."
+                             ? @"clangd could not complete this request. Check the project's compiler settings."
                              : nil];
   [context release];
 }
@@ -601,8 +659,7 @@ YCodeIsExecutableFile (NSString *path)
   NSDictionary *old = [_documents objectForKey: uri];
   if ([[old objectForKey: @"text"] isEqual: text])
     return;
-  NSNumber *version = [NSNumber
-      numberWithInteger: [[old objectForKey: @"version"] integerValue] + 1];
+  NSNumber *version = [NSNumber numberWithInteger: ++_documentVersion];
   NSDictionary *document = [NSDictionary
       dictionaryWithObjectsAndKeys: uri, @"uri", language, @"languageId",
                                    version, @"version",
@@ -665,29 +722,45 @@ YCodeIsExecutableFile (NSString *path)
                    offset: (NSUInteger)offset
                   context: (id)context
 {
+  [self requestMethod: @"textDocument/definition"
+                 path: path
+               offset: offset
+              context: context];
+}
+
+- (void) requestMethod: (NSString *)method
+                 path: (NSString *)path
+               offset: (NSUInteger)offset
+              context: (id)context
+{
   NSString *uri = [[NSURL fileURLWithPath: path] absoluteString];
   NSDictionary *document = [_documents objectForKey: uri];
   if (!document)
     return;
   NSNumber *identifier = [NSNumber numberWithInteger: ++_nextID];
   [_requests setObject: context forKey: identifier];
-  NSDictionary *parameters = [NSDictionary
+  NSMutableDictionary *parameters = [NSMutableDictionary
       dictionaryWithObjectsAndKeys:
           [NSDictionary dictionaryWithObject: uri forKey: @"uri"],
           @"textDocument",
           [[self class] positionForOffset: offset
                                    inText: [document objectForKey: @"text"]],
           @"position", nil];
+  if ([method isEqual: @"textDocument/documentSymbol"])
+    [parameters removeObjectForKey: @"position"];
+  if ([method isEqual: @"textDocument/references"])
+    [parameters
+        setObject: [NSDictionary
+                      dictionaryWithObject: [NSNumber numberWithBool: YES]
+                                    forKey: @"includeDeclaration"]
+           forKey: @"context"];
   if (_ready)
-    [self sendMethod: @"textDocument/definition"
-          parameters: parameters
-          identifier: identifier];
+    [self sendMethod: method parameters: parameters identifier: identifier];
   else
     [_pending
         addObject: [NSDictionary
                       dictionaryWithObjectsAndKeys: @"2.0", @"jsonrpc",
-                                                   identifier, @"id",
-                                                   @"textDocument/definition",
+                                                   identifier, @"id", method,
                                                    @"method", parameters,
                                                    @"params", nil]];
   [self performSelector: @selector (requestTimeout:)

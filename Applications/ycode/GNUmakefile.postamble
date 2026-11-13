@@ -41,11 +41,13 @@
 
 # Build the hosted XCTest helper before application resources are copied.
 before-all::
+	$(MAKE) -C CompilerCapture all
 	$(MAKE) -C TestHost all
 	$(MAKE) -C DebuggerBundles all
 	$(MAKE) -C EditorBundles all
 
 before-clean::
+	$(MAKE) -C CompilerCapture clean
 	$(MAKE) -C TestHost clean
 	$(MAKE) -C DebuggerBundles clean
 	$(MAKE) -C EditorBundles clean

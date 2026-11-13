@@ -125,6 +125,7 @@
 /**
  * File management
  */
+- (NSArray *) projectFileEntries;
 - (void) addFilesToProject: (NSArray *)filePaths;
 - (void) removeFilesFromProject: (NSArray *)filePaths;
 /** Remove a reference and its build-phase entries, preserving the file on disk. */

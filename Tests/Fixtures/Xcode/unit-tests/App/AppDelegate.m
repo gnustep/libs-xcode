@@ -1,7 +1,15 @@
 #import "AppDelegate.h"
 
 @implementation AppDelegate
-@synthesize launched;
+- (BOOL) launched
+{
+  return launched;
+}
+
+- (void) setLaunched: (BOOL)value
+{
+  launched = value;
+}
 
 - (void) applicationDidFinishLaunching: (NSNotification *)notification
 {

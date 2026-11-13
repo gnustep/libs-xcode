@@ -845,6 +845,37 @@ static NSLock *lock = nil;
           [buildCommand stringByReplacingOccurrencesOfString: @"$(inherited)"
                                                   withString: @"."];
 
+      /* Capture actual resolved flags, including unchanged translation units.
+         Each worker writes its own fragment; the IDE merges after the build. */
+      NSString *captureDirectory = [[[NSProcessInfo processInfo] environment]
+          objectForKey: @"YCODE_CDB_FRAGMENTS"];
+      if ([captureDirectory length])
+        {
+          NSString *directory = [manager currentDirectoryPath];
+          NSString *source =
+              [compilePath isAbsolutePath]
+                  ? compilePath
+                  : [directory stringByAppendingPathComponent: compilePath];
+          NSString *redirect = [NSString
+              stringWithFormat: @"2> %@ ",
+                               [errorOutPath stringByAddingQuotationMarks]];
+          NSString *command =
+              [buildCommand stringByReplacingOccurrencesOfString: redirect
+                                                      withString: @""];
+          NSDictionary *entry = [NSDictionary
+              dictionaryWithObjectsAndKeys: directory, @"directory",
+                                           [source stringByStandardizingPath],
+                                           @"file", command, @"command", nil];
+          NSData *data = [NSJSONSerialization dataWithJSONObject: entry
+                                                         options: 0
+                                                           error: NULL];
+          NSString *name = [[[NSProcessInfo processInfo] globallyUniqueString]
+              stringByAppendingPathExtension: @"json"];
+          [data writeToFile: [captureDirectory
+                                stringByAppendingPathComponent: name]
+                 atomically: YES];
+        }
+
       NSDebugLog (@"%@", buildCommand);
 
       if (outputPathDate != nil)

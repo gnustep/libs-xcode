@@ -52,6 +52,12 @@
             shellScript = "set -e\nsh \"$SRCROOT/DebuggerBundles/build-macos.sh\"\nsh \"$SRCROOT/build-macos-resources.sh\"";
         };
 
+        YCODE_COMPILER_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeCompilerSettings.h; sourceTree = "<group>"; };
+        YCODE_COMPILER_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeCompilerSettings.m; sourceTree = "<group>"; };
+        YCODE_COMPILER_BUILD = { isa = PBXBuildFile; fileRef = YCODE_COMPILER_M; };
+        YCODE_BROWSER_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeCodeBrowser.h; sourceTree = "<group>"; };
+        YCODE_BROWSER_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeCodeBrowser.m; sourceTree = "<group>"; };
+        YCODE_BROWSER_BUILD = { isa = PBXBuildFile; fileRef = YCODE_BROWSER_M; };
         YCODE_LSP_H = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.h"; path = YCodeLanguageServer.h; sourceTree = "<group>"; };
         YCODE_LSP_M = { isa = PBXFileReference; lastKnownFileType = "sourcecode.c.objc"; path = YCodeLanguageServer.m; sourceTree = "<group>"; };
         YCODE_LSP_BUILD = { isa = PBXBuildFile; fileRef = YCODE_LSP_M; };
@@ -185,7 +191,7 @@
         YCODE_FILE_INSPECTOR_HEADER,
         YCODE_IMAGE_INSPECTOR_HEADER,
         YCODE_SOUND_INSPECTOR_HEADER,
-        YCODE_PREFERENCES_H, YCODE_PREFERENCES_M, YCODE_WATCHER_H, YCODE_WATCHER_M, YCODE_LSP_H, YCODE_LSP_M, YCODE_LANGUAGE_H, YCODE_LANGUAGE_M,
+        YCODE_PREFERENCES_H, YCODE_PREFERENCES_M, YCODE_WATCHER_H, YCODE_WATCHER_M, YCODE_COMPILER_H, YCODE_COMPILER_M, YCODE_BROWSER_H, YCODE_BROWSER_M, YCODE_LSP_H, YCODE_LSP_M, YCODE_LANGUAGE_H, YCODE_LANGUAGE_M,
         YCODE_FILE_ICONS,
         YCODE_DOCUMENT_ICON_H, YCODE_DOCUMENT_ICON_C, YCODE_DOCUMENT_ICON_M, YCODE_DOCUMENT_ICON_MM, YCODE_DOCUMENT_ICON_JAVA, YCODE_DOCUMENT_ICON_RUBY, YCODE_DOCUMENT_ICON_RUST,
         YCODE_TEMPLATES, YCODE_LANGUAGES, YCODE_HELP, YCODE_LICENSE, TERMINAL_LICENSE,
@@ -229,7 +235,7 @@
                 NATIVE_YCODEPROJECTNAVIGATORITEM_BUILD,
                 NATIVE_YCODESYNTAXHIGHLIGHTER_BUILD, YCODE_TEXT_BUILD,
                 TERMINAL_YCODETERMINALVIEW_BUILD, TERMINAL_NATIVE_BUILD,
-        YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD, YCODE_WATCHER_BUILD, YCODE_LSP_BUILD, YCODE_LANGUAGE_BUILD,
+        YCODE_ICONS_BUILD, YCODE_PREFERENCES_BUILD, YCODE_WATCHER_BUILD, YCODE_COMPILER_BUILD, YCODE_BROWSER_BUILD, YCODE_LSP_BUILD, YCODE_LANGUAGE_BUILD,
         YCODE_FILE_INSPECTOR_BUILD,
         YCODE_IMAGE_INSPECTOR_BUILD,
         YCODE_SOUND_INSPECTOR_BUILD,

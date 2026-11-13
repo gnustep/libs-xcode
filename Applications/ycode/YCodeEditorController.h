@@ -28,6 +28,7 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #import "YCodeLanguageServer.h"
+#import "YCodeCodeBrowser.h"
 
 extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 
@@ -43,6 +44,9 @@ extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 {
   BOOL _fileWatchingStopped;
   YCodeLanguageServer *_languageServer;
+  NSDictionary *_compilerConfiguration;
+  YCodeCodeBrowser *_codeBrowser;
+  NSMutableDictionary *_codeDiagnostics;
   NSMutableArray *_definitionHistory;
   NSUInteger _definitionRequest;
   YCodeProject *_project;
@@ -129,6 +133,12 @@ extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 - (IBAction) findInFile: (id)sender;
 - (IBAction) replaceInFile: (id)sender;
 /** Optional semantic navigation; lexical editor features remain independent. */
+- (void) showCodeInformation: (id)sender;
+- (void) showDocumentSymbols: (id)sender;
+- (void) findReferences: (id)sender;
+- (void) completeCode: (id)sender;
+- (void) showCodeDiagnostics: (id)sender;
+- (void) quickOpenFile: (id)sender;
 - (BOOL) canGoToDefinition;
 - (BOOL) canGoBack;
 - (IBAction) goToDefinition: (id)sender;

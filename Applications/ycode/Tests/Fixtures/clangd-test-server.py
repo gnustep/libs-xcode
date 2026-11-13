@@ -14,6 +14,7 @@ def send(message):
 
 
 documents = {}
+versions = {}
 while True:
     length = None
     while True:
@@ -34,8 +35,10 @@ while True:
     elif method == 'textDocument/didOpen':
         doc = params['textDocument']
         documents[doc['uri']] = doc['text']
+        versions[doc['uri']] = doc['version']
     elif method == 'textDocument/didChange':
         documents[params['textDocument']['uri']] = params['contentChanges'][0]['text']
+        versions[params['textDocument']['uri']] = params['textDocument']['version']
     elif method == 'textDocument/didClose':
         documents.pop(params['textDocument']['uri'], None)
     elif method == 'textDocument/definition':
@@ -52,3 +55,25 @@ while True:
         send({'jsonrpc': '2.0', 'id': message['id'], 'result': [{
             'uri': uri, 'range': {'start': params['position'], 'end': params['position']},
             'observedText': content}]})
+    elif method in ('textDocument/hover', 'textDocument/documentSymbol',
+                    'textDocument/references', 'textDocument/completion'):
+        uri = params['textDocument']['uri']
+        origin = {'line': 0, 'character': 0}
+        span = {'start': origin, 'end': {'line': 0, 'character': 3}}
+        for version in (versions[uri] - 1, None, versions[uri]):
+            send({'jsonrpc': '2.0', 'method': 'textDocument/publishDiagnostics',
+                  'params': {'uri': uri, 'version': version, 'diagnostics': [
+                      {'range': span, 'severity': 2, 'message': 'Fixture warning'}]}})
+        if method.endswith('/hover'):
+            result = {'contents': {'kind': 'plaintext', 'value': 'int value'}}
+        elif method.endswith('/documentSymbol'):
+            assert 'position' not in params
+            result = [{'name': 'value', 'kind': 13, 'range': span, 'selectionRange': span}]
+        elif method.endswith('/references'):
+            assert params['context']['includeDeclaration']
+            result = [{'uri': uri, 'range': span}]
+        else:
+            result = {'isIncomplete': False, 'items': [
+                {'label': 'value', 'detail': 'int value',
+                 'textEdit': {'range': span, 'newText': 'value'}}]}
+        send({'jsonrpc': '2.0', 'id': message['id'], 'result': result})

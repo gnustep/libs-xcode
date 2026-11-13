@@ -49,7 +49,7 @@ ADDITIONAL_INCLUDE_DIRS += -I../..
 #
 # Resource files
 #
-Ycode_RESOURCE_FILES = \
+Ycode_RESOURCE_FILES = CompilerCapture/obj/ycode-compiler-capture \
 COPYING \
 TestHost/YCodeTestHost.bundle \
 Resources/Ycode.tiff \
@@ -76,6 +76,8 @@ Ycode_HEADER_FILES = \
 YCodeTerminalView.h \
 YCodeTerminalTypes.h \
 YCodeTerminalParser.h \
+YCodeCompilerSettings.h \
+YCodeCodeBrowser.h \
 YCodeLanguageServer.h \
 YCodeLanguage.h \
 YCodePreferences.h \
@@ -111,6 +113,8 @@ YCodeControlIcons.h
 Ycode_OBJC_FILES = \
 YCodeTerminalView.m \
 YCodeTerminalParser.m \
+YCodeCompilerSettings.m \
+YCodeCodeBrowser.m \
 YCodeLanguageServer.m \
 YCodeLanguage.m \
 YCodePreferences.m \

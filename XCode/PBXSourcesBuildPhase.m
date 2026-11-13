@@ -104,7 +104,9 @@
     }
 
   // if the database is present use it's list of files...
-  if (db != nil && !usingSynchronizedGroups)
+  if (db != nil && !usingSynchronizedGroups
+      && ![[[[NSProcessInfo processInfo] environment]
+          objectForKey: @"YCODE_CDB_FRAGMENTS"] length])
     {
       if ([db isEmpty])
         {

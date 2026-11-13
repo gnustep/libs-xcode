@@ -244,7 +244,7 @@
 
 - (void) setTestOptions: (NSDictionary *)options
 {
-  ASSIGN(_testOptions, options);
+  ASSIGN (_testOptions, options);
 }
 
 - (BOOL) test
