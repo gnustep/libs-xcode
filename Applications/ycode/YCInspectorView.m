@@ -41,3 +41,73 @@
 }
 
 @end
+
+#import "YCodeEditorDocument.h"
+/* Keep fixed-size bundle controls at the top even when the sidebar is taller
+ * than the supplied inspector, without changing the bundle's coordinates. */
+@interface YCEditorInspectorContainer : NSView
+@end
+
+@implementation YCEditorInspectorContainer
+- (BOOL) isFlipped
+{
+  return YES;
+}
+
+@end
+
+@implementation YCEditorInspectorView
+- (id) initWithFrame: (NSRect)frame
+{
+  self = [super initWithFrame: frame];
+  if (self)
+    {
+      _scroll = [[NSScrollView alloc] initWithFrame: [self bounds]];
+      [_scroll setHasVerticalScroller: YES];
+      [_scroll setHasHorizontalScroller: YES];
+      [_scroll setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+      [self addSubview: _scroll];
+    }
+  return self;
+}
+
+- (void) dealloc
+{
+  [_scroll release];
+  [super dealloc];
+}
+
+- (NSString *) inspectorIdentifier
+{
+  return @"editor";
+}
+
+- (NSString *) inspectorTitle
+{
+  return @"Interface";
+}
+
+- (void) inspectDocument: (YCodeEditorDocument *)document
+{
+  NSView *view = [document inspectorView];
+  if ([[[_scroll documentView] subviews] lastObject] != view)
+    {
+      if (view)
+        {
+          NSView *container = [[YCEditorInspectorContainer alloc]
+              initWithFrame: NSMakeRect (0, 0, NSWidth ([view frame]),
+                                        NSHeight ([view frame]))];
+          [view setFrameOrigin: NSZeroPoint];
+          [container addSubview: view];
+          [_scroll setDocumentView: container];
+          [container release];
+          [[_scroll contentView] scrollToPoint: NSZeroPoint];
+        }
+      else
+        [_scroll setDocumentView: nil];
+    }
+  if (view)
+    [[_scroll documentView] setFrameSize: [view frame].size];
+}
+
+@end

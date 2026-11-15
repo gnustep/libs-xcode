@@ -58,6 +58,7 @@
   NSButton *_spacesForTabs;
   NSButton *_projectIndentation;
   NSMutableArray *_fontChoices;
+  id _editorServices;
 }
 
 /**
@@ -84,6 +85,9 @@
  * Builds the application main menu without loading gorm resources.
  */
 - (void) buildMainMenu;
+
+/** Optional editor bundle services for otherwise unhandled delegate messages. */
+- (void) setEditorServices: (id)services;
 
 /**
  * Called when the application finishes launching.

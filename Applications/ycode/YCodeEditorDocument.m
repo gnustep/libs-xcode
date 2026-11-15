@@ -119,6 +119,11 @@
   return nil;
 }
 
+- (NSView *) inspectorView
+{
+  return nil;
+}
+
 - (NSScrollView *) scrollView
 {
   return nil;

@@ -51,3 +51,9 @@ before-clean::
 	$(MAKE) -C TestHost clean
 	$(MAKE) -C DebuggerBundles clean
 	$(MAKE) -C EditorBundles clean
+
+# GNUstep resource copying merges directories; remove an obsolete optional editor.
+after-all::
+	@if test ! -d EditorBundles/Editors/Gorm.bundle; then \
+	  $(RM) -r Ycode.app/Resources/Editors/Gorm.bundle Ycode.app/Contents/Resources/Editors/Gorm.bundle; \
+	fi

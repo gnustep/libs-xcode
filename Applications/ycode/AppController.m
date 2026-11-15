@@ -117,6 +117,32 @@ YCodeFileURLFromPath (NSString *path)
 
 @implementation AppController
 
+- (void) setEditorServices: (id)services
+{
+  ASSIGN (_editorServices, services);
+}
+
+- (BOOL) respondsToSelector: (SEL)selector
+{
+  return [super respondsToSelector: selector] ||
+         [_editorServices respondsToSelector: selector];
+}
+
+- (NSMethodSignature *) methodSignatureForSelector: (SEL)selector
+{
+  NSMethodSignature *signature = [super methodSignatureForSelector: selector];
+  return signature ? signature
+                   : [_editorServices methodSignatureForSelector: selector];
+}
+
+- (void) forwardInvocation: (NSInvocation *)invocation
+{
+  if ([_editorServices respondsToSelector: [invocation selector]])
+    [invocation invokeWithTarget: _editorServices];
+  else
+    [super forwardInvocation: invocation];
+}
+
 + (void) initialize
 {
   NSMutableDictionary *defaults = [NSMutableDictionary dictionary];
@@ -150,6 +176,7 @@ YCodeFileURLFromPath (NSString *path)
   RELEASE (_issueColorWells);
   [_helpWindow close];
   RELEASE (_helpWindow);
+  RELEASE (_editorServices);
   [super dealloc];
 }
 

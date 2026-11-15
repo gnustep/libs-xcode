@@ -8,6 +8,7 @@ macOS/Windows code still needs verification on those platforms.
 
 import concurrent.futures
 import pathlib
+import os
 import re
 import shlex
 import subprocess
@@ -39,6 +40,15 @@ def main():
         expressions = [line for line in result.stdout.splitlines()
                        if MODERN_EXPRESSIONS.search(line)]
         return path, result.returncode, result.stderr, expressions
+
+    # The editor bundle is optional; CI without Gorm must still audit the host.
+    probe = subprocess.run(
+        ['sh', 'Applications/ycode/EditorBundles/check-gorm.sh'], cwd=ROOT,
+        env=dict(os.environ, CC='clang'), text=True, capture_output=True)
+    if probe.stdout.strip() != 'yes':
+        paths = [path for path in paths
+                 if not path.startswith('Applications/ycode/EditorBundles/Gorm/')]
+        print('Skipping optional Gorm editor audit: development libraries unavailable')
 
     failures = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:

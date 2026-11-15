@@ -22,7 +22,7 @@
    <https://www.gnu.org/licenses/>.
 */
 
-#import "YCodeEditorDocument.h"
+#import "YCodeModelEditorDocument.h"
 #import "YCodeEditorController.h"
 #import "YCodePreferences.h"
 #ifdef GNUSTEP
@@ -184,14 +184,48 @@ static const CGFloat YCModelTitleHeight = 22;
   NSMutableDictionary *_previewOrigins;
   NSView *_draggedPreview;
   NSPoint _dragOffset;
+  YCodeModelEditorDocument *_editingOwner;
+  NSPoint _editStart;
 }
 
 - (void) setObjectsPane: (BOOL)flag;
+- (void) setEditingOwner: (YCodeModelEditorDocument *)owner;
 - (void) addPreviewView: (NSView *)view;
 - (void) setPreviewTop: (CGFloat)top;
 - (void) layoutPreviews;
 @end
+/* Draw selection above preview children without delivering input to them. */
+@interface YCModelSelectionOverlay : NSView
+{
+  YCodeModelEditorDocument *_owner;
+}
+
+- (void) setOwner: (YCodeModelEditorDocument *)owner;
+@end
+@implementation YCModelSelectionOverlay
+- (void) setOwner: (YCodeModelEditorDocument *)owner
+{
+  _owner = owner;
+}
+
+- (BOOL) isFlipped
+{
+  return YES;
+}
+
+- (void) drawRect: (NSRect)rect
+{
+  [_owner drawSelectionInCanvas: [self superview]];
+}
+
+@end
+
 @implementation YCModelCanvas
+- (void) setEditingOwner: (YCodeModelEditorDocument *)owner
+{
+  _editingOwner = owner;
+}
+
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver: self];
@@ -340,6 +374,12 @@ static const CGFloat YCModelTitleHeight = 22;
   NSView *view;
 
   _draggedPreview = nil;
+  if ([_editingOwner hasEditingDelegate])
+    {
+      _editStart = [event locationInWindow];
+      [_editingOwner selectAtPoint: point inCanvas: self];
+      return;
+    }
   if (_objectsPane)
     return;
   while ((view = [views nextObject]))
@@ -361,6 +401,11 @@ static const CGFloat YCModelTitleHeight = 22;
 
 - (void) mouseDragged: (NSEvent *)event
 {
+  if ([_editingOwner hasEditingDelegate])
+    {
+      [self autoscroll: event];
+      return;
+    }
   if (_draggedPreview)
     {
       NSPoint point = [self convertPoint: [event locationInWindow]
@@ -379,6 +424,15 @@ static const CGFloat YCModelTitleHeight = 22;
 
 - (void) mouseUp: (NSEvent *)event
 {
+  if ([_editingOwner hasEditingDelegate] && !_objectsPane)
+    {
+      [[self retain] autorelease];
+      NSPoint end = [event locationInWindow];
+      NSSize delta = NSMakeSize (end.x - _editStart.x, end.y - _editStart.y);
+      [_editingOwner
+          moveSelectionBy: delta
+                   resize: ([event modifierFlags] & NSShiftKeyMask) != 0];
+    }
   _draggedPreview = nil;
 }
 
@@ -733,34 +787,107 @@ YCConnectionRow (id connection, NSDictionary *names)
                                    @"destinationKey", nil];
 }
 
-@interface YCodeModelEditorDocument : YCodeEditorDocument
+@implementation YCodeModelEditorDocument
+- (void) setEditingDelegate: (id<YCModelEditing>)delegate
 {
-  NSView *_editorView;
-  NSScrollView *_objectScrollView;
-  NSScrollView *_scrollView;
-  NSArray *_objects;
-  NSArray *_connections;
-  NSTableView *_connectionTable;
-  NSTextField *_connectionHeading;
-  NSMutableDictionary *_endpointViews;
-  NSMutableArray *_connectionLineWindows;
-  NSMutableArray *_connectionTagWindows;
-  BOOL _updatingConnectionLine;
-  BOOL _applicationInactive;
+  _editingDelegate = delegate;
 }
 
-- (void) addLabel: (NSString *)label toCanvas: (NSView *)canvas y: (CGFloat *)y;
-- (void) updateConnectionLine;
-- (void) hideConnectionLine;
-- (void) registerEndpointView: (NSView *)view forObject: (id)object;
-- (void) registerEndpointHierarchy: (NSView *)view;
-- (void) addMenu: (NSMenu *)menu
-       toCanvas: (YCModelCanvas *)canvas
-          depth: (NSUInteger)depth
-        visited: (NSMutableSet *)visited;
-@end
+- (BOOL) hasEditingDelegate
+{
+  return _editingDelegate != nil;
+}
 
-@implementation YCodeModelEditorDocument
+- (BOOL) loadGormData: (NSData *)data
+{
+  ASSIGN (_archiveData, data);
+  return [self loadFromFile];
+}
+
+- (void) selectModelObjectNamed: (NSString *)name
+{
+  ASSIGN (_selectedObjectName, name);
+  if (name)
+    {
+      NSView *view = [[_endpointViews objectForKey: name] objectForKey: @"view"];
+      [view scrollRectToVisible: [view bounds]];
+    }
+  [[_scrollView documentView] setNeedsDisplay: YES];
+  NSEnumerator *overlays =
+      [[[_scrollView documentView] subviews] objectEnumerator];
+  NSView *overlay;
+  while ((overlay = [overlays nextObject]))
+    if ([overlay isKindOfClass: [YCModelSelectionOverlay class]])
+      [overlay setNeedsDisplay: YES];
+  [[_objectScrollView documentView] setNeedsDisplay: YES];
+}
+
+- (void) selectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas
+{
+  NSMutableArray *keys = [NSMutableArray array];
+  NSEnumerator *allKeys = [_endpointViews keyEnumerator];
+  id key;
+  while ((key = [allKeys nextObject]))
+    if ([key isKindOfClass: [NSString class]])
+      [keys addObject: key];
+  NSEnumerator *names =
+      [[keys sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
+  NSString *name, *selected = nil;
+  CGFloat smallest = 1.0e30;
+  while ((name = [names nextObject]))
+    {
+      NSDictionary *endpoint = [_endpointViews objectForKey: name];
+      NSView *view = [endpoint objectForKey: @"view"];
+      if (![view isDescendantOf: canvas])
+        continue;
+      NSRect rect = [endpoint objectForKey: @"rect"]
+                        ? [[endpoint objectForKey: @"rect"] rectValue]
+                        : [view bounds];
+      rect = [view convertRect: rect toView: canvas];
+      CGFloat area = rect.size.width * rect.size.height;
+      if ([[_namedObjects objectForKey: name] isKindOfClass: [NSCell class]])
+        area += 0.5;
+      if (NSPointInRect (point, rect) && area < smallest)
+        {
+          smallest = area;
+          selected = name;
+        }
+    }
+  [self selectModelObjectNamed: selected];
+  [_editingDelegate selectModelObjectNamed: selected];
+}
+
+- (void) moveSelectionBy: (NSSize)delta resize: (BOOL)resize
+{
+  if (fabs (delta.width) + fabs (delta.height) > 2)
+    [_editingDelegate moveSelectedModelBy: delta resize: resize];
+}
+
+- (void) drawSelectionInCanvas: (NSView *)canvas
+{
+  if (!_selectedObjectName)
+    return;
+  NSDictionary *endpoint = [_endpointViews objectForKey: _selectedObjectName];
+  NSView *view = [endpoint objectForKey: @"view"];
+  if ([view isDescendantOf: canvas])
+    {
+      NSRect rect = [endpoint objectForKey: @"rect"]
+                        ? [[endpoint objectForKey: @"rect"] rectValue]
+                        : [view bounds];
+      rect = [view convertRect: rect toView: canvas];
+      [[NSColor selectedControlColor] set];
+      NSFrameRectWithWidth (NSInsetRect (rect, -2, -2), 2);
+    }
+}
+
+- (NSDictionary *) selectedConnection
+{
+  NSInteger row = [_connectionTable selectedRow];
+  return row >= 0 && row < (NSInteger)[_connections count]
+             ? [_connections objectAtIndex: row]
+             : nil;
+}
+
 + (NSString *) editorIdentifier
 {
   return @"model";
@@ -878,6 +1005,9 @@ YCConnectionRow (id connection, NSDictionary *names)
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver: self];
+  [_archiveData release];
+  [_selectedObjectName release];
+  [_namedObjects release];
   [(YCModelEditorView *)_editorView setOverlayOwner: nil];
   [self hideConnectionLine];
   [_connectionLineWindows makeObjectsPerformSelector: @selector (close)];
@@ -1279,8 +1409,9 @@ YCConnectionRow (id connection, NSDictionary *names)
 #ifdef GNUSTEP
   BOOL wasInBuilder = [NSClassSwapper isInInterfaceBuilder];
 #endif
-  if (![[NSFileManager defaultManager] fileExistsAtPath: path
-                                            isDirectory: &directory])
+  if (!_archiveData
+      && ![[NSFileManager defaultManager] fileExistsAtPath: path
+                                               isDirectory: &directory])
     return NO;
   [_connectionTable deselectAll: nil];
   [self hideConnectionLine];
@@ -1292,7 +1423,8 @@ YCConnectionRow (id connection, NSDictionary *names)
   @try
     {
 #ifdef GNUSTEP
-      NSData *data = [NSData dataWithContentsOfFile: path];
+      NSData *data
+          = _archiveData ? _archiveData : [NSData dataWithContentsOfFile: path];
       if (![data length])
         [NSException raise: NSInvalidArgumentException
                     format: @"The model contains no readable archive."];
@@ -1321,6 +1453,7 @@ YCConnectionRow (id connection, NSDictionary *names)
                         format: @"Not a Gorm model archive."];
           [connections addObjectsFromArray: [container connections]];
           NSDictionary *names = [container nameTable];
+          ASSIGN (_namedObjects, names);
           NSEnumerator *keys = [[[names allKeys]
               sortedArrayUsingSelector: @selector (compare:)] objectEnumerator];
           NSString *key;
@@ -1420,7 +1553,8 @@ YCConnectionRow (id connection, NSDictionary *names)
       NSEnumerator *connectionEnumerator = [connections objectEnumerator];
       id connection;
       while ((connection = [connectionEnumerator nextObject]))
-        [rows addObject: YCConnectionRow (connection, connectionNames)];
+        if (!_editingDelegate || [[connection label] length])
+          [rows addObject: YCConnectionRow (connection, connectionNames)];
 #else
       problem = @"Model previews require GNUstep GUI's archive decoders.";
 #endif
@@ -1447,18 +1581,31 @@ YCConnectionRow (id connection, NSDictionary *names)
       setStringValue:
           problem ? @"Connections unavailable"
           : [rows count]
-              ? [NSString stringWithFormat: @"Connections (%lu) — read only",
-                                           (unsigned long)[rows count]]
+              ? [NSString
+                    stringWithFormat: _editingDelegate
+                                         ? @"Connections (%lu)"
+                                         : @"Connections (%lu) — read only",
+                                     (unsigned long)[rows count]]
               : @"Connections — none in this model"];
   objectCanvas =
       [[YCModelCanvas alloc] initWithFrame: NSMakeRect (0, 0, 120, 400)];
   [objectCanvas setObjectsPane: YES];
+  [objectCanvas setEditingOwner: self];
   [self addLabel: @"Objects" toCanvas: objectCanvas y: &objectY];
   canvas = [[YCModelCanvas alloc] initWithFrame: NSMakeRect (0, 0, width, 400)];
-  [self addLabel: @"Interface preview — read only" toCanvas: canvas y: &y];
+  [canvas setEditingOwner: self];
   [self
       addLabel:
-          @"Custom controls use available base classes. Application code is not loaded."
+          _editingDelegate
+              ? @"Interface — select to edit; drag to move, Shift-drag to resize"
+              : @"Interface preview — read only"
+      toCanvas: canvas
+             y: &y];
+  [self
+      addLabel:
+          _editingDelegate
+              ? @"Use Inspector in the toolbar to edit attributes, add objects, and connect them."
+              : @"Custom controls use available base classes. Application code is not loaded."
       toCanvas: canvas
              y: &y];
   if (problem)
@@ -1637,6 +1784,15 @@ YCConnectionRow (id connection, NSDictionary *names)
   [[_objectScrollView contentView] scrollToPoint: NSZeroPoint];
   [_scrollView setDocumentView: canvas];
   [canvas layoutPreviews];
+  if (_editingDelegate)
+    {
+      YCModelSelectionOverlay *overlay =
+          [[YCModelSelectionOverlay alloc] initWithFrame: [canvas bounds]];
+      [overlay setOwner: self];
+      [overlay setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+      [canvas addSubview: overlay];
+      [overlay release];
+    }
   [canvas release];
   ASSIGN (_objects, objects);
   [[_scrollView contentView] scrollToPoint: NSZeroPoint];

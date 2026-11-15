@@ -32,3 +32,9 @@ before-all::
 	$(MAKE) -C ../TestHost all
 	$(MAKE) -C ../DebuggerBundles all
 	$(MAKE) -C ../EditorBundles all
+
+# Do not retain a previously built optional bundle in the test resources.
+after-all::
+	@if test ! -d ../EditorBundles/Editors/Gorm.bundle; then \
+	  $(RM) -r Resources/ycode_tests/Editors/Gorm.bundle; \
+	fi

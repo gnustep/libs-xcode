@@ -51,6 +51,7 @@
 #import "YCodeProjectNavigatorItem.h"
 #import "YCodeEditorController.h"
 #import "YCodeEditorDocument.h"
+#import "../EditorBundles/Model/YCodeModelEditorDocument.h"
 #import "YCodeEditorRegistry.h"
 #import "YCodeCompilerSettings.h"
 #import "YCodeSyntaxHighlighter.h"
@@ -5037,7 +5038,10 @@ testEditorBundles (void)
   YCodeEditorRegistry *registry = [[YCodeEditorRegistry alloc]
       initWithSearchPaths: resources ? [NSArray arrayWithObject: resources]
                                     : [NSArray array]];
-  testAssert ([[registry editorIdentifiers]
+  NSMutableArray *requiredEditors =
+      [NSMutableArray arrayWithArray: [registry editorIdentifiers]];
+  [requiredEditors removeObject: @"org.gnustep.ycode.gorm"];
+  testAssert ([requiredEditors
                   isEqual: [NSArray arrayWithObjects: @"image", @"model",
                                                     @"sound", @"text", nil]],
               @"Discover the independently loaded editor bundles");
@@ -5079,6 +5083,359 @@ testEditorBundles (void)
       [registry editorClassForFilePath: @"Source.m"] == Nil,
       @"An empty registry does not silently create a hard-coded editor");
   [registry release];
+}
+
+static void
+testGormEditor (NSString *directory)
+{
+  id savedDelegate = [[NSApp delegate] retain];
+  AppController *delegate = [AppController new];
+  [NSApp setDelegate: delegate];
+  YCodeEditorRegistry *registry = [YCodeEditorRegistry sharedRegistry];
+  Class editor = [registry editorClassForFilePath: @"Interface.gorm"];
+  if ([[registry editorIdentifiers] containsObject: @"org.gnustep.ycode.gorm"])
+    testAssert (
+        [[editor editorIdentifier] isEqual: @"org.gnustep.ycode.gorm"],
+        @"Installed Gorm editor takes priority over the read-only viewer");
+  if (![[editor editorIdentifier] isEqual: @"org.gnustep.ycode.gorm"])
+    {
+      testAssert (
+          [[editor editorIdentifier] isEqual: @"model"],
+          @"Absent Gorm libraries leave the read-only model editor available");
+    }
+  else
+    {
+      NSFileManager *manager = [NSFileManager defaultManager];
+      [manager createDirectoryAtPath: directory
+          withIntermediateDirectories: YES
+                           attributes: nil
+                                error: NULL];
+      NSString *path = [directory
+          stringByAppendingPathComponent: @"Editable Interface.gorm"];
+      NSString *fixture = [[NSBundle mainBundle] pathForResource: @"Ycode"
+                                                          ofType: @"gorm"];
+      testAssert ([manager copyItemAtPath: fixture toPath: path error: NULL],
+                  @"Copy a real Gorm package for editing");
+      YCodeEditorDocument *document = [[editor alloc] initWithFilePath: path];
+      testAssert (document != nil && [document loadFromFile] &&
+                      [document isEditable] && ![document isModified],
+                  @"Gorm libraries open a clean, editable interface");
+      if (document && [document isEditable])
+        {
+          id model = [document valueForKey: @"_document"];
+          testAssert (
+              [[model windowControllers] count] == 0 &&
+                  [document inspectorView] != nil &&
+                  [[document editorView]
+                      isKindOfClass: NSClassFromString (@"YCModelEditorView")],
+              @"Gorm editing uses Ycode's existing canvas and inspector without floating editor windows");
+          testAssert ([NSApp delegate] == delegate,
+                      @"Opening Gorm preserves Ycode's application delegate");
+          NSPopUpButton *palette = [document valueForKey: @"_newObject"];
+          [palette selectItemWithTitle: @"Window"];
+          [document performSelector: @selector (addObject:) withObject: nil];
+          NSString *windowName =
+              [(NSString *)[document valueForKey: @"_selectedName"] copy];
+          NSDictionary *fields = [document valueForKey: @"_fields"];
+          [[fields objectForKey: @"Title"] setStringValue: @"Edited in Ycode"];
+          [document performSelector: @selector (applyAttributes:)
+                         withObject: nil];
+          [palette selectItemWithTitle: @"Text Field"];
+          [document performSelector: @selector (addObject:) withObject: nil];
+          [[fields objectForKey: @"Title"] setStringValue: @"Editable control"];
+          [document performSelector: @selector (applyAttributes:)
+                         withObject: nil];
+          NSString *controlName =
+              [(NSString *)[document valueForKey: @"_selectedName"] copy];
+          [(id<YCModelEditing>)document moveSelectedModelBy: NSMakeSize (15, 10)
+                                                     resize: NO];
+          id control = [model performSelector: @selector (objectForName:)
+                                   withObject: controlName];
+          testAssert (
+              [control isEditable]
+                  && NSEqualPoints ([control frame].origin,
+                                    NSMakePoint (35, 30)),
+              @"Canvas moves edit the Gorm graph while read-only previews leave control properties intact");
+          YCodeModelEditorDocument *preview =
+              [document valueForKey: @"_preview"];
+          NSDictionary *endpoint = [[preview valueForKey: @"_endpointViews"]
+              objectForKey: controlName];
+          NSView *previewControl = [endpoint objectForKey: @"view"];
+          NSView *canvas = [[preview scrollView] documentView];
+          [preview
+              selectAtPoint: [previewControl convertPoint: NSMakePoint (5, 5)
+                                                  toView: canvas]
+                   inCanvas: canvas];
+          testAssert (
+              [[document valueForKey: @"_selectedName"] isEqual: controlName],
+              @"Clicking a canvas control selects its corresponding Gorm object");
+          [(id<YCModelEditing>)document moveSelectedModelBy: NSMakeSize (20, 5)
+                                                     resize: YES];
+          testAssert (
+              NSEqualSizes ([control frame].size, NSMakeSize (140, 33)),
+              @"Canvas resizing edits the original control geometry");
+          NSDictionary *nativeInspectors =
+              [document valueForKey: @"_nativeInspectors"];
+          id attributes = [nativeInspectors
+              objectForKey: @"GormTextFieldAttributesInspector"];
+          if (NSClassFromString (@"GormTextFieldAttributesInspector"))
+            {
+              testAssert (
+                  attributes != nil &&
+                      [attributes valueForKey: @"object"] == control,
+                  @"Text fields use Gorm's native attributes inspector on the original object");
+              NSForm *tagForm = [attributes valueForKey: @"tagForm"];
+              [[tagForm cellAtIndex: 0] setIntValue: 417];
+              [model updateChangeCount: NSChangeCleared];
+              [attributes performSelector: @selector (ok:) withObject: tagForm];
+              testAssert (
+                  [control tag] == 417 && [document isModified],
+                  @"A native inspector action updates the graph and marks Ycode dirty");
+              [document performSelector: @selector (refreshPreview)];
+              NSView *updated = [[[preview valueForKey: @"_endpointViews"]
+                  objectForKey: controlName] objectForKey: @"view"];
+              testAssert (
+                  [(NSControl *)updated tag] == 417,
+                  @"Native inspector changes reach the embedded canvas");
+            }
+          testAssert (
+              [[document valueForKey: @"_nativeSections"] count] >= 3,
+              @"Gorm inspectors appear in separate Interface sections");
+          NSSize inspectorSize = [[document inspectorView] frame].size;
+          [(id<YCModelEditing>)document selectModelObjectNamed: windowName];
+          [(id<YCModelEditing>)document selectModelObjectNamed: controlName];
+          testAssert (
+              NSEqualSizes (inspectorSize,
+                            [[document inspectorView] frame].size),
+              @"Switching object-specific inspectors preserves their natural dimensions");
+          YCEditorInspectorView *sidebar = [[YCEditorInspectorView alloc]
+              initWithFrame: NSMakeRect (0, 0, 300, 700)];
+          [sidebar inspectDocument: document];
+          testAssert (
+              [[document inspectorView] isDescendantOf: sidebar],
+              @"The standard Ycode sidebar hosts the bundle's inspector controls");
+          [sidebar setFrameSize: NSMakeSize (300, 1600)];
+          NSView *inspectorContent = [document inspectorView];
+          NSRect visibleInspector =
+              [inspectorContent convertRect: [inspectorContent bounds]
+                                     toView: sidebar];
+          testAssert (
+              fabs (NSMaxY ([sidebar bounds]) - NSMaxY (visibleInspector)) < 2,
+              @"A tall sidebar keeps interface editing controls at the top");
+          [sidebar setFrameSize: NSMakeSize (300, 400)];
+          NSScrollView *inspectorScroll = [sidebar valueForKey: @"_scroll"];
+          testAssert (
+              NSHeight ([[inspectorScroll documentView] frame])
+                  > NSHeight ([[inspectorScroll contentView] bounds]),
+              @"A short sidebar keeps the full inspector available by scrolling");
+          CGFloat sidebarWidth = NSWidth ([[document inspectorView] frame]) +
+                                 [NSScroller scrollerWidth] + 16;
+          NSWindow *host = [[NSWindow alloc]
+              initWithContentRect: NSMakeRect (0, 0, 800 + sidebarWidth, 740)
+                        styleMask: NSTitledWindowMask
+                          backing: NSBackingStoreBuffered
+                            defer: NO];
+          [host setReleasedWhenClosed: NO];
+          NSView *editorView = [document editorView];
+          [editorView setFrame: NSMakeRect (0, 0, 790, 740)];
+          [sidebar setFrame: NSMakeRect (800, 0, sidebarWidth, 740)];
+          [[host contentView] addSubview: editorView];
+          [[host contentView] addSubview: sidebar];
+          [host orderFront: nil];
+          [host display];
+          NSString *screenshot = [[[NSProcessInfo processInfo] environment]
+              objectForKey: @"YCODE_GORM_SCREENSHOT"];
+          if (screenshot)
+            {
+              NSView *view = [host contentView];
+              NSBitmapImageRep *bitmap =
+                  [view bitmapImageRepForCachingDisplayInRect: [view bounds]];
+              [view cacheDisplayInRect: [view bounds] toBitmapImageRep: bitmap];
+              [[bitmap representationUsingType: NSPNGFileType
+                                    properties: [NSDictionary dictionary]]
+                  writeToFile: screenshot
+                   atomically: YES];
+            }
+          [editorView removeFromSuperview];
+          [sidebar removeFromSuperview];
+          [sidebar inspectDocument: nil];
+          [sidebar release];
+          [host close];
+          [host release];
+          [[document valueForKey: @"_destination"]
+              selectItemWithTitle: @"NSOwner"];
+          [[fields objectForKey: @"Connection"] setStringValue: @"delegate"];
+          [document performSelector: @selector (addConnection:) withObject: nil];
+          [model setValue: [NSNumber numberWithBool: NO] forKey: @"olderArchive"];
+          testAssert ([document isModified],
+                      @"Canvas and inspector changes mark the editor dirty");
+          testAssert (
+              [document saveToFile] && ![document isModified],
+              @"Save writes the Gorm package and clears unsaved changes");
+          testAssert (
+              [[NSData dataWithContentsOfFile:
+                           [path stringByAppendingPathComponent: @"data.info"]]
+                  length]
+                  > 0,
+              @"Saving preserves Gorm's file preference metadata");
+          NSEnumerator *objects;
+          id object;
+          testAssert ([document loadFromFile],
+                      @"Reopen the saved Gorm archive");
+          model = [document valueForKey: @"_document"];
+          objects = [[model performSelector: @selector (topLevelObjects)]
+              objectEnumerator];
+          BOOL found = NO;
+          while ((object = [objects nextObject]))
+            if ([object isKindOfClass: [NSWindow class]] &&
+                [[object title] isEqual: @"Edited in Ycode"])
+              found = YES;
+          testAssert (found,
+                      @"Interface property edits survive a save and reload");
+          control = [model performSelector: @selector (objectForName:)
+                                withObject: controlName];
+          testAssert (
+              [[control stringValue] isEqual: @"Editable control"]
+                  && NSEqualRects ([control frame],
+                                   NSMakeRect (35, 30, 140, 33)),
+              @"Inserted controls retain their edited text and geometry after reopening");
+          if (NSClassFromString (@"GormTextFieldAttributesInspector"))
+            testAssert (
+                [control tag] == 417,
+                @"Native inspector attribute changes survive save and reopen");
+          NSArray *connections = [NSArray
+              arrayWithArray: [model performSelector: @selector (connections)]];
+          NSEnumerator *connectionEnumerator = [connections objectEnumerator];
+          NSNibConnector *connection;
+          BOOL connected = NO;
+          while ((connection = [connectionEnumerator nextObject]))
+            if ([[connection label] isEqual: @"delegate"] &&
+                [connection source] == control)
+              connected = YES;
+          testAssert (
+              connected,
+              @"Connections added through Ycode survive the Gorm round trip");
+          preview = [document valueForKey: @"_preview"];
+          NSArray *rows = [preview valueForKey: @"_connections"];
+          NSUInteger row;
+          for (row = 0; row < [rows count]; row++)
+            if ([[[rows objectAtIndex: row] objectForKey: @"label"]
+                    isEqual: @"delegate"])
+              {
+                [[preview valueForKey: @"_connectionTable"]
+                        selectRowIndexes: [NSIndexSet indexSetWithIndex: row]
+                    byExtendingSelection: NO];
+                [document performSelector: @selector (deleteConnection:)
+                               withObject: nil];
+                break;
+              }
+          testAssert (
+              [[model performSelector: @selector (connections)] count] ==
+                  [connections count] - 1,
+              @"Disconnect removes the selected outlet, including File's Owner endpoints");
+          [document performSelector: @selector (selectModelObjectNamed:)
+                         withObject: windowName];
+          [document performSelector: @selector (deleteObject:) withObject: nil];
+          testAssert (
+              [model performSelector: @selector (objectForName:)
+                          withObject: windowName]
+                      == nil
+                  && [model performSelector: @selector (objectForName:)
+                                 withObject: controlName]
+                         == nil,
+              @"Deleting a window removes its children through Gorm's document operations");
+          [windowName release];
+          [controlName release];
+          [@"external" writeToFile: [path stringByAppendingPathComponent:
+                                             @"external-resource"]
+                        atomically: YES
+                          encoding: NSUTF8StringEncoding
+                             error: NULL];
+          [document checkForExternalChanges];
+          testAssert ([document hasExternalChanges],
+                      @"Detect changes within a Gorm package");
+          [document performSelector: @selector (refreshPreview)];
+          testAssert ([document hasExternalChanges],
+                      @"UI updates preserve the external-change warning");
+          [@"blocker"
+              writeToFile: [directory
+                              stringByAppendingPathComponent: @"Missing Parent"]
+               atomically: YES
+                 encoding: NSUTF8StringEncoding
+                    error: NULL];
+          [model performSelector: @selector (touch)];
+          [document
+              setFilePath: [directory stringByAppendingPathComponent:
+                                         @"Missing Parent/Failure.gorm"]];
+          testAssert (![document writeContentsToFile] && [document isModified],
+                      @"A failed package write preserves unsaved changes");
+          testAssert (
+              [manager fileExistsAtPath: [path stringByAppendingPathComponent:
+                                                  @"objects.gorm"]],
+              @"Failed saving leaves the original package intact");
+          [document setFilePath: path];
+          NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+          id savedWidth =
+              [[defaults objectForKey: @"YCodeInspectorWidth"] retain];
+          id savedHidden =
+              [[defaults objectForKey: @"YCodeInspectorHidden"] retain];
+          [defaults setDouble: 250 forKey: @"YCodeInspectorWidth"];
+          [defaults setBool: YES forKey: @"YCodeInspectorHidden"];
+          YCodeProject *project = [YCodeProject new];
+          [project readFromURL: [NSURL fileURLWithPath: directory]
+                        ofType: @"YCodeMakeProjectType"
+                         error: NULL];
+          YCodeWindowController *windowController =
+              [YCodeWindowController new];
+          [windowController setProject: project];
+          testAssert (
+              [[project editorController] openFile: path],
+              @"Open a Gorm interface through the actual project window");
+          testAssert (
+              ![[windowController valueForKey: @"_inspectorView"] isHidden],
+              @"Opening an editable Gorm file reveals the Interface inspector");
+          [[windowController window] setContentSize: NSMakeSize (1400, 1300)];
+          [windowController performSelector: @selector (restoreSidebarWidths)];
+          id activeDocument = [[project editorController] currentDocument];
+          [(id<YCModelEditing>)activeDocument
+              selectModelObjectNamed: @"NSOwner"];
+          NSTabView *inspectorTabs =
+              [windowController valueForKey: @"_inspectorTabView"];
+          testAssert (
+              [[[inspectorTabs selectedTabViewItem] identifier]
+                  isEqual: @"editor"],
+              @"The project window selects the Interface inspector for an editable Gorm file");
+          NSView *activeSidebar = [[inspectorTabs selectedTabViewItem] view];
+          NSScrollView *activeScroll = [activeSidebar valueForKey: @"_scroll"];
+          NSView *activeInspector =
+              [[[project editorController] currentDocument] inspectorView];
+          testAssert (
+              NSWidth ([[activeScroll contentView] bounds])
+                  >= NSWidth ([activeInspector frame]),
+              @"The project widens a 250-point sidebar enough to fit Gorm inspector controls");
+          [project close];
+          [windowController close];
+          [windowController release];
+          [project release];
+          if (savedWidth)
+            [defaults setObject: savedWidth forKey: @"YCodeInspectorWidth"];
+          else
+            [defaults removeObjectForKey: @"YCodeInspectorWidth"];
+          if (savedHidden)
+            [defaults setObject: savedHidden forKey: @"YCodeInspectorHidden"];
+          else
+            [defaults removeObjectForKey: @"YCodeInspectorHidden"];
+          [savedWidth release];
+          [savedHidden release];
+        }
+      [document release];
+      testAssert ([[[registry editorClassForFilePath: @"Interface.xib"]
+                      editorIdentifier] isEqual: @"model"],
+                  @"The optional Gorm editor leaves XIB previews unchanged");
+    }
+  [NSApp setDelegate: savedDelegate];
+  [delegate release];
+  [savedDelegate release];
 }
 
 static void
@@ -11485,6 +11842,15 @@ main (void)
       [pool drain];
       return failures ? 1 : 0;
     }
+  if ([arguments containsObject: @"--check-gorm-editor"])
+    {
+      testGormEditor (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode Gorm editor checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-editor-bundles"])
     {
       testEditorBundles ();
@@ -12350,6 +12716,7 @@ main (void)
   testEditorBundles ();
   testEditorBundleFiles (temporaryDirectory);
   testModelViewer (temporaryDirectory);
+  testGormEditor (temporaryDirectory);
   testEditorFiles (temporaryDirectory);
   testProjectCenterImport (temporaryDirectory);
   testProjectCenterExport (temporaryDirectory);

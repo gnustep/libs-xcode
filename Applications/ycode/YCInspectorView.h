@@ -43,4 +43,12 @@
 
 @end
 
+/** Hosts the current editor bundle's optional inspector without library linkage. */
+@interface YCEditorInspectorView : YCInspectorView
+{
+  NSScrollView *_scroll;
+}
+
+@end
+
 #endif // _YCINSPECTORVIEW_H_

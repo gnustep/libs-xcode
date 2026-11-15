@@ -89,6 +89,8 @@
 - (BOOL) isSoundDocument;
 - (NSImage *) image;
 - (NSView *) editorView;
+/** Optional editor-specific content hosted in Ycode's inspector sidebar. */
+- (NSView *) inspectorView;
 - (NSTextView *) textView;
 - (NSScrollView *) scrollView;
 

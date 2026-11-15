@@ -690,8 +690,15 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
     }
   if (_inspectorVisible)
     {
+      CGFloat preferredWidth = _inspectorWidth;
+      NSView *editorInspector =
+          [[_editorController currentDocument] inspectorView];
+      if (editorInspector)
+        preferredWidth
+            = MAX (preferredWidth, NSWidth ([editorInspector frame]) +
+                                       [NSScroller scrollerWidth] + 16);
       CGFloat desired
-          = MIN (_inspectorWidth,
+          = MIN (preferredWidth,
                  MAX (80, NSWidth ([_contentSplitView bounds]) - 250));
       CGFloat position = NSMaxX ([_editorView frame]);
 #ifdef GNUSTEP
@@ -1581,6 +1588,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           initWithFrame: [_inspectorTabView contentRect]];
       [self registerInspectorView: soundInspector];
       RELEASE (soundInspector);
+      YCEditorInspectorView *editorInspector = [[YCEditorInspectorView alloc]
+          initWithFrame: [_inspectorTabView contentRect]];
+      [self registerInspectorView: editorInspector];
+      [editorInspector release];
     }
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   [center removeObserver: self
@@ -1652,6 +1663,13 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                              : @"file";
   if ([[_editorController currentDocument] isSoundDocument])
     identifier = @"sound";
+  if ([[_editorController currentDocument] inspectorView])
+    {
+      identifier = @"editor";
+      if (!_inspectorVisible)
+        [self setInspectorVisible: YES];
+    }
+  [self restoreSidebarWidths];
   [_inspectorTabView selectTabViewItemWithIdentifier: identifier];
   {
     NSEnumerator *itemEnumerator =

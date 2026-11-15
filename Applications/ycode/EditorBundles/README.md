@@ -37,8 +37,8 @@ ruler, syntax-highlighting, and language services. Image and Sound retain their
 existing preview behavior; sound playback and waveforms remain in the Sound
 inspector. This refactor does not add image or audio editing tools.
 
-Build with `make -C Applications/ycode`. The application build embeds the four
-bundles automatically. `make -C Applications/ycode/Tests all` also packages them
+Build with `make -C Applications/ycode`. The application build embeds the four standard
+bundles and the optional Gorm bundle when its dependencies are available. `make -C Applications/ycode/Tests all` also packages them
 for tests; `ycode_tests --check-editor-bundles` checks discovery and selection.
 The existing editing, external-file, image, and sound tests cover their behavior.
 
@@ -90,3 +90,59 @@ Other Gorm plugin formats, such as CIB and Gux, are not supported by this bundle
 Add `--model-preview-screenshot` to write a rendered preview to
 `/tmp/ycode-model-preview.png` and a widget fixture to
 `/tmp/ycode-model-widgets.png` for visual inspection.
+
+## Optional Gorm editor
+
+On GNUstep, the separate `Gorm.bundle` enables `.gorm` editing through the
+installed GormCore and InterfaceBuilder libraries. It reuses Ycode's canvas,
+object pane, connection table, and inspector sidebar. Editing opens the Interface
+sidebar automatically and sizes it to the selected object's inspectors. Gorm's
+native Attributes, Size, Connections, Custom Class, Bindings, and Help inspectors
+appear as separate sections where applicable. Their controls edit the original
+Gorm objects and update Ycode's canvas and unsaved-change state.
+
+Inspectors supplied by GormCore work with the libraries alone. When Gorm is
+installed, Ycode also loads its palette bundles for specialized inspectors such
+as buttons, text fields, menus, and windows. Gorm is never launched, and its
+inspector views are embedded without floating editor windows.
+
+Select an object on the canvas or in the Interface inspector's object list.
+Drag to move it, or Shift-drag to resize. The inspector edits names, titles/text,
+and geometry, and adds windows, buttons, text fields, labels, views, menus, and
+menu items. Select a parent window, view, or menu before adding a child.
+Connections use the selected object as source, the destination popup, and an
+outlet or action name. Select a connection in the table and choose Disconnect
+to remove it. Save and unsaved-change prompts use Ycode's normal document flow.
+The Objects and Connections section supplies object creation and direct
+connection editing alongside the native inspectors. Existing custom classes
+and other archived properties are preserved.
+
+Gorm owns the editable object graph, connection operations, and archive
+serialization. The canvas displays a decoded snapshot, so its preview controls
+cannot trigger application actions or change the live graph's control state.
+Saves stage a complete package before replacing the original, preserving it if
+serialization or writing fails. Changes to files inside the package are checked
+before saving.
+
+The build detects Gorm's headers and libraries, including the shared document
+policy API. Gorm's native format plugin must be installed with its framework
+resources. Ycode and the read-only Model bundle do not link to Gorm. A missing
+editor bundle or unavailable Gorm libraries leaves the read-only viewer active;
+a missing native format plugin also falls back to the viewer. XIB and NIB files
+continue to use read-only previews.
+
+Install the libraries and rebuild Ycode to include the optional bundle, or
+install a separately built bundle in `Library/Ycode/Editors` using one of the
+registry's search domains. Restart Ycode after changing installed bundles or
+libraries. Build with `YCODE_GORM=no` to omit the bundled editor.
+
+Run the integration checks with a GUI display (or `xvfb-run -a`):
+
+```sh
+make -C Applications/ycode/Tests check YCODE_TEST_ARGUMENTS=--check-gorm-editor
+```
+
+The tests exercise canvas/sidebar editing, archive round trips, dirty state,
+package-change detection, and failed saves. Without the optional bundle they
+check read-only selection. Editor bundles may supply `inspectorView` to host
+additional controls in Ycode's Interface inspector tab.
