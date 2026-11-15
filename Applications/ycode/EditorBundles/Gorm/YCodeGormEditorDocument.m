@@ -669,6 +669,15 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   e = [sections reverseObjectEnumerator];
   while ((view = [e nextObject]))
     {
+      if (height > 8)
+        {
+          NSBox *separator = [[NSBox alloc]
+              initWithFrame: NSMakeRect (8, height, width - 16, 2)];
+          [separator setBoxType: NSBoxSeparator];
+          [_inspector addSubview: separator];
+          [separator release];
+          height += 10;
+        }
       [view setFrameOrigin: NSMakePoint (8, height)];
       [_inspector addSubview: view];
       height += NSHeight ([view frame]) + 8;
