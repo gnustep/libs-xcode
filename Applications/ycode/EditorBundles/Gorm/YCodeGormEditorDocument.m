@@ -37,6 +37,39 @@
 #import <GormCore/GormWrapperLoader.h>
 #import <GormCore/GormWrapperBuilder.h>
 
+/* Gorm's inspector archives refer to these images by name. A framework's
+ * resources are not automatically in the host application's named-image
+ * lookup path, so register them before any inspector archive is decoded. */
+static void
+YCRegisterGormInspectorImages (NSBundle *fallback)
+{
+  NSBundle *framework = [NSBundle bundleForClass: [GormDocument class]];
+  NSArray *names =
+      [NSArray arrayWithObjects: @"GormEHCoil", @"GormEVCoil", @"GormEHLine",
+                                @"GormEVLine", @"GormMHCoil", @"GormMVCoil",
+                                @"GormMHLine", @"GormMVLine", nil];
+  NSEnumerator *e = [names objectEnumerator];
+  NSString *name;
+  while ((name = [e nextObject]))
+    {
+      NSImage *existing = [NSImage imageNamed: name];
+      if ([existing isValid])
+        continue;
+      [existing setName: nil];
+      NSImage *image = [[NSImage alloc]
+          initWithContentsOfFile: [framework pathForImageResource: name]];
+      if (![image isValid])
+        {
+          [image release];
+          image = [[NSImage alloc]
+              initWithContentsOfFile: [fallback pathForImageResource: name]];
+        }
+      if ([image isValid])
+        [image setName: name];
+      [image release];
+    }
+}
+
 /* Gorm owns the graph and archive format; Ycode owns every editing surface.
  * Suppress Gorm's floating editors even when attachObject opens an editor. */
 @interface YCodeHostedGormDocument : GormDocument
@@ -183,6 +216,7 @@
   static YCodeGormServices *services = nil;
   if (!services)
     {
+      YCRegisterGormInspectorImages ([NSBundle bundleForClass: self]);
       services = [[self alloc] init];
       /* Palette bundles supply categories selecting the native inspectors.
        * Load their code without opening Gorm's palette windows. */

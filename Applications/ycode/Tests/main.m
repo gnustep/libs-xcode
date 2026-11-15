@@ -5257,6 +5257,45 @@ testGormEditor (NSString *directory)
           testAssert (
               [[document valueForKey: @"_nativeSections"] count] >= 3,
               @"Gorm inspectors appear in separate Interface sections");
+          id sizeInspector =
+              [nativeInspectors objectForKey: @"GormViewSizeInspector"];
+          NSArray *springControls =
+              [NSArray arrayWithObjects: @"top", @"bottom", @"left", @"right",
+                                        @"width", @"height", nil];
+          NSEnumerator *springEnumerator = [springControls objectEnumerator];
+          NSString *springControl;
+          while ((springControl = [springEnumerator nextObject]))
+            {
+              NSButton *button = [sizeInspector valueForKey: springControl];
+              testAssert (
+                  [[button image] isValid] &&
+                      [[button alternateImage] isValid],
+                  @"Each native autosizing control has visible fixed and spring images");
+            }
+          NSButton *widthSpring = [sizeInspector valueForKey: @"width"];
+          [widthSpring setState: NSOnState];
+          [sizeInspector performSelector: @selector (setAutosize:)
+                              withObject: widthSpring];
+          testAssert (
+              ([control autoresizingMask] & NSViewWidthSizable) != 0,
+              @"The native spring control changes the original object's autoresizing mask");
+          NSBundle *gormBundle = [NSBundle bundleForClass: [document class]];
+          NSArray *springImages = [NSArray
+              arrayWithObjects: @"GormEHCoil", @"GormEVCoil", @"GormEHLine",
+                               @"GormEVLine", @"GormMHCoil", @"GormMVCoil",
+                               @"GormMHLine", @"GormMVLine", nil];
+          NSEnumerator *imageNames = [springImages objectEnumerator];
+          NSString *imageName;
+          while ((imageName = [imageNames nextObject]))
+            {
+              NSImage *fallbackImage = [[NSImage alloc]
+                  initWithContentsOfFile: [gormBundle
+                                             pathForImageResource: imageName]];
+              testAssert (
+                  [fallbackImage isValid],
+                  @"The optional bundle includes valid fallback spring images");
+              [fallbackImage release];
+            }
           NSSize inspectorSize = [[document inspectorView] frame].size;
           [(id<YCModelEditing>)document selectModelObjectNamed: windowName];
           [(id<YCModelEditing>)document selectModelObjectNamed: controlName];
@@ -5391,6 +5430,23 @@ testGormEditor (NSString *directory)
                 }
             }
           [host display];
+          NSString *sizeScreenshot = [[[NSProcessInfo processInfo] environment]
+              objectForKey: @"YCODE_GORM_SIZE_SCREENSHOT"];
+          if (sizeScreenshot)
+            {
+              NSView *section = [[document valueForKey: @"_nativeSections"]
+                  objectForKey: @"GormViewSizeInspector"];
+              [section scrollRectToVisible: [section bounds]];
+              [host display];
+              NSBitmapImageRep *bitmap = [section
+                  bitmapImageRepForCachingDisplayInRect: [section bounds]];
+              [section cacheDisplayInRect: [section bounds]
+                         toBitmapImageRep: bitmap];
+              [[bitmap representationUsingType: NSPNGFileType
+                                    properties: [NSDictionary dictionary]]
+                  writeToFile: sizeScreenshot
+                   atomically: YES];
+            }
           NSString *screenshot = [[[NSProcessInfo processInfo] environment]
               objectForKey: @"YCODE_GORM_SCREENSHOT"];
           if (screenshot)
@@ -5555,6 +5611,8 @@ testGormEditor (NSString *directory)
                   && NSEqualRects ([control frame],
                                    NSMakeRect (35, 30, 140, 33)),
               @"Inserted controls retain their edited text and geometry after reopening");
+          testAssert (([control autoresizingMask] & NSViewWidthSizable) != 0,
+                      @"Native spring settings survive save and reopen");
           if (NSClassFromString (@"GormTextFieldAttributesInspector"))
             testAssert (
                 [control tag] == 417,

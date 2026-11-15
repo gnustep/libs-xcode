@@ -1,0 +1,7 @@
+The eight Gorm*Coil.tiff and Gorm*Line.tiff images are copied unchanged
+from GNUstep Gorm, GormCore/Images, in the apps-gorm source tree.
+Source: https://github.com/gnustep/apps-gorm
+These resources are distributed under Gorm's GNU General Public License,
+version 3 or later; see COPYING.Gorm. Copyright belongs to the original
+GNUstep Gorm contributors. Ycode bundles these images as fallbacks for
+Gorm's native autosizing inspector; installed framework images take priority.

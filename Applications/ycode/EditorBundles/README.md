@@ -104,7 +104,17 @@ Gorm objects and update Ycode's canvas and unsaved-change state.
 Inspectors supplied by GormCore work with the libraries alone. When Gorm is
 installed, Ycode also loads its palette bundles for specialized inspectors such
 as buttons, text fields, menus, and windows. Gorm is never launched, and its
-inspector views are embedded without floating editor windows.
+inspector views are embedded without floating editor windows. The autosizing
+inspector's spring and strut images are registered by name before loading its
+interface. Installed GormCore images take priority; the optional Ycode bundle
+includes fallback copies and their license notices.
+
+Gorm's plugin manager loads the installed GormCore format plugins, and Ycode uses
+the native Gorm plugin to read and write `.gorm` packages. Palette bundles supply
+widget prototypes and specialized inspectors. Gorm's `UserPlugins` and
+`UserPalettes` defaults are honored when configured in Ycode's defaults search
+list; preferences from Gorm's separate application domain are not imported.
+Loading other format plugins does not enable editing those formats in Ycode.
 
 With Gorm's Widget Library available, a searchable library of installed palette
 prototypes can be opened with the **+** toolbar button beside the pane controls.
