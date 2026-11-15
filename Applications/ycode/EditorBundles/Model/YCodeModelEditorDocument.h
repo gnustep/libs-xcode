@@ -53,6 +53,8 @@
   id<YCModelEditing> _editingDelegate;
   NSData *_archiveData;
   NSString *_selectedObjectName;
+  NSString *_connectionDragSource;
+  NSPoint _connectionDragPoint;
   NSDictionary *_namedObjects;
 }
 
@@ -64,6 +66,8 @@
 - (BOOL) acceptModelDrag: (id<NSDraggingInfo>)drag
                inCanvas: (NSView *)canvas
                 testing: (BOOL)testing;
+- (void) beginConnectionDragAtWindowPoint: (NSPoint)point;
+- (void) updateConnectionDragAtWindowPoint: (NSPoint)point;
 - (void) connectSelectionAtWindowPoint: (NSPoint)point;
 - (NSString *) modelObjectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas;
 - (void) selectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas;

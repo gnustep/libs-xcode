@@ -108,7 +108,9 @@ inspector views are embedded without floating editor windows.
 
 With Gorm's Widget Library available, a searchable library of installed palette
 prototypes can be opened with the **+** toolbar button beside the pane controls.
-The library starts closed; click **+** again to hide it. Drag a widget preview or
+The library opens in its own panel and starts closed; click **+** again or its
+close button to hide it. Opening it leaves the inspector sidebar width unchanged.
+Switching documents hides the previous document’s library panel. Drag a widget preview or
 its description onto a window or container on Ycode's canvas. Drop windows and
 menus onto empty canvas space, menu items onto a menu, and formatters onto a
 compatible control. The library uses Gorm's copy/paste APIs, preserving prototype
@@ -121,7 +123,8 @@ Drag to move it, or Shift-drag to resize. The inspector edits names, titles/text
 and geometry, and adds windows, buttons, text fields, labels, views, menus, and
 menu items. Select a parent window, view, or menu before adding a child.
 Control-drag from the source object to the destination on the canvas or object
-pane to open Gorm's Connections inspector. Select an outlet, or expand `target`
+pane. A live connection line follows the pointer; releasing over a destination
+reveals Gorm's Connections inspector, even when the sidebar was hidden. Select an outlet, or expand `target`
 and select an action, then click **Connect**. The destination popup in Objects
 and Connections offers an alternative to dragging. That section also allows
 entering an outlet or action name directly. Select a connection in the table and choose Disconnect

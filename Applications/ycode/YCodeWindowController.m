@@ -2063,11 +2063,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 {
   YCodeEditorDocument *document = [_editorController currentDocument];
   if ([document hasWidgetLibrary])
-    {
-      [self setInspectorVisible: YES];
-      [document toggleWidgetLibrary];
-      [self updateInspectors: nil];
-    }
+    [document toggleWidgetLibrary];
 }
 
 - (IBAction) toggleInspector: (id)sender

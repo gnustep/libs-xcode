@@ -5177,12 +5177,12 @@ testGormEditor (NSString *directory)
               @"Gorm editing uses Ycode's existing canvas and inspector without floating editor windows");
           testAssert ([NSApp delegate] == delegate,
                       @"Opening Gorm preserves Ycode's application delegate");
-          testAssert (![[document valueForKey: @"_libraryVisible"] boolValue],
+          testAssert (![[document valueForKey: @"_widgetLibrary"] isVisible],
                       @"The widget library starts closed");
           if ([document hasWidgetLibrary])
             {
               [document toggleWidgetLibrary];
-              testAssert ([[document valueForKey: @"_libraryVisible"] boolValue]
+              testAssert ([[document valueForKey: @"_widgetLibrary"] isVisible]
                               && ![document isModified],
                           @"Opening the library does not edit the interface");
             }
@@ -5305,12 +5305,14 @@ testGormEditor (NSString *directory)
               NSArray *entries = [library valueForKey: @"entries"];
               testAssert (
                   [entries count] > 10,
-                  @"The embedded widget library includes installed Gorm palette prototypes");
-              NSView *librarySection =
-                  [document valueForKey: @"_librarySection"];
+                  @"The widget library includes installed Gorm palette prototypes");
+              NSPanel *libraryPanel = [[document valueForKey: @"_widgetLibrary"]
+                  performSelector: @selector (panel)];
               testAssert (
-                  [librarySection isDescendantOf: sidebar],
-                  @"Gorm's widget library is embedded in the Interface sidebar");
+                  libraryPanel != host &&
+                      [[libraryPanel contentView] window] == libraryPanel
+                      && ![[libraryPanel contentView] isDescendantOf: sidebar],
+                  @"Gorm's widget library remains in its own panel");
               NSEnumerator *entriesEnumerator = [entries objectEnumerator];
               id entry, sliderEntry = nil;
               while ((entry = [entriesEnumerator nextObject]))
@@ -5335,7 +5337,7 @@ testGormEditor (NSString *directory)
                       [[[libraryScroll documentView] subviews] count];
                   testAssert (
                       rows > 0 && rows < [entries count],
-                      @"The embedded Gorm library filters widget previews by search text");
+                      @"The Gorm library filters widget previews by search text");
                   NSPasteboard *pasteboard =
                       [NSPasteboard pasteboardWithUniqueName];
                   testAssert (
@@ -5412,7 +5414,45 @@ testGormEditor (NSString *directory)
           NSPoint ownerPoint = [ownerView
               convertPoint: NSMakePoint (NSMidX (ownerRect), NSMidY (ownerRect))
                     toView: nil];
-          [preview connectSelectionAtWindowPoint: ownerPoint];
+          NSView *gestureSource = [[[preview valueForKey: @"_endpointViews"]
+              objectForKey: controlName] objectForKey: @"view"];
+          NSPoint sourcePoint = [gestureSource convertPoint: NSMakePoint (5, 5)
+                                                     toView: nil];
+          [NSApp activateIgnoringOtherApps: YES];
+          [host resignKeyWindow];
+          NSEventType gestureTypes[]
+              = { NSLeftMouseDown, NSLeftMouseDragged, NSLeftMouseUp };
+          NSUInteger gestureIndex;
+          for (gestureIndex = 0; gestureIndex < 3; gestureIndex++)
+            {
+              NSEvent *event =
+                  [NSEvent mouseEventWithType: gestureTypes[gestureIndex]
+                                     location: gestureIndex == 0 ? sourcePoint
+                                                                : ownerPoint
+                                modifierFlags: NSControlKeyMask
+                                    timestamp: 1 + gestureIndex
+                                 windowNumber: [host windowNumber]
+                                      context: nil
+                                  eventNumber: gestureIndex
+                                   clickCount: 1
+                                     pressure: 1];
+              [host sendEvent: event];
+              if (gestureIndex == 1)
+                {
+                  testAssert (
+                      [[preview valueForKey: @"_connectionDragSource"]
+                          isEqual: controlName],
+                      @"Control-drag starts on the first click in an inactive editor window");
+                  NSArray *lines =
+                      [preview valueForKey: @"_connectionLineWindows"];
+                  testAssert ([lines count] > 0 &&
+                                  [[lines objectAtIndex: 0] isVisible],
+                              @"Control-drag displays a live connection line");
+                }
+            }
+          testAssert (
+              [preview valueForKey: @"_connectionDragSource"] == nil,
+              @"Releasing a connection drag clears its temporary state");
           id connectionInspector = [[document valueForKey: @"_nativeInspectors"]
               objectForKey: @"GormConnectionInspector"];
           testAssert (
@@ -5641,17 +5681,39 @@ testGormEditor (NSString *directory)
               @"The project widens a 250-point sidebar enough to fit Gorm inspector controls");
           if ([activeDocument hasWidgetLibrary])
             {
+              CGFloat originalInspectorWidth = NSWidth (
+                  [[windowController valueForKey: @"_inspectorView"] frame]);
               [windowController toggleWidgetLibrary: nil];
               testAssert (
-                  [[activeDocument valueForKey: @"_libraryVisible"] boolValue]
+                  originalInspectorWidth
+                      == NSWidth ([[windowController
+                          valueForKey: @"_inspectorView"] frame]),
+                  @"Opening the separate library panel does not resize the sidebar");
+              testAssert (
+                  [[activeDocument valueForKey: @"_widgetLibrary"] isVisible]
                       && NSWidth ([[activeScroll contentView] bounds])
                              >= NSWidth ([activeInspector frame]),
-                  @"The toolbar library action opens the library at its full width");
+                  @"The toolbar library action opens a separate library panel");
+              NSPanel *panel = [[activeDocument valueForKey: @"_widgetLibrary"]
+                  performSelector: @selector (panel)];
+              [panel close];
+              testAssert (
+                  ![panel isVisible],
+                  @"The library panel can be closed with its own close button");
+              [windowController toggleWidgetLibrary: nil];
+              testAssert ([panel isVisible],
+                          @"The plus button reopens a closed library panel");
               [windowController toggleWidgetLibrary: nil];
               testAssert (
-                  ![[activeDocument valueForKey: @"_libraryVisible"] boolValue],
+                  ![[activeDocument valueForKey: @"_widgetLibrary"] isVisible],
                   @"The toolbar library action closes the library again");
             }
+          [windowController setInspectorVisible: NO];
+          [(id<YCModelEditing>)activeDocument
+              beginModelConnectionTo: @"NSFirst"];
+          testAssert (
+              ![[windowController valueForKey: @"_inspectorView"] isHidden],
+              @"Connecting an already-selected source reveals a hidden Interface inspector");
           NSArray *toolbarItems = [[[windowController window] toolbar] items];
           NSArray *toolbarIdentifiers =
               [toolbarItems valueForKey: @"itemIdentifier"];

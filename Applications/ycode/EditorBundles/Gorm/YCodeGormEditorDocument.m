@@ -116,6 +116,7 @@
 @interface NSObject (YCodeWidgetLibrary)
 - (void) addPalette: (IBPalette *)palette;
 - (NSPanel *) panel;
+- (BOOL) isVisible;
 @end
 
 @interface YCodeGormPalettesManager : GormPalettesManager
@@ -251,8 +252,6 @@
   NSView *_inspector;
   NSView *_objectControls;
   id _widgetLibrary;
-  NSBox *_librarySection;
-  BOOL _libraryVisible;
   NSMutableDictionary *_nativeInspectors;
   NSMutableDictionary *_nativeSections;
   id _inspectedObject;
@@ -403,13 +402,6 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
           IBPalette *palette;
           while ((palette = [e nextObject]))
             [_widgetLibrary addPalette: palette];
-          NSView *libraryView = [[_widgetLibrary panel] contentView];
-          [libraryView removeFromSuperview];
-          [libraryView setFrameSize: NSMakeSize (480, 360)];
-          _librarySection =
-              [[NSBox alloc] initWithFrame: NSMakeRect (0, 0, 504, 400)];
-          [_librarySection setTitle: @"Widget Library"];
-          [_librarySection setContentView: libraryView];
         }
       _fields = [NSMutableDictionary new];
       _objects =
@@ -490,6 +482,21 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
              selector: @selector (gormDocumentChanged:)
                  name: @"YCodeGormDocumentChanged"
                object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (currentEditorChanged:)
+                 name: YCodeCurrentDocumentDidChangeNotification
+               object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (hostWindowChanged:)
+                 name: NSWindowDidBecomeMainNotification
+               object: nil];
+      [[NSNotificationCenter defaultCenter]
+          addObserver: self
+             selector: @selector (hostWindowChanged:)
+                 name: NSWindowWillCloseNotification
+               object: nil];
     }
   return self;
 }
@@ -501,7 +508,8 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   [_nativeSections release];
   [_nativeInspectors release];
   [_objectControls release];
-  [_librarySection release];
+  if ([_widgetLibrary isVisible])
+    [[_widgetLibrary panel] orderOut: nil];
   [_widgetLibrary release];
   [_preview setEditingDelegate: nil];
   if ([[YCodeGormServices sharedServices] activeDocument] == _document)
@@ -522,23 +530,45 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
 
 - (BOOL) hasWidgetLibrary
 {
-  return _librarySection != nil;
+  return _widgetLibrary != nil;
 }
 
 - (void) toggleWidgetLibrary
 {
-  _libraryVisible = !_libraryVisible;
-  _inspectedObject = nil;
-  /* Force a layout even when no object is selected. */
-  NSArray *views = [[_inspector subviews] copy];
-  NSEnumerator *e = [views objectEnumerator];
-  NSView *view;
-  while ((view = [e nextObject]))
-    [view removeFromSuperview];
-  [views release];
-  [self refreshNativeInspectors];
-  if (_libraryVisible)
-    [_librarySection scrollRectToVisible: [_librarySection bounds]];
+  if (!_widgetLibrary)
+    return;
+  NSPanel *panel = [_widgetLibrary panel];
+  if ([panel isVisible])
+    [panel orderOut: nil];
+  else
+    {
+      [[YCodeGormServices sharedServices] setActiveDocument: _document];
+      [panel setTitle: [NSString stringWithFormat: @"Widget Library — %@",
+                                                 [self fileName]]];
+      [panel makeKeyAndOrderFront: nil];
+    }
+}
+
+- (void) currentEditorChanged: (NSNotification *)notification
+{
+  if (![_widgetLibrary isVisible])
+    return;
+  if ([(YCodeEditorController *)[notification object] currentDocument] != self)
+    [[_widgetLibrary panel] orderOut: nil];
+}
+
+- (void) hostWindowChanged: (NSNotification *)notification
+{
+  NSWindow *host = [[self editorView] window];
+  if ([[notification name] isEqual: NSWindowWillCloseNotification])
+    {
+      if ([notification object] == host)
+        [[_widgetLibrary panel] orderOut: nil];
+    }
+  else if ([notification object] == host)
+    [[YCodeGormServices sharedServices] setActiveDocument: _document];
+  else
+    [[_widgetLibrary panel] orderOut: nil];
 }
 
 - (void) beginModelConnectionTo: (NSString *)name
@@ -546,6 +576,11 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   if (!name || ![_document objectForName: name] || !_selectedName)
     return;
   [_destination selectItemWithTitle: name];
+  /* Reveal the inspector even if the source was already selected. */
+  if (_editorController)
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName: YCodeCurrentDocumentDidChangeNotification
+                      object: _editorController];
   [self chooseDestination: nil];
 }
 
@@ -735,11 +770,6 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
                       @selector (helpInspectorClassName) };
   NSMutableArray *sections = [NSMutableArray array];
   CGFloat width = 312;
-  if (_librarySection && _libraryVisible)
-    {
-      [sections addObject: _librarySection];
-      width = MAX (width, NSWidth ([_librarySection frame]) + 16);
-    }
   NSUInteger i;
   for (i = 0; selected && i < [titles count]; i++)
     {

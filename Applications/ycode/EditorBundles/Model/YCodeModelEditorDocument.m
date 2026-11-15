@@ -224,6 +224,37 @@ static const CGFloat YCModelTitleHeight = 22;
 @end
 
 @implementation YCModelCanvas
+- (BOOL) acceptsFirstMouse: (NSEvent *)event
+{
+  return [_editingOwner hasEditingDelegate];
+}
+
+/* Some AppKit backends deliver Control-click as a right-button gesture. */
+- (void) rightMouseDown: (NSEvent *)event
+{
+  if ([_editingOwner hasEditingDelegate]
+      && ([event modifierFlags] & NSControlKeyMask))
+    [self mouseDown: event];
+  else
+    [super rightMouseDown: event];
+}
+
+- (void) rightMouseDragged: (NSEvent *)event
+{
+  if (_connecting)
+    [self mouseDragged: event];
+  else
+    [super rightMouseDragged: event];
+}
+
+- (void) rightMouseUp: (NSEvent *)event
+{
+  if (_connecting)
+    [self mouseUp: event];
+  else
+    [super rightMouseUp: event];
+}
+
 - (void) setEditingOwner: (YCodeModelEditorDocument *)owner
 {
   _editingOwner = owner;
@@ -408,6 +439,8 @@ static const CGFloat YCModelTitleHeight = 22;
       _editStart = [event locationInWindow];
       _connecting = ([event modifierFlags] & NSControlKeyMask) != 0;
       [_editingOwner selectAtPoint: point inCanvas: self];
+      if (_connecting)
+        [_editingOwner beginConnectionDragAtWindowPoint: _editStart];
       return;
     }
   if (_objectsPane)
@@ -433,7 +466,16 @@ static const CGFloat YCModelTitleHeight = 22;
 {
   if ([_editingOwner hasEditingDelegate])
     {
-      [self autoscroll: event];
+      if (!_connecting && ([event modifierFlags] & NSControlKeyMask))
+        {
+          _connecting = YES;
+          [_editingOwner beginConnectionDragAtWindowPoint: _editStart];
+        }
+      if (_connecting)
+        [_editingOwner
+            updateConnectionDragAtWindowPoint: [event locationInWindow]];
+      else
+        [self autoscroll: event];
       return;
     }
   if (_draggedPreview)
@@ -956,8 +998,25 @@ YCConnectionRow (id connection, NSDictionary *names)
   [_editingDelegate selectModelObjectNamed: selected];
 }
 
+- (void) beginConnectionDragAtWindowPoint: (NSPoint)point
+{
+  ASSIGN (_connectionDragSource, _selectedObjectName);
+  [self updateConnectionDragAtWindowPoint: point];
+}
+
+- (void) updateConnectionDragAtWindowPoint: (NSPoint)point
+{
+  _connectionDragPoint = point;
+  [self updateConnectionLine];
+}
+
 - (void) connectSelectionAtWindowPoint: (NSPoint)point
 {
+  if (!_connectionDragSource)
+    return;
+  NSString *source = [_connectionDragSource copy];
+  DESTROY (_connectionDragSource);
+  [self hideConnectionLine];
   NSView *canvases[]
       = { [_scrollView documentView], [_objectScrollView documentView] };
   NSUInteger i;
@@ -966,13 +1025,17 @@ YCConnectionRow (id connection, NSDictionary *names)
       NSPoint local = [canvases[i] convertPoint: point fromView: nil];
       if (NSPointInRect (local, [canvases[i] visibleRect]))
         {
-          NSString *destination = [self modelObjectAtPoint: local
-                                                  inCanvas: canvases[i]];
+          NSString *destination = [[self modelObjectAtPoint: local
+                                                   inCanvas: canvases[i]] copy];
+          if (source)
+            [_editingDelegate selectModelObjectNamed: source];
           if (destination)
             [_editingDelegate beginModelConnectionTo: destination];
-          return;
+          [destination release];
+          break;
         }
     }
+  [source release];
 }
 
 - (void) moveSelectionBy: (NSSize)delta resize: (BOOL)resize
@@ -1125,6 +1188,7 @@ YCConnectionRow (id connection, NSDictionary *names)
   [[NSNotificationCenter defaultCenter] removeObserver: self];
   [_archiveData release];
   [_selectedObjectName release];
+  [_connectionDragSource release];
   [_namedObjects release];
   [(YCModelEditorView *)_editorView setOverlayOwner: nil];
   [self hideConnectionLine];
@@ -1238,7 +1302,10 @@ YCConnectionRow (id connection, NSDictionary *names)
   NSString *name = [notification name];
   id object = [notification object];
   if ([name isEqual: NSApplicationDidResignActiveNotification])
-    _applicationInactive = YES;
+    {
+      _applicationInactive = YES;
+      DESTROY (_connectionDragSource);
+    }
   else if ([name isEqual: NSApplicationDidBecomeActiveNotification])
     _applicationInactive = NO;
   if ([object isKindOfClass: [NSView class]] && object != _editorView
@@ -1250,6 +1317,7 @@ YCConnectionRow (id connection, NSDictionary *names)
         return;
       if ([name isEqual: NSWindowWillCloseNotification])
         {
+          DESTROY (_connectionDragSource);
           [self hideConnectionLine];
           return;
         }
@@ -1332,13 +1400,22 @@ YCConnectionRow (id connection, NSDictionary *names)
   NSDictionary *connection = row >= 0 && (NSUInteger)row < [_connections count]
                                  ? [_connections objectAtIndex: row]
                                  : nil;
-  if (!connection || !host || ![host isVisible] || [host isMiniaturized] ||
-      [_editorView isHiddenOrHasHiddenAncestor] || _applicationInactive
-      || ![self connectionPointForKey: [connection objectForKey: @"sourceKey"]
-                                point: &source]
-      || ![self
-          connectionPointForKey: [connection objectForKey: @"destinationKey"]
-                          point: &destination])
+  BOOL pointsAvailable = NO;
+  if (_connectionDragSource)
+    {
+      pointsAvailable = [self connectionPointForKey: _connectionDragSource
+                                              point: &source];
+      destination = [host convertBaseToScreen: _connectionDragPoint];
+    }
+  else if (connection)
+    pointsAvailable =
+        [self connectionPointForKey: [connection objectForKey: @"sourceKey"]
+                              point: &source]
+        &&
+        [self connectionPointForKey: [connection objectForKey: @"destinationKey"]
+                              point: &destination];
+  if (!pointsAvailable || !host || ![host isVisible] || [host isMiniaturized]
+      || [_editorView isHiddenOrHasHiddenAncestor] || _applicationInactive)
     {
       [self hideConnectionLine];
       _updatingConnectionLine = NO;
