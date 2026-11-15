@@ -5085,6 +5085,52 @@ testEditorBundles (void)
   [registry release];
 }
 
+/* Exercise the canvas drop path without synthesizing an X11 drag session. */
+@interface YCTestModelDrag : NSObject
+{
+  NSPasteboard *_pasteboard;
+  NSPoint _location;
+}
+
+- (id) initWithPasteboard: (NSPasteboard *)pasteboard location: (NSPoint)location;
+- (NSPasteboard *) draggingPasteboard;
+- (NSPoint) draggingLocation;
+@end
+@implementation YCTestModelDrag
+- (id) initWithPasteboard: (NSPasteboard *)pasteboard location: (NSPoint)location
+{
+  self = [super init];
+  if (self)
+    {
+      _pasteboard = [pasteboard retain];
+      _location = location;
+    }
+  return self;
+}
+
+- (void) dealloc
+{
+  [_pasteboard release];
+  [super dealloc];
+}
+
+- (NSPasteboard *) draggingPasteboard
+{
+  return _pasteboard;
+}
+
+- (NSPoint) draggingLocation
+{
+  return _location;
+}
+
+@end
+@interface NSObject (YCTestGormCopy)
+- (BOOL) copyObject: (id)object
+              type: (NSString *)type
+      toPasteboard: (NSPasteboard *)pasteboard;
+@end
+
 static void
 testGormEditor (NSString *directory)
 {
@@ -5131,11 +5177,21 @@ testGormEditor (NSString *directory)
               @"Gorm editing uses Ycode's existing canvas and inspector without floating editor windows");
           testAssert ([NSApp delegate] == delegate,
                       @"Opening Gorm preserves Ycode's application delegate");
+          testAssert (![[document valueForKey: @"_libraryVisible"] boolValue],
+                      @"The widget library starts closed");
+          if ([document hasWidgetLibrary])
+            {
+              [document toggleWidgetLibrary];
+              testAssert ([[document valueForKey: @"_libraryVisible"] boolValue]
+                              && ![document isModified],
+                          @"Opening the library does not edit the interface");
+            }
           NSPopUpButton *palette = [document valueForKey: @"_newObject"];
           [palette selectItemWithTitle: @"Window"];
           [document performSelector: @selector (addObject:) withObject: nil];
           NSString *windowName =
               [(NSString *)[document valueForKey: @"_selectedName"] copy];
+          NSString *libraryObjectName = nil;
           NSDictionary *fields = [document valueForKey: @"_fields"];
           [[fields objectForKey: @"Title"] setStringValue: @"Edited in Ycode"];
           [document performSelector: @selector (applyAttributes:)
@@ -5243,6 +5299,96 @@ testGormEditor (NSString *directory)
           [[host contentView] addSubview: sidebar];
           [host orderFront: nil];
           [host display];
+          id library = [document valueForKey: @"_widgetLibrary"];
+          if (library && NSClassFromString (@"ControlsPalette"))
+            {
+              NSArray *entries = [library valueForKey: @"entries"];
+              testAssert (
+                  [entries count] > 10,
+                  @"The embedded widget library includes installed Gorm palette prototypes");
+              NSView *librarySection =
+                  [document valueForKey: @"_librarySection"];
+              testAssert (
+                  [librarySection isDescendantOf: sidebar],
+                  @"Gorm's widget library is embedded in the Interface sidebar");
+              NSEnumerator *entriesEnumerator = [entries objectEnumerator];
+              id entry, sliderEntry = nil;
+              while ((entry = [entriesEnumerator nextObject]))
+                if ([[entry valueForKey: @"object"]
+                        isKindOfClass: [NSSlider class]])
+                  {
+                    sliderEntry = entry;
+                    break;
+                  }
+              testAssert (
+                  sliderEntry != nil,
+                  @"Gorm supplies a slider prototype beyond the basic Add Object menu");
+              if (sliderEntry)
+                {
+                  NSSearchField *search = [library valueForKey: @"searchField"];
+                  [search setStringValue: @"NSSlider"];
+                  [library performSelector: @selector (reload:)
+                                withObject: search];
+                  NSScrollView *libraryScroll =
+                      [library valueForKey: @"scrollView"];
+                  NSUInteger rows =
+                      [[[libraryScroll documentView] subviews] count];
+                  testAssert (
+                      rows > 0 && rows < [entries count],
+                      @"The embedded Gorm library filters widget previews by search text");
+                  NSPasteboard *pasteboard =
+                      [NSPasteboard pasteboardWithUniqueName];
+                  testAssert (
+                      [model copyObject: [sliderEntry valueForKey: @"object"]
+                                   type: [sliderEntry valueForKey: @"type"]
+                           toPasteboard: pasteboard],
+                      @"Copy a real palette prototype using Gorm's pasteboard API");
+                  testAssert (
+                      ![(id<YCModelEditing>)document
+                          acceptModelPasteboard: pasteboard
+                                         target: nil
+                                          point: NSZeroPoint
+                                        testing: YES],
+                      @"Widgets cannot be dropped outside a container");
+                  NSView *previewFrame =
+                      [[[preview valueForKey: @"_endpointViews"]
+                          objectForKey: windowName] objectForKey: @"view"];
+                  NSView *previewContent = [previewFrame
+                      performSelector: @selector (modelContentView)];
+                  NSPoint location =
+                      [previewContent convertPoint: NSMakePoint (200, 140)
+                                            toView: nil];
+                  YCTestModelDrag *drag =
+                      [[YCTestModelDrag alloc] initWithPasteboard: pasteboard
+                                                         location: location];
+                  NSView *dropCanvas = [[preview scrollView] documentView];
+                  testAssert (
+                      [preview acceptModelDrag: (id)drag
+                                      inCanvas: dropCanvas
+                                       testing: YES]
+                          && [preview acceptModelDrag: (id)drag
+                                             inCanvas: dropCanvas
+                                              testing: NO],
+                      @"Dropping a library widget on the canvas inserts it into the original window");
+                  [drag release];
+                  libraryObjectName = [(NSString *)[document
+                      valueForKey: @"_selectedName"] copy];
+                  id inserted =
+                      [model performSelector: @selector (objectForName:)
+                                  withObject: libraryObjectName];
+                  testAssert (
+                      [inserted isKindOfClass: [NSSlider class]] &&
+                          [inserted superview]
+                          && NSEqualPoints ([inserted frame].origin,
+                                            NSMakePoint (200, 140))
+                          && [document isModified],
+                      @"Library insertion preserves widget type, drop position, hierarchy, and dirty state");
+                  [pasteboard releaseGlobally];
+                  [(id<YCModelEditing>)document
+                      selectModelObjectNamed: controlName];
+                }
+            }
+          [host display];
           NSString *screenshot = [[[NSProcessInfo processInfo] environment]
               objectForKey: @"YCODE_GORM_SCREENSHOT"];
           if (screenshot)
@@ -5255,6 +5401,76 @@ testGormEditor (NSString *directory)
                                     properties: [NSDictionary dictionary]]
                   writeToFile: screenshot
                    atomically: YES];
+            }
+          NSDictionary *ownerEndpoint = [[preview
+              valueForKey: @"_endpointViews"] objectForKey: @"NSOwner"];
+          NSView *ownerView = [ownerEndpoint objectForKey: @"view"];
+          NSRect ownerRect =
+              [ownerEndpoint objectForKey: @"rect"]
+                  ? [[ownerEndpoint objectForKey: @"rect"] rectValue]
+                  : [ownerView bounds];
+          NSPoint ownerPoint = [ownerView
+              convertPoint: NSMakePoint (NSMidX (ownerRect), NSMidY (ownerRect))
+                    toView: nil];
+          [preview connectSelectionAtWindowPoint: ownerPoint];
+          id connectionInspector = [[document valueForKey: @"_nativeInspectors"]
+              objectForKey: @"GormConnectionInspector"];
+          testAssert (
+              [[document valueForKey: @"_selectedName"] isEqual: controlName] &&
+                  [[[document valueForKey: @"_destination"] titleOfSelectedItem]
+                      isEqual: @"NSOwner"],
+              @"Canvas connection gestures preserve the source and select the destination across panes");
+          NSBrowser *outlets = [connectionInspector valueForKey: @"newBrowser"];
+          [outlets setPath: @"/delegate"];
+          [outlets sendAction];
+          NSNibConnector *pending =
+              [connectionInspector valueForKey: @"currentConnector"];
+          BOOL validConnection =
+              [pending source] == control &&
+              [pending destination] ==
+                  [model performSelector: @selector (objectForName:)
+                              withObject: @"NSOwner"];
+          testAssert (
+              validConnection,
+              @"Gorm's Connections inspector offers an outlet between the chosen objects");
+          if (validConnection)
+            {
+              [connectionInspector performSelector: @selector (ok:)
+                                        withObject: nil];
+              testAssert (
+                  [[model valueForKey: @"connections"] containsObject: pending]
+                      && [document isModified],
+                  @"The native Connect button creates a persistent connection in Ycode");
+            }
+          [outlets setPath: @"/target"];
+          [outlets sendAction];
+          NSArray *actions = [connectionInspector valueForKey: @"actions"];
+          testAssert (
+              [actions count] > 0,
+              @"Gorm lists actions on the selected connection destination");
+          if ([actions count])
+            {
+              [outlets
+                  setPath: [@"/target/"
+                              stringByAppendingString: [actions
+                                                          objectAtIndex: 0]]];
+              [outlets sendAction];
+              pending = [connectionInspector valueForKey: @"currentConnector"];
+              BOOL validAction =
+                  [pending isKindOfClass: [NSNibControlConnector class]] &&
+                  [pending source] == control && [pending destination] != nil;
+              testAssert (
+                  validAction,
+                  @"The native inspector prepares target/action connections");
+              if (validAction)
+                {
+                  [connectionInspector performSelector: @selector (ok:)
+                                            withObject: nil];
+                  testAssert (
+                      [[model valueForKey: @"connections"]
+                          containsObject: pending],
+                      @"The native Connect button creates target/action connections");
+                }
             }
           [editorView removeFromSuperview];
           [sidebar removeFromSuperview];
@@ -5303,6 +5519,16 @@ testGormEditor (NSString *directory)
             testAssert (
                 [control tag] == 417,
                 @"Native inspector attribute changes survive save and reopen");
+          if (libraryObjectName)
+            {
+              id inserted = [model performSelector: @selector (objectForName:)
+                                        withObject: libraryObjectName];
+              testAssert (
+                  [inserted isKindOfClass: [NSSlider class]] &&
+                      [inserted superview],
+                  @"Widgets inserted from the Gorm library survive save and reopen");
+              [libraryObjectName release];
+            }
           NSArray *connections = [NSArray
               arrayWithArray: [model performSelector: @selector (connections)]];
           NSEnumerator *connectionEnumerator = [connections objectEnumerator];
@@ -5413,6 +5639,30 @@ testGormEditor (NSString *directory)
               NSWidth ([[activeScroll contentView] bounds])
                   >= NSWidth ([activeInspector frame]),
               @"The project widens a 250-point sidebar enough to fit Gorm inspector controls");
+          if ([activeDocument hasWidgetLibrary])
+            {
+              [windowController toggleWidgetLibrary: nil];
+              testAssert (
+                  [[activeDocument valueForKey: @"_libraryVisible"] boolValue]
+                      && NSWidth ([[activeScroll contentView] bounds])
+                             >= NSWidth ([activeInspector frame]),
+                  @"The toolbar library action opens the library at its full width");
+              [windowController toggleWidgetLibrary: nil];
+              testAssert (
+                  ![[activeDocument valueForKey: @"_libraryVisible"] boolValue],
+                  @"The toolbar library action closes the library again");
+            }
+          NSArray *toolbarItems = [[[windowController window] toolbar] items];
+          NSArray *toolbarIdentifiers =
+              [toolbarItems valueForKey: @"itemIdentifier"];
+          NSUInteger libraryIndex =
+              [toolbarIdentifiers indexOfObject: @"library"];
+          testAssert (
+              libraryIndex != NSNotFound
+                  && libraryIndex + 1 < [toolbarIdentifiers count] &&
+                  [[toolbarIdentifiers objectAtIndex: libraryIndex + 1]
+                      isEqual: @"navigator"],
+              @"The plus button sits beside the pane expansion controls");
           [project close];
           [windowController close];
           [windowController release];

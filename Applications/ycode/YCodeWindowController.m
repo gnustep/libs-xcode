@@ -1237,6 +1237,33 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
           [defaults setBool: YES forKey: @"YCodeBuildStatusToolbarItemAdded"];
           [defaults synchronize];
         }
+      if (![defaults boolForKey: @"YCodeLibraryToolbarItemAdded"])
+        {
+          NSArray *identifiers =
+              [[_toolbar items] valueForKey: @"itemIdentifier"];
+          if (![identifiers containsObject: @"library"])
+            {
+              NSUInteger index = [identifiers indexOfObject: @"navigator"];
+              [_toolbar insertItemWithItemIdentifier: @"library"
+                                             atIndex: index == NSNotFound
+                                                         ? [identifiers count]
+                                                         : index];
+            }
+#ifdef GNUSTEP
+          NSMutableDictionary *configuration = [NSMutableDictionary
+              dictionaryWithDictionary:
+                  [defaults
+                      dictionaryForKey: @"NSToolbar Config YCodeMainToolbar"]
+                      ?: [NSDictionary dictionary]];
+          [configuration
+              setObject: [[_toolbar items] valueForKey: @"itemIdentifier"]
+                 forKey: @"items"];
+          [defaults setObject: configuration
+                       forKey: @"NSToolbar Config YCodeMainToolbar"];
+#endif
+          [defaults setBool: YES forKey: @"YCodeLibraryToolbarItemAdded"];
+          [defaults synchronize];
+        }
       // Add the bottom-pane control to existing layouts once.
       if (![defaults boolForKey: @"YCodeBottomToolbarItemAdded"])
         {
@@ -2032,6 +2059,17 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
   [self setNavigatorVisible: !_navigatorVisible];
 }
 
+- (IBAction) toggleWidgetLibrary: (id)sender
+{
+  YCodeEditorDocument *document = [_editorController currentDocument];
+  if ([document hasWidgetLibrary])
+    {
+      [self setInspectorVisible: YES];
+      [document toggleWidgetLibrary];
+      [self updateInspectors: nil];
+    }
+}
+
 - (IBAction) toggleInspector: (id)sender
 {
   [self setInspectorVisible: !_inspectorVisible];
@@ -2270,6 +2308,8 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
 
 - (BOOL) validateToolbarItem: (NSToolbarItem *)item
 {
+  if ([item action] == @selector (toggleWidgetLibrary:))
+    return [[_editorController currentDocument] hasWidgetLibrary];
   if ([item action] == @selector (selectArchitecture:))
     return _project != nil && ![[_project buildSystem] isBusy];
   if ([item action] == @selector (selectBuildTarget:))
@@ -3509,20 +3549,20 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                                 @"stepOut", @"restart", @"go", @"up", @"down",
                                 YCodeToolbarSeparatorItemIdentifier, @"scheme",
                                 @"architecture", @"buildStatus", @"navigator",
-                                @"bottom", @"inspector",
+                                @"library", @"bottom", @"inspector",
                                 NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 - (NSArray *) toolbarDefaultItemIdentifiers: (NSToolbar *)toolbar
 {
-  return [NSArray arrayWithObjects: @"clean", @"build", @"run", @"debug",
-                                   @"stop", @"pause", @"continue", @"next",
-                                   @"stepInto", @"stepOut",
-                                   YCodeToolbarSeparatorItemIdentifier,
-                                   @"scheme", @"architecture", @"buildStatus",
-                                   YCodeToolbarSeparatorItemIdentifier,
-                                   NSToolbarFlexibleSpaceItemIdentifier,
-                                   @"navigator", @"bottom", @"inspector", nil];
+  return [NSArray
+      arrayWithObjects: @"clean", @"build", @"run", @"debug", @"stop", @"pause",
+                       @"continue", @"next", @"stepInto", @"stepOut",
+                       YCodeToolbarSeparatorItemIdentifier, @"scheme",
+                       @"architecture", @"buildStatus",
+                       YCodeToolbarSeparatorItemIdentifier,
+                       NSToolbarFlexibleSpaceItemIdentifier, @"library",
+                       @"navigator", @"bottom", @"inspector", nil];
 }
 
 - (NSToolbarItem *) toolbar: (NSToolbar *)toolbar
@@ -3650,6 +3690,15 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       [item setTarget: self];
       [item setAction: @selector (stopProject:)];
       [item setImage: YCodeControlIcon (@"stop", 24)];
+    }
+  else if ([itemIdentifier isEqualToString: @"library"])
+    {
+      [item setLabel: @"Library"];
+      [item setPaletteLabel: @"Widget Library"];
+      [item setToolTip: @"Show or hide the widget library"];
+      [item setTarget: self];
+      [item setAction: @selector (toggleWidgetLibrary:)];
+      [item setImage: YCodeControlIcon (@"plus", 24)];
     }
   else if ([itemIdentifier isEqualToString: @"navigator"])
     {

@@ -164,12 +164,14 @@ static const CGFloat YCModelTitleHeight = 22;
 @interface YCModelWindowFrame : NSView
 {
   NSUInteger _previewStyle;
+  NSView *_modelContentView;
 }
 
 - (id) initWithContentView: (NSView *)view
                     title: (NSString *)title
                 styleMask: (NSUInteger)style;
 - (BOOL) isTitlePoint: (NSPoint)point;
+- (NSView *) modelContentView;
 @end
 
 /* Intercept input before it reaches any archived control. The surrounding
@@ -186,6 +188,7 @@ static const CGFloat YCModelTitleHeight = 22;
   NSPoint _dragOffset;
   YCodeModelEditorDocument *_editingOwner;
   NSPoint _editStart;
+  BOOL _connecting;
 }
 
 - (void) setObjectsPane: (BOOL)flag;
@@ -224,6 +227,7 @@ static const CGFloat YCModelTitleHeight = 22;
 - (void) setEditingOwner: (YCodeModelEditorDocument *)owner
 {
   _editingOwner = owner;
+  [self registerForDraggedTypes: [owner modelPasteboardTypes]];
 }
 
 - (void) dealloc
@@ -367,6 +371,31 @@ static const CGFloat YCModelTitleHeight = 22;
   return [super hitTest: point] ? self : nil;
 }
 
+- (NSDragOperation) draggingEntered: (id<NSDraggingInfo>)sender
+{
+  return [_editingOwner acceptModelDrag: sender inCanvas: self testing: YES]
+             ? NSDragOperationCopy
+             : NSDragOperationNone;
+}
+
+- (NSDragOperation) draggingUpdated: (id<NSDraggingInfo>)sender
+{
+  [self autoscroll: [NSApp currentEvent]];
+  return [self draggingEntered: sender];
+}
+
+- (BOOL) prepareForDragOperation: (id<NSDraggingInfo>)sender
+{
+  return [_editingOwner acceptModelDrag: sender inCanvas: self testing: YES];
+}
+
+- (BOOL) performDragOperation: (id<NSDraggingInfo>)sender
+{
+  /* Insertion rebuilds the snapshot containing this canvas. */
+  [[self retain] autorelease];
+  return [_editingOwner acceptModelDrag: sender inCanvas: self testing: NO];
+}
+
 - (void) mouseDown: (NSEvent *)event
 {
   NSPoint point = [self convertPoint: [event locationInWindow] fromView: nil];
@@ -377,6 +406,7 @@ static const CGFloat YCModelTitleHeight = 22;
   if ([_editingOwner hasEditingDelegate])
     {
       _editStart = [event locationInWindow];
+      _connecting = ([event modifierFlags] & NSControlKeyMask) != 0;
       [_editingOwner selectAtPoint: point inCanvas: self];
       return;
     }
@@ -424,6 +454,13 @@ static const CGFloat YCModelTitleHeight = 22;
 
 - (void) mouseUp: (NSEvent *)event
 {
+  if ([_editingOwner hasEditingDelegate] && _connecting)
+    {
+      [[self retain] autorelease];
+      [_editingOwner connectSelectionAtWindowPoint: [event locationInWindow]];
+      _connecting = NO;
+      return;
+    }
   if ([_editingOwner hasEditingDelegate] && !_objectsPane)
     {
       [[self retain] autorelease];
@@ -465,6 +502,11 @@ YCModelTitleSegment (NSRect rect)
 }
 
 @implementation YCModelWindowFrame
+- (NSView *) modelContentView
+{
+  return _modelContentView;
+}
+
 - (id) initWithContentView: (NSView *)view
                     title: (NSString *)title
                 styleMask: (NSUInteger)style
@@ -475,6 +517,7 @@ YCModelTitleSegment (NSRect rect)
                                                size.height + barHeight + 2)]))
     {
       _previewStyle = style;
+      _modelContentView = view;
       [view removeFromSuperview];
       [view setFrameOrigin: NSMakePoint (1, 1)];
       [self addSubview: view];
@@ -793,6 +836,56 @@ YCConnectionRow (id connection, NSDictionary *names)
   _editingDelegate = delegate;
 }
 
+- (NSArray *) modelPasteboardTypes
+{
+  return [_editingDelegate modelPasteboardTypes];
+}
+
+- (BOOL) acceptModelDrag: (id<NSDraggingInfo>)drag
+               inCanvas: (NSView *)canvas
+                testing: (BOOL)testing
+{
+  if (!_editingDelegate)
+    return NO;
+  NSPoint point = [canvas convertPoint: [drag draggingLocation] fromView: nil];
+  NSString *selected = nil;
+  NSPoint local = NSZeroPoint;
+  CGFloat smallest = 1.0e30;
+  NSEnumerator *names = [_endpointViews keyEnumerator];
+  NSString *name;
+  NSPasteboard *pasteboard = [drag draggingPasteboard];
+  while ((name = [names nextObject]))
+    {
+      if (![name isKindOfClass: [NSString class]])
+        continue;
+      NSView *view = [[_endpointViews objectForKey: name] objectForKey: @"view"];
+      id object = [_namedObjects objectForKey: name];
+      if ([view isKindOfClass: [YCModelWindowFrame class]])
+        view = [(YCModelWindowFrame *)view modelContentView];
+      if ([object isKindOfClass: [NSBox class]])
+        view = [object contentView];
+      if (![view isDescendantOf: canvas])
+        continue;
+      NSPoint location = [view convertPoint: point fromView: canvas];
+      NSRect bounds = [view bounds];
+      CGFloat area = NSWidth (bounds) * NSHeight (bounds);
+      if (NSPointInRect (location, bounds) && area < smallest &&
+          [_editingDelegate acceptModelPasteboard: pasteboard
+                                           target: name
+                                            point: location
+                                          testing: YES])
+        {
+          smallest = area;
+          selected = name;
+          local = location;
+        }
+    }
+  return [_editingDelegate acceptModelPasteboard: pasteboard
+                                          target: selected
+                                           point: local
+                                         testing: testing];
+}
+
 - (BOOL) hasEditingDelegate
 {
   return _editingDelegate != nil;
@@ -822,7 +915,7 @@ YCConnectionRow (id connection, NSDictionary *names)
   [[_objectScrollView documentView] setNeedsDisplay: YES];
 }
 
-- (void) selectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas
+- (NSString *) modelObjectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas
 {
   NSMutableArray *keys = [NSMutableArray array];
   NSEnumerator *allKeys = [_endpointViews keyEnumerator];
@@ -853,8 +946,33 @@ YCConnectionRow (id connection, NSDictionary *names)
           selected = name;
         }
     }
+  return selected;
+}
+
+- (void) selectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas
+{
+  NSString *selected = [self modelObjectAtPoint: point inCanvas: canvas];
   [self selectModelObjectNamed: selected];
   [_editingDelegate selectModelObjectNamed: selected];
+}
+
+- (void) connectSelectionAtWindowPoint: (NSPoint)point
+{
+  NSView *canvases[]
+      = { [_scrollView documentView], [_objectScrollView documentView] };
+  NSUInteger i;
+  for (i = 0; i < 2; i++)
+    {
+      NSPoint local = [canvases[i] convertPoint: point fromView: nil];
+      if (NSPointInRect (local, [canvases[i] visibleRect]))
+        {
+          NSString *destination = [self modelObjectAtPoint: local
+                                                  inCanvas: canvases[i]];
+          if (destination)
+            [_editingDelegate beginModelConnectionTo: destination];
+          return;
+        }
+    }
 }
 
 - (void) moveSelectionBy: (NSSize)delta resize: (BOOL)resize
@@ -1604,7 +1722,7 @@ YCConnectionRow (id connection, NSDictionary *names)
   [self
       addLabel:
           _editingDelegate
-              ? @"Use Inspector in the toolbar to edit attributes, add objects, and connect them."
+              ? @"Use + for widgets. Control-drag between objects to connect them in Inspector."
               : @"Custom controls use available base classes. Application code is not loaded."
       toCanvas: canvas
              y: &y];

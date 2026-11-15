@@ -91,6 +91,9 @@
 - (NSView *) editorView;
 /** Optional editor-specific content hosted in Ycode's inspector sidebar. */
 - (NSView *) inspectorView;
+/** Optional widget-library support, supplied by editing bundles. */
+- (BOOL) hasWidgetLibrary;
+- (void) toggleWidgetLibrary;
 - (NSTextView *) textView;
 - (NSScrollView *) scrollView;
 

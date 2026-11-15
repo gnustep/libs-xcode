@@ -28,6 +28,7 @@
 #import "../Model/YCodeModelEditorDocument.h"
 #import <GormCore/GormAbstractDelegate.h>
 #import <InterfaceBuilder/IBInspector.h>
+#import <InterfaceBuilder/IBPalette.h>
 #import <GormCore/GormNSWindow.h>
 #import <GormCore/GormDocument.h>
 #import <GormCore/GormClassManager.h>
@@ -41,6 +42,13 @@
 @interface YCodeHostedGormDocument : GormDocument
 @end
 @implementation YCodeHostedGormDocument
+/* Gorm's paste path asks for the document window; the host has no floating
+ * document controller. Canvas drop coordinates are supplied separately. */
+- (NSWindow *) window
+{
+  return nil;
+}
+
 - (void) touch
 {
   [super touch];
@@ -104,9 +112,48 @@
 
 @end
 
+/* Resolve the optional widget library at runtime for older Gorm libraries. */
+@interface NSObject (YCodeWidgetLibrary)
+- (void) addPalette: (IBPalette *)palette;
+- (NSPanel *) panel;
+@end
+
 @interface YCodeGormPalettesManager : GormPalettesManager
+{
+  BOOL _loadedBuiltins;
+}
+
+- (NSArray *) libraryPalettes;
 @end
 @implementation YCodeGormPalettesManager
+- (NSArray *) libraryPalettes
+{
+  if (!_loadedBuiltins)
+    {
+      _loadedBuiltins = YES;
+      NSString *path =
+          [[NSWorkspace sharedWorkspace] fullPathForApplication: @"Gorm"];
+      NSBundle *bundle = path ? [NSBundle bundleWithPath: path] : nil;
+      NSArray *paths = [[bundle pathsForResourcesOfType: @"palette"
+                                            inDirectory: nil]
+          sortedArrayUsingSelector: @selector (compare:)];
+      NSEnumerator *e = [paths objectEnumerator];
+      NSString *palette;
+      while ((palette = [e nextObject]))
+        {
+          BOOL loaded = NO;
+          NSEnumerator *existing = [bundles objectEnumerator];
+          NSBundle *item;
+          while ((item = [existing nextObject]))
+            if ([[item bundlePath] isEqual: palette])
+              loaded = YES;
+          if (!loaded)
+            [self loadPalette: palette];
+        }
+    }
+  return palettes;
+}
+
 - (id) init
 {
   self = [super init];
@@ -127,6 +174,7 @@
 
 + (YCodeGormServices *) sharedServices;
 - (void) setActiveDocument: (GormDocument *)document;
+- (void) beginConnectionFrom: (id)source to: (id)destination;
 @end
 @implementation YCodeGormServices
 + (YCodeGormServices *) sharedServices
@@ -175,6 +223,13 @@
   _activeDocument = document;
 }
 
+- (void) beginConnectionFrom: (id)source to: (id)destination
+{
+  _connectSource = source;
+  _connectDestination = destination;
+  _isConnecting = source != nil && destination != nil;
+}
+
 /* Embedded inspectors must never draw connection lines on graph windows. */
 - (void) displayConnectionBetween: (id)source and: (id)destination
 {
@@ -195,6 +250,9 @@
   YCodeModelEditorDocument *_preview;
   NSView *_inspector;
   NSView *_objectControls;
+  id _widgetLibrary;
+  NSBox *_librarySection;
+  BOOL _libraryVisible;
   NSMutableDictionary *_nativeInspectors;
   NSMutableDictionary *_nativeSections;
   id _inspectedObject;
@@ -215,6 +273,7 @@
 - (void) gormDocumentChanged: (NSNotification *)notification;
 - (void) applyAttributes: (id)sender;
 - (void) chooseObject: (id)sender;
+- (void) chooseDestination: (id)sender;
 - (void) addObject: (id)sender;
 - (void) deleteObject: (id)sender;
 - (void) addConnection: (id)sender;
@@ -333,6 +392,25 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
       _objectControls = [_inspector retain];
       _nativeInspectors = [NSMutableDictionary new];
       _nativeSections = [NSMutableDictionary new];
+      Class libraryClass = NSClassFromString (@"GormWidgetLibrary");
+      if (libraryClass)
+        {
+          _widgetLibrary = [libraryClass new];
+          NSArray *palettes =
+              [(YCodeGormPalettesManager *)[[YCodeGormServices sharedServices]
+                  palettesManager] libraryPalettes];
+          NSEnumerator *e = [palettes objectEnumerator];
+          IBPalette *palette;
+          while ((palette = [e nextObject]))
+            [_widgetLibrary addPalette: palette];
+          NSView *libraryView = [[_widgetLibrary panel] contentView];
+          [libraryView removeFromSuperview];
+          [libraryView setFrameSize: NSMakeSize (480, 360)];
+          _librarySection =
+              [[NSBox alloc] initWithFrame: NSMakeRect (0, 0, 504, 400)];
+          [_librarySection setTitle: @"Widget Library"];
+          [_librarySection setContentView: libraryView];
+        }
       _fields = [NSMutableDictionary new];
       _objects =
           [[NSPopUpButton alloc] initWithFrame: NSMakeRect (8, 650, 264, 28)
@@ -378,6 +456,8 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
       _destination =
           [[NSPopUpButton alloc] initWithFrame: NSMakeRect (8, 240, 264, 28)
                                      pullsDown: NO];
+      [_destination setTarget: self];
+      [_destination setAction: @selector (chooseDestination:)];
       [_inspector addSubview: _destination];
       _connectionType =
           [[NSPopUpButton alloc] initWithFrame: NSMakeRect (8, 204, 264, 28)
@@ -396,7 +476,7 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
           [[NSTextField alloc] initWithFrame: NSMakeRect (8, 10, 264, 104)];
       [instructions
           setStringValue:
-              @"Select objects on the canvas or in the list above. Drag to move; Shift-drag to resize. Connections use the selected object as source and the destination chosen above. Select a connection in the canvas table to disconnect it."];
+              @"Select objects on the canvas or in the list above. Drag to move; Shift-drag to resize. Control-drag from a source to a destination on the canvas, then choose an outlet or action in Connections and click Connect. Alternatively, choose the destination above. Select a connection in the canvas table to disconnect it."];
       [instructions setEditable: NO];
       [instructions setBezeled: NO];
       [instructions setDrawsBackground: NO];
@@ -421,6 +501,8 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   [_nativeSections release];
   [_nativeInspectors release];
   [_objectControls release];
+  [_librarySection release];
+  [_widgetLibrary release];
   [_preview setEditingDelegate: nil];
   if ([[YCodeGormServices sharedServices] activeDocument] == _document)
     [[YCodeGormServices sharedServices] setActiveDocument: nil];
@@ -436,6 +518,51 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   [_selectedName release];
   [_diskState release];
   [super dealloc];
+}
+
+- (BOOL) hasWidgetLibrary
+{
+  return _librarySection != nil;
+}
+
+- (void) toggleWidgetLibrary
+{
+  _libraryVisible = !_libraryVisible;
+  _inspectedObject = nil;
+  /* Force a layout even when no object is selected. */
+  NSArray *views = [[_inspector subviews] copy];
+  NSEnumerator *e = [views objectEnumerator];
+  NSView *view;
+  while ((view = [e nextObject]))
+    [view removeFromSuperview];
+  [views release];
+  [self refreshNativeInspectors];
+  if (_libraryVisible)
+    [_librarySection scrollRectToVisible: [_librarySection bounds]];
+}
+
+- (void) beginModelConnectionTo: (NSString *)name
+{
+  if (!name || ![_document objectForName: name] || !_selectedName)
+    return;
+  [_destination selectItemWithTitle: name];
+  [self chooseDestination: nil];
+}
+
+- (void) chooseDestination: (id)sender
+{
+  id source = [_document objectForName: _selectedName];
+  id destination =
+      [_document objectForName: [_destination titleOfSelectedItem]];
+  YCodeGormServices *services = [YCodeGormServices sharedServices];
+  [services setActiveDocument: _document];
+  [services beginConnectionFrom: source to: destination];
+  NSString *name = [source connectInspectorClassName];
+  IBInspector *inspector = name ? [_nativeInspectors objectForKey: name] : nil;
+  [inspector setObject: source];
+  NSView *section = name ? [_nativeSections objectForKey: name] : nil;
+  if (section)
+    [section scrollRectToVisible: [section bounds]];
 }
 
 - (BOOL) isEditable
@@ -550,6 +677,8 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
 
 - (void) selectModelObjectNamed: (NSString *)name
 {
+  if (![_selectedName isEqual: name])
+    [[YCodeGormServices sharedServices] beginConnectionFrom: nil to: nil];
   ASSIGN (_selectedName, name);
   [_preview selectModelObjectNamed: name];
   [[YCodeGormServices sharedServices] setActiveDocument: _document];
@@ -605,7 +734,12 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
                       @selector (bindingsInspectorClassName),
                       @selector (helpInspectorClassName) };
   NSMutableArray *sections = [NSMutableArray array];
-  CGFloat width = 296;
+  CGFloat width = 312;
+  if (_librarySection && _libraryVisible)
+    {
+      [sections addObject: _librarySection];
+      width = MAX (width, NSWidth ([_librarySection frame]) + 16);
+    }
   NSUInteger i;
   for (i = 0; selected && i < [titles count]; i++)
     {
@@ -813,6 +947,75 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   [self changed];
 }
 
+- (NSArray *) modelPasteboardTypes
+{
+  return [NSArray arrayWithObjects: IBViewPboardType, IBWindowPboardType,
+                                   IBMenuPboardType, IBMenuCellPboardType,
+                                   IBObjectPboardType, IBFormatterPboardType,
+                                   nil];
+}
+
+- (BOOL) acceptModelPasteboard: (NSPasteboard *)pasteboard
+                       target: (NSString *)name
+                        point: (NSPoint)point
+                      testing: (BOOL)testing
+{
+  NSString *type =
+      [pasteboard availableTypeFromArray: [self modelPasteboardTypes]];
+  id parent = name ? [_document objectForName: name] : nil;
+  if (!type)
+    return NO;
+  if ([type isEqual: IBViewPboardType])
+    {
+      if ([parent isKindOfClass: [NSWindow class]])
+        parent = [parent contentView];
+      if ([parent isKindOfClass: [NSBox class]])
+        parent = [parent contentView];
+      if (![parent isKindOfClass: [NSView class]] ||
+          [parent isKindOfClass: [NSControl class]])
+        return NO;
+    }
+  else if ([type isEqual: IBMenuCellPboardType])
+    {
+      if (![parent isKindOfClass: [NSMenu class]])
+        return NO;
+    }
+  else if ([type isEqual: IBFormatterPboardType])
+    {
+      if (![parent respondsToSelector: @selector (setFormatter:)])
+        return NO;
+    }
+  else
+    parent = nil;
+  if (testing)
+    return YES;
+  [[YCodeGormServices sharedServices] setActiveDocument: _document];
+  NSArray *inserted = [_document pasteType: type
+                            fromPasteboard: pasteboard
+                                    parent: parent];
+  NSEnumerator *e = [inserted objectEnumerator];
+  id object;
+  while ((object = [e nextObject]))
+    {
+      if ([type isEqual: IBViewPboardType])
+        {
+          NSRect frame = [object frame];
+          frame.origin = NSMakePoint (MAX (0, point.x), MAX (0, point.y));
+          [object setFrame: frame];
+          [parent addSubview: object];
+        }
+      else if ([type isEqual: IBMenuCellPboardType])
+        [parent addItem: object];
+      else if ([type isEqual: IBFormatterPboardType])
+        [parent setFormatter: object];
+      ASSIGN (_selectedName, [_document nameForObject: object]);
+    }
+  if (![inserted count])
+    return NO;
+  [self changed];
+  return YES;
+}
+
 - (void) addObject: (id)sender
 {
   NSString *kind = [_newObject titleOfSelectedItem];
@@ -906,6 +1109,17 @@ YCWriteGormWrapper (NSFileWrapper *wrapper, NSString *path, NSError **error)
   [connector setSource: source];
   [connector setDestination: destination];
   [connector setLabel: label];
+  NSEnumerator *existing =
+      [[NSArray arrayWithArray: [_document connections]] objectEnumerator];
+  NSNibConnector *previous;
+  while ((previous = [existing nextObject]))
+    if ([previous source] == source
+        && (([connector isKindOfClass: [NSNibControlConnector class]] &&
+             [previous isKindOfClass: [NSNibControlConnector class]])
+            || ([connector isKindOfClass: [NSNibOutletConnector class]] &&
+                [previous isKindOfClass: [NSNibOutletConnector class]] &&
+                [[previous label] isEqual: label])))
+      [_document removeConnector: (id<IBConnectors>)previous];
   [_document addConnector: (id<IBConnectors>)connector];
   [connector release];
   [self changed];

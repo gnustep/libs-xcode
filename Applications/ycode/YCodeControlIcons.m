@@ -211,6 +211,11 @@ YCodeControlIcon (NSString *name, CGFloat size)
       [path closePath];
       [path fill];
     }
+  else if ([name isEqual: @"plus"])
+    {
+      YCLine (5, 12, 19, 12);
+      YCLine (12, 5, 12, 19);
+    }
   else if ([name isEqual: @"navigator"] || [name isEqual: @"inspector"] ||
            [name isEqual: @"bottom"])
     {

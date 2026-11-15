@@ -29,6 +29,12 @@
 @protocol YCModelEditing
 - (void) selectModelObjectNamed: (NSString *)name;
 - (void) moveSelectedModelBy: (NSSize)delta resize: (BOOL)resize;
+- (void) beginModelConnectionTo: (NSString *)name;
+- (NSArray *) modelPasteboardTypes;
+- (BOOL) acceptModelPasteboard: (NSPasteboard *)pasteboard
+                       target: (NSString *)name
+                        point: (NSPoint)point
+                      testing: (BOOL)testing;
 @end
 @interface YCodeModelEditorDocument : YCodeEditorDocument
 {
@@ -54,6 +60,12 @@
 - (BOOL) loadGormData: (NSData *)data;
 - (void) selectModelObjectNamed: (NSString *)name;
 - (BOOL) hasEditingDelegate;
+- (NSArray *) modelPasteboardTypes;
+- (BOOL) acceptModelDrag: (id<NSDraggingInfo>)drag
+               inCanvas: (NSView *)canvas
+                testing: (BOOL)testing;
+- (void) connectSelectionAtWindowPoint: (NSPoint)point;
+- (NSString *) modelObjectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas;
 - (void) selectAtPoint: (NSPoint)point inCanvas: (NSView *)canvas;
 - (void) moveSelectionBy: (NSSize)delta resize: (BOOL)resize;
 - (void) drawSelectionInCanvas: (NSView *)canvas;

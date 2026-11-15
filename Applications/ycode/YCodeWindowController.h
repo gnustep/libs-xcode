@@ -157,6 +157,7 @@
  */
 - (IBAction) toggleNavigator: (id)sender;
 - (IBAction) toggleInspector: (id)sender;
+- (IBAction) toggleWidgetLibrary: (id)sender;
 - (IBAction) toggleBottomPanel: (id)sender;
 /** Register an inspector once per identifier; subsequent calls are ignored. */
 - (void) registerInspectorView: (YCInspectorView *)inspector;

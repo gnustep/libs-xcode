@@ -119,6 +119,15 @@
   return nil;
 }
 
+- (BOOL) hasWidgetLibrary
+{
+  return NO;
+}
+
+- (void) toggleWidgetLibrary
+{
+}
+
 - (NSView *) inspectorView
 {
   return nil;

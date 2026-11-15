@@ -106,12 +106,25 @@ installed, Ycode also loads its palette bundles for specialized inspectors such
 as buttons, text fields, menus, and windows. Gorm is never launched, and its
 inspector views are embedded without floating editor windows.
 
+With Gorm's Widget Library available, a searchable library of installed palette
+prototypes can be opened with the **+** toolbar button beside the pane controls.
+The library starts closed; click **+** again to hide it. Drag a widget preview or
+its description onto a window or container on Ycode's canvas. Drop windows and
+menus onto empty canvas space, menu items onto a menu, and formatters onto a
+compatible control. The library uses Gorm's copy/paste APIs, preserving prototype
+settings and nested controls. Invalid destinations reject the drop. Added widgets
+are selected for inspection and saved with the interface. Older Gorm libraries
+without the Widget Library API retain the basic Add Object controls below.
+
 Select an object on the canvas or in the Interface inspector's object list.
 Drag to move it, or Shift-drag to resize. The inspector edits names, titles/text,
 and geometry, and adds windows, buttons, text fields, labels, views, menus, and
 menu items. Select a parent window, view, or menu before adding a child.
-Connections use the selected object as source, the destination popup, and an
-outlet or action name. Select a connection in the table and choose Disconnect
+Control-drag from the source object to the destination on the canvas or object
+pane to open Gorm's Connections inspector. Select an outlet, or expand `target`
+and select an action, then click **Connect**. The destination popup in Objects
+and Connections offers an alternative to dragging. That section also allows
+entering an outlet or action name directly. Select a connection in the table and choose Disconnect
 to remove it. Save and unsaved-change prompts use Ycode's normal document flow.
 The Objects and Connections section supplies object creation and direct
 connection editing alongside the native inspectors. Existing custom classes
