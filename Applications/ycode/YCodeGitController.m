@@ -202,6 +202,54 @@
   [_message setEnabled: _task == nil];
 }
 
+/* Read HEAD directly so cursor updates never launch a process or wait for Git.
+   A gitfile is used by linked worktrees and submodules. */
++ (NSString *) branchForDirectory: (NSString *)directory
+{
+  if (![directory length])
+    return nil;
+  directory = [directory stringByResolvingSymlinksInPath];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  NSCharacterSet *newlines = [NSCharacterSet newlineCharacterSet];
+  while ([directory length])
+    {
+      NSString *git = [directory stringByAppendingPathComponent: @".git"];
+      BOOL isDirectory = NO;
+      if ([manager fileExistsAtPath: git isDirectory: &isDirectory])
+        {
+          if (!isDirectory)
+            {
+              NSString *link =
+                  [NSString stringWithContentsOfFile: git
+                                            encoding: NSUTF8StringEncoding
+                                               error: NULL];
+              if (![link hasPrefix: @"gitdir: "])
+                return nil;
+              git = [[link substringFromIndex: 8]
+                  stringByTrimmingCharactersInSet: newlines];
+              if (![git isAbsolutePath])
+                git = [directory stringByAppendingPathComponent: git];
+            }
+          NSString *head =
+              [NSString stringWithContentsOfFile:
+                            [git stringByAppendingPathComponent: @"HEAD"]
+                                        encoding: NSUTF8StringEncoding
+                                           error: NULL];
+          NSString *prefix = @"ref: refs/heads/";
+          if (![head hasPrefix: prefix])
+            return nil;
+          NSString *branch = [[head substringFromIndex: [prefix length]]
+              stringByTrimmingCharactersInSet: newlines];
+          return [branch length] ? branch : nil;
+        }
+      NSString *parent = [directory stringByDeletingLastPathComponent];
+      if ([parent isEqual: directory])
+        break;
+      directory = parent;
+    }
+  return nil;
+}
+
 + (NSArray *) entriesFromStatusData: (NSData *)data
 {
   if ([data length]

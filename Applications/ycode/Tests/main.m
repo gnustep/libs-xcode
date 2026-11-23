@@ -6456,6 +6456,61 @@ testArchitectureSelection (NSString *temporaryDirectory)
   testAssert (
       [[statusField stringValue] isEqual: @"Architecture Project - Ready - —"],
       @"Status starts with the project name and Ready before any build");
+  NSString *gitDirectory = [directory stringByAppendingPathComponent: @".git"];
+  [manager createDirectoryAtPath: gitDirectory
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *head = [gitDirectory stringByAppendingPathComponent: @"HEAD"];
+  [@"ref: refs/heads/feature/status\n" writeToFile: head
+                                        atomically: YES
+                                          encoding: NSUTF8StringEncoding
+                                             error: NULL];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: NSApplicationDidBecomeActiveNotification
+                    object: NSApp];
+  testAssert (
+      [[statusField stringValue]
+          isEqual: @"Architecture Project - Git: feature/status - Ready - —"],
+      @"Status shows the current branch, including unborn branches");
+  testAssert (
+      [[YCodeGitController
+          branchForDirectory: [directory
+                                 stringByAppendingPathComponent: @"Sources"]]
+          isEqual: @"feature/status"],
+      @"Branch discovery searches parent directories");
+  [@"0123456789012345678901234567890123456789\n"
+      writeToFile: head
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName: NSApplicationDidBecomeActiveNotification
+                    object: NSApp];
+  testAssert (
+      [[statusField stringValue] isEqual: @"Architecture Project - Ready - —"],
+      @"Detached HEAD removes the branch from status on activation");
+  [manager removeItemAtPath: gitDirectory error: NULL];
+  NSString *metadata =
+      [directory stringByAppendingPathComponent: @"worktree metadata"];
+  [manager createDirectoryAtPath: metadata
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  [@"ref: refs/heads/worktree\n"
+      writeToFile: [metadata stringByAppendingPathComponent: @"HEAD"]
+       atomically: YES
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  [@"gitdir: worktree metadata\n" writeToFile: gitDirectory
+                                   atomically: YES
+                                     encoding: NSUTF8StringEncoding
+                                        error: NULL];
+  testAssert (
+      [[YCodeGitController branchForDirectory: directory] isEqual: @"worktree"],
+      @"Branch discovery follows relative gitfiles with spaces");
+  [manager removeItemAtPath: gitDirectory error: NULL];
+  [manager removeItemAtPath: metadata error: NULL];
   YCodeEditorController *editor = [window editorController];
   YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
       initWithFilePath: [directory stringByAppendingPathComponent: @"cursor.txt"]
@@ -11425,6 +11480,115 @@ testProjectWorkflows (NSString *temporaryDirectory)
   [document release];
 }
 
+@interface YCodeNonprintingTestDocument : YCodeEditorDocument
+@end
+@implementation YCodeNonprintingTestDocument
+@end
+
+static void
+testPrinting (void)
+{
+  YCodeEditorDocument *document = [[YCodeEditorDocument alloc]
+      initWithFilePath: @"/tmp/Ycode Printing Test.m"
+               content: @"unsaved text"];
+  NSTextView *editor = [document textView];
+  NSPrintInfo *info = [[NSPrintInfo sharedPrintInfo] copy];
+  NSMutableString *text = [NSMutableString string];
+  NSUInteger i;
+  NSPrintOperation *operation;
+  NSTextView *view;
+  NSAttributedString *original;
+  NSRect frame;
+  NSString *output = [NSTemporaryDirectory ()
+      stringByAppendingPathComponent: [[NSProcessInfo processInfo]
+                                         globallyUniqueString]];
+
+  [info setPaperSize: NSMakeSize (300, 400)];
+  [info setLeftMargin: 30];
+  [info setRightMargin: 30];
+  [info setTopMargin: 30];
+  [info setBottomMargin: 30];
+  for (i = 0; i < 100; i++)
+    [text
+        appendString:
+            @"Unsaved source with a long line that must wrap onto the next line of the printed page.\n"];
+  [document setContent: text];
+  [document setModified: YES];
+  [editor setSelectedRange: NSMakeRange (2, 5)];
+  [editor setTextColor: [NSColor whiteColor]];
+  [editor setBackgroundColor: [NSColor blackColor]];
+  original = [[NSAttributedString alloc]
+      initWithAttributedString: [editor textStorage]];
+  frame = [editor frame];
+  operation = [document printOperationWithPrintInfo: info];
+  view = (NSTextView *)[operation view];
+  testAssert (operation != nil && view != editor &&
+                  [[view string] isEqual: text],
+              @"Printing snapshots all unsaved text, not just the selection");
+  testAssert (NSWidth ([view frame]) <= 240 && NSHeight ([view frame]) > 340,
+              @"Long lines wrap and long documents span multiple pages");
+  testAssert ([[view textColor] isEqual: [NSColor blackColor]] &&
+                  [[view backgroundColor] isEqual: [NSColor whiteColor]],
+              @"Dark editor themes print as black text on white paper");
+  [[operation printInfo] setJobDisposition: NSPrintSaveJob];
+  [[[operation printInfo] dictionary] setObject: output forKey: NSPrintSavePath];
+  [operation setShowsPrintPanel: NO];
+  [operation setShowsProgressPanel: NO];
+  testAssert (
+      [operation runOperation] &&
+          [[[NSFileManager defaultManager] attributesOfItemAtPath: output
+                                                            error: NULL]
+              fileSize]
+              > 0,
+      @"Printing renders a document to a file without a printer dialog");
+  [[NSFileManager defaultManager] removeItemAtPath: output error: NULL];
+  testAssert (
+      NSEqualRects (frame, [editor frame])
+          && NSEqualRanges ([editor selectedRange], NSMakeRange (2, 5)) &&
+          [original isEqualToAttributedString: [editor textStorage]] &&
+          [document isModified],
+      @"Printing preserves editor layout, selection, styling, and unsaved state");
+  [document setContent: @""];
+  operation = [document printOperationWithPrintInfo: info];
+  testAssert (
+      operation != nil &&
+          [[(NSTextView *)[operation view] string] length] == 0,
+      @"Repeated printing takes a fresh snapshot, including empty files");
+  {
+    YCodeEditorDocument *unsupported =
+        [[YCodeNonprintingTestDocument alloc] initWithFilePath: @"preview"];
+    AppController *app = [[AppController alloc] init];
+    NSMenu *savedMenu = [[NSApp mainMenu] retain];
+    NSMenu *fileMenu;
+    NSMenuItem *printItem;
+    NSMenuItem *setupItem;
+    [NSApp setMainMenu: nil];
+    [app buildMainMenu];
+    fileMenu = [[[NSApp mainMenu] itemWithTitle: @"File"] submenu];
+    printItem = (NSMenuItem *)[fileMenu itemWithTitle: @"Print..."];
+    setupItem = (NSMenuItem *)[fileMenu itemWithTitle: @"Page Setup..."];
+    testAssert (
+        [printItem target] == app &&
+            [printItem action] == @selector (printDocument:) &&
+            [[printItem keyEquivalent] isEqual: @"p"] &&
+            [setupItem target] == app &&
+            [setupItem action] == @selector (runPageLayout:),
+        @"File menu routes Print and Page Setup to the application controller");
+    testAssert (
+        ![app validateMenuItem: printItem] && [app validateMenuItem: setupItem],
+        @"Print is disabled without a text editor while Page Setup remains available");
+    testAssert ([unsupported printOperationWithPrintInfo: info] == nil,
+                @"Non-text editor previews do not create print operations");
+    [NSApp setMainMenu: savedMenu];
+    [savedMenu release];
+    [app release];
+    [unsupported release];
+  }
+  [original release];
+  [info release];
+  [document release];
+}
+
 int
 main (void)
 {
@@ -11443,6 +11607,13 @@ main (void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject: @"--check-printing"])
+    {
+      testPrinting ();
+      NSLog (@"Ycode printing checks: %lu failures", (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-project-workflows"])
     {
       [NSApp finishLaunching];
@@ -12351,6 +12522,7 @@ main (void)
   testEditorBundleFiles (temporaryDirectory);
   testModelViewer (temporaryDirectory);
   testEditorFiles (temporaryDirectory);
+  testPrinting ();
   testProjectCenterImport (temporaryDirectory);
   testProjectCenterExport (temporaryDirectory);
   testResultNavigation (temporaryDirectory);

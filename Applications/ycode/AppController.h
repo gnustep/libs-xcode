@@ -105,6 +105,11 @@
                   productType: (NSString *)productType
          applicationFramework: (NSString *)applicationFramework;
 
+/** Prints the active text editor, including unsaved changes. */
+- (IBAction) printDocument: (id)sender;
+/** Configures paper size, orientation, and margins for subsequent printing. */
+- (IBAction) runPageLayout: (id)sender;
+
 /**
  * Saves the active source file, or the project when no source file is open.
  */

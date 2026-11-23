@@ -138,6 +138,49 @@
 {
 }
 
+- (NSPrintOperation *) printOperationWithPrintInfo: (NSPrintInfo *)info
+{
+  NSTextView *editor = [self textView];
+  NSPrintInfo *printInfo;
+  NSTextView *view;
+  NSPrintOperation *operation;
+  CGFloat width;
+  NSRange range;
+
+  if (editor == nil)
+    return nil;
+  printInfo = [info copy];
+  width = MAX (1.0, [printInfo paperSize].width - [printInfo leftMargin] -
+                        [printInfo rightMargin]);
+  [printInfo setHorizontalPagination: NSFitPagination];
+  [printInfo setVerticalPagination: NSAutoPagination];
+  [printInfo setHorizontallyCentered: NO];
+  [printInfo setVerticallyCentered: NO];
+
+  view = [[NSTextView alloc] initWithFrame: NSMakeRect (0, 0, width, 1)];
+  [view setMinSize: NSMakeSize (width, 1)];
+  [view setMaxSize: NSMakeSize (width, 1e7)];
+  [view setHorizontallyResizable: NO];
+  [view setVerticallyResizable: YES];
+  [[view textContainer] setContainerSize: NSMakeSize (width, 1e7)];
+  [[view textContainer] setWidthTracksTextView: YES];
+  [[view textStorage] setAttributedString: [editor textStorage]];
+  range = NSMakeRange (0, [[view string] length]);
+  [[view textStorage] removeAttribute: NSBackgroundColorAttributeName
+                                range: range];
+  [view setFont: [NSFont userFixedPitchFontOfSize: 10]];
+  [view setTextColor: [NSColor blackColor]];
+  [view setBackgroundColor: [NSColor whiteColor]];
+  [view setEditable: NO];
+  [view setSelectable: NO];
+  [view sizeToFit];
+  operation = [NSPrintOperation printOperationWithView: view
+                                             printInfo: printInfo];
+  RELEASE (view);
+  RELEASE (printInfo);
+  return operation;
+}
+
 - (BOOL) loadFromFile
 {
   return NO;

@@ -57,6 +57,8 @@
 - (void) show;
 - (void) close;
 - (BOOL) isBusy;
+/** Return the current local branch, or nil outside Git or with detached HEAD. */
++ (NSString *) branchForDirectory: (NSString *)directory;
 /** Decode porcelain v1 -z, including rename source paths. */
 + (NSArray *) entriesFromStatusData: (NSData *)data;
 - (IBAction) refresh: (id)sender;

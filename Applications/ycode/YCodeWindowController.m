@@ -561,6 +561,14 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
                      name: @"YCodeBuildStatusChanged"
                    object: nil];
       [center addObserver: self
+                 selector: @selector (updateBuildStatus:)
+                     name: NSApplicationDidBecomeActiveNotification
+                   object: nil];
+      [center addObserver: self
+                 selector: @selector (updateBuildStatus:)
+                     name: NSWindowDidBecomeKeyNotification
+                   object: [self window]];
+      [center addObserver: self
                  selector: @selector (bottomPanelResized:)
                      name: NSSplitViewDidResizeSubviewsNotification
                    object: _editorSplitView];
@@ -1338,6 +1346,10 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
     name = [name stringByDeletingPathExtension];
   if (![name length])
     name = @"No Project";
+  NSString *branch =
+      [YCodeGitController branchForDirectory: [_project projectDirectoryPath]];
+  if ([branch length])
+    name = [NSString stringWithFormat: @"%@ - Git: %@", name, branch];
   NSString *activity = @"Ready";
   switch ([[_project buildSystem] status])
     {

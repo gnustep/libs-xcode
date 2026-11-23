@@ -26,6 +26,8 @@ Use View to show or hide the Navigator, Inspector, and Debug Area. The bottom ar
 
 File > New File creates an editor tab. Save writes the active source file; Save As writes it to a selected location. Save All saves open edited files. Save Project saves project structure and settings separately from source edits. Close File closes the current editor tab and asks about unsaved changes.
 
+File > Print prints the active text file, including unsaved edits, in black text on white paper. Long lines wrap to the page width. File > Page Setup controls paper size, orientation, and margins. Image, sound, and model previews do not support printing.
+
 Use the navigator's context menu to add files or groups. Removing a file from an Xcode project removes its reference, leaving the original file on disk. Save Project after changing project membership. In folder projects, Add Group creates a directory on disk, and Refresh Folder updates the navigator after external changes.
 
 Edit > Find searches the current file; Edit > Replace changes matching text. The Search navigator searches across project files and lets you open matching locations. Edit > Comment/Uncomment Lines toggles comments for the selected lines. Convert Tabs to Spaces uses your configured tab width.

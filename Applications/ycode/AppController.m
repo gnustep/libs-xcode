@@ -281,6 +281,11 @@ YCodeFileURLFromPath (NSString *path)
   [fileMenu
       addItem: YCodeMenuItem (@"Export ProjectCenter Project...",
                              @selector (exportProjectCenter:), @"", self)];
+  [fileMenu addItem: [NSMenuItem separatorItem]];
+  [fileMenu addItem: YCodeMenuItem (@"Page Setup...",
+                                   @selector (runPageLayout:), @"P", self)];
+  [fileMenu addItem: YCodeMenuItem (@"Print...", @selector (printDocument:),
+                                   @"p", self)];
   menuItem = [[NSMenuItem alloc] initWithTitle: @"File"
                                         action: NULL
                                  keyEquivalent: @""];
@@ -675,6 +680,24 @@ YCodeFileURLFromPath (NSString *path)
       [errorAlert runModal];
       RELEASE (errorAlert);
     }
+}
+
+- (IBAction) runPageLayout: (id)sender
+{
+  NSPrintInfo *info = [[NSPrintInfo sharedPrintInfo] copy];
+  if ([[NSPageLayout pageLayout] runModalWithPrintInfo: info] == NSOKButton)
+    [NSPrintInfo setSharedPrintInfo: info];
+  RELEASE (info);
+}
+
+- (IBAction) printDocument: (id)sender
+{
+  YCodeEditorDocument *document =
+      [[self currentEditorController] currentDocument];
+  NSPrintOperation *operation =
+      [document printOperationWithPrintInfo: [NSPrintInfo sharedPrintInfo]];
+  if (operation != nil)
+    [operation runOperation];
 }
 
 - (IBAction) saveDocument: (id)sender
@@ -1174,6 +1197,8 @@ YCodeFileURLFromPath (NSString *path)
 - (BOOL) validateMenuItem: (NSMenuItem *)item
 {
   SEL action = [item action];
+  if (action == @selector (printDocument:))
+    return [[[self currentEditorController] currentDocument] textView] != nil;
   if (action == @selector (replaceInProject:)
       || action == @selector (showSourceControl:))
     return [self currentProject] != nil;

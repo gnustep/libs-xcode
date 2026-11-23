@@ -95,6 +95,8 @@
 /**
  * File operations
  */
+/** Returns a print operation for a snapshot of the text, or nil for non-text editors. */
+- (NSPrintOperation *) printOperationWithPrintInfo: (NSPrintInfo *)info;
 - (BOOL) loadFromFile;
 - (BOOL) saveToFile;
 - (BOOL) reloadFromFile;
