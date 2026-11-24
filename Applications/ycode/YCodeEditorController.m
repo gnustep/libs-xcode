@@ -118,24 +118,197 @@
 @end
 
 @implementation YCodeEditorTabView
+- (void) dealloc
+{
+  RELEASE (_previousTabsButton);
+  RELEASE (_nextTabsButton);
+  RELEASE (_visibleTabRects);
+  [super dealloc];
+}
+
+- (NSRect) contentRect
+{
+  NSRect rect = NSInsetRect ([self bounds], 3, 3);
+  rect.size.width = MAX (0, rect.size.width);
+  rect.size.height = MAX (0, rect.size.height - 28);
+  if ([self isFlipped])
+    rect.origin.y += 28;
+  return rect;
+}
+
+- (CGFloat) widthForTab: (NSTabViewItem *)item
+{
+  return MIN (240, MAX (60, [item sizeOfLabel: NO].width + 20));
+}
+
+// Use the same tab rectangles for drawing and hit testing, independently of
+// theme layouts which may silently omit overflowing tabs.
+- (void) layoutEditorTabs
+{
+  NSArray *items = [self tabViewItems];
+  NSUInteger count = [items count];
+  NSUInteger i;
+  CGFloat total = 0;
+  NSRect bounds = [self bounds];
+  CGFloat width = MAX (0, NSWidth (bounds) - 6);
+  CGFloat y = [self isFlipped] ? NSMinY (bounds) + 2 : NSMaxY (bounds) - 28;
+  CGFloat x = NSMinX (bounds) + 3;
+  CGFloat rightEdge;
+  BOOL overflow;
+
+  if (!_previousTabsButton)
+    {
+      _previousTabsButton = [[NSButton alloc] initWithFrame: NSZeroRect];
+      [_previousTabsButton setTitle: @"◀"];
+      [_previousTabsButton setToolTip: @"Show previous file tabs"];
+      [_previousTabsButton setTarget: self];
+      [_previousTabsButton setAction: @selector (scrollTabsLeft:)];
+      [self addSubview: _previousTabsButton];
+      _nextTabsButton = [[NSButton alloc] initWithFrame: NSZeroRect];
+      [_nextTabsButton setTitle: @"▶"];
+      [_nextTabsButton setToolTip: @"Show next file tabs"];
+      [_nextTabsButton setTarget: self];
+      [_nextTabsButton setAction: @selector (scrollTabsRight:)];
+      [self addSubview: _nextTabsButton];
+      _visibleTabRects = [[NSMutableArray alloc] init];
+    }
+  for (i = 0; i < count; i++)
+    total += [self widthForTab: [items objectAtIndex: i]];
+  overflow = count > 1 && total > width;
+  [_previousTabsButton setHidden: !overflow];
+  [_nextTabsButton setHidden: !overflow];
+  if (overflow)
+    {
+      CGFloat arrowWidth = MIN (24, width / 3);
+      [_previousTabsButton setFrame: NSMakeRect (x, y, arrowWidth, 26)];
+      [_nextTabsButton
+          setFrame: NSMakeRect (x + width - arrowWidth, y, arrowWidth, 26)];
+      x += arrowWidth;
+      width -= 2 * arrowWidth;
+    }
+  else
+    _firstVisibleTab = 0;
+  rightEdge = x + width;
+  if (count == 0)
+    _firstVisibleTab = 0;
+  else if (_firstVisibleTab >= count)
+    _firstVisibleTab = count - 1;
+
+  if (_revealSelectedTab && count)
+    {
+      NSInteger selected =
+          [self indexOfTabViewItem: [self selectedTabViewItem]];
+      if (selected != NSNotFound)
+        {
+          CGFloat required = 0;
+          if ((NSUInteger)selected < _firstVisibleTab)
+            _firstVisibleTab = selected;
+          for (i = _firstVisibleTab; i <= (NSUInteger)selected; i++)
+            required
+                += MIN (width, [self widthForTab: [items objectAtIndex: i]]);
+          while (required > width && _firstVisibleTab < (NSUInteger)selected)
+            {
+              required -= MIN (
+                  width,
+                  [self widthForTab: [items objectAtIndex: _firstVisibleTab]]);
+              _firstVisibleTab++;
+            }
+        }
+    }
+  _revealSelectedTab = NO;
+  [_visibleTabRects removeAllObjects];
+  _visibleTabEnd = _firstVisibleTab;
+  for (i = 0; i < count; i++)
+    {
+      NSRect rect = NSZeroRect;
+      if (i >= _firstVisibleTab && i == _visibleTabEnd)
+        {
+          CGFloat tabWidth
+              = MIN (width, [self widthForTab: [items objectAtIndex: i]]);
+          if (tabWidth > 0 && x + tabWidth <= rightEdge)
+            {
+              rect = NSMakeRect (x, y, tabWidth, 26);
+              x += tabWidth;
+              _visibleTabEnd = i + 1;
+            }
+        }
+      [_visibleTabRects addObject: [NSValue valueWithRect: rect]];
+    }
+  [_previousTabsButton setEnabled: _firstVisibleTab > 0];
+  [_nextTabsButton setEnabled: _visibleTabEnd < count];
+}
+
+- (void) scrollTabsLeft: (id)sender
+{
+  if (_firstVisibleTab > 0)
+    _firstVisibleTab--;
+  [self setNeedsDisplay: YES];
+}
+
+- (void) scrollTabsRight: (id)sender
+{
+  if (_visibleTabEnd < [[self tabViewItems] count])
+    _firstVisibleTab++;
+  [self setNeedsDisplay: YES];
+}
+
+- (void) selectTabViewItem: (NSTabViewItem *)item
+{
+  [super selectTabViewItem: item];
+  _revealSelectedTab = YES;
+  [self setNeedsDisplay: YES];
+}
+
+- (void) resizeSubviewsWithOldSize: (NSSize)size
+{
+  [super resizeSubviewsWithOldSize: size];
+  _revealSelectedTab = YES;
+  [self setNeedsDisplay: YES];
+}
+
+- (NSTabViewItem *) tabViewItemAtPoint: (NSPoint)point
+{
+  NSUInteger i;
+  [self layoutEditorTabs];
+  for (i = 0; i < [_visibleTabRects count]; i++)
+    if (NSPointInRect (point, [[_visibleTabRects objectAtIndex: i] rectValue]))
+      return [self tabViewItemAtIndex: i];
+  return nil;
+}
+
 - (void) drawRect: (NSRect)rect
 {
-  // A theme may omit tabs that no longer fit after resizing.
-  {
-    NSEnumerator *itemEnumerator = [[self tabViewItems] objectEnumerator];
-    NSTabViewItem *item;
-    while ((item = [itemEnumerator nextObject]) != nil)
-      if ([item isKindOfClass: [YCodeEditorTabItem class]])
+  NSUInteger i;
+  [self layoutEditorTabs];
+  [[NSColor windowBackgroundColor] set];
+  NSRectFill ([self bounds]);
+  for (i = 0; i < [[self tabViewItems] count]; i++)
+    {
+      NSTabViewItem *item = [self tabViewItemAtIndex: i];
+      NSRect tabRect = [[_visibleTabRects objectAtIndex: i] rectValue];
+      BOOL closable = [item isKindOfClass: [YCodeEditorTabItem class]];
+      if (closable)
         [(YCodeEditorTabItem *)item prepareToDrawLabel];
-  }
-  [super drawRect: rect];
-  {
-    NSEnumerator *itemEnumerator = [[self tabViewItems] objectEnumerator];
-    NSTabViewItem *item;
-    while ((item = [itemEnumerator nextObject]) != nil)
-      if ([item isKindOfClass: [YCodeEditorTabItem class]])
+      if (!NSIsEmptyRect (tabRect))
+        {
+          NSRect labelRect = NSInsetRect (tabRect, 10, 4);
+          [[item isEqual: [self selectedTabViewItem]]
+                  ? [NSColor controlBackgroundColor]
+                  : [NSColor controlColor] set];
+          NSRectFill (tabRect);
+          [[NSColor gridColor] set];
+          NSFrameRect (tabRect);
+          if (NSWidth (labelRect) > 0)
+            {
+              [NSGraphicsContext saveGraphicsState];
+              NSRectClip (labelRect);
+              [item drawLabel: YES inRect: labelRect];
+              [NSGraphicsContext restoreGraphicsState];
+            }
+        }
+      if (closable)
         [(YCodeEditorTabItem *)item updateCloseButtonVisibility];
-  }
+    }
 }
 
 - (void) removeTabViewItem: (NSTabViewItem *)item
@@ -143,6 +316,8 @@
   if ([item isKindOfClass: [YCodeEditorTabItem class]])
     [[(YCodeEditorTabItem *)item closeButton] removeFromSuperview];
   [super removeTabViewItem: item];
+  _revealSelectedTab = YES;
+  [self setNeedsDisplay: YES];
 }
 
 @end

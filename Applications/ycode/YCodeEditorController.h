@@ -35,8 +35,17 @@ extern NSString *const YCodeCurrentDocumentDidChangeNotification;
 @class YCodeProject;
 @class YCodeEditorDocument;
 
-/** Editor tabs with close buttons alongside their labels. */
+/** Editor tabs with close buttons and arrows for navigating overflowing tabs. */
 @interface YCodeEditorTabView : NSTabView
+{
+  NSButton *_previousTabsButton;
+  NSButton *_nextTabsButton;
+  NSMutableArray *_visibleTabRects;
+  NSUInteger _firstVisibleTab;
+  NSUInteger _visibleTabEnd;
+  BOOL _revealSelectedTab;
+}
+
 @end
 
 @interface YCodeEditorController

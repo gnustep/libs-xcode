@@ -5152,6 +5152,89 @@ testEditorBundleFiles (NSString *directory)
 }
 
 static void
+testEditorTabOverflow (void)
+{
+  NSWindow *window =
+      [[NSWindow alloc] initWithContentRect: NSMakeRect (0, 0, 360, 220)
+                                  styleMask: NSTitledWindowMask
+                                    backing: NSBackingStoreBuffered
+                                      defer: NO];
+  YCodeEditorTabView *tabs =
+      [[YCodeEditorTabView alloc] initWithFrame: NSMakeRect (0, 0, 360, 220)];
+  NSUInteger i;
+  [window setContentView: tabs];
+  for (i = 0; i < 8; i++)
+    {
+      NSTabViewItem *item = [[NSClassFromString (@"YCodeEditorTabItem") alloc]
+          initWithIdentifier: [NSString stringWithFormat: @"file-%lu",
+                                                        (unsigned long)i]];
+      [item setLabel: [NSString stringWithFormat: @"SourceFile%lu.m",
+                                                (unsigned long)i]];
+      [tabs addTabViewItem: item];
+      RELEASE (item);
+    }
+  [tabs selectFirstTabViewItem: nil];
+  [tabs display];
+  NSButton *left = [tabs valueForKey: @"_previousTabsButton"];
+  NSButton *right = [tabs valueForKey: @"_nextTabsButton"];
+  NSTabViewItem *first = [tabs tabViewItemAtIndex: 0];
+  NSTabViewItem *last = [tabs tabViewItemAtIndex: 7];
+  testAssert (
+      ![left isHidden] && ![right isHidden] && ![left isEnabled] &&
+          [right isEnabled],
+      @"Overflow tabs show both arrows, with only forward navigation enabled initially");
+  testAssert (![[first closeButton] isHidden] && [[last closeButton] isHidden],
+              @"Only visible tabs expose their close buttons");
+  for (i = 0; i < 8 && [right isEnabled]; i++)
+    {
+      [right performClick: nil];
+      [tabs display];
+    }
+  testAssert (
+      ![right isEnabled] && [left isEnabled] && ![[last closeButton] isHidden]
+          && [tabs selectedTabViewItem] == first,
+      @"Scrolling reaches the last tab without switching the active file");
+  NSRect closeRect = [[last closeButton] frame];
+  testAssert ([tabs tabViewItemAtPoint: NSMakePoint (NSMinX (closeRect) - 5,
+                                                    NSMidY (closeRect))]
+                  == last,
+              @"Scrolled tabs remain selectable at their displayed position");
+  [left performClick: nil];
+  [tabs display];
+  testAssert ([right isEnabled],
+              @"Left arrow scrolls back toward earlier tabs");
+  [tabs selectFirstTabViewItem: nil];
+  [tabs display];
+  testAssert (![[first closeButton] isHidden] && ![left isEnabled],
+              @"Selecting an offscreen file reveals its tab");
+  [tabs selectLastTabViewItem: nil];
+  [tabs display];
+  testAssert (![[last closeButton] isHidden],
+              @"Selecting the last file reveals its tab");
+  [window setContentSize: NSMakeSize (1800, 220)];
+  [tabs display];
+  testAssert ([left isHidden] && [right isHidden]
+                  && ![[first closeButton] isHidden]
+                  && ![[last closeButton] isHidden],
+              @"Widening the editor hides navigation and restores all tabs");
+  [window setContentSize: NSMakeSize (180, 220)];
+  [tabs display];
+  testAssert (![right isHidden] && ![[last closeButton] isHidden],
+              @"Narrowing the editor keeps the selected tab visible");
+  while ([tabs numberOfTabViewItems] > 1)
+    [tabs removeTabViewItem: [tabs tabViewItemAtIndex: 0]];
+  [tabs display];
+  testAssert ([left isHidden] && [right isHidden],
+              @"Closing tabs removes arrows when the remaining tabs fit");
+  [tabs removeTabViewItem: [tabs tabViewItemAtIndex: 0]];
+  [tabs display];
+  testAssert ([left isHidden] && [right isHidden],
+              @"An empty editor has no tab navigation arrows");
+  RELEASE (tabs);
+  RELEASE (window);
+}
+
+static void
 testEditorFiles (NSString *directory)
 {
   NSFileManager *manager = [NSFileManager defaultManager];
@@ -11824,6 +11907,16 @@ main (void)
       return failures ? 1 : 0;
     }
 
+  if ([arguments containsObject: @"--check-tab-overflow"])
+    {
+      testEditorTabOverflow ();
+      testEditorFiles (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode tab overflow checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-close-files"])
     {
       testCloseModifiedFiles (temporaryDirectory);
@@ -12521,6 +12614,7 @@ main (void)
   testEditorBundles ();
   testEditorBundleFiles (temporaryDirectory);
   testModelViewer (temporaryDirectory);
+  testEditorTabOverflow ();
   testEditorFiles (temporaryDirectory);
   testPrinting ();
   testProjectCenterImport (temporaryDirectory);
