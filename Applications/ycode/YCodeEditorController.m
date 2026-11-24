@@ -286,18 +286,29 @@
     {
       NSTabViewItem *item = [self tabViewItemAtIndex: i];
       NSRect tabRect = [[_visibleTabRects objectAtIndex: i] rectValue];
+      BOOL selected = item == [self selectedTabViewItem];
       BOOL closable = [item isKindOfClass: [YCodeEditorTabItem class]];
       if (closable)
         [(YCodeEditorTabItem *)item prepareToDrawLabel];
       if (!NSIsEmptyRect (tabRect))
         {
           NSRect labelRect = NSInsetRect (tabRect, 10, 4);
-          [[item isEqual: [self selectedTabViewItem]]
-                  ? [NSColor controlBackgroundColor]
-                  : [NSColor controlColor] set];
+          [selected ? [NSColor controlBackgroundColor] : [NSColor controlColor]
+              set];
           NSRectFill (tabRect);
           [[NSColor gridColor] set];
           NSFrameRect (tabRect);
+          if (selected)
+            {
+              // Theme background colors may be identical. Keep an explicit
+              // selection marker above the label and close button.
+              NSRect indicatorRect = tabRect;
+              indicatorRect.size.height = 3;
+              if (![self isFlipped])
+                indicatorRect.origin.y = NSMaxY (tabRect) - 3;
+              [[NSColor keyboardFocusIndicatorColor] set];
+              NSRectFill (indicatorRect);
+            }
           if (NSWidth (labelRect) > 0)
             {
               [NSGraphicsContext saveGraphicsState];
