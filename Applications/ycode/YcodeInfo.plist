@@ -56,7 +56,7 @@
             NSIcon = "FileMM.tiff";
             NSName = YCodeObjectiveCPlusPlusSourceType;
             NSRole = Editor;
-            NSUnixExtensions = ( mm, M );
+            NSUnixExtensions = ( mm );
         },
         {
             NSHumanReadableName = "C++ source";
