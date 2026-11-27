@@ -804,7 +804,7 @@
   [_contextMenu addItem: [NSMenuItem separatorItem]];
 
   NSMenuItem *deleteItem =
-      [[NSMenuItem alloc] initWithTitle: @"Remove File from Project"
+      [[NSMenuItem alloc] initWithTitle: @"Remove from Project..."
                                  action: @selector (deleteItem:)
                           keyEquivalent: @""];
   [deleteItem setTarget: self];
@@ -874,21 +874,199 @@
   RELEASE (input);
 }
 
+- (YCodeProjectNavigatorItem *) removalItemForSender: (id)sender
+{
+  NSInteger row = -1;
+  if ([sender isKindOfClass: [NSMenuItem class]] &&
+      [sender menu] == _contextMenu)
+    row = [_outlineView clickedRow];
+  if (row < 0)
+    row = [_outlineView selectedRow];
+  return row >= 0 ? [_outlineView itemAtRow: row] : nil;
+}
+
+- (BOOL) isFilesystemItem: (YCodeProjectNavigatorItem *)item
+{
+  if ([_project isDirectoryProject])
+    return YES;
+  YCodeProjectNavigatorItem *parent = [item parent];
+  while (parent)
+    {
+      if ([[parent representedObject]
+              isKindOfClass: [PBXFileSystemSynchronizedRootGroup class]])
+        return YES;
+      parent = [parent parent];
+    }
+  return NO;
+}
+
+- (BOOL) canRemoveItem: (YCodeProjectNavigatorItem *)item
+{
+  id object = [item representedObject];
+  if (!object || (![item isFile] && ![item isGroup]))
+    return NO;
+  YCodeProjectNavigatorItem *ancestor = item;
+  while (ancestor)
+    {
+      if ([ancestor representedObject] == [[_project project] productRefGroup])
+        return NO;
+      ancestor = [ancestor parent];
+    }
+  return object != [[_project project] mainGroup];
+}
+
+/* A pathless logical group resolves to its parent directory, which must never
+   become the target of a Trash operation. Protect ancestors of the project too. */
+- (NSString *) trashPathForItem: (YCodeProjectNavigatorItem *)item
+{
+  if (![[item representedObject] path]
+      || ![[[item representedObject] path] length])
+    return nil;
+  NSString *path = [self resolvedPathForNavigatorItem: item];
+  if (![path length]
+      || ![[NSFileManager defaultManager] fileExistsAtPath: path])
+    return nil;
+  NSString *resolved = [path stringByResolvingSymlinksInPath];
+  NSString *root =
+      [[_project projectDirectoryPath] stringByResolvingSymlinksInPath];
+  if ([resolved isEqual: @"/"] || [root isEqual: resolved] ||
+      [root hasPrefix: [resolved stringByAppendingString: @"/"]])
+    return nil;
+  return path;
+}
+
+/* GNUstep delegates recycling to a workspace application, which may not be
+   running on a freedesktop desktop. GIO supplies that desktop's trash service. */
+- (NSString *) gioTrashExecutable
+{
+  NSArray *directories = [[[[NSProcessInfo processInfo] environment]
+      objectForKey: @"PATH"] componentsSeparatedByString: @":"];
+  NSEnumerator *enumerator = [directories objectEnumerator];
+  NSString *directory;
+  while ((directory = [enumerator nextObject]) != nil)
+    {
+      if (![directory isAbsolutePath])
+        continue;
+      NSString *candidate = [directory stringByAppendingPathComponent: @"gio"];
+      if ([[NSFileManager defaultManager] isExecutableFileAtPath: candidate])
+        return candidate;
+    }
+  return nil;
+}
+
+- (BOOL) movePathToDesktopTrash: (NSString *)path error: (NSString **)error
+{
+  NSString *executable = [self gioTrashExecutable];
+  if (!executable)
+    {
+      if (error)
+        *error
+            = @"No trash service is available. Start a GNUstep workspace application or install gio and make it available on PATH.";
+      return NO;
+    }
+  NSTask *task = AUTORELEASE ([[NSTask alloc] init]);
+  NSPipe *output = [NSPipe pipe];
+  [task setLaunchPath: executable];
+  [task setArguments: [NSArray arrayWithObjects: @"trash", @"--", path, nil]];
+  [task setStandardOutput: output];
+  [task setStandardError: output];
+  NS_DURING
+  {
+    [task launch];
+    NSData *data = [[output fileHandleForReading] readDataToEndOfFile];
+    [task waitUntilExit];
+    if ([task terminationStatus] == 0)
+      NS_VALRETURN (YES);
+    if (error)
+      {
+        NSString *message = AUTORELEASE ([[NSString alloc]
+            initWithData: data
+                encoding: NSUTF8StringEncoding]);
+        *error =
+            [message length] ? message : @"The desktop trash service failed.";
+      }
+  }
+  NS_HANDLER
+  {
+    if (error)
+      *error = [localException reason];
+  }
+  NS_ENDHANDLER
+  return NO;
+}
+
 - (IBAction) deleteItem: (id)sender
 {
-  NSInteger selectedRow = [_outlineView clickedRow];
-  if (selectedRow < 0)
-    selectedRow = [_outlineView selectedRow];
-  if (selectedRow >= 0)
+  YCodeProjectNavigatorItem *item = [self removalItemForSender: sender];
+  if (![self canRemoveItem: item])
+    return;
+  BOOL filesystem = [self isFilesystemItem: item];
+  NSString *path = [self trashPathForItem: item];
+  if (filesystem && !path)
+    return;
+  /* Keep the item alive across the modal loop and navigator refresh. */
+  RETAIN (item);
+  NSAlert *alert = AUTORELEASE ([[NSAlert alloc] init]);
+  [alert setMessageText: [NSString stringWithFormat: @"Remove “%@”?",
+                                                   [item displayName]]];
+  [alert
+      setInformativeText:
+          path
+              ? [NSString
+                    stringWithFormat:
+                        @"%@Move to Trash moves this path and its entire contents, including files not shown in the navigator:\n\n%@",
+                        filesystem
+                            ? @""
+                            : @"Remove from Project keeps all files on disk. Descendant project references will be removed.\n\n",
+                        path]
+              : @"Remove this item and its descendant project references. Files on disk will be kept."];
+  [alert addButtonWithTitle: filesystem ? @"Cancel" : @"Remove from Project"];
+  [alert addButtonWithTitle: filesystem ? @"Move to Trash" : @"Cancel"];
+  if (!filesystem && path)
+    [alert addButtonWithTitle: @"Move to Trash"];
+  NSInteger result = [alert runModal];
+  BOOL trash = filesystem ? result == NSAlertSecondButtonReturn
+                          : path && result == NSAlertThirdButtonReturn;
+  if (trash)
     {
-      id selectedItem = [_outlineView itemAtRow: selectedRow];
-      if ([selectedItem isKindOfClass: [YCodeProjectNavigatorItem class]])
+      NSInteger tag = 0;
+      NSString *trashError = @"The workspace could not recycle this item.";
+      BOOL recycled = [[NSWorkspace sharedWorkspace]
+          performFileOperation: NSWorkspaceRecycleOperation
+                        source: [path stringByDeletingLastPathComponent]
+                   destination: @""
+                         files: [NSArray
+                                   arrayWithObject: [path lastPathComponent]]
+                           tag: &tag];
+#if defined(GNUSTEP) && !defined(_WIN32)
+      if (!recycled)
+        recycled = [self movePathToDesktopTrash: path error: &trashError];
+#endif
+      if (!recycled)
         {
-          if ([selectedItem isFile])
-            [_project removeFileReferenceFromProject: [selectedItem
-                                                         representedObject]];
+          NSAlert *failure = AUTORELEASE ([[NSAlert alloc] init]);
+          [failure setMessageText: @"Could not move the item to Trash"];
+          [failure
+              setInformativeText: [NSString stringWithFormat: @"%@\n\n%@", path,
+                                                            trashError]];
+          [failure runModal];
+          RELEASE (item);
+          return;
         }
     }
+  if (trash || (!filesystem && result == NSAlertFirstButtonReturn))
+    {
+      if (filesystem)
+        {
+          [_project refreshDirectoryFiles];
+          [self projectDidChange];
+        }
+      else if ([item isGroup])
+        [_project removeGroupFromProject: [item representedObject]];
+      else
+        [_project removeFileReferenceFromProject: [item representedObject]];
+    }
+  RELEASE (item);
 }
 
 - (IBAction) refreshFolder: (id)sender
@@ -900,16 +1078,16 @@
 {
   if ([item action] == @selector (refreshFolder:))
     return [_project isDirectoryProject];
-  if ([_project isDirectoryProject]
-      && ([item action] == @selector (deleteItem:) ||
-          [item action] == @selector (addFile:)))
+  if ([_project isDirectoryProject] && [item action] == @selector (addFile:))
     return NO;
   if ([item action] == @selector (deleteItem:))
     {
-      NSInteger row = [_outlineView clickedRow];
-      if (row < 0)
-        row = [_outlineView selectedRow];
-      return row >= 0 && [[_outlineView itemAtRow: row] isFile];
+      YCodeProjectNavigatorItem *selected = [self removalItemForSender: item];
+      BOOL filesystem = [self isFilesystemItem: selected];
+      [item setTitle: filesystem ? @"Move to Trash..."
+                                : @"Remove from Project..."];
+      return [self canRemoveItem: selected]
+             && (!filesystem || [self trashPathForItem: selected] != nil);
     }
   return _project != nil;
 }

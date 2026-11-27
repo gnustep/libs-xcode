@@ -43,6 +43,47 @@
 #import "YCImageInspectorView.h"
 #import "YCSoundInspectorView.h"
 
+/* Route keyboard and Edit menu removal through the navigator confirmation. */
+@interface YCodeNavigatorOutlineView : NSOutlineView
+@end
+
+@implementation YCodeNavigatorOutlineView
+- (void) delete: (id)sender
+{
+  [(YCodeProjectNavigatorController *)[self delegate] deleteItem: self];
+}
+
+- (BOOL) validateMenuItem: (NSMenuItem *)item
+{
+  if ([item action] == @selector (delete:))
+    {
+      NSMenuItem *probe = AUTORELEASE ([[NSMenuItem alloc]
+          initWithTitle: @"Remove"
+                 action: @selector (deleteItem:)
+          keyEquivalent: @""]);
+      return [(id)[self delegate] validateMenuItem: probe];
+    }
+  return YES;
+}
+
+- (void) keyDown: (NSEvent *)event
+{
+  NSString *characters = [event charactersIgnoringModifiers];
+  if ([characters length] == 1)
+    {
+      unichar key = [characters characterAtIndex: 0];
+      if (key == NSDeleteCharacter || key == NSBackspaceCharacter
+          || key == NSDeleteFunctionKey)
+        {
+          [self delete: self];
+          return;
+        }
+    }
+  [super keyDown: event];
+}
+
+@end
+
 /* Outline items have stable identity even when diagnostics have identical text
    or a group's child count changes as build output arrives. */
 @interface YCodeBuildIssueItem : NSObject
@@ -1504,7 +1545,7 @@ YCodeScrollViewWithDocumentView (NSView *documentView)
       NSTableColumn *column = nil;
 
       _navigatorOutlineView =
-          [[NSOutlineView alloc] initWithFrame: outlineFrame];
+          [[YCodeNavigatorOutlineView alloc] initWithFrame: outlineFrame];
       [_navigatorOutlineView setAutoresizingMask: NSViewNotSizable];
       [_navigatorOutlineView setHeaderView: nil];
       [_navigatorOutlineView setGridStyleMask: NSTableViewGridNone];

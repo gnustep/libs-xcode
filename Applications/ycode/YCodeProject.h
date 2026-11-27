@@ -130,6 +130,7 @@
 - (void) removeFilesFromProject: (NSArray *)filePaths;
 /** Remove a reference and its build-phase entries, preserving the file on disk. */
 - (void) removeFileReferenceFromProject: (PBXFileReference *)reference;
+- (void) removeGroupFromProject: (PBXGroup *)group;
 - (BOOL) addGroupToProject: (NSString *)groupName;
 
 /**

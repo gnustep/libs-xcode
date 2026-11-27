@@ -299,6 +299,7 @@ YCodeFileURLFromPath (NSString *path)
   [editMenu addItem: YCodeMenuItem (@"Redo", @selector (redo:), @"Z", nil)];
   [editMenu addItem: [NSMenuItem separatorItem]];
   [editMenu addItem: YCodeMenuItem (@"Cut", @selector (cut:), @"x", nil)];
+  [editMenu addItem: YCodeMenuItem (@"Delete", @selector (delete:), @"", nil)];
   [editMenu addItem: YCodeMenuItem (@"Copy", @selector (copy:), @"c", nil)];
   [editMenu addItem: YCodeMenuItem (@"Paste", @selector (paste:), @"v", nil)];
   [editMenu addItem: YCodeMenuItem (@"Select All", @selector (selectAll:), @"a",

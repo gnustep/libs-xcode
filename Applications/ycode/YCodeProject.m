@@ -2642,6 +2642,73 @@ YCodeDirectoryGroup (NSString *path, NSMutableDictionary *watchers,
   [_navigatorController projectDidChange];
 }
 
+/* Detach the subtree, preserving references still used elsewhere in the project. */
+- (void) removeGroupFromProject: (PBXGroup *)group
+{
+  if (!group || group == [_project mainGroup]
+      || group == [_project productRefGroup] || [self isDirectoryProject])
+    return;
+  NSMutableArray *pending =
+      [NSMutableArray arrayWithObject: [_project mainGroup]];
+  PBXGroup *parent = nil;
+  while ([pending count] && !parent)
+    {
+      PBXGroup *candidate = [pending lastObject];
+      [pending removeLastObject];
+      NSEnumerator *children = [[candidate children] objectEnumerator];
+      id child;
+      while ((child = [children nextObject]))
+        {
+          if (child == group)
+            parent = candidate;
+          else if ([child isKindOfClass: [PBXGroup class]])
+            [pending addObject: child];
+        }
+    }
+  if (!parent)
+    return;
+  NSMutableArray *groups = [NSMutableArray arrayWithObject: group];
+  NSMutableArray *references = [NSMutableArray array];
+  NSUInteger index;
+  for (index = 0; index < [groups count]; index++)
+    {
+      NSEnumerator *children =
+          [[[groups objectAtIndex: index] children] objectEnumerator];
+      id child;
+      while ((child = [children nextObject]))
+        {
+          if ([child isKindOfClass: [PBXGroup class]])
+            [groups addObject: child];
+          else if ([child isKindOfClass: [PBXFileReference class]])
+            [references addObject: child];
+        }
+    }
+  [[parent children] removeObjectIdenticalTo: group];
+  NSEnumerator *entries = [[self projectFileEntries] objectEnumerator];
+  NSDictionary *entry;
+  while ((entry = [entries nextObject]))
+    [references removeObjectIdenticalTo: [entry objectForKey: @"file"]];
+  NSEnumerator *targets = [[_project targets] objectEnumerator];
+  PBXTarget *target;
+  while ((target = [targets nextObject]))
+    {
+      [[target fileSystemSynchronizedGroups] removeObjectsInArray: groups];
+      NSEnumerator *phases = [[target buildPhases] objectEnumerator];
+      PBXBuildPhase *phase;
+      while ((phase = [phases nextObject]))
+        {
+          NSEnumerator *files =
+              [[NSArray arrayWithArray: [phase files]] objectEnumerator];
+          PBXBuildFile *file;
+          while ((file = [files nextObject]))
+            if ([references containsObject: [file fileRef]])
+              [[phase files] removeObjectIdenticalTo: file];
+        }
+    }
+  [self updateChangeCount: NSChangeDone];
+  [_navigatorController projectDidChange];
+}
+
 - (void) removeFileReferenceFromProject: (PBXFileReference *)reference
 {
   if (reference)

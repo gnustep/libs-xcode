@@ -1548,6 +1548,181 @@ buildReferenceCount (YCodeProject *project, PBXFileReference *reference)
   return count;
 }
 
+@interface YCodeProjectNavigatorController (RemovalTesting)
+- (BOOL) canRemoveItem: (YCodeProjectNavigatorItem *)item;
+- (NSString *) trashPathForItem: (YCodeProjectNavigatorItem *)item;
+- (BOOL) isFilesystemItem: (YCodeProjectNavigatorItem *)item;
+- (BOOL) movePathToDesktopTrash: (NSString *)path error: (NSString **)error;
+@end
+
+@interface YCodeTrashTestNavigator : YCodeProjectNavigatorController
+{
+@public
+  NSString *trashExecutable;
+}
+
+@end
+
+@implementation YCodeTrashTestNavigator
+- (NSString *) gioTrashExecutable
+{
+  return trashExecutable;
+}
+
+@end
+
+static void
+testDesktopTrash (NSString *directory)
+{
+  [[NSFileManager defaultManager] createDirectoryAtPath: directory
+                            withIntermediateDirectories: YES
+                                             attributes: nil
+                                                  error: NULL];
+  YCodeTrashTestNavigator *navigator
+      = AUTORELEASE ([[YCodeTrashTestNavigator alloc] init]);
+  NSString *error = nil;
+  testAssert (![navigator movePathToDesktopTrash: @"unused" error: &error] &&
+                  [error length] > 0,
+              @"Missing trash service reports an actionable error");
+  NSString *script = [directory stringByAppendingPathComponent: @"fake gio"];
+  navigator->trashExecutable = script;
+  NSString *source
+      = @"#!/bin/sh\n[ \"$#\" = 3 ] && [ \"$1\" = trash ] && [ \"$2\" = -- ] && [ \"$3\" = 'file with spaces; $literal' ]\n";
+  [source writeToFile: script
+           atomically: YES
+             encoding: NSUTF8StringEncoding
+                error: NULL];
+  [[NSFileManager defaultManager]
+      setAttributes: [NSDictionary
+                        dictionaryWithObject: [NSNumber numberWithInt: 0700]
+                                      forKey: NSFilePosixPermissions]
+       ofItemAtPath: script
+              error: NULL];
+  testAssert ([navigator movePathToDesktopTrash: @"file with spaces; $literal"
+                                          error: &error],
+              @"Trash passes paths literally as a single argument");
+  [@"#!/bin/sh\nprintf 'Trash permission denied' >&2\nexit 1\n"
+      writeToFile: script
+       atomically: NO
+         encoding: NSUTF8StringEncoding
+            error: NULL];
+  testAssert (![navigator movePathToDesktopTrash: @"unused" error: &error] &&
+                  [error rangeOfString: @"Trash permission denied"].location
+                      != NSNotFound,
+              @"Failed trash command preserves its diagnostic");
+  [[NSFileManager defaultManager] removeItemAtPath: script error: NULL];
+}
+
+static void
+testGroupRemoval (NSString *directory)
+{
+  NSString *folder =
+      [directory stringByAppendingPathComponent: @"Group With Spaces"];
+  NSFileManager *manager = [NSFileManager defaultManager];
+  [manager createDirectoryAtPath: folder
+      withIntermediateDirectories: YES
+                       attributes: nil
+                            error: NULL];
+  NSString *path = [folder stringByAppendingPathComponent: @"Keep.m"];
+  [@"int keep;" writeToFile: path
+                 atomically: YES
+                   encoding: NSUTF8StringEncoding
+                      error: NULL];
+  YCodeProject *document = AUTORELEASE ([YCodeProject new]);
+  [document
+      setProjectPath: [directory
+                         stringByAppendingPathComponent: @"Removal.xcodeproj"]];
+  PBXProject *project = AUTORELEASE ([PBXProject new]);
+  PBXGroup *root = AUTORELEASE ([PBXGroup new]);
+  PBXGroup *group = AUTORELEASE ([PBXGroup new]);
+  PBXGroup *nested = AUTORELEASE ([PBXGroup new]);
+  PBXGroup *products = AUTORELEASE ([PBXGroup new]);
+  PBXFileReference *file
+      = AUTORELEASE ([[PBXFileReference alloc] initWithPath: @"Keep.m"]);
+  PBXFileReference *shared
+      = AUTORELEASE ([[PBXFileReference alloc] initWithPath: @"Shared.m"]);
+  [group setPath: @"Group With Spaces"];
+  [nested setChildren: [NSMutableArray arrayWithObjects: file, shared, nil]];
+  [group setChildren: [NSMutableArray arrayWithObject: nested]];
+  [root setChildren: [NSMutableArray
+                        arrayWithObjects: group, products, shared, nil]];
+  [project setMainGroup: root];
+  [project setProductRefGroup: products];
+  PBXNativeTarget *target = AUTORELEASE ([PBXNativeTarget new]);
+  PBXSourcesBuildPhase *phase = AUTORELEASE ([PBXSourcesBuildPhase new]);
+  PBXBuildFile *buildFile = AUTORELEASE ([PBXBuildFile new]);
+  PBXBuildFile *sharedBuildFile = AUTORELEASE ([PBXBuildFile new]);
+  [buildFile setFileRef: file];
+  [sharedBuildFile setFileRef: shared];
+  [phase setFiles: [NSMutableArray
+                      arrayWithObjects: buildFile, sharedBuildFile, nil]];
+  [target setBuildPhases: [NSMutableArray arrayWithObject: phase]];
+  [target
+      setFileSystemSynchronizedGroups: [NSMutableArray arrayWithObject: nested]];
+  [project setTargets: [NSMutableArray arrayWithObject: target]];
+  [document setProject: project];
+  YCodeProjectNavigatorController *navigator = [document navigatorController];
+  [navigator projectDidChange];
+  YCodeProjectNavigatorItem *item = [navigator itemForObject: group];
+  testAssert ([navigator canRemoveItem: item],
+              @"Ordinary groups support removal");
+  testAssert ([[navigator trashPathForItem: item] isEqual: folder],
+              @"Trash uses the group's directory including spaces");
+  testAssert ([navigator trashPathForItem: [navigator itemForObject: nested]]
+                  == nil,
+              @"Pathless groups never trash their parent directory");
+  testAssert (
+      ![navigator canRemoveItem: [navigator itemForObject: root]]
+          && ![navigator canRemoveItem: [navigator itemForObject: products]],
+      @"Root and Products groups are protected");
+  [group setPath: @"."];
+  testAssert ([navigator trashPathForItem: item] == nil,
+              @"Project directory cannot be trashed through a group");
+  [group setPath: @"Group With Spaces"];
+  NSOutlineView *outline
+      = AUTORELEASE ([[NSClassFromString (@"YCodeNavigatorOutlineView") alloc]
+          initWithFrame: NSMakeRect (0, 0, 300, 300)]);
+  NSTableColumn *column
+      = AUTORELEASE ([[NSTableColumn alloc] initWithIdentifier: @"name"]);
+  [outline addTableColumn: column];
+  [outline setOutlineTableColumn: column];
+  [navigator setOutlineView: outline];
+  [outline reloadData];
+  [outline expandItem: nil expandChildren: YES];
+  NSInteger row = [outline rowForItem: [navigator itemForObject: group]];
+  testAssert (row >= 0, @"Group is available for keyboard removal");
+  if (row >= 0)
+    {
+      [outline selectRowIndexes: [NSIndexSet indexSetWithIndex: row]
+           byExtendingSelection: NO];
+      answerCloseAlert (NSAlertSecondButtonReturn);
+      [outline performSelector: @selector (delete:) withObject: nil];
+      testAssert ([[root children] containsObject: group] &&
+                      [manager fileExistsAtPath: path],
+                  @"Cancel preserves the group and its directory");
+      answerCloseAlert (NSAlertFirstButtonReturn);
+      [outline performSelector: @selector (delete:) withObject: nil];
+    }
+  [navigator setOutlineView: nil];
+  testAssert (
+      ![[root children] containsObject: group] && [document isDocumentEdited],
+      @"Removing a group detaches its subtree and marks the project changed");
+  testAssert (
+      [[phase files] count] == 1 &&
+          [[phase files] containsObject: sharedBuildFile],
+      @"Group removal cleans nested build entries and preserves shared references");
+  testAssert ([[target fileSystemSynchronizedGroups] count] == 0,
+              @"Group removal clears target synchronized-group membership");
+  testAssert ([manager fileExistsAtPath: path],
+              @"Removing a directory-backed group preserves files on disk");
+  [document updateChangeCount: NSChangeCleared];
+  [document removeGroupFromProject: group];
+  [document removeGroupFromProject: root];
+  [document removeGroupFromProject: products];
+  testAssert (![document isDocumentEdited],
+              @"Repeated and protected group removals are no-ops");
+}
+
 static void
 testProjectFileMembership (YCodeProject *project, NSString *directory)
 {
@@ -11690,6 +11865,16 @@ main (void)
 
   [NSApplication sharedApplication];
   NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+  if ([arguments containsObject: @"--check-group-removal"])
+    {
+      testDesktopTrash (temporaryDirectory);
+      testGroupRemoval (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode group removal checks: %lu failures",
+             (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
   if ([arguments containsObject: @"--check-printing"])
     {
       testPrinting ();
@@ -11940,6 +12125,15 @@ main (void)
       testAutomaticCompletion ();
       NSLog (@"Ycode completion checks: %lu failures",
              (unsigned long)failures);
+      [pool drain];
+      return failures ? 1 : 0;
+    }
+  if ([arguments containsObject: @"--check-trash"])
+    {
+      testDesktopTrash (temporaryDirectory);
+      testGroupRemoval (temporaryDirectory);
+      [manager removeItemAtPath: temporaryDirectory error: NULL];
+      NSLog (@"Ycode trash checks: %lu failures", (unsigned long)failures);
       [pool drain];
       return failures ? 1 : 0;
     }
@@ -12567,6 +12761,8 @@ main (void)
               @"Closing the final editor clears File inspector");
 
   testSaveActiveFile (document, temporaryDirectory);
+  testDesktopTrash (temporaryDirectory);
+  testGroupRemoval (temporaryDirectory);
   testProjectFileMembership (document, temporaryDirectory);
 
   // A failed read must report an error and preserve an already loaded project.
