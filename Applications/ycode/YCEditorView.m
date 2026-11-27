@@ -862,7 +862,8 @@
       rect = NSIntersectionRect (rect, viewport);
       [NSGraphicsContext saveGraphicsState];
       NSRectClip (rect);
-      origin.x += [container lineFragmentPadding];
+      // Mark the end of each character column, matching the column guide.
+      origin.x += [container lineFragmentPadding] + advance;
       NSPoint start = [self convertPoint: origin fromView: textView];
       NSInteger first
           = MAX (0, (NSInteger)((NSMinX (rect) - start.x) / advance));
